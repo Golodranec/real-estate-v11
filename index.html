@@ -2,123 +2,112 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Фильтры недвижимости</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Админка — Дерево категорий</title>
+  <style>
+    body { font-family: sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
+    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin-bottom:16px; }
+    ul.tree { list-style:none; padding-left:20px; }
+    ul.tree li { margin:4px 0; }
+    .actions button { margin-left:6px; font-size:12px; }
+    input, select { padding:6px; border-radius:6px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
+    .btn { padding:6px 10px; border-radius:6px; background:#4da3ff; border:none; cursor:pointer; color:#001428; }
+  </style>
 </head>
 <body>
 
-<div class="card">
-  <h2>Фильтры</h2>
-  <div class="filters">
-
-    <!-- Базовые -->
-    <select id="city">
-      <option value="">Город</option>
-      <option>Ташкент</option>
-      <option>Самарканд</option>
-    </select>
-
-    <select id="district">
-      <option value="">Район</option>
-      <option>Мирабад</option>
-      <option>Юнусабад</option>
-    </select>
-
-    <select id="street">
-      <option value="">Улица / массив</option>
-      <option>ул. Навои</option>
-      <option>массив Восточный</option>
-    </select>
-
-    <select id="category">
-      <option value="">Категория</option>
-      <option value="apartment">Квартиры</option>
-      <option value="house">Дома</option>
-      <option value="land">Земельные участки</option>
-      <option value="commercial">Коммерческие помещения</option>
-      <option value="garage">Гаражи / стоянки</option>
-      <option value="daily">Посуточная аренда</option>
-    </select>
-
-    <!-- Цена -->
-    <div class="range">
-      <input type="number" placeholder="Цена от">
-      <input type="number" placeholder="Цена до">
-    </div>
-
-    <!-- Количество комнат -->
-    <div class="range">
-      <input type="number" placeholder="Комнат от">
-      <input type="number" placeholder="Комнат до">
-    </div>
-
-    <!-- Этаж -->
-    <div class="range">
-      <input type="number" placeholder="Этаж от">
-      <input type="number" placeholder="Этаж до">
-    </div>
-
-    <!-- Этажность -->
-    <div class="range">
-      <input type="number" placeholder="Этажность от">
-      <input type="number" placeholder="Этажность до">
-    </div>
-
-    <!-- Площадь -->
-    <div class="range">
-      <input type="number" placeholder="Площадь от">
-      <input type="number" placeholder="Площадь до">
-    </div>
-
-    <!-- Мультиселект: Удобства -->
-    <div class="multiselect" id="amenities">
-      Удобства
-      <div class="multiselect-menu">
-        <label><input type="checkbox"> Интернет</label>
-        <label><input type="checkbox"> Кондиционер</label>
-        <label><input type="checkbox"> Холодильник</label>
-        <label><input type="checkbox"> Телевизор</label>
-        <label><input type="checkbox"> Стиральная машина</label>
-        <label><input type="checkbox"> Кухонный гарнитур</label>
-      </div>
-    </div>
-
-    <!-- Мультиселект: Ремонт -->
-    <div class="multiselect" id="repair">
-      Ремонт
-      <div class="multiselect-menu">
-        <label><input type="checkbox"> Авторский проект</label>
-        <label><input type="checkbox"> Евроремонт</label>
-        <label><input type="checkbox"> Средний</label>
-        <label><input type="checkbox"> Требует ремонта</label>
-        <label><input type="checkbox"> Черновая отделка</label>
-      </div>
-    </div>
-
-    <!-- Мультиселект: Парковка -->
-    <div class="multiselect" id="parking">
-      Парковка
-      <div class="multiselect-menu">
-        <label><input type="checkbox"> Есть</label>
-        <label><input type="checkbox"> Нет</label>
-      </div>
-    </div>
-
+  <h1>Админка: Дерево категорий</h1>
+  <div class="card">
+    <form id="nodeForm">
+      <input id="nodeName" placeholder="Название" required>
+      <select id="nodeParent"></select>
+      <button class="btn" type="submit">Добавить</button>
+    </form>
   </div>
-</div>
+
+  <div class="card">
+    <h2>Текущее дерево</h2>
+    <ul id="treeContainer" class="tree"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Экспорт / Импорт</h2>
+    <button id="exportBtn" class="btn">Экспорт JSON</button>
+    <input type="file" id="importFile" accept="application/json">
+  </div>
 
 <script>
-  // Открытие/закрытие мультиселектов
-  document.querySelectorAll(".multiselect").forEach(ms => {
-    ms.addEventListener("click", e => {
-      ms.classList.toggle("open");
-      e.stopPropagation();
-    });
-  });
-  document.body.addEventListener("click", () => {
-    document.querySelectorAll(".multiselect").forEach(ms => ms.classList.remove("open"));
-  });
-</script>
+let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
 
+function saveNodes(){
+  localStorage.setItem("treeNodes", JSON.stringify(nodes));
+  renderTree();
+  fillParentSelect();
+}
+
+function fillParentSelect(){
+  const sel = document.getElementById("nodeParent");
+  sel.innerHTML = `<option value="">(корень)</option>`;
+  nodes.forEach(n => {
+    sel.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+  });
+}
+
+function renderTree(parentId=null, container=document.getElementById("treeContainer")){
+  if(parentId===null) container.innerHTML = "";
+  const ul = document.createElement("ul");
+  ul.className = "tree";
+  nodes.filter(n=>n.parent==parentId).forEach(n=>{
+    const li = document.createElement("li");
+    li.textContent = n.name;
+    const actions = document.createElement("span");
+    actions.className = "actions";
+    const del = document.createElement("button");
+    del.textContent = "Удалить";
+    del.onclick = ()=>{ nodes = nodes.filter(x=>x.id!==n.id); saveNodes(); };
+    actions.appendChild(del);
+    li.appendChild(actions);
+    renderTree(n.id, li);
+    ul.appendChild(li);
+  });
+  container.appendChild(ul);
+}
+
+document.getElementById("nodeForm").onsubmit = e=>{
+  e.preventDefault();
+  const name = document.getElementById("nodeName").value;
+  const parent = document.getElementById("nodeParent").value || null;
+  const id = Date.now();
+  nodes.push({id, name, parent: parent?+parent:null});
+  saveNodes();
+  e.target.reset();
+};
+
+// Экспорт JSON
+document.getElementById("exportBtn").onclick = ()=>{
+  const blob = new Blob([JSON.stringify(nodes, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tree.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Импорт JSON
+document.getElementById("importFile").onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try {
+      nodes = JSON.parse(evt.target.result);
+      saveNodes();
+    } catch(err){ alert("Ошибка импорта: " + err.message); }
+  };
+  reader.readAsText(file);
+};
+
+saveNodes();
+</script>
 </body>
 </html>
