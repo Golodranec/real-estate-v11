@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.4</title>
+  <title>Каталог недвижимости — v13.4.2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Leaflet -->
@@ -11,17 +11,18 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
-  <link rel="stylesheet" href="style.css?v=13.4" />
+  <link rel="stylesheet" href="style.css?v=13.4.2" />
 </head>
 <body>
   <header class="topbar">
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13.4</div>
+    <div class="version">ChatPatch v13.4.2</div>
     <a class="admin-link" href="admin.html" target="_blank">Админка (дерево)</a>
   </header>
 
   <!-- Фильтры -->
   <section class="filters card">
+    <!-- Базовый каскад -->
     <select id="cityFilter"><option value="">Город</option></select>
     <select id="districtFilter"><option value="">Район</option></select>
     <select id="streetFilter"><option value="">Массив / улица</option></select>
@@ -45,6 +46,9 @@
     <label class="only-fav"><input id="onlyFav" type="checkbox" /> Только избранные</label>
     <button id="resetFilters" class="btn ghost">Сбросить</button>
     <div id="filtersInfo" class="hint" style="grid-column:1/-1;display:none"></div>
+
+    <!-- Доп. типы из админки (если добавишь свои) -->
+    <div id="extraFilters" class="extra" style="grid-column:1/-1;"></div>
 
     <div class="tools" style="grid-column:1/-1">
       <button id="exportJson" class="btn">Экспорт JSON</button>
@@ -124,13 +128,13 @@
     </form>
   </section>
 
-  <footer class="footer">Версия: ChatPatch v13.4</footer>
+  <footer class="footer">Версия: ChatPatch v13.4.2</footer>
 
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <!-- MarkerCluster -->
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <script src="script.js?v=13.4"></script>
+  <script src="script.js?v=13.4.2"></script>
 </body>
 </html>
