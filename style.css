@@ -5,7 +5,6 @@
   --muted: #9aa3b2;
   --accent: #4da3ff;
   --danger: #ff6b6b;
-  --ok: #31c48d;
   --border: #242938;
 }
 
@@ -32,14 +31,15 @@ body {
   grid-template-columns: repeat(6, minmax(160px, 1fr));
   gap: 8px;
 }
-.filters input, .filters select, .filters button {
+.filters input, .filters select, .filters button, .only-fav {
   width: 100%;
   padding: 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: #0d1016; color: var(--text);
 }
-#searchInput { grid-column: 1 / -1; }
+.only-fav { display: flex; align-items: center; gap: 8px; }
+.tools { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 
 .btn { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #0d1016; color: var(--text); cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #001428; }
@@ -109,6 +109,6 @@ body {
 /* адаптив */
 @media (max-width: 1000px) {
   .filters { grid-template-columns: repeat(2, 1fr); }
-  #searchInput { grid-column: 1 / -1; }
+  .tools { grid-column: 1 / -1; }
   .form-row { grid-template-columns: 1fr; }
 }
