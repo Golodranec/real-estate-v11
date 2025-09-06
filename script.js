@@ -1,15 +1,50 @@
-// ======= v13.1 bootstrap =======
-console.log("✅ script.js v13.1 loaded");
+// ======= v13.2 bootstrap =======
+console.log("✅ script.js v13.2 loaded");
 
+// ======= Хранилища =======
 const LS_OBJECTS = "objects";
-const LS_FILTERS = "filters_v13_1";
-const LS_FAVS    = "favorites_v13_1";
+const LS_FILTERS = "filters_v13_2";
+const LS_FAVS    = "favorites_v13_1"; // совместимость со старым ключом
 
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
 let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
+
+// ======= Тестовое древо локаций (район → квартал → улица/массив) =======
+// при желании расширяешь этот массив — всё подтянется автоматом
+const locations = [
+  // Районы
+  { id: 1, name: "Мирабадский район", parent: null },
+  { id: 5, name: "Юнусабадский район", parent: null },
+
+  // Кварталы
+  { id: 2, name: "12-й квартал", parent: 1 },
+  { id: 6, name: "15-й квартал", parent: 5 },
+
+  // Улицы/массивы
+  { id: 3, name: "ул. Навои", parent: 2 },
+  { id: 4, name: "массив Восточный", parent: 3 },
+  { id: 7, name: "ул. Амир Темур", parent: 6 },
+];
+
+function getChildren(parentId) {
+  return locations.filter(l => l.parent === parentId);
+}
+function getNode(id) {
+  return locations.find(l => l.id === id) || null;
+}
+function getPathNames(id) {
+  const node = getNode(id);
+  if (!node) return [];
+  return node.parent ? [...getPathNames(node.parent), node.name] : [node.name];
+}
+function getPathIds(id) {
+  const node = getNode(id);
+  if (!node) return [];
+  return node.parent ? [...getPathIds(node.parent), node.id] : [node.id];
+}
 
 // ======= карта (Leaflet + кластеры) =======
 const map = L.map("map").setView([41.3111, 69.2797], 12); // Ташкент
@@ -27,26 +62,30 @@ map.addLayer(cluster);
 // ======= элементы =======
 const $ = (id) => document.getElementById(id);
 
-const searchInput   = $("searchInput");
-const categoryFilter= $("categoryFilter");
-const statusFilter  = $("statusFilter");
-const priceMin      = $("priceMin");
-const priceMax      = $("priceMax");
-const roomsMin      = $("roomsMin");
-const roomsMax      = $("roomsMax");
-const areaMin       = $("areaMin");
-const areaMax       = $("areaMax");
-const floorMin      = $("floorMin");
-const floorMax      = $("floorMax");
-const sortSelect    = $("sortSelect");
-const onlyFav       = $("onlyFav");
-const resetFilters  = $("resetFilters");
+// фильтры
+const searchInput    = $("searchInput");
+const categoryFilter = $("categoryFilter");
+const statusFilter   = $("statusFilter");
+const priceMin       = $("priceMin");
+const priceMax       = $("priceMax");
+const roomsMin       = $("roomsMin");
+const roomsMax       = $("roomsMax");
+const areaMin        = $("areaMin");
+const areaMax        = $("areaMax");
+const floorMin       = $("floorMin");
+const floorMax       = $("floorMax");
+const districtFilter = $("districtFilter");
+const sortSelect     = $("sortSelect");
+const onlyFav        = $("onlyFav");
+const resetFilters   = $("resetFilters");
 
+// экспорт/импорт
 const exportJsonBtn = $("exportJson");
 const importJsonBtn = $("importJsonBtn");
 const importJsonInp = $("importJson");
 const exportCsvBtn  = $("exportCsv");
 
+// список/форма
 const resultsList   = $("resultsList");
 const form          = $("objectForm");
 const formTitle     = $("formTitle");
@@ -68,7 +107,50 @@ const coordsBadge   = $("coordsBadge");
 const cancelEditBtn = $("cancelEdit");
 const clearFormBtn  = $("clearForm");
 
-// ======= восстановление фильтров =======
+// древо в форме
+const districtSel = $("district");
+const quarterSel  = $("quarter");
+const streetSel   = $("street");
+
+function populateSelect(select, items, placeholder) {
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+  items.forEach(i => {
+    const opt = document.createElement("option");
+    opt.value = i.id;
+    opt.textContent = i.name;
+    select.appendChild(opt);
+  });
+}
+function initLocationSelects() {
+  populateSelect(districtSel, getChildren(null), "Выбрать район");
+  populateSelect(quarterSel, [], "Выбрать квартал");
+  populateSelect(streetSel, [], "Выбрать улицу/массив");
+}
+districtSel?.addEventListener("change", () => {
+  const id = districtSel.value ? +districtSel.value : null;
+  populateSelect(quarterSel, id ? getChildren(id) : [], "Выбрать квартал");
+  populateSelect(streetSel, [], "Выбрать улицу/массив");
+});
+quarterSel?.addEventListener("change", () => {
+  const id = quarterSel.value ? +quarterSel.value : null;
+  populateSelect(streetSel, id ? getChildren(id) : [], "Выбрать улицу/массив");
+});
+
+// и корневые районы для фильтра
+function initDistrictFilter() {
+  // сохраняем текущий выбор
+  const prev = districtFilter.value;
+  districtFilter.innerHTML = `<option value="">Район: все</option>`;
+  getChildren(null).forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.id;
+    opt.textContent = d.name;
+    districtFilter.appendChild(opt);
+  });
+  if (prev) districtFilter.value = prev;
+}
+
+// ======= восстановление/сохранение фильтров =======
 function loadFilters() {
   const saved = JSON.parse(localStorage.getItem(LS_FILTERS) || "{}");
   if (saved.q != null) searchInput.value = saved.q;
@@ -84,6 +166,7 @@ function loadFilters() {
   if (saved.floorMax) floorMax.value = saved.floorMax;
   if (saved.sort)     sortSelect.value  = saved.sort;
   if (saved.onlyFav)  onlyFav.checked = true;
+  if (saved.districtFilter) districtFilter.value = saved.districtFilter;
 }
 function saveFilters() {
   const f = {
@@ -99,7 +182,8 @@ function saveFilters() {
     floorMin: floorMin.value,
     floorMax: floorMax.value,
     sort: sortSelect.value,
-    onlyFav: onlyFav.checked
+    onlyFav: onlyFav.checked,
+    districtFilter: districtFilter.value
   };
   localStorage.setItem(LS_FILTERS, JSON.stringify(f));
 }
@@ -154,6 +238,12 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   const base = editingId ? objects.find(o => o.id === editingId) : null;
 
+  // Формируем локацию из древа
+  const chosenId = streetSel.value || quarterSel.value || districtSel.value || "";
+  const locationId = chosenId ? +chosenId : null;
+  const locationPath = locationId ? getPathNames(locationId) : [];
+  const locationPathIds = locationId ? getPathIds(locationId) : [];
+
   const obj = {
     id: editingId ?? Date.now(),
     title: titleInput.value.trim(),
@@ -169,6 +259,9 @@ form.addEventListener("submit", (e) => {
     lat: tempCoords.lat,
     lng: tempCoords.lng,
     images: [...selectedImages],
+    locationId,
+    locationPath,
+    locationPathIds,
     createdAt: base ? base.createdAt : Date.now(),
   };
 
@@ -182,7 +275,13 @@ form.addEventListener("submit", (e) => {
   renderAll();
 });
 cancelEditBtn.addEventListener("click", clearFormState);
-clearFormBtn.addEventListener("click", () => { form.reset(); selectedImages=[]; tempCoords={lat:null,lng:null}; renderImagePreview(); });
+clearFormBtn.addEventListener("click", () => {
+  form.reset();
+  selectedImages=[];
+  tempCoords={lat:null,lng:null};
+  renderImagePreview();
+  initLocationSelects();
+});
 
 // ======= clearFormState (фикс) =======
 function clearFormState() {
@@ -198,6 +297,7 @@ function clearFormState() {
     markerLayer.removeLayer(formMarker);
     formMarker = null;
   }
+  initLocationSelects();
 }
 
 // ======= избранное =======
@@ -226,6 +326,15 @@ function applyFilters(list) {
   if (floorMin.value) res = res.filter(o => (o.floor ?? 999) >= +floorMin.value);
   if (floorMax.value) res = res.filter(o => (o.floor ?? -999) <= +floorMax.value);
 
+  // фильтр по району (корневой уровень древа)
+  if (districtFilter.value) {
+    const districtId = +districtFilter.value;
+    res = res.filter(o => {
+      if (!o.locationPathIds || !o.locationPathIds.length) return false;
+      return o.locationPathIds.includes(districtId);
+    });
+  }
+
   if (onlyFav.checked) res = res.filter(o => favorites.has(o.id));
 
   if (sortSelect.value==="priceAsc") res.sort((a,b)=>a.price-b.price);
@@ -235,12 +344,28 @@ function applyFilters(list) {
 
   return res;
 }
-[searchInput,categoryFilter,statusFilter,priceMin,priceMax,roomsMin,roomsMax,areaMin,areaMax,floorMin,floorMax,sortSelect,onlyFav]
-  .forEach(el=>el.addEventListener("input",()=>{saveFilters();renderAll();}));
-resetFilters.addEventListener("click",()=>{[searchInput,categoryFilter,statusFilter,priceMin,priceMax,roomsMin,roomsMax,areaMin,areaMax,floorMin,floorMax,sortSelect].forEach(el=>el.value="");onlyFav.checked=false;saveFilters();renderAll();});
+[
+  searchInput,categoryFilter,statusFilter,priceMin,priceMax,roomsMin,roomsMax,
+  areaMin,areaMax,floorMin,floorMax,districtFilter,sortSelect,onlyFav
+].forEach(el => el.addEventListener("input", () => { saveFilters(); renderAll(); }));
+
+resetFilters.addEventListener("click", () => {
+  [
+    searchInput,categoryFilter,statusFilter,priceMin,priceMax,roomsMin,roomsMax,
+    areaMin,areaMax,floorMin,floorMax,sortSelect,districtFilter
+  ].forEach(el => el.value = "");
+  onlyFav.checked = false;
+  saveFilters();
+  renderAll();
+});
 
 // ======= рендер =======
-function renderAll(){const list=applyFilters(objects);renderList(list);renderMap(list);}
+function renderAll() {
+  initDistrictFilter();
+  const list = applyFilters(objects);
+  renderList(list);
+  renderMap(list);
+}
 function renderList(list){
   resultsList.innerHTML="";
   list.forEach(obj=>{
@@ -254,6 +379,7 @@ function renderList(list){
         <div class="card-meta"><span>Цена: ${obj.price.toLocaleString()}</span><span>Комнат: ${obj.rooms}</span></div>
         <div class="card-meta"><span>Категория: ${obj.category}</span><span>Статус: ${obj.status}</span></div>
         ${obj.address?`<div class="card-meta">Адрес: ${obj.address}</div>`:""}
+        ${obj.locationPath?.length ? `<div class="card-meta">Локация: ${obj.locationPath.join(" / ")}</div>` : ""}
         <div class="card-meta">
           ${obj.area?`<span>Площадь: ${obj.area} м²</span>`:""}
           ${obj.floor!=null?`<span>Этаж: ${humanFloor(obj.floor)}</span>`:""}
@@ -273,7 +399,8 @@ function renderMap(list){
   list.forEach(obj=>{
     if(obj.lat==null||obj.lng==null)return;
     const m=L.marker([obj.lat,obj.lng]);
-    m.bindPopup(`<b>${obj.title}</b><br>${obj.price.toLocaleString()}<br>${humanFloor(obj.floor)}`);
+    const loc = obj.locationPath?.length ? `<br>${obj.locationPath.join(" / ")}` : "";
+    m.bindPopup(`<b>${obj.title}</b><br>${obj.price.toLocaleString()}<br>${humanFloor(obj.floor)}${loc}`);
     cluster.addLayer(m);
   });
 }
@@ -287,9 +414,34 @@ function fillFormForEdit(id){
   areaInput.value=o.area||""; floorInput.value=o.floor??""; yearInput.value=o.year||""; houseTypeSel.value=o.houseType||"";
   selectedImages=[...(o.images||[])]; renderImagePreview();
   tempCoords={lat:o.lat,lng:o.lng};
+
+  // восстановление селектов древа
+  initLocationSelects();
+  if (o.locationPathIds?.length) {
+    const ids = o.locationPathIds;
+    // ids: [districtId, quarterId?, streetId?]
+    if (ids[0]) {
+      districtSel.value = ids[0];
+      districtSel.dispatchEvent(new Event("change"));
+    }
+    if (ids[1]) {
+      quarterSel.value = ids[1];
+      quarterSel.dispatchEvent(new Event("change"));
+    }
+    if (ids[2]) {
+      streetSel.value = ids[2];
+    }
+  }
+
   formTitle.textContent="Редактировать объект";
 }
-function deleteObj(id){objects=objects.filter(o=>o.id!==id);favorites.delete(id);localStorage.setItem(LS_OBJECTS,JSON.stringify(objects));localStorage.setItem(LS_FAVS,JSON.stringify([...favorites]));renderAll();}
+function deleteObj(id){
+  objects=objects.filter(o=>o.id!==id);
+  favorites.delete(id);
+  localStorage.setItem(LS_OBJECTS,JSON.stringify(objects));
+  localStorage.setItem(LS_FAVS,JSON.stringify([...favorites]));
+  renderAll();
+}
 
 // ======= утилиты =======
 function humanFloor(v){if(v===-2)return"Подвал"; if(v===-1)return"Цоколь"; return v;}
@@ -315,7 +467,13 @@ importJsonInp.addEventListener("change", (e) => {
     try {
       const data = JSON.parse(ev.target.result);
       if (Array.isArray(data)) {
-        objects = data;
+        // мягко приводим старые объекты без локации
+        objects = data.map(o => ({
+          ...o,
+          locationId: o.locationId ?? null,
+          locationPath: Array.isArray(o.locationPath) ? o.locationPath : (o.locationId ? getPathNames(o.locationId) : []),
+          locationPathIds: Array.isArray(o.locationPathIds) ? o.locationPathIds : (o.locationId ? getPathIds(o.locationId) : []),
+        }));
         localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
         renderAll();
         alert("Импортировано объектов: " + objects.length);
@@ -336,8 +494,16 @@ exportCsvBtn.addEventListener("click", () => {
     alert("Нет объектов для экспорта");
     return;
   }
-  const headers = ["id","title","price","rooms","status","category","address","area","floor","year","houseType","lat","lng","createdAt"];
-  const rows = objects.map(o => headers.map(h => JSON.stringify(o[h] ?? "")).join(","));
+  const headers = ["id","title","price","rooms","status","category","address","area","floor","year","houseType","lat","lng","createdAt","locationId","locationPath"];
+  const rows = objects.map(o => {
+    const locPath = (o.locationPath||[]).join(" / ");
+    const row = [
+      o.id, o.title, o.price, o.rooms, o.status, o.category, o.address ?? "",
+      o.area ?? "", o.floor ?? "", o.year ?? "", o.houseType ?? "",
+      o.lat ?? "", o.lng ?? "", o.createdAt ?? "", o.locationId ?? "", locPath
+    ];
+    return row.map(v => JSON.stringify(v)).join(",");
+  });
   const csv = headers.join(",") + "\n" + rows.join("\n");
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -350,5 +516,8 @@ exportCsvBtn.addEventListener("click", () => {
   document.body.removeChild(dl);
 });
 
+// ======= init =======
+initLocationSelects();
+initDistrictFilter();
 loadFilters();
 renderAll();
