@@ -1,250 +1,159 @@
-// ======= v13.5.2 =======
-console.log("✅ script.js v13.5.2 loaded");
+/* ======= ChatPatch v13.5.2 ======= */
 
-// ======= Константы LS =======
-const LS_OBJECTS = "objects";
-const LS_FILTERS = "filters_v13_5";
-const LS_FAVS    = "favorites_v13_5";
-
-// ======= Данные =======
-let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
-let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
-let editingId = null;
-let selectedImages = [];
-let tempCoords = { lat: null, lng: null };
-
-// ======= Дерево/типы =======
-let treeNodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
-let nodeTypes = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
-const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
-defaultTypes.forEach(t => { if (!nodeTypes.includes(t)) nodeTypes.push(t); });
-
-// 🔥 теперь extraParams всегда берём заново
-function getExtraParams() {
-  return JSON.parse(localStorage.getItem("extraParams") || "[]");
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #0f1115;
+  color: #e8eaf0;
+  line-height: 1.4;
 }
 
-// ======= helpers =======
-const $ = (id) => document.getElementById(id);
-const getNode = (id) => treeNodes.find(n => n.id === id) || null;
-const childrenOf = (parentId) => treeNodes.filter(n => n.parent === parentId);
-const typed = (type) => treeNodes.filter(n => n.type === type);
-const nameById = (id) => (getNode(id)?.name) || "";
-const num = v => (v==="" || v==null ? null : +v);
-
-// ======= карта =======
-const map = L.map("map").setView([41.3111, 69.2797], 12);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
-const markerLayer = L.layerGroup().addTo(map);
-const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 });
-map.addLayer(cluster);
-let formMarker = null;
-
-// ======= фильтры DOM =======
-const cityFilter = $("cityFilter");
-const districtFilter = $("districtFilter");
-const streetFilter = $("streetFilter");
-const categoryFilter = $("categoryFilter");
-const statusFilter = $("statusFilter");
-const priceMin = $("priceMin"), priceMax = $("priceMax");
-const roomsMin = $("roomsMin"), roomsMax = $("roomsMax");
-const floorMin = $("floorMin"), floorMax = $("floorMax");
-const floorsMin= $("floorsMin"), floorsMax= $("floorsMax");
-const areaMin  = $("areaMin"),  areaMax  = $("areaMax");
-const yearMin  = $("yearMin"),  yearMax  = $("yearMax");
-const houseTypeFilter = $("houseTypeFilter");
-const sortSelect = $("sortSelect");
-const onlyFav = $("onlyFav");
-const resetFilters = $("resetFilters");
-const filtersInfo = $("filtersInfo");
-const paramsFiltersBox = $("dynamicParamsFilters");
-const adminSyncInfo = $("adminSyncInfo");
-
-// ======= форма DOM =======
-const resultsList   = $("resultsList");
-const form          = $("objectForm");
-const formTitle     = $("formTitle");
-const titleInput    = $("title");
-const priceInput    = $("price");
-const roomsInput    = $("rooms");
-const statusInput   = $("status");
-const categoryInput = $("category");
-const addressInput  = $("address");
-const areaInput     = $("area");
-const floorInput    = $("floor");
-const floorsInput   = $("floors");
-const yearInput     = $("year");
-const houseTypeSel  = $("houseType");
-const imagesInput   = $("images");
-const imagePreview  = $("imagePreview");
-const pickOnMapBtn  = $("pickOnMap");
-const coordsBadge   = $("coordsBadge");
-const cancelEditBtn = $("cancelEdit");
-const clearFormBtn  = $("clearForm");
-const citySel = $("city");
-const districtSel = $("district");
-const streetSel = $("street");
-
-// ======= утилиты =======
-function setOptions(select, items, placeholder) {
-  const prev = select.value;
-  select.innerHTML = `<option value="">${placeholder}</option>`;
-  items.forEach(n => {
-    const opt = document.createElement("option");
-    opt.value = String(n.id);
-    opt.textContent = n.name;
-    select.appendChild(opt);
-  });
-  if (prev && [...select.options].some(o => o.value === prev)) select.value = prev;
-}
-function showInfo(msg) { filtersInfo.style.display = "block"; filtersInfo.textContent = msg; }
-function hideInfo() { filtersInfo.style.display = "none"; }
-
-// ======= Каскад фильтров =======
-function initCascadeFilters() {
-  setOptions(cityFilter, typed("Город"), "Город");
-  setOptions(districtFilter, [], "Район");
-  setOptions(streetFilter, [], "Массив / улица");
-  setOptions(categoryFilter, typed("Категория"), "Категория");
-
-  cityFilter.onchange = () => {
-    const id = cityFilter.value ? +cityFilter.value : null;
-    setOptions(districtFilter, id ? childrenOf(id).filter(n=>n.type==="Район") : [], "Район");
-    setOptions(streetFilter, [], "Массив / улица");
-    buildParamsFilters(); saveFilters(); renderAll();
-  };
-  districtFilter.onchange = () => {
-    const id = districtFilter.value ? +districtFilter.value : null;
-    setOptions(streetFilter, id ? childrenOf(id).filter(n=>n.type==="Массив / улица") : [], "Массив / улица");
-    saveFilters(); renderAll();
-  };
-  streetFilter.onchange = () => { saveFilters(); renderAll(); };
-  categoryFilter.onchange = () => { buildParamsFilters(); saveFilters(); renderAll(); };
-  statusFilter.onchange = () => { saveFilters(); renderAll(); };
-  houseTypeFilter.onchange = () => { saveFilters(); renderAll(); };
+h1, h2, h3 {
+  margin: 0 0 12px;
+  font-weight: 600;
 }
 
-// ======= Каскад формы =======
-function initCascadeForm() {
-  setOptions(citySel, typed("Город"), "Город");
-  setOptions(districtSel, [], "Район");
-  setOptions(streetSel, [], "Массив / улица");
-  setOptions(categoryInput, typed("Категория"), "Категория");
+h1 { font-size: 24px; }
+h2 { font-size: 20px; }
+h3 { font-size: 18px; }
 
-  citySel.onchange = () => {
-    const id = citySel.value ? +citySel.value : null;
-    setOptions(districtSel, id ? childrenOf(id).filter(n=>n.type==="Район") : [], "Район");
-    setOptions(streetSel, [], "Массив / улица");
-  };
-  districtSel.onchange = () => {
-    const id = districtSel.value ? +districtSel.value : null;
-    setOptions(streetSel, id ? childrenOf(id).filter(n=>n.type==="Массив / улица") : [], "Массив / улица");
-  };
+a { color: #4da3ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
 
-  categoryInput.onchange = () => { renderParamsForm(); };
-  renderParamsForm();
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #161a22;
+  padding: 12px 20px;
+  border-bottom: 1px solid #242938;
+}
+.version { font-size: 13px; opacity: 0.7; }
+.admin-link { font-size: 13px; }
+
+.card {
+  background: #161a22;
+  border: 1px solid #242938;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px;
 }
 
-// ======= Динамические параметры: форма =======
-function paramsByCategoryId(catId) {
-  return getExtraParams().filter(p => p.categoryId === catId);
-}
-function renderParamsForm() {
-  const box = $("dynamicParamsForm");
-  box.innerHTML = "";
-  const catId = categoryInput.value ? +categoryInput.value : null;
-  if (!catId) return;
-
-  const params = paramsByCategoryId(catId);
-  params.forEach(p => {
-    const group = document.createElement("div");
-    group.className = "param-group";
-    group.innerHTML = `<div class="param-title">${p.name}</div>`;
-    const vals = document.createElement("div");
-    vals.className = "param-values";
-    (p.values||[]).forEach(val => {
-      const chip = document.createElement("label");
-      chip.className = "param-chip";
-      chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
-      vals.appendChild(chip);
-    });
-    group.appendChild(vals);
-    box.appendChild(group);
-  });
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
 }
 
-// ======= Динамические параметры: фильтры =======
-function buildParamsFilters() {
-  paramsFiltersBox.innerHTML = "";
-  const catId = categoryFilter.value ? +categoryFilter.value : null;
-  if (!catId) return;
+.range { display: flex; gap: 6px; }
+.range input { flex: 1; }
 
-  const params = paramsByCategoryId(catId);
-  params.forEach(p => {
-    const group = document.createElement("div");
-    group.className = "param-group";
-    group.innerHTML = `<div class="param-title">${p.name}</div>`;
-    const vals = document.createElement("div");
-    vals.className = "param-values";
-    (p.values||[]).forEach(val => {
-      const chip = document.createElement("label");
-      chip.className = "param-chip";
-      chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
-      chip.querySelector("input").addEventListener("change", ()=>{ saveFilters(); renderAll(); });
-      vals.appendChild(chip);
-    });
-    group.appendChild(vals);
-    paramsFiltersBox.appendChild(group);
-  });
+input, select, button, textarea {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #242938;
+  background: #0d1016;
+  color: #e8eaf0;
+  font-size: 14px;
 }
 
-// ======= Подсказка о синхронизации =======
-function updateAdminSyncInfo() {
-  const cats = treeNodes.filter(n => n.type === "Категория").length;
-  const params = getExtraParams().length;
-  if (cats || params) {
-    adminSyncInfo.style.color = "#9aa3b2";
-    adminSyncInfo.textContent = `Загружено: ${cats} категорий, ${params} параметров из админки`;
-  } else {
-    adminSyncInfo.style.color = "#ff6b6b";
-    adminSyncInfo.textContent = "❌ Нет данных из админки";
-  }
+button { cursor: pointer; }
+
+.btn {
+  background: #4da3ff;
+  border-color: #4da3ff;
+  color: #001428;
+  font-weight: 600;
+}
+.btn.ghost {
+  background: transparent;
+  color: #4da3ff;
+}
+.btn.danger {
+  background: #ff6b6b;
+  border-color: #ff6b6b;
+  color: #fff;
 }
 
-// ======= фильтрация =======
-function applyFilters(list) {
-  let res = [...list];
-  const categoryName = categoryFilter.value ? nameById(+categoryFilter.value) : "";
-
-  if (categoryName) res = res.filter(o => (o.category||"") === categoryName);
-
-  // динамические параметры
-  const selectedByParam = {};
-  paramsFiltersBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-    if (cb.checked) {
-      const p = cb.dataset.param;
-      if (!selectedByParam[p]) selectedByParam[p] = new Set();
-      selectedByParam[p].add(cb.value);
-    }
-  });
-  Object.keys(selectedByParam).forEach(pname=>{
-    const wanted = selectedByParam[pname];
-    res = res.filter(o => {
-      const got = new Set(o.extra?.[pname] || []);
-      for (const val of wanted) { if (got.has(val)) return true; }
-      return false;
-    });
-  });
-
-  return res;
+.only-fav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
 }
 
-// ======= init =======
-function init() {
-  initCascadeFilters();
-  initCascadeForm();
-  buildParamsFilters();
-  updateAdminSyncInfo();   // 🔥 новая строка
-  renderAll();
+.hint {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 4px;
 }
-init();
+
+#map { height: 400px; border-radius: 12px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.item {
+  background: #0d1016;
+  border: 1px solid #242938;
+  border-radius: 12px;
+  padding: 12px;
+}
+.item h3 { margin: 0 0 8px; font-size: 16px; }
+.item .meta { font-size: 13px; opacity: 0.8; }
+.item .price { font-weight: bold; margin: 6px 0; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #242938;
+}
+
+.form-row { display: flex; gap: 8px; margin-bottom: 10px; }
+
+.preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.preview img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.params-box {
+  margin: 12px 0;
+  display: grid;
+  gap: 10px;
+}
+
+.param-group { background: #0d1016; border: 1px solid #242938; border-radius: 8px; padding: 8px; }
+.param-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.param-values { display: flex; flex-wrap: wrap; gap: 6px; }
+.param-chip {
+  background: #161a22;
+  border: 1px solid #242938;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.form-actions { display: flex; gap: 10px; margin-top: 10px; }
+
+.footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 13px;
+  opacity: 0.7;
+}
