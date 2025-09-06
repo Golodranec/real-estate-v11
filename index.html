@@ -1,11 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Фильтры недвижимости</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
 <div class="card">
   <h2>Фильтры</h2>
   <div class="filters">
 
     <!-- Базовые -->
-    <select id="city"><option value="">Город</option><option>Ташкент</option></select>
-    <select id="district"><option value="">Район</option></select>
-    <select id="street"><option value="">Улица / массив</option></select>
+    <select id="city">
+      <option value="">Город</option>
+      <option>Ташкент</option>
+      <option>Самарканд</option>
+    </select>
+
+    <select id="district">
+      <option value="">Район</option>
+      <option>Мирабад</option>
+      <option>Юнусабад</option>
+    </select>
+
+    <select id="street">
+      <option value="">Улица / массив</option>
+      <option>ул. Навои</option>
+      <option>массив Восточный</option>
+    </select>
+
     <select id="category">
       <option value="">Категория</option>
       <option value="apartment">Квартиры</option>
@@ -46,5 +70,55 @@
       <input type="number" placeholder="Площадь до">
     </div>
 
+    <!-- Мультиселект: Удобства -->
+    <div class="multiselect" id="amenities">
+      Удобства
+      <div class="multiselect-menu">
+        <label><input type="checkbox"> Интернет</label>
+        <label><input type="checkbox"> Кондиционер</label>
+        <label><input type="checkbox"> Холодильник</label>
+        <label><input type="checkbox"> Телевизор</label>
+        <label><input type="checkbox"> Стиральная машина</label>
+        <label><input type="checkbox"> Кухонный гарнитур</label>
+      </div>
+    </div>
+
+    <!-- Мультиселект: Ремонт -->
+    <div class="multiselect" id="repair">
+      Ремонт
+      <div class="multiselect-menu">
+        <label><input type="checkbox"> Авторский проект</label>
+        <label><input type="checkbox"> Евроремонт</label>
+        <label><input type="checkbox"> Средний</label>
+        <label><input type="checkbox"> Требует ремонта</label>
+        <label><input type="checkbox"> Черновая отделка</label>
+      </div>
+    </div>
+
+    <!-- Мультиселект: Парковка -->
+    <div class="multiselect" id="parking">
+      Парковка
+      <div class="multiselect-menu">
+        <label><input type="checkbox"> Есть</label>
+        <label><input type="checkbox"> Нет</label>
+      </div>
+    </div>
+
   </div>
 </div>
+
+<script>
+  // Открытие/закрытие мультиселектов
+  document.querySelectorAll(".multiselect").forEach(ms => {
+    ms.addEventListener("click", e => {
+      ms.classList.toggle("open");
+      e.stopPropagation();
+    });
+  });
+  document.body.addEventListener("click", () => {
+    document.querySelectorAll(".multiselect").forEach(ms => ms.classList.remove("open"));
+  });
+</script>
+
+</body>
+</html>
