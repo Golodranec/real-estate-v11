@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.4</title>
+  <title>Админка — v13.4.2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
@@ -22,21 +22,30 @@
 
 <h1>Админка: дерево фильтров</h1>
 
+<!-- Блок: управление типами -->
+<div class="card">
+  <h3>Типы узлов</h3>
+  <div class="row">
+    <input id="typeName" placeholder="Новый тип (например: Микрорайон)" />
+    <button id="addTypeBtn" class="btn">Добавить тип</button>
+    <button id="clearTypes" class="danger">Сбросить к базовым</button>
+  </div>
+  <div style="margin-top:8px; font-size:14px; opacity:.8">
+    Базовые: <b>Город</b>, <b>Район</b>, <b>Массив / улица</b>, <b>Категория</b>. Можно добавить свои.
+  </div>
+</div>
+
+<!-- Блок: управление деревом -->
 <div class="card">
   <div class="row">
     <input id="nodeName" placeholder="Название" />
-    <select id="nodeType">
-      <option value="Город">Город</option>
-      <option value="Район">Район</option>
-      <option value="Массив / улица">Массив / улица</option>
-      <option value="Категория">Категория</option>
-    </select>
+    <select id="nodeType"></select>
     <select id="nodeParent"></select>
     <button id="addBtn" class="btn">Добавить</button>
-    <button id="clearAll" class="danger">Очистить всё</button>
+    <button id="clearAll" class="danger">Очистить всё дерево</button>
   </div>
   <div style="margin-top:8px; opacity:.8; font-size:14px">
-    Рекомендуемая структура: Город → Район → Массив / улица. Категория — отдельные корневые узлы.
+    Рекомендуемая структура: Город → Район → <b>Массив / улица</b>. Категория — отдельные корневые узлы.
   </div>
 </div>
 
@@ -47,46 +56,74 @@
 
 <script>
 let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
+let types = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
+defaultTypes.forEach(t => { if (!types.includes(t)) types.push(t); });
+
 const $ = id => document.getElementById(id);
 
-function save() { localStorage.setItem("treeNodes", JSON.stringify(nodes)); render(); fillParent(); }
+function saveNodes() { localStorage.setItem("treeNodes", JSON.stringify(nodes)); renderTree(); fillParent(); }
+function saveTypes() { localStorage.setItem("nodeTypes", JSON.stringify(types)); fillTypes(); }
+
+function fillTypes() {
+  const sel = $("nodeType");
+  sel.innerHTML = "";
+  types.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t; opt.textContent = t;
+    sel.appendChild(opt);
+  });
+}
 function fillParent() {
   const sel = $("nodeParent");
   sel.innerHTML = `<option value="">(без родителя)</option>`;
-  nodes.forEach(n => { const o=document.createElement("option"); o.value=n.id; o.textContent=`${n.name} (${n.type})`; sel.appendChild(o); });
+  nodes.forEach(n => {
+    const o = document.createElement("option");
+    o.value = n.id; o.textContent = `${n.name} (${n.type})`;
+    sel.appendChild(o);
+  });
 }
 function kids(parentId) { return nodes.filter(n=>n.parent===parentId); }
 
-function render(parentId=null, container=$("tree")) {
+function renderTree(parentId=null, container=$("tree")) {
   if (parentId===null) container.innerHTML="";
-  const ul = document.createElement("ul"); ul.className="tree";
+  const ul=document.createElement("ul"); ul.className="tree";
   kids(parentId).forEach(n=>{
-    const li = document.createElement("li");
-    const row = document.createElement("div"); row.className="node";
-    const t = document.createElement("span"); t.textContent=n.name;
-    const type = document.createElement("span"); type.className="node-type"; type.textContent=`(${n.type})`;
-    const del = document.createElement("button"); del.className="danger"; del.textContent="Удалить";
-    del.onclick = () => {
-      const delSet = new Set([n.id]); let changed = true;
-      while (changed) { changed=false; nodes.forEach(x=>{ if (delSet.has(x.parent)) { delSet.add(x.id); changed=true; } }); }
-      nodes = nodes.filter(x=>!delSet.has(x.id)); save();
+    const li=document.createElement("li");
+    const row=document.createElement("div"); row.className="node";
+    const name=document.createElement("span"); name.textContent=n.name;
+    const type=document.createElement("span"); type.className="node-type"; type.textContent=`(${n.type})`;
+    const del=document.createElement("button"); del.className="danger"; del.textContent="Удалить";
+    del.onclick=()=>{
+      const delSet=new Set([n.id]); let changed=true;
+      while(changed){ changed=false; nodes.forEach(x=>{ if(delSet.has(x.parent)){ delSet.add(x.id); changed=true; } }); }
+      nodes=nodes.filter(x=>!delSet.has(x.id)); saveNodes();
     };
-    row.appendChild(t); row.appendChild(type); row.appendChild(del); li.appendChild(row);
-    render(n.id, li); ul.appendChild(li);
+    row.appendChild(name); row.appendChild(type); row.appendChild(del); li.appendChild(row);
+    renderTree(n.id, li); ul.appendChild(li);
   });
   container.appendChild(ul);
 }
 
-$("addBtn").onclick = () => {
-  const name = $("nodeName").value.trim(); if (!name) return alert("Введи название");
-  const type = $("nodeType").value;
-  const parent = $("nodeParent").value ? +$("nodeParent").value : null;
-  nodes.push({ id: Date.now(), name, type, parent });
-  $("nodeName").value = ""; save();
+$("addBtn").onclick=()=>{
+  const name=$("nodeName").value.trim(); if(!name) return alert("Введите название");
+  const type=$("nodeType").value;
+  const parent=$("nodeParent").value?+$("nodeParent").value:null;
+  nodes.push({id:Date.now(),name,type,parent});
+  $("nodeName").value=""; saveNodes();
 };
-$("clearAll").onclick = () => { if (confirm("Удалить всё дерево?")) { nodes=[]; save(); } };
+$("clearAll").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
 
-save();
+$("addTypeBtn").onclick=()=>{
+  const t=$("typeName").value.trim(); if(!t) return alert("Введите название типа");
+  if(types.includes(t)) return alert("Такой тип уже есть");
+  types.push(t); $("typeName").value=""; saveTypes();
+};
+$("clearTypes").onclick=()=>{
+  if(confirm("Сбросить типы к базовым?")){ types=[...defaultTypes]; saveTypes(); }
+};
+
+saveNodes(); saveTypes();
 </script>
 </body>
 </html>
