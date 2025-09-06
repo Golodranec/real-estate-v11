@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.4.2</title>
+  <title>Каталог недвижимости — v13.5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Leaflet -->
@@ -11,13 +11,13 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
-  <link rel="stylesheet" href="style.css?v=13.4.2" />
+  <link rel="stylesheet" href="style.css?v=13.5" />
 </head>
 <body>
   <header class="topbar">
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13.4.2</div>
-    <a class="admin-link" href="admin.html" target="_blank">Админка (дерево)</a>
+    <div class="version">ChatPatch v13.5</div>
+    <a class="admin-link" href="admin.html" target="_blank">Админка (дерево и параметры)</a>
   </header>
 
   <!-- Фильтры -->
@@ -28,12 +28,28 @@
     <select id="streetFilter"><option value="">Массив / улица</option></select>
 
     <select id="categoryFilter"><option value="">Категория</option></select>
+    <select id="statusFilter">
+      <option value="">Подкатегория</option>
+      <option value="sale">Продается</option>
+      <option value="rent">Сдается</option>
+      <option value="exchange">Обмен</option>
+    </select>
 
     <div class="range"><input id="priceMin" type="number" placeholder="Цена от" /><input id="priceMax" type="number" placeholder="Цена до" /></div>
     <div class="range"><input id="roomsMin" type="number" placeholder="Комнат от" /><input id="roomsMax" type="number" placeholder="Комнат до" /></div>
     <div class="range"><input id="floorMin" type="number" placeholder="Этаж от" /><input id="floorMax" type="number" placeholder="Этаж до" /></div>
     <div class="range"><input id="floorsMin" type="number" placeholder="Этажность от" /><input id="floorsMax" type="number" placeholder="Этажность до" /></div>
     <div class="range"><input id="areaMin" type="number" step="0.1" placeholder="Площадь от" /><input id="areaMax" type="number" step="0.1" placeholder="Площадь до" /></div>
+    <div class="range"><input id="yearMin" type="number" placeholder="Год от" /><input id="yearMax" type="number" placeholder="Год до" /></div>
+
+    <select id="houseTypeFilter">
+      <option value="">Тип дома</option>
+      <option value="brick">Кирпичный</option>
+      <option value="panel">Панельный</option>
+      <option value="block">Блочный</option>
+      <option value="monolithic">Монолит</option>
+      <option value="wood">Деревянный</option>
+    </select>
 
     <select id="sortSelect">
       <option value="">Сортировка</option>
@@ -47,8 +63,8 @@
     <button id="resetFilters" class="btn ghost">Сбросить</button>
     <div id="filtersInfo" class="hint" style="grid-column:1/-1;display:none"></div>
 
-    <!-- Доп. типы из админки (если добавишь свои) -->
-    <div id="extraFilters" class="extra" style="grid-column:1/-1;"></div>
+    <!-- Динамические параметры (мультивыбор чекбоксы) -->
+    <div id="dynamicParamsFilters" class="params-box" style="grid-column:1/-1;"></div>
 
     <div class="tools" style="grid-column:1/-1">
       <button id="exportJson" class="btn">Экспорт JSON</button>
@@ -92,7 +108,7 @@
 
       <!-- цифры -->
       <div class="form-row">
-        <div class="range"><input id="rooms" type="number" min="1" step="1" placeholder="Комнаты" /><input id="year" type="number" min="1800" max="2100" step="1" placeholder="Год" /></div>
+        <div class="range"><input id="rooms" type="number" min="0" step="1" placeholder="Комнаты" /><input id="year" type="number" min="1800" max="2100" step="1" placeholder="Год" /></div>
         <div class="range"><input id="price" type="number" placeholder="Цена" /><input id="area" type="number" step="0.1" placeholder="Площадь, м²" /></div>
         <div class="range"><input id="floor" type="number" placeholder="Этаж" /><input id="floors" type="number" placeholder="Этажность" /></div>
       </div>
@@ -111,6 +127,9 @@
         </select>
       </div>
 
+      <!-- динамические параметры категории (чекбоксы) -->
+      <div id="dynamicParamsForm" class="params-box"></div>
+
       <!-- карта и фото -->
       <div class="form-row">
         <button id="pickOnMap" type="button" class="btn">Поставить точку на карте</button>
@@ -128,13 +147,13 @@
     </form>
   </section>
 
-  <footer class="footer">Версия: ChatPatch v13.4.2</footer>
+  <footer class="footer">Версия: ChatPatch v13.5</footer>
 
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <!-- MarkerCluster -->
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/markercluster.js"></script>
 
-  <script src="script.js?v=13.4.2"></script>
+  <script src="script.js?v=13.5"></script>
 </body>
 </html>
