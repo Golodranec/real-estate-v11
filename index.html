@@ -2,70 +2,135 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.3.1</title>
+  <title>Каталог недвижимости — v13.4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <link rel="stylesheet" href="style.css?v=13.4" />
 </head>
 <body>
+  <header class="topbar">
+    <h1>Каталог недвижимости</h1>
+    <div class="version">ChatPatch v13.4</div>
+    <a class="admin-link" href="admin.html" target="_blank">Админка (дерево)</a>
+  </header>
 
-<header class="topbar">
-  <h1>Каталог недвижимости</h1>
-  <div class="version">ChatPatch v13.3.1</div>
-  <a class="admin-link" href="admin.html" target="_blank">Открыть админку</a>
-</header>
-
-<section class="card">
-  <h2>Фильтры</h2>
-  <div id="filtersInfo" class="hint" style="display:none"></div>
-
-  <div class="filters">
-    <!-- каскад -->
+  <!-- Фильтры -->
+  <section class="filters card">
     <select id="cityFilter"><option value="">Город</option></select>
     <select id="districtFilter"><option value="">Район</option></select>
-    <select id="streetFilter"><option value="">Улица / массив</option></select>
+    <select id="streetFilter"><option value="">Массив / улица</option></select>
 
-    <!-- категория -->
     <select id="categoryFilter"><option value="">Категория</option></select>
 
-    <!-- цена -->
-    <div class="range">
-      <input type="number" id="priceMin" placeholder="Цена от" />
-      <input type="number" id="priceMax" placeholder="Цена до" />
-    </div>
+    <div class="range"><input id="priceMin" type="number" placeholder="Цена от" /><input id="priceMax" type="number" placeholder="Цена до" /></div>
+    <div class="range"><input id="roomsMin" type="number" placeholder="Комнат от" /><input id="roomsMax" type="number" placeholder="Комнат до" /></div>
+    <div class="range"><input id="floorMin" type="number" placeholder="Этаж от" /><input id="floorMax" type="number" placeholder="Этаж до" /></div>
+    <div class="range"><input id="floorsMin" type="number" placeholder="Этажность от" /><input id="floorsMax" type="number" placeholder="Этажность до" /></div>
+    <div class="range"><input id="areaMin" type="number" step="0.1" placeholder="Площадь от" /><input id="areaMax" type="number" step="0.1" placeholder="Площадь до" /></div>
 
-    <!-- комнаты -->
-    <div class="range">
-      <input type="number" id="roomsMin" placeholder="Комнат от" />
-      <input type="number" id="roomsMax" placeholder="Комнат до" />
-    </div>
+    <select id="sortSelect">
+      <option value="">Сортировка</option>
+      <option value="priceAsc">Цена ↑</option>
+      <option value="priceDesc">Цена ↓</option>
+      <option value="dateNew">Новые</option>
+      <option value="dateOld">Старые</option>
+    </select>
 
-    <!-- этаж -->
-    <div class="range">
-      <input type="number" id="floorMin" placeholder="Этаж от" />
-      <input type="number" id="floorMax" placeholder="Этаж до" />
-    </div>
-
-    <!-- этажность дома -->
-    <div class="range">
-      <input type="number" id="floorsMin" placeholder="Этажность от" />
-      <input type="number" id="floorsMax" placeholder="Этажность до" />
-    </div>
-
-    <!-- площадь -->
-    <div class="range">
-      <input type="number" id="areaMin" placeholder="Площадь от" />
-      <input type="number" id="areaMax" placeholder="Площадь до" />
-    </div>
-
+    <label class="only-fav"><input id="onlyFav" type="checkbox" /> Только избранные</label>
     <button id="resetFilters" class="btn ghost">Сбросить</button>
-  </div>
-</section>
+    <div id="filtersInfo" class="hint" style="grid-column:1/-1;display:none"></div>
 
-<section id="results" class="card">
-  <h2>Результаты</h2>
-  <div id="resultsList" class="grid"></div>
-</section>
+    <div class="tools" style="grid-column:1/-1">
+      <button id="exportJson" class="btn">Экспорт JSON</button>
+      <button id="importJsonBtn" class="btn">Импорт JSON</button>
+      <input id="importJson" type="file" accept="application/json" hidden />
+      <button id="exportCsv" class="btn ghost">Экспорт CSV</button>
+    </div>
+  </section>
 
-<script src="script.js"></script>
+  <!-- Карта -->
+  <section id="mapContainer" class="card">
+    <div id="map"></div>
+    <div class="hint">Клик по карте — поставить точку. Клик по попапу — скролл к карточке.</div>
+  </section>
+
+  <!-- Список карточек -->
+  <section id="results" class="card">
+    <div id="resultsList" class="grid"></div>
+  </section>
+
+  <!-- Форма добавления/редактирования -->
+  <section class="card">
+    <h2 id="formTitle">Добавить объект</h2>
+    <form id="objectForm">
+      <!-- тип + статус -->
+      <div class="form-row">
+        <select id="category" required></select>
+        <select id="status" required>
+          <option value="sale">Продается</option>
+          <option value="rent">Сдается</option>
+          <option value="exchange">Обмен</option>
+        </select>
+      </div>
+
+      <!-- локация -->
+      <div class="form-row">
+        <select id="city"></select>
+        <select id="district"></select>
+        <select id="street"></select>
+      </div>
+
+      <!-- цифры -->
+      <div class="form-row">
+        <div class="range"><input id="rooms" type="number" min="1" step="1" placeholder="Комнаты" /><input id="year" type="number" min="1800" max="2100" step="1" placeholder="Год" /></div>
+        <div class="range"><input id="price" type="number" placeholder="Цена" /><input id="area" type="number" step="0.1" placeholder="Площадь, м²" /></div>
+        <div class="range"><input id="floor" type="number" placeholder="Этаж" /><input id="floors" type="number" placeholder="Этажность" /></div>
+      </div>
+
+      <!-- адрес/название -->
+      <div class="form-row">
+        <input id="title" type="text" placeholder="Название объявления" />
+        <input id="address" type="text" placeholder="Адрес (необязательно)" />
+        <select id="houseType">
+          <option value="">Тип дома</option>
+          <option value="brick">Кирпичный</option>
+          <option value="panel">Панельный</option>
+          <option value="block">Блочный</option>
+          <option value="monolithic">Монолит</option>
+          <option value="wood">Деревянный</option>
+        </select>
+      </div>
+
+      <!-- карта и фото -->
+      <div class="form-row">
+        <button id="pickOnMap" type="button" class="btn">Поставить точку на карте</button>
+        <span id="coordsBadge" class="badge muted">Координаты не выбраны</span>
+        <input id="images" type="file" accept="image/*" multiple />
+      </div>
+
+      <div id="imagePreview" class="preview"></div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Сохранить</button>
+        <button id="cancelEdit" type="button" class="btn ghost">Отмена</button>
+        <button id="clearForm" type="button" class="btn danger ghost">Очистить</button>
+      </div>
+    </form>
+  </section>
+
+  <footer class="footer">Версия: ChatPatch v13.4</footer>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- MarkerCluster -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script src="script.js?v=13.4"></script>
 </body>
 </html>
