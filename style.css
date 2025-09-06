@@ -62,8 +62,6 @@ body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font
 
 .footer { text-align:center; opacity:.6; margin-top:10px; font-size:14px; }
 
-.pulse{box-shadow:0 0 0 3px rgba(77,163,255,.5) inset}
-
 @media (max-width: 1000px) {
   .filters { grid-template-columns: repeat(2, 1fr); }
   .form-row { grid-template-columns: 1fr; }
