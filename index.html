@@ -2,15 +2,15 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v12</title>
+  <title>Каталог недвижимости — v12.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=12.1" />
 </head>
 <body>
   <header class="topbar">
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v12</div>
+    <div class="version">ChatPatch v12.1</div>
   </header>
 
   <!-- Поиск + фильтры -->
@@ -29,19 +29,14 @@
       <option value="">Статус: все</option>
       <option value="sale">Продается</option>
       <option value="rent">Сдается</option>
-      <option value="sold">Продано/Сдано</option>
     </select>
 
     <input id="priceMin" type="number" placeholder="Цена от" />
     <input id="priceMax" type="number" placeholder="Цена до" />
 
-    <select id="roomsFilter">
-      <option value="">Комнаты: все</option>
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4">4+</option>
-    </select>
+    <!-- Диапазон комнат -->
+    <input id="roomsMin" type="number" min="0" step="1" placeholder="Комнат от" />
+    <input id="roomsMax" type="number" min="0" step="1" placeholder="Комнат до" />
 
     <select id="sortSelect">
       <option value="">Сортировка</option>
@@ -79,7 +74,6 @@
         <select id="status" required>
           <option value="sale">Продается</option>
           <option value="rent">Сдается</option>
-          <option value="sold">Продано/Сдано</option>
         </select>
 
         <select id="category" required>
@@ -89,7 +83,7 @@
           <option value="commercial">Коммерция</option>
         </select>
 
-        <input id="address" type="text" placeholder="Адрес" />
+        <input id="address" type="text" placeholder="Адрес (необязательно)" />
       </div>
 
       <!-- Доп. поля -->
@@ -127,9 +121,9 @@
     </form>
   </section>
 
-  <footer class="footer">Версия: ChatPatch v12</footer>
+  <footer class="footer">Версия: ChatPatch v12.1</footer>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="script.js?v=12"></script>
+  <script src="script.js?v=12.1"></script>
 </body>
 </html>
