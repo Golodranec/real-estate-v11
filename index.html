@@ -4,43 +4,20 @@
   <meta charset="UTF-8" />
   <title>Каталог недвижимости — v11</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v11</div>
-  </header>
+  <h1>Каталог недвижимости</h1>
 
   <!-- Панель фильтров -->
-  <section class="filters card">
-    <select id="categoryFilter">
-      <option value="">Категория: все</option>
-      <option value="apartment">Квартира</option>
-      <option value="house">Дом</option>
-      <option value="land">Участок</option>
-      <option value="commercial">Коммерция</option>
-    </select>
+  <div class="filters">
+    <select id="categoryFilter"></select>
+    <select id="statusFilter"></select>
+    <input type="number" id="priceMin" placeholder="Цена от">
+    <input type="number" id="priceMax" placeholder="Цена до">
+    <select id="roomsFilter"></select>
 
-    <select id="statusFilter">
-      <option value="">Статус: все</option>
-      <option value="sale">Продается</option>
-      <option value="rent">Сдается</option>
-      <option value="sold">Продано/Сдано</option>
-    </select>
-
-    <input id="priceMin" type="number" placeholder="Цена от" />
-    <input id="priceMax" type="number" placeholder="Цена до" />
-
-    <select id="roomsFilter">
-      <option value="">Комнаты: все</option>
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4">4+</option>
-    </select>
-
+    <!-- Новый селект сортировки -->
     <select id="sortSelect">
       <option value="">Сортировка</option>
       <option value="priceAsc">Цена ↑</option>
@@ -48,71 +25,32 @@
       <option value="dateNew">Новые</option>
       <option value="dateOld">Старые</option>
     </select>
+  </div>
 
-    <button id="resetFilters" class="btn ghost">Сбросить</button>
-  </section>
+  <!-- Список объектов -->
+  <div id="objectsList"></div>
 
   <!-- Карта -->
-  <section id="mapContainer" class="card">
-    <div id="map"></div>
-    <div class="hint">Клик по фото в попапе — скролл к карточке</div>
-  </section>
+  <div id="map"></div>
 
-  <!-- Список карточек -->
-  <section id="results" class="card">
-    <div id="resultsList" class="grid"></div>
-  </section>
+  <!-- Форма добавления / редактирования -->
+  <form id="objectForm">
+    <input type="text" id="title" placeholder="Название" required>
+    <input type="number" id="price" placeholder="Цена" required>
+    <input type="number" id="rooms" placeholder="Комнаты" required>
+    <select id="status"></select>
+    <select id="category"></select>
 
-  <!-- Форма добавления/редактирования -->
-  <section class="card">
-    <h2 id="formTitle">Добавить объект</h2>
-    <form id="addForm">
-      <div class="form-row">
-        <input id="title" type="text" placeholder="Название" required />
-        <input id="price" type="number" placeholder="Цена" required />
-        <input id="rooms" type="number" min="1" step="1" placeholder="Комнаты" required />
-      </div>
+    <input type="file" id="images" multiple accept="image/*">
+    <div id="imagePreview"></div>
 
-      <div class="form-row">
-        <select id="status" required>
-          <option value="sale">Продается</option>
-          <option value="rent">Сдается</option>
-          <option value="sold">Продано/Сдано</option>
-        </select>
+    <button type="submit">Сохранить</button>
+  </form>
 
-        <select id="category" required>
-          <option value="apartment">Квартира</option>
-          <option value="house">Дом</option>
-          <option value="land">Участок</option>
-          <option value="commercial">Коммерция</option>
-        </select>
+  <footer style="text-align:center; margin-top:20px; opacity:0.6;">
+    Версия v11
+  </footer>
 
-        <input id="address" type="text" placeholder="Адрес (необязательно)" />
-      </div>
-
-      <div class="form-row">
-        <input id="lat" type="number" step="any" placeholder="Широта" />
-        <input id="lng" type="number" step="any" placeholder="Долгота" />
-        <button id="pickOnMap" type="button" class="btn">Поставить точку на карте</button>
-      </div>
-
-      <div class="form-row">
-        <input id="images" type="file" accept="image/*" multiple />
-      </div>
-
-      <div id="imagePreview" class="preview"></div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn primary">Сохранить</button>
-        <button id="cancelEdit" type="button" class="btn ghost">Отмена</button>
-        <button id="clearForm" type="button" class="btn danger ghost">Очистить</button>
-      </div>
-    </form>
-  </section>
-
-  <footer class="footer">Версия: ChatPatch v11</footer>
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="script.js?v=11"></script>
+  <script src="script.js"></script>
 </body>
 </html>
