@@ -194,7 +194,10 @@ function clearFormState() {
   coordsBadge.classList.add("muted");
   renderImagePreview();
   formTitle.textContent = "Добавить объект";
-  if (formMarker) { markerLayer.removeLayer(formMarker); formMarker = null; }
+  if (formMarker) {
+    markerLayer.removeLayer(formMarker);
+    formMarker = null;
+  }
 }
 
 // ======= избранное =======
