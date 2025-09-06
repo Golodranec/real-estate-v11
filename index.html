@@ -1,190 +1,118 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.2.1</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-
-  <link rel="stylesheet" href="style.css?v=13.2.1" />
+  <meta charset="UTF-8">
+  <title>Прототип фильтров</title>
+  <style>
+    body { font-family: sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
+    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin-bottom:16px; }
+    .filters { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    select, .multiselect { padding:8px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
+    .multiselect { position:relative; cursor:pointer; }
+    .multiselect-menu {
+      display:none; position:absolute; top:100%; left:0; right:0;
+      background:#161a22; border:1px solid #242938; border-radius:8px; padding:6px;
+      max-height:180px; overflow:auto; z-index:10;
+    }
+    .multiselect-menu label { display:block; padding:4px; cursor:pointer; }
+    .multiselect.open .multiselect-menu { display:block; }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13.2.1</div>
-  </header>
 
-  <!-- Фильтры -->
-  <section class="filters card">
-    <select id="categoryFilter">
-      <option value="">Категория: все</option>
-      <option value="apartment">Квартира</option>
-      <option value="house">Дом</option>
-      <option value="land">Участок</option>
-      <option value="commercial">Коммерция</option>
+<div class="card">
+  <h2>Фильтры</h2>
+  <div class="filters">
+    <!-- Базовые -->
+    <select id="city"><option value="">Город</option><option>Ташкент</option></select>
+    <select id="district"><option value="">Район</option></select>
+    <select id="street"><option value="">Улица / массив</option></select>
+
+    <select id="category">
+      <option value="">Категория</option>
+      <option value="apartment">Квартиры</option>
+      <option value="house">Дома</option>
+      <option value="land">Земельные участки</option>
+      <option value="commercial">Коммерческие помещения</option>
+      <option value="garage">Гаражи / стоянки</option>
+      <option value="daily">Посуточная аренда</option>
     </select>
+  </div>
+</div>
 
-    <select id="statusFilter">
-      <option value="">Статус: все</option>
-      <option value="sale">Продается</option>
-      <option value="rent">Сдается</option>
-    </select>
+<!-- Динамические блоки -->
+<div id="filters-apartment" class="card" style="display:none">
+  <h3>Фильтры: Квартиры</h3>
+  <div class="filters">
+    <select><option>Подкатегория</option><option>Продажа</option><option>Аренда</option><option>Обмен</option></select>
+    <select><option>Тип жилья</option><option>Новостройка</option><option>Вторичка</option><option>От застройщика</option></select>
+    <input type="number" placeholder="Цена от">
+    <input type="number" placeholder="Цена до">
+    <input type="number" placeholder="Комнат от">
+    <input type="number" placeholder="Комнат до">
+    <input type="number" placeholder="Этаж от">
+    <input type="number" placeholder="Этаж до">
+    <input type="number" placeholder="Этажность от">
+    <input type="number" placeholder="Этажность до">
+    <input type="number" placeholder="Площадь от">
+    <input type="number" placeholder="Площадь до">
 
-    <select id="districtFilter">
-      <option value="">Район: все</option>
-    </select>
-
-    <input id="searchInput" type="search" placeholder="Поиск по названию или адресу" />
-
-    <input id="roomsMin" type="number" min="0" step="1" placeholder="Комнат от" />
-    <input id="roomsMax" type="number" min="0" step="1" placeholder="Комнат до" />
-
-    <input id="priceMin" type="number" placeholder="Цена от" />
-    <input id="priceMax" type="number" placeholder="Цена до" />
-
-    <input id="areaMin" type="number" min="0" step="0.1" placeholder="Площадь от (м²)" />
-    <input id="areaMax" type="number" min="0" step="0.1" placeholder="Площадь до (м²)" />
-
-    <select id="floorMin">
-      <option value="">Этаж от</option>
-      <option value="-2">Подвал</option>
-      <option value="-1">Цоколь</option>
-      <!-- 1–30 -->
-      <option value="1">1</option><option value="2">2</option>...<option value="30">30</option>
-    </select>
-
-    <select id="floorMax">
-      <option value="">Этаж до</option>
-      <option value="-2">Подвал</option>
-      <option value="-1">Цоколь</option>
-      <!-- 1–30 -->
-      <option value="1">1</option><option value="2">2</option>...<option value="30">30</option>
-    </select>
-
-    <select id="sortSelect">
-      <option value="">Сортировка</option>
-      <option value="priceAsc">Цена ↑</option>
-      <option value="priceDesc">Цена ↓</option>
-      <option value="dateNew">Новые</option>
-      <option value="dateOld">Старые</option>
-    </select>
-
-    <label class="only-fav">
-      <input id="onlyFav" type="checkbox" />
-      Только избранные
-    </label>
-
-    <div class="tools">
-      <button id="exportJson" class="btn">Экспорт JSON</button>
-      <button id="importJsonBtn" class="btn">Импорт JSON</button>
-      <input id="importJson" type="file" accept="application/json" hidden />
-      <button id="exportCsv" class="btn ghost">Экспорт CSV</button>
-      <button id="resetFilters" class="btn ghost">Сбросить</button>
+    <!-- мультиселект удобств -->
+    <div class="multiselect" data-label="Удобства">
+      Удобства
+      <div class="multiselect-menu">
+        <label><input type="checkbox"> Интернет</label>
+        <label><input type="checkbox"> Холодильник</label>
+        <label><input type="checkbox"> Кондиционер</label>
+        <label><input type="checkbox"> Стиральная машина</label>
+      </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- Карта -->
-  <section id="mapContainer" class="card">
-    <div id="map"></div>
-    <div class="hint">Клик по фото/ссылке в попапе — скролл к карточке</div>
-  </section>
+<div id="filters-commercial" class="card" style="display:none">
+  <h3>Фильтры: Коммерция</h3>
+  <div class="filters">
+    <select><option>Подкатегория</option><option>Продажа</option><option>Аренда</option><option>Обмен</option></select>
+    <select><option>Тип</option><option>Офис</option><option>Магазин</option><option>Склад</option></select>
+    <input type="number" placeholder="Цена от">
+    <input type="number" placeholder="Цена до">
 
-  <!-- Список карточек -->
-  <section id="results" class="card">
-    <div id="resultsList" class="grid"></div>
-  </section>
-
-  <!-- Форма добавления/редактирования -->
-  <section class="card">
-    <h2 id="formTitle">Добавить объект</h2>
-    <form id="objectForm">
-      <!-- Категория и статус -->
-      <div class="form-row">
-        <select id="category" required>
-          <option value="apartment">Квартира</option>
-          <option value="house">Дом</option>
-          <option value="land">Участок</option>
-          <option value="commercial">Коммерция</option>
-        </select>
-        <select id="status" required>
-          <option value="sale">Продается</option>
-          <option value="rent">Сдается</option>
-        </select>
+    <!-- мультиселект удобств -->
+    <div class="multiselect" data-label="Удобства">
+      Удобства
+      <div class="multiselect-menu">
+        <label><input type="checkbox"> Open Space</label>
+        <label><input type="checkbox"> Видеонаблюдение</label>
+        <label><input type="checkbox"> Охрана</label>
+        <label><input type="checkbox"> Парковка</label>
       </div>
+    </div>
+  </div>
+</div>
 
-      <!-- Название, цена, комнаты -->
-      <div class="form-row">
-        <input id="title" type="text" placeholder="Название" required />
-        <input id="price" type="number" placeholder="Цена" required />
-        <input id="rooms" type="number" min="1" step="1" placeholder="Комнаты" required />
-      </div>
+<script>
+  // показать/скрыть блок по категории
+  const categorySel = document.getElementById("category");
+  categorySel.addEventListener("change", () => {
+    document.querySelectorAll("[id^=filters-]").forEach(el => el.style.display="none");
+    if (categorySel.value) {
+      const block = document.getElementById("filters-"+categorySel.value);
+      if (block) block.style.display="block";
+    }
+  });
 
-      <!-- Локация (древо) -->
-      <div class="form-row">
-        <select id="district"></select>
-        <select id="quarter"></select>
-        <select id="street"></select>
-      </div>
+  // мультиселект
+  document.querySelectorAll(".multiselect").forEach(ms => {
+    ms.addEventListener("click", (e) => {
+      ms.classList.toggle("open");
+      e.stopPropagation();
+    });
+  });
+  document.body.addEventListener("click", () => {
+    document.querySelectorAll(".multiselect").forEach(ms => ms.classList.remove("open"));
+  });
+</script>
 
-      <!-- Адрес -->
-      <div class="form-row">
-        <input id="address" type="text" placeholder="Адрес (необязательно)" />
-      </div>
-
-      <!-- Площадь, этаж, год -->
-      <div class="form-row">
-        <input id="area" type="number" min="0" step="0.1" placeholder="Площадь, м²" />
-        <select id="floor">
-          <option value="">Выбрать этаж</option>
-          <option value="-2">Подвал</option>
-          <option value="-1">Цоколь</option>
-          <option value="1">1</option>...<option value="30">30</option>
-        </select>
-        <input id="year" type="number" min="1800" max="2100" step="1" placeholder="Год постройки" />
-      </div>
-
-      <!-- Тип дома -->
-      <div class="form-row">
-        <select id="houseType">
-          <option value="">Тип дома (необязательно)</option>
-          <option value="brick">Кирпичный</option>
-          <option value="panel">Панельный</option>
-          <option value="block">Блочный</option>
-          <option value="monolithic">Монолит</option>
-          <option value="wood">Деревянный</option>
-        </select>
-
-        <button id="pickOnMap" type="button" class="btn">Поставить точку на карте</button>
-        <span id="coordsBadge" class="badge muted">Координаты не выбраны</span>
-      </div>
-
-      <!-- Фотки -->
-      <div class="form-row">
-        <input id="images" type="file" accept="image/*" multiple />
-      </div>
-
-      <div id="imagePreview" class="preview"></div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn primary">Сохранить</button>
-        <button id="cancelEdit" type="button" class="btn ghost">Отмена</button>
-        <button id="clearForm" type="button" class="btn danger ghost">Очистить</button>
-      </div>
-    </form>
-  </section>
-
-  <footer class="footer">Версия: ChatPatch v13.2.1</footer>
-
-  <!-- Leaflet -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- MarkerCluster -->
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
-  <script src="script.js?v=13.2.1"></script>
 </body>
 </html>
