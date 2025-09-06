@@ -184,6 +184,19 @@ form.addEventListener("submit", (e) => {
 cancelEditBtn.addEventListener("click", clearFormState);
 clearFormBtn.addEventListener("click", () => { form.reset(); selectedImages=[]; tempCoords={lat:null,lng:null}; renderImagePreview(); });
 
+// ======= clearFormState (фикс) =======
+function clearFormState() {
+  form.reset();
+  editingId = null;
+  selectedImages = [];
+  tempCoords = { lat: null, lng: null };
+  coordsBadge.textContent = "Координаты не выбраны";
+  coordsBadge.classList.add("muted");
+  renderImagePreview();
+  formTitle.textContent = "Добавить объект";
+  if (formMarker) { markerLayer.removeLayer(formMarker); formMarker = null; }
+}
+
 // ======= избранное =======
 function isFav(id) { return favorites.has(id); }
 function toggleFav(id) {
