@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13</title>
+  <title>Каталог недвижимости — v13.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Leaflet -->
@@ -17,12 +17,12 @@
     href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
   />
 
-  <link rel="stylesheet" href="style.css?v=13" />
+  <link rel="stylesheet" href="style.css?v=13.1" />
 </head>
 <body>
   <header class="topbar">
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13</div>
+    <div class="version">ChatPatch v13.1</div>
   </header>
 
   <!-- Поиск + фильтры + утилиты -->
@@ -46,9 +46,26 @@
     <input id="priceMin" type="number" placeholder="Цена от" />
     <input id="priceMax" type="number" placeholder="Цена до" />
 
-    <!-- Диапазон комнат -->
     <input id="roomsMin" type="number" min="0" step="1" placeholder="Комнат от" />
     <input id="roomsMax" type="number" min="0" step="1" placeholder="Комнат до" />
+
+    <!-- Площадь -->
+    <input id="areaMin" type="number" min="0" step="0.1" placeholder="Площадь от (м²)" />
+    <input id="areaMax" type="number" min="0" step="0.1" placeholder="Площадь до (м²)" />
+
+    <!-- Этажность -->
+    <select id="floorMin">
+      <option value="">Этаж от</option>
+      <option value="-2">Подвал</option>
+      <option value="-1">Цоколь</option>
+      ${[...Array(30).keys()].map(i => `<option value="${i+1}">${i+1}</option>`).join("")}
+    </select>
+    <select id="floorMax">
+      <option value="">Этаж до</option>
+      <option value="-2">Подвал</option>
+      <option value="-1">Цоколь</option>
+      ${[...Array(30).keys()].map(i => `<option value="${i+1}">${i+1}</option>`).join("")}
+    </select>
 
     <select id="sortSelect">
       <option value="">Сортировка</option>
@@ -109,10 +126,14 @@
         <input id="address" type="text" placeholder="Адрес (необязательно)" />
       </div>
 
-      <!-- Доп. поля -->
       <div class="form-row">
         <input id="area" type="number" min="0" step="0.1" placeholder="Площадь, м²" />
-        <input id="floor" type="text" placeholder="Этаж (включая цоколь/подвал)" />
+        <select id="floor">
+          <option value="">Выбрать этаж</option>
+          <option value="-2">Подвал</option>
+          <option value="-1">Цоколь</option>
+          ${[...Array(30).keys()].map(i => `<option value="${i+1}">${i+1}</option>`).join("")}
+        </select>
         <input id="year" type="number" min="1800" max="2100" step="1" placeholder="Год постройки" />
       </div>
 
@@ -144,13 +165,13 @@
     </form>
   </section>
 
-  <footer class="footer">Версия: ChatPatch v13</footer>
+  <footer class="footer">Версия: ChatPatch v13.1</footer>
 
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <!-- MarkerCluster -->
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <script src="script.js?v=13"></script>
+  <script src="script.js?v=13.1"></script>
 </body>
 </html>
