@@ -47,7 +47,7 @@ input,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  max-width: 280px; /* ширина всего блока */
+  max-width: 280px;
 }
 
 .range input[type="number"] {
