@@ -1,54 +1,63 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Каталог недвижимости v13.3</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Каталог недвижимости — v13.3.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <header class="topbar">
   <h1>Каталог недвижимости</h1>
-  <div class="version">ChatPatch v13.3</div>
+  <div class="version">ChatPatch v13.3.1</div>
+  <a class="admin-link" href="admin.html" target="_blank">Открыть админку</a>
 </header>
 
 <section class="card">
   <h2>Фильтры</h2>
+  <div id="filtersInfo" class="hint" style="display:none"></div>
+
   <div class="filters">
+    <!-- каскад -->
     <select id="cityFilter"><option value="">Город</option></select>
     <select id="districtFilter"><option value="">Район</option></select>
     <select id="streetFilter"><option value="">Улица / массив</option></select>
+
+    <!-- категория -->
     <select id="categoryFilter"><option value="">Категория</option></select>
 
-    <!-- Цена -->
+    <!-- цена -->
     <div class="range">
-      <input type="number" id="priceMin" placeholder="Цена от">
-      <input type="number" id="priceMax" placeholder="Цена до">
+      <input type="number" id="priceMin" placeholder="Цена от" />
+      <input type="number" id="priceMax" placeholder="Цена до" />
     </div>
 
-    <!-- Комнаты -->
+    <!-- комнаты -->
     <div class="range">
-      <input type="number" id="roomsMin" placeholder="Комнат от">
-      <input type="number" id="roomsMax" placeholder="Комнат до">
+      <input type="number" id="roomsMin" placeholder="Комнат от" />
+      <input type="number" id="roomsMax" placeholder="Комнат до" />
     </div>
 
-    <!-- Этаж -->
+    <!-- этаж -->
     <div class="range">
-      <input type="number" id="floorMin" placeholder="Этаж от">
-      <input type="number" id="floorMax" placeholder="Этаж до">
+      <input type="number" id="floorMin" placeholder="Этаж от" />
+      <input type="number" id="floorMax" placeholder="Этаж до" />
     </div>
 
-    <!-- Этажность -->
+    <!-- этажность дома -->
     <div class="range">
-      <input type="number" id="floorsMin" placeholder="Этажность от">
-      <input type="number" id="floorsMax" placeholder="Этажность до">
+      <input type="number" id="floorsMin" placeholder="Этажность от" />
+      <input type="number" id="floorsMax" placeholder="Этажность до" />
     </div>
 
-    <!-- Площадь -->
+    <!-- площадь -->
     <div class="range">
-      <input type="number" id="areaMin" placeholder="Площадь от">
-      <input type="number" id="areaMax" placeholder="Площадь до">
+      <input type="number" id="areaMin" placeholder="Площадь от" />
+      <input type="number" id="areaMax" placeholder="Площадь до" />
     </div>
+
+    <button id="resetFilters" class="btn ghost">Сбросить</button>
   </div>
 </section>
 
