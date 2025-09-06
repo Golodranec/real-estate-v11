@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.4.2</title>
+  <title>Админка — v13.5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
     .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin:16px 0; }
-    input, select, button { padding:10px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
+    input, select, button, textarea { padding:10px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
     button { cursor:pointer; }
     .btn { background:#4da3ff; color:#001428; border-color:#4da3ff; }
     .danger { background:#ff6b6b; color:#fff; border-color:#ff6b6b; }
@@ -16,13 +16,19 @@
     ul.tree li { margin:4px 0; }
     .node { display:flex; gap:8px; align-items:center; }
     .node-type { opacity:.7; font-size:12px; }
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(220px,1fr)); gap:10px; }
+    .param-item { border:1px solid #242938; border-radius:10px; padding:10px; }
+    .param-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .muted { opacity:.8; font-size:13px; }
+    textarea { width:100%; min-height:80px; resize:vertical; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 
-<h1>Админка: дерево фильтров</h1>
+<h1>Админка: дерево и доп. параметры</h1>
 
-<!-- Блок: управление типами -->
+<!-- Типы узлов -->
 <div class="card">
   <h3>Типы узлов</h3>
   <div class="row">
@@ -30,65 +36,79 @@
     <button id="addTypeBtn" class="btn">Добавить тип</button>
     <button id="clearTypes" class="danger">Сбросить к базовым</button>
   </div>
-  <div style="margin-top:8px; font-size:14px; opacity:.8">
-    Базовые: <b>Город</b>, <b>Район</b>, <b>Массив / улица</b>, <b>Категория</b>. Можно добавить свои.
+  <div class="muted" style="margin-top:8px">
+    Базовые: <b>Город</b>, <b>Район</b>, <b>Массив / улица</b>, <b>Категория</b>. Можно добавлять свои.
   </div>
 </div>
 
-<!-- Блок: управление деревом -->
+<!-- Дерево -->
 <div class="card">
+  <h3>Дерево локаций и категорий</h3>
   <div class="row">
     <input id="nodeName" placeholder="Название" />
     <select id="nodeType"></select>
     <select id="nodeParent"></select>
-    <button id="addBtn" class="btn">Добавить</button>
-    <button id="clearAll" class="danger">Очистить всё дерево</button>
+    <button id="addNode" class="btn">Добавить</button>
+    <button id="clearTree" class="danger">Очистить дерево</button>
   </div>
-  <div style="margin-top:8px; opacity:.8; font-size:14px">
-    Рекомендуемая структура: Город → Район → <b>Массив / улица</b>. Категория — отдельные корневые узлы.
-  </div>
+  <ul id="tree" class="tree" style="margin-top:12px"></ul>
 </div>
 
+<!-- Доп. параметры -->
 <div class="card">
-  <h3>Дерево</h3>
-  <ul id="tree" class="tree"></ul>
+  <h3>Доп. параметры (привязка к категории)</h3>
+  <div class="row">
+    <input id="paramName" placeholder="Название параметра (например: Тип недвижимости)" />
+    <select id="paramCategory"></select>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <textarea id="paramValues" placeholder="Значения, по одному на строку (например: Офисы↵Склады↵Бутики)"></textarea>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="addParam" class="btn">Добавить параметр</button>
+    <button id="clearParams" class="danger">Удалить все параметры</button>
+  </div>
+
+  <div id="paramsList" class="grid" style="margin-top:12px"></div>
 </div>
 
 <script>
 let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
 let types = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+let extraParams = JSON.parse(localStorage.getItem("extraParams") || "[]"); // [{id,name,categoryId,values:[]}]
 const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
 defaultTypes.forEach(t => { if (!types.includes(t)) types.push(t); });
 
+// dom
 const $ = id => document.getElementById(id);
 
-function saveNodes() { localStorage.setItem("treeNodes", JSON.stringify(nodes)); renderTree(); fillParent(); }
+function saveNodes() { localStorage.setItem("treeNodes", JSON.stringify(nodes)); renderTree(); fillParent(); fillCategoriesSelect(); }
 function saveTypes() { localStorage.setItem("nodeTypes", JSON.stringify(types)); fillTypes(); }
+function saveParams() { localStorage.setItem("extraParams", JSON.stringify(extraParams)); renderParams(); }
 
 function fillTypes() {
   const sel = $("nodeType");
   sel.innerHTML = "";
-  types.forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t; opt.textContent = t;
-    sel.appendChild(opt);
-  });
+  types.forEach(t => { const opt=document.createElement("option"); opt.value=t; opt.textContent=t; sel.appendChild(opt); });
 }
 function fillParent() {
   const sel = $("nodeParent");
   sel.innerHTML = `<option value="">(без родителя)</option>`;
-  nodes.forEach(n => {
-    const o = document.createElement("option");
-    o.value = n.id; o.textContent = `${n.name} (${n.type})`;
-    sel.appendChild(o);
+  nodes.forEach(n => { const o=document.createElement("option"); o.value=n.id; o.textContent=`${n.name} (${n.type})`; sel.appendChild(o); });
+}
+function fillCategoriesSelect() {
+  const sel = $("paramCategory");
+  sel.innerHTML = "";
+  nodes.filter(n => n.type==="Категория").forEach(n => {
+    const opt=document.createElement("option"); opt.value=n.id; opt.textContent=n.name; sel.appendChild(opt);
   });
 }
-function kids(parentId) { return nodes.filter(n=>n.parent===parentId); }
 
+function kids(parentId) { return nodes.filter(n=>n.parent===parentId); }
 function renderTree(parentId=null, container=$("tree")) {
   if (parentId===null) container.innerHTML="";
   const ul=document.createElement("ul"); ul.className="tree";
-  kids(parentId).forEach(n=>{
+  nodes.filter(n=>n.parent===parentId).forEach(n=>{
     const li=document.createElement("li");
     const row=document.createElement("div"); row.className="node";
     const name=document.createElement("span"); name.textContent=n.name;
@@ -97,7 +117,10 @@ function renderTree(parentId=null, container=$("tree")) {
     del.onclick=()=>{
       const delSet=new Set([n.id]); let changed=true;
       while(changed){ changed=false; nodes.forEach(x=>{ if(delSet.has(x.parent)){ delSet.add(x.id); changed=true; } }); }
-      nodes=nodes.filter(x=>!delSet.has(x.id)); saveNodes();
+      nodes=nodes.filter(x=>!delSet.has(x.id));
+      // сносим параметры, привязанные к удалённой категории
+      extraParams = extraParams.filter(p => !delSet.has(p.categoryId));
+      saveNodes(); saveParams();
     };
     row.appendChild(name); row.appendChild(type); row.appendChild(del); li.appendChild(row);
     renderTree(n.id, li); ul.appendChild(li);
@@ -105,14 +128,15 @@ function renderTree(parentId=null, container=$("tree")) {
   container.appendChild(ul);
 }
 
-$("addBtn").onclick=()=>{
+// add node
+$("addNode").onclick=()=>{
   const name=$("nodeName").value.trim(); if(!name) return alert("Введите название");
   const type=$("nodeType").value;
   const parent=$("nodeParent").value?+$("nodeParent").value:null;
   nodes.push({id:Date.now(),name,type,parent});
   $("nodeName").value=""; saveNodes();
 };
-$("clearAll").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
+$("clearTree").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
 
 $("addTypeBtn").onclick=()=>{
   const t=$("typeName").value.trim(); if(!t) return alert("Введите название типа");
@@ -123,7 +147,56 @@ $("clearTypes").onclick=()=>{
   if(confirm("Сбросить типы к базовым?")){ types=[...defaultTypes]; saveTypes(); }
 };
 
-saveNodes(); saveTypes();
+// Параметры
+function renderParams() {
+  const wrap = $("paramsList"); wrap.innerHTML = "";
+  if (!extraParams.length) {
+    wrap.innerHTML = `<div class="muted">Пока нет параметров. Добавь выше название, выбери категорию и укажи значения.</div>`;
+    return;
+  }
+  extraParams.forEach(p=>{
+    const cat = nodes.find(n=>n.id===p.categoryId);
+    const div = document.createElement("div");
+    div.className = "param-item";
+    div.innerHTML = `
+      <div class="param-header">
+        <div><b>${p.name}</b> <span class="muted">/ ${cat ? cat.name : "—"}</span></div>
+        <button class="danger">Удалить</button>
+      </div>
+      <div class="muted">Значения:</div>
+      <div style="margin-top:6px">${(p.values||[]).map(v=>`<span style="display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border:1px solid #242938;border-radius:8px;">${v}</span>`).join("") || "—"}</div>
+    `;
+    div.querySelector("button").onclick = ()=>{
+      if (confirm("Удалить параметр?")) {
+        extraParams = extraParams.filter(x=>x.id!==p.id);
+        saveParams();
+      }
+    };
+    wrap.appendChild(div);
+  });
+}
+
+$("addParam").onclick=()=>{
+  const name = $("paramName").value.trim(); if(!name) return alert("Название параметра?");
+  const categoryId = $("paramCategory").value ? +$("paramCategory").value : null;
+  if(!categoryId) return alert("Выбери категорию");
+  const raw = $("paramValues").value.trim();
+  const values = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean) : [];
+  if (!values.length) return alert("Добавь хотя бы одно значение (строкой)");
+  extraParams.push({ id: Date.now(), name, categoryId, values });
+  $("paramName").value=""; $("paramValues").value="";
+  saveParams();
+};
+$("clearParams").onclick=()=>{
+  if (confirm("Удалить все параметры?")) { extraParams=[]; saveParams(); }
+};
+
+// init
+function init() {
+  fillTypes(); fillParent(); fillCategoriesSelect();
+  renderTree(); renderParams();
+}
+init();
 </script>
 </body>
 </html>
