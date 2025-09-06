@@ -2,20 +2,17 @@
   --bg: #0f1115;
   --card: #161a22;
   --text: #e8eaf0;
-  --muted: #9aa3b2;
-  --accent: #4da3ff;
-  --danger: #ff6b6b;
   --border: #242938;
+  --accent: #4da3ff;
 }
 
 * { box-sizing: border-box; }
 body {
-  margin: 0;
-  padding: 16px;
-  background: var(--bg);
-  color: var(--text);
+  margin: 0; padding: 16px;
+  background: var(--bg); color: var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
+.topbar { margin-bottom: 16px; }
 
 .card {
   background: var(--card);
@@ -24,16 +21,12 @@ body {
   padding: 16px;
   margin-bottom: 16px;
 }
-
 .filters {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
-
-select,
-input,
-.multiselect {
+select, input {
   padding: 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -42,57 +35,22 @@ input,
   width: 100%;
 }
 
-/* Пары «от / до» */
+/* Пары "от / до" */
 .range {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   max-width: 280px;
 }
-
 .range input[type="number"] {
   max-width: 100%;
-  padding: 8px;
-  border-radius: 8px;
+}
+
+/* Результаты */
+.grid { display: grid; gap: 10px; }
+.result-card {
+  padding: 12px;
   border: 1px solid var(--border);
+  border-radius: 8px;
   background: #0d1016;
-  color: var(--text);
-}
-
-/* Мультиселект */
-.multiselect {
-  position: relative;
-  cursor: pointer;
-}
-.multiselect-menu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #161a22;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px;
-  max-height: 180px;
-  overflow: auto;
-  z-index: 10;
-}
-.multiselect-menu label {
-  display: block;
-  padding: 4px;
-  cursor: pointer;
-}
-.multiselect.open .multiselect-menu {
-  display: block;
-}
-
-/* Адаптив */
-@media (max-width: 900px) {
-  .filters {
-    grid-template-columns: repeat(1, 1fr);
-  }
-  .range {
-    max-width: 100%;
-  }
 }
