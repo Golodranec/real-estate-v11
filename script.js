@@ -1,25 +1,42 @@
-// ======= v12.1 bootstrap =======
-console.log("✅ script.js v12.1 loaded");
+// ======= v13 bootstrap =======
+console.log("✅ script.js v13 loaded");
 
-const LS_OBJECTS = "objects";
-const LS_FILTERS = "filters_v12_1";
-const LS_FAVS    = "favorites_v12_1";
+const LS_OBJECTS = "objects";              // совместимо с прошлым
+const LS_FILTERS = "filters_v13";
+const LS_FAVS    = "favorites_v13";
+const LS_FAVS_OLD = "favorites_v12_1";     // миграция
 
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
-let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
+// мигрируем избранное из старого ключа, если новый пустой
+let favInit = JSON.parse(localStorage.getItem(LS_FAVS) || "[]");
+if (!favInit.length) {
+  const old = JSON.parse(localStorage.getItem(LS_FAVS_OLD) || "[]");
+  if (old.length) {
+    localStorage.setItem(LS_FAVS, JSON.stringify(old));
+    favInit = old;
+  }
+}
+let favorites = new Set(favInit);
+
 let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
 
-// ======= карта (Leaflet) =======
+// ======= карта (Leaflet) + кластеризация =======
 const map = L.map("map").setView([41.3111, 69.2797], 12); // Ташкент
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "© OpenStreetMap",
 }).addTo(map);
 
+// слой для маркера формы (точка редактируемого/нового объекта)
 const markerLayer = L.layerGroup().addTo(map);
-let formMarker = null;
+// кластер для объектов
+const cluster = L.markerClusterGroup({
+  showCoverageOnHover: false,
+  maxClusterRadius: 45
+});
+map.addLayer(cluster);
 
 // ======= элементы =======
 const $ = (id) => document.getElementById(id);
@@ -32,7 +49,13 @@ const priceMax      = $("priceMax");
 const roomsMin      = $("roomsMin");
 const roomsMax      = $("roomsMax");
 const sortSelect    = $("sortSelect");
+const onlyFav       = $("onlyFav");
 const resetFilters  = $("resetFilters");
+
+const exportJsonBtn = $("exportJson");
+const importJsonBtn = $("importJsonBtn");
+const importJsonInp = $("importJson");
+const exportCsvBtn  = $("exportCsv");
 
 const resultsList   = $("resultsList");
 const form          = $("objectForm");
@@ -66,6 +89,7 @@ function loadFilters() {
   if (typeof saved.roomsMin === "number") roomsMin.value = saved.roomsMin;
   if (typeof saved.roomsMax === "number") roomsMax.value = saved.roomsMax;
   if (saved.sort)     sortSelect.value  = saved.sort;
+  if (saved.onlyFav)  onlyFav.checked = true;
 }
 function saveFilters() {
   const f = {
@@ -77,6 +101,7 @@ function saveFilters() {
     roomsMin: roomsMin.value ? Number(roomsMin.value) : undefined,
     roomsMax: roomsMax.value ? Number(roomsMax.value) : undefined,
     sort: sortSelect.value,
+    onlyFav: !!onlyFav.checked
   };
   localStorage.setItem(LS_FILTERS, JSON.stringify(f));
 }
@@ -131,6 +156,8 @@ pickOnMapBtn.addEventListener("click", () => {
   map.on("click", once);
 });
 
+let formMarker = null;
+
 // ======= сохранение / редактирование =======
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -146,7 +173,7 @@ form.addEventListener("submit", (e) => {
     category: categoryInput.value,
     address: addressInput.value.trim(),
     area: areaInput.value ? Number(areaInput.value) : null,
-    floor: floorInput.value ? Number(floorInput.value) : null,
+    floor: floorInput.value?.trim() || null, // строка: поддерживает "цоколь", "подвал"
     year: yearInput.value ? Number(yearInput.value) : null,
     houseType: houseTypeSel.value || null,
     lat: tempCoords.lat,
@@ -221,6 +248,7 @@ function applyFilters(list) {
   if (pmax !== null) res = res.filter(o => o.price <= pmax);
   if (rmin !== null) res = res.filter(o => o.rooms >= rmin);
   if (rmax !== null) res = res.filter(o => o.rooms <= rmax);
+  if (onlyFav.checked) res = res.filter(o => favorites.has(o.id));
 
   const sort = sortSelect.value;
   if (sort === "priceAsc") res.sort((a,b) => a.price - b.price);
@@ -231,8 +259,10 @@ function applyFilters(list) {
   return res;
 }
 
-[searchInput, categoryFilter, statusFilter, roomsMin, roomsMax, priceMin, priceMax, sortSelect]
-  .forEach(elm => elm.addEventListener("input", () => { saveFilters(); renderAll(); }));
+[
+  searchInput, categoryFilter, statusFilter, roomsMin, roomsMax,
+  priceMin, priceMax, sortSelect, onlyFav
+].forEach(elm => elm.addEventListener("input", () => { saveFilters(); renderAll(); }));
 
 resetFilters.addEventListener("click", () => {
   searchInput.value = "";
@@ -243,8 +273,81 @@ resetFilters.addEventListener("click", () => {
   roomsMin.value = "";
   roomsMax.value = "";
   sortSelect.value = "";
+  onlyFav.checked = false;
   saveFilters();
   renderAll();
+});
+
+// ======= экспорт/импорт JSON + экспорт CSV =======
+exportJsonBtn.addEventListener("click", () => {
+  const data = JSON.stringify(objects, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `objects_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+importJsonBtn.addEventListener("click", () => importJsonInp.click());
+importJsonInp.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const arr = JSON.parse(ev.target.result);
+      if (!Array.isArray(arr)) throw new Error("JSON должен быть массивом объектов");
+      // простая валидация
+      objects = arr.map(x => ({
+        id: x.id ?? Date.now() + Math.random(),
+        title: x.title ?? "",
+        price: Number(x.price ?? 0),
+        rooms: Number(x.rooms ?? 0),
+        status: x.status === "rent" ? "rent" : "sale",
+        category: x.category || "apartment",
+        address: x.address ?? "",
+        area: x.area ?? null,
+        floor: x.floor ?? null,
+        year: x.year ?? null,
+        houseType: x.houseType ?? null,
+        lat: (x.lat ?? null),
+        lng: (x.lng ?? null),
+        images: Array.isArray(x.images) ? x.images : [],
+        createdAt: x.createdAt ?? Date.now(),
+      }));
+      localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
+      renderAll();
+      alert("Импорт завершён");
+    } catch (err) {
+      alert("Ошибка импорта: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+exportCsvBtn.addEventListener("click", () => {
+  const fields = [
+    "id","title","price","rooms","status","category","address",
+    "area","floor","year","houseType","lat","lng","createdAt"
+  ];
+  const esc = (v) => {
+    if (v === null || v === undefined) return "";
+    const s = String(v).replace(/"/g, '""');
+    return `"${s}"`;
+  };
+  const rows = [fields.map(esc).join(",")];
+  applyFilters(objects).forEach(o => {
+    const row = fields.map(f => esc(o[f]));
+    rows.push(row.join(","));
+  });
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `objects_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 });
 
 // ======= рендер списка + карта =======
@@ -284,7 +387,7 @@ function renderList(list) {
         ${obj.address ? `<div class="card-meta">Адрес: ${obj.address}</div>` : ""}
         <div class="card-meta">
           ${obj.area ? `<span>Площадь: ${obj.area} м²</span>` : ""}
-          ${obj.floor != null && obj.floor !== "" ? `<span>Этаж: ${obj.floor}</span>` : ""}
+          ${obj.floor ? `<span>Этаж: ${obj.floor}</span>` : ""}
           ${obj.year ? `<span>Год: ${obj.year}</span>` : ""}
           ${obj.houseType ? `<span>Тип: ${humanHouseType(obj.houseType)}</span>` : ""}
         </div>
@@ -338,7 +441,9 @@ function attachSlider(card, obj) {
 }
 
 function renderMap(list) {
-  markerLayer.clearLayers();
+  cluster.clearLayers();
+  markerLayer.clearLayers(); // только для маркера формы
+
   list.forEach(obj => {
     if (obj.lat == null || obj.lng == null) return;
     const m = L.marker([obj.lat, obj.lng]);
@@ -350,7 +455,7 @@ function renderMap(list) {
         <div style="color:#666">${Number(obj.price||0).toLocaleString()} • ${obj.rooms || "-"} комн.</div>
       </div>`;
     m.bindPopup(html);
-    m.addTo(markerLayer);
+    cluster.addLayer(m);
     m.on("popupopen", (e) => {
       const a = e.popup.getElement().querySelector(`[data-scroll="${obj.id}"]`);
       if (a) {
@@ -431,7 +536,7 @@ if (!objects.length) {
     address: "ул. Примерная, 1",
     lat: 41.3111, lng: 69.2797,
     images: [],
-    area: 54.2, floor: 7, year: 2016, houseType: "monolithic",
+    area: 54.2, floor: "7", year: 2016, houseType: "monolithic",
     createdAt: Date.now(),
   };
   objects.push(demo);
