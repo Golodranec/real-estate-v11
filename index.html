@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.2.0</title>
+  <title>Каталог недвижимости — v13.2.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Leaflet -->
@@ -11,18 +11,16 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
-  <link rel="stylesheet" href="style.css?v=13.2.0" />
+  <link rel="stylesheet" href="style.css?v=13.2.1" />
 </head>
 <body>
   <header class="topbar">
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13.2.0</div>
+    <div class="version">ChatPatch v13.2.1</div>
   </header>
 
   <!-- Фильтры -->
   <section class="filters card">
-    <input id="searchInput" type="search" placeholder="Поиск по названию или адресу" />
-
     <select id="categoryFilter">
       <option value="">Категория: все</option>
       <option value="apartment">Квартира</option>
@@ -37,32 +35,27 @@
       <option value="rent">Сдается</option>
     </select>
 
-    <input id="priceMin" type="number" placeholder="Цена от" />
-    <input id="priceMax" type="number" placeholder="Цена до" />
+    <select id="districtFilter">
+      <option value="">Район: все</option>
+    </select>
+
+    <input id="searchInput" type="search" placeholder="Поиск по названию или адресу" />
 
     <input id="roomsMin" type="number" min="0" step="1" placeholder="Комнат от" />
     <input id="roomsMax" type="number" min="0" step="1" placeholder="Комнат до" />
 
-    <!-- Площадь -->
+    <input id="priceMin" type="number" placeholder="Цена от" />
+    <input id="priceMax" type="number" placeholder="Цена до" />
+
     <input id="areaMin" type="number" min="0" step="0.1" placeholder="Площадь от (м²)" />
     <input id="areaMax" type="number" min="0" step="0.1" placeholder="Площадь до (м²)" />
 
-    <!-- Этажность -->
     <select id="floorMin">
       <option value="">Этаж от</option>
       <option value="-2">Подвал</option>
       <option value="-1">Цоколь</option>
       <!-- 1–30 -->
-      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-      <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-      <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-      <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-      <option value="13">13</option><option value="14">14</option><option value="15">15</option>
-      <option value="16">16</option><option value="17">17</option><option value="18">18</option>
-      <option value="19">19</option><option value="20">20</option><option value="21">21</option>
-      <option value="22">22</option><option value="23">23</option><option value="24">24</option>
-      <option value="25">25</option><option value="26">26</option><option value="27">27</option>
-      <option value="28">28</option><option value="29">29</option><option value="30">30</option>
+      <option value="1">1</option><option value="2">2</option>...<option value="30">30</option>
     </select>
 
     <select id="floorMax">
@@ -70,21 +63,7 @@
       <option value="-2">Подвал</option>
       <option value="-1">Цоколь</option>
       <!-- 1–30 -->
-      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-      <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-      <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-      <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-      <option value="13">13</option><option value="14">14</option><option value="15">15</option>
-      <option value="16">16</option><option value="17">17</option><option value="18">18</option>
-      <option value="19">19</option><option value="20">20</option><option value="21">21</option>
-      <option value="22">22</option><option value="23">23</option><option value="24">24</option>
-      <option value="25">25</option><option value="26">26</option><option value="27">27</option>
-      <option value="28">28</option><option value="29">29</option><option value="30">30</option>
-    </select>
-
-    <!-- Новый фильтр по району (древо — корневой уровень) -->
-    <select id="districtFilter">
-      <option value="">Район: все</option>
+      <option value="1">1</option><option value="2">2</option>...<option value="30">30</option>
     </select>
 
     <select id="sortSelect">
@@ -124,56 +103,52 @@
   <section class="card">
     <h2 id="formTitle">Добавить объект</h2>
     <form id="objectForm">
+      <!-- Категория и статус -->
       <div class="form-row">
-        <input id="title" type="text" placeholder="Название" required />
-        <input id="price" type="number" placeholder="Цена" required />
-        <input id="rooms" type="number" min="1" step="1" placeholder="Комнаты" required />
-      </div>
-
-      <div class="form-row">
-        <select id="status" required>
-          <option value="sale">Продается</option>
-          <option value="rent">Сдается</option>
-        </select>
-
         <select id="category" required>
           <option value="apartment">Квартира</option>
           <option value="house">Дом</option>
           <option value="land">Участок</option>
           <option value="commercial">Коммерция</option>
         </select>
-
-        <input id="address" type="text" placeholder="Адрес (необязательно)" />
+        <select id="status" required>
+          <option value="sale">Продается</option>
+          <option value="rent">Сдается</option>
+        </select>
       </div>
 
-      <!-- Древо локации: район → квартал → улица/массив -->
+      <!-- Название, цена, комнаты -->
+      <div class="form-row">
+        <input id="title" type="text" placeholder="Название" required />
+        <input id="price" type="number" placeholder="Цена" required />
+        <input id="rooms" type="number" min="1" step="1" placeholder="Комнаты" required />
+      </div>
+
+      <!-- Локация (древо) -->
       <div class="form-row">
         <select id="district"></select>
         <select id="quarter"></select>
         <select id="street"></select>
       </div>
 
+      <!-- Адрес -->
+      <div class="form-row">
+        <input id="address" type="text" placeholder="Адрес (необязательно)" />
+      </div>
+
+      <!-- Площадь, этаж, год -->
       <div class="form-row">
         <input id="area" type="number" min="0" step="0.1" placeholder="Площадь, м²" />
         <select id="floor">
           <option value="">Выбрать этаж</option>
           <option value="-2">Подвал</option>
           <option value="-1">Цоколь</option>
-          <!-- 1–30 -->
-          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
-          <option value="4">4</option><option value="5">5</option><option value="6">6</option>
-          <option value="7">7</option><option value="8">8</option><option value="9">9</option>
-          <option value="10">10</option><option value="11">11</option><option value="12">12</option>
-          <option value="13">13</option><option value="14">14</option><option value="15">15</option>
-          <option value="16">16</option><option value="17">17</option><option value="18">18</option>
-          <option value="19">19</option><option value="20">20</option><option value="21">21</option>
-          <option value="22">22</option><option value="23">23</option><option value="24">24</option>
-          <option value="25">25</option><option value="26">26</option><option value="27">27</option>
-          <option value="28">28</option><option value="29">29</option><option value="30">30</option>
+          <option value="1">1</option>...<option value="30">30</option>
         </select>
         <input id="year" type="number" min="1800" max="2100" step="1" placeholder="Год постройки" />
       </div>
 
+      <!-- Тип дома -->
       <div class="form-row">
         <select id="houseType">
           <option value="">Тип дома (необязательно)</option>
@@ -188,6 +163,7 @@
         <span id="coordsBadge" class="badge muted">Координаты не выбраны</span>
       </div>
 
+      <!-- Фотки -->
       <div class="form-row">
         <input id="images" type="file" accept="image/*" multiple />
       </div>
@@ -202,13 +178,13 @@
     </form>
   </section>
 
-  <footer class="footer">Версия: ChatPatch v13.2.0</footer>
+  <footer class="footer">Версия: ChatPatch v13.2.1</footer>
 
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <!-- MarkerCluster -->
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <script src="script.js?v=13.2.0"></script>
+  <script src="script.js?v=13.2.1"></script>
 </body>
 </html>
