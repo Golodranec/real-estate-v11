@@ -23,6 +23,13 @@ body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font
 .hint { color: var(--muted); font-size: 13px; }
 .tools { display:flex; gap:8px; flex-wrap:wrap; }
 
+.params-box { display: grid; grid-template-columns: repeat(3, minmax(160px,1fr)); gap: 10px; }
+.param-group { border:1px dashed var(--border); border-radius:10px; padding:10px; }
+.param-title { font-weight:600; margin-bottom:6px; }
+.param-values { display:flex; flex-wrap:wrap; gap:8px; }
+.param-chip { display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:#0d1016; }
+.param-chip input { margin:0; }
+
 .btn { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #0d1016; color: var(--text); cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #001428; }
 .btn.ghost { background: transparent; }
@@ -64,6 +71,7 @@ body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font
 
 @media (max-width: 1000px) {
   .filters { grid-template-columns: repeat(2, 1fr); }
+  .params-box { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .range { max-width: 100%; }
 }
