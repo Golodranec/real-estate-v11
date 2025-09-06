@@ -1,33 +1,11 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <title>Прототип фильтров</title>
-  <style>
-    body { font-family: sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
-    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin-bottom:16px; }
-    .filters { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    select, .multiselect { padding:8px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
-    .multiselect { position:relative; cursor:pointer; }
-    .multiselect-menu {
-      display:none; position:absolute; top:100%; left:0; right:0;
-      background:#161a22; border:1px solid #242938; border-radius:8px; padding:6px;
-      max-height:180px; overflow:auto; z-index:10;
-    }
-    .multiselect-menu label { display:block; padding:4px; cursor:pointer; }
-    .multiselect.open .multiselect-menu { display:block; }
-  </style>
-</head>
-<body>
-
 <div class="card">
   <h2>Фильтры</h2>
   <div class="filters">
+
     <!-- Базовые -->
     <select id="city"><option value="">Город</option><option>Ташкент</option></select>
     <select id="district"><option value="">Район</option></select>
     <select id="street"><option value="">Улица / массив</option></select>
-
     <select id="category">
       <option value="">Категория</option>
       <option value="apartment">Квартиры</option>
@@ -37,82 +15,36 @@
       <option value="garage">Гаражи / стоянки</option>
       <option value="daily">Посуточная аренда</option>
     </select>
-  </div>
-</div>
 
-<!-- Динамические блоки -->
-<div id="filters-apartment" class="card" style="display:none">
-  <h3>Фильтры: Квартиры</h3>
-  <div class="filters">
-    <select><option>Подкатегория</option><option>Продажа</option><option>Аренда</option><option>Обмен</option></select>
-    <select><option>Тип жилья</option><option>Новостройка</option><option>Вторичка</option><option>От застройщика</option></select>
-    <input type="number" placeholder="Цена от">
-    <input type="number" placeholder="Цена до">
-    <input type="number" placeholder="Комнат от">
-    <input type="number" placeholder="Комнат до">
-    <input type="number" placeholder="Этаж от">
-    <input type="number" placeholder="Этаж до">
-    <input type="number" placeholder="Этажность от">
-    <input type="number" placeholder="Этажность до">
-    <input type="number" placeholder="Площадь от">
-    <input type="number" placeholder="Площадь до">
-
-    <!-- мультиселект удобств -->
-    <div class="multiselect" data-label="Удобства">
-      Удобства
-      <div class="multiselect-menu">
-        <label><input type="checkbox"> Интернет</label>
-        <label><input type="checkbox"> Холодильник</label>
-        <label><input type="checkbox"> Кондиционер</label>
-        <label><input type="checkbox"> Стиральная машина</label>
-      </div>
+    <!-- Цена -->
+    <div class="range">
+      <input type="number" placeholder="Цена от">
+      <input type="number" placeholder="Цена до">
     </div>
-  </div>
-</div>
 
-<div id="filters-commercial" class="card" style="display:none">
-  <h3>Фильтры: Коммерция</h3>
-  <div class="filters">
-    <select><option>Подкатегория</option><option>Продажа</option><option>Аренда</option><option>Обмен</option></select>
-    <select><option>Тип</option><option>Офис</option><option>Магазин</option><option>Склад</option></select>
-    <input type="number" placeholder="Цена от">
-    <input type="number" placeholder="Цена до">
-
-    <!-- мультиселект удобств -->
-    <div class="multiselect" data-label="Удобства">
-      Удобства
-      <div class="multiselect-menu">
-        <label><input type="checkbox"> Open Space</label>
-        <label><input type="checkbox"> Видеонаблюдение</label>
-        <label><input type="checkbox"> Охрана</label>
-        <label><input type="checkbox"> Парковка</label>
-      </div>
+    <!-- Количество комнат -->
+    <div class="range">
+      <input type="number" placeholder="Комнат от">
+      <input type="number" placeholder="Комнат до">
     </div>
+
+    <!-- Этаж -->
+    <div class="range">
+      <input type="number" placeholder="Этаж от">
+      <input type="number" placeholder="Этаж до">
+    </div>
+
+    <!-- Этажность -->
+    <div class="range">
+      <input type="number" placeholder="Этажность от">
+      <input type="number" placeholder="Этажность до">
+    </div>
+
+    <!-- Площадь -->
+    <div class="range">
+      <input type="number" placeholder="Площадь от">
+      <input type="number" placeholder="Площадь до">
+    </div>
+
   </div>
 </div>
-
-<script>
-  // показать/скрыть блок по категории
-  const categorySel = document.getElementById("category");
-  categorySel.addEventListener("change", () => {
-    document.querySelectorAll("[id^=filters-]").forEach(el => el.style.display="none");
-    if (categorySel.value) {
-      const block = document.getElementById("filters-"+categorySel.value);
-      if (block) block.style.display="block";
-    }
-  });
-
-  // мультиселект
-  document.querySelectorAll(".multiselect").forEach(ms => {
-    ms.addEventListener("click", (e) => {
-      ms.classList.toggle("open");
-      e.stopPropagation();
-    });
-  });
-  document.body.addEventListener("click", () => {
-    document.querySelectorAll(".multiselect").forEach(ms => ms.classList.remove("open"));
-  });
-</script>
-
-</body>
-</html>
