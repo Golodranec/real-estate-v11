@@ -1,10 +1,10 @@
-// ======= v13.4.2 =======
-console.log("✅ script.js v13.4.2 loaded");
+// ======= v13.5 =======
+console.log("✅ script.js v13.5 loaded");
 
 // ======= Константы LS =======
 const LS_OBJECTS = "objects";
-const LS_FILTERS = "filters_v13_4_2";
-const LS_FAVS    = "favorites_v13_4_2";
+const LS_FILTERS = "filters_v13_5";
+const LS_FAVS    = "favorites_v13_5";
 
 // ======= Данные =======
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
@@ -13,9 +13,11 @@ let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
 
-// ======= Дерево/типы из админки =======
-let treeNodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
-let nodeTypes = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+// ======= Дерево/типы/параметры из админки =======
+let treeNodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");  // [{id,name,type,parent}]
+let nodeTypes = JSON.parse(localStorage.getItem("nodeTypes") || "[]");  // ["Город","Район","Массив / улица","Категория",...]
+let extraParams = JSON.parse(localStorage.getItem("extraParams") || "[]"); // [{id,name,categoryId,values:[...] }]
+
 const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
 defaultTypes.forEach(t => { if (!nodeTypes.includes(t)) nodeTypes.push(t); });
 
@@ -40,17 +42,21 @@ const cityFilter     = $("cityFilter");
 const districtFilter = $("districtFilter");
 const streetFilter   = $("streetFilter");
 const categoryFilter = $("categoryFilter");
+const statusFilter   = $("statusFilter");
 
 const priceMin = $("priceMin"), priceMax = $("priceMax");
 const roomsMin = $("roomsMin"), roomsMax = $("roomsMax");
 const floorMin = $("floorMin"), floorMax = $("floorMax");
 const floorsMin= $("floorsMin"), floorsMax= $("floorsMax");
 const areaMin  = $("areaMin"),  areaMax  = $("areaMax");
+const yearMin  = $("yearMin"),  yearMax  = $("yearMax");
+const houseTypeFilter = $("houseTypeFilter");
+
 const sortSelect = $("sortSelect");
 const onlyFav = $("onlyFav");
 const resetFilters = $("resetFilters");
 const filtersInfo = $("filtersInfo");
-const extraFiltersWrap = $("extraFilters");
+const paramsFiltersBox = $("dynamicParamsFilters");
 
 // экспорт/импорт
 const exportJsonBtn = $("exportJson");
@@ -98,17 +104,14 @@ function setOptions(select, items, placeholder) {
   });
   if (prev && [...select.options].some(o => o.value === prev)) select.value = prev;
 }
-
-function showInfo(msg) {
-  filtersInfo.style.display = "block";
-  filtersInfo.textContent = msg;
-}
+function showInfo(msg) { filtersInfo.style.display = "block"; filtersInfo.textContent = msg; }
 function hideInfo() { filtersInfo.style.display = "none"; }
+const num = v => (v==="" || v==null ? null : +v);
 
-// ======= Каскад фильтров (базовые 4) =======
+// ======= Каскад фильтров =======
 function initCascadeFilters() {
   if (!treeNodes.length) {
-    showInfo("Нет данных из админки. Открой ‘Админка (дерево)’ и добавь Город → Район → Массив / улица, а также Категории.");
+    showInfo("Нет данных из админки. Открой ‘Админка’ и добавь Город → Район → Массив / улица, а также Категории.");
   } else hideInfo();
 
   setOptions(cityFilter, typed("Город"), "Город");
@@ -120,7 +123,7 @@ function initCascadeFilters() {
     const id = cityFilter.value ? +cityFilter.value : null;
     setOptions(districtFilter, id ? childrenOf(id).filter(n=>n.type==="Район") : [], "Район");
     setOptions(streetFilter, [], "Массив / улица");
-    saveFilters(); renderAll();
+    buildParamsFilters(); saveFilters(); renderAll();
   };
   districtFilter.onchange = () => {
     const id = districtFilter.value ? +districtFilter.value : null;
@@ -128,7 +131,9 @@ function initCascadeFilters() {
     saveFilters(); renderAll();
   };
   streetFilter.onchange = () => { saveFilters(); renderAll(); };
-  categoryFilter.onchange = () => { saveFilters(); renderAll(); };
+  categoryFilter.onchange = () => { buildParamsFilters(); saveFilters(); renderAll(); };
+  statusFilter.onchange = () => { saveFilters(); renderAll(); };
+  houseTypeFilter.onchange = () => { saveFilters(); renderAll(); };
 }
 
 // ======= Каскад формы =======
@@ -147,62 +152,96 @@ function initCascadeForm() {
     const id = districtSel.value ? +districtSel.value : null;
     setOptions(streetSel, id ? childrenOf(id).filter(n=>n.type==="Массив / улица") : [], "Массив / улица");
   };
+
+  categoryInput.onchange = () => { renderParamsForm(); };
+  renderParamsForm();
 }
 
-// ======= Доп. типы (динамические селекты) =======
-function buildExtraTypeFilters() {
-  // очищаем
-  extraFiltersWrap.innerHTML = "";
-  // какие типы показывать как дополнительные: все, кроме базовых 4
-  const extraTypes = nodeTypes.filter(t => !defaultTypes.includes(t));
-  if (!extraTypes.length) return;
+// ======= Динамические параметры: формы =======
+function paramsByCategoryId(catId) {
+  return extraParams.filter(p => p.categoryId === catId);
+}
+function renderParamsForm() {
+  const box = $("dynamicParamsForm");
+  box.innerHTML = "";
+  const catId = categoryInput.value ? +categoryInput.value : null;
+  if (!catId) return;
 
-  const grid = document.createElement("div");
-  grid.style.display = "grid";
-  grid.style.gridTemplateColumns = "repeat(3, minmax(160px,1fr))";
-  grid.style.gap = "10px";
-
-  extraTypes.forEach(type => {
-    const sel = document.createElement("select");
-    sel.className = "extra-type";
-    sel.dataset.type = type;
-    sel.innerHTML = `<option value="">${type}</option>`;
-    typed(type).forEach(n => {
-      const opt = document.createElement("option");
-      opt.value = String(n.id);
-      opt.textContent = n.name;
-      sel.appendChild(opt);
+  const params = paramsByCategoryId(catId);
+  params.forEach(p => {
+    const group = document.createElement("div");
+    group.className = "param-group";
+    group.innerHTML = `<div class="param-title">${p.name}</div>`;
+    const vals = document.createElement("div");
+    vals.className = "param-values";
+    (p.values||[]).forEach(val => {
+      const chip = document.createElement("label");
+      chip.className = "param-chip";
+      const id = `pf_${p.id}_${val}`;
+      chip.innerHTML = `<input type="checkbox" id="${id}" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
+      vals.appendChild(chip);
     });
-    sel.addEventListener("change", () => { saveFilters(); renderAll(); });
-    grid.appendChild(sel);
+    group.appendChild(vals);
+    box.appendChild(group);
+  });
+}
+
+// ======= Динамические параметры: фильтры =======
+function buildParamsFilters() {
+  paramsFiltersBox.innerHTML = "";
+  const catId = categoryFilter.value ? +categoryFilter.value : null;
+  if (!catId) return;
+
+  const params = paramsByCategoryId(catId);
+  params.forEach(p => {
+    const group = document.createElement("div");
+    group.className = "param-group";
+    group.innerHTML = `<div class="param-title">${p.name}</div>`;
+    const vals = document.createElement("div");
+    vals.className = "param-values";
+    (p.values||[]).forEach(val => {
+      const id = `fl_${p.id}_${val}`;
+      const chip = document.createElement("label");
+      chip.className = "param-chip";
+      chip.innerHTML = `<input type="checkbox" id="${id}" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
+      chip.querySelector("input").addEventListener("change", ()=>{ saveFilters(); renderAll(); });
+      vals.appendChild(chip);
+    });
+    group.appendChild(vals);
+    paramsFiltersBox.appendChild(group);
   });
 
-  extraFiltersWrap.appendChild(grid);
+  // восстановить сохранённые значения фильтра
+  const s = JSON.parse(localStorage.getItem(LS_FILTERS) || "{}");
+  paramsFiltersBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    const key = `param_${cb.dataset.param}_${cb.value}`;
+    if (s[key]) cb.checked = true;
+  });
 }
 
 // ======= сохранение/загрузка фильтров =======
 function loadFilters() {
   const s = JSON.parse(localStorage.getItem(LS_FILTERS) || "{}");
-  ["cityFilter","districtFilter","streetFilter","categoryFilter"].forEach(k => { if (s[k]) $(k).value = s[k]; });
-  ["priceMin","priceMax","roomsMin","roomsMax","floorMin","floorMax","floorsMin","floorsMax","areaMin","areaMax","sortSelect"]
+  ["cityFilter","districtFilter","streetFilter","categoryFilter","statusFilter","houseTypeFilter"].forEach(k => { if (s[k]) $(k).value = s[k]; });
+  ["priceMin","priceMax","roomsMin","roomsMax","floorMin","floorMax","floorsMin","floorsMax","areaMin","areaMax","yearMin","yearMax","sortSelect"]
     .forEach(k => { if (s[k] != null) $(k).value = s[k]; });
   onlyFav.checked = !!s.onlyFav;
 
-  // восстановим extra
-  document.querySelectorAll("#extraFilters select.extra-type").forEach(sel => {
-    const key = "extra_" + sel.dataset.type;
-    if (s[key]) sel.value = s[key];
-  });
+  // отрисовать чекбоксы параметров под выбранную категорию и восстановить состояния
+  buildParamsFilters();
 }
 function saveFilters() {
   const s = {
     cityFilter: cityFilter.value, districtFilter: districtFilter.value, streetFilter: streetFilter.value, categoryFilter: categoryFilter.value,
+    statusFilter: statusFilter.value, houseTypeFilter: houseTypeFilter.value,
     priceMin: priceMin.value, priceMax: priceMax.value, roomsMin: roomsMin.value, roomsMax: roomsMax.value,
     floorMin: floorMin.value, floorMax: floorMax.value, floorsMin: floorsMin.value, floorsMax: floorsMax.value,
-    areaMin: areaMin.value, areaMax: areaMax.value, sortSelect: sortSelect.value, onlyFav: onlyFav.checked
+    areaMin: areaMin.value, areaMax: areaMax.value, yearMin: yearMin.value, yearMax: yearMax.value,
+    sortSelect: sortSelect.value, onlyFav: onlyFav.checked
   };
-  document.querySelectorAll("#extraFilters select.extra-type").forEach(sel => {
-    s["extra_" + sel.dataset.type] = sel.value;
+  paramsFiltersBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    const key = `param_${cb.dataset.param}_${cb.value}`;
+    s[key] = cb.checked;
   });
   localStorage.setItem(LS_FILTERS, JSON.stringify(s));
 }
@@ -252,12 +291,22 @@ form.addEventListener("submit", (e) => {
   const districtId = districtSel.value ? +districtSel.value : null;
   const streetId = streetSel.value ? +streetSel.value : null;
 
+  // собрать extra из чекбоксов формы
+  const extra = {};
+  document.querySelectorAll('#dynamicParamsForm input[type="checkbox"]').forEach(cb=>{
+    const pname = cb.dataset.param;
+    if (cb.checked) {
+      if (!extra[pname]) extra[pname] = [];
+      extra[pname].push(cb.value);
+    }
+  });
+
   const obj = {
     id: editingId ?? Date.now(),
     title: titleInput.value.trim(),
     price: priceInput.value ? +priceInput.value : null,
     rooms: roomsInput.value ? +roomsInput.value : null,
-    status: statusInput.value,
+    status: statusInput.value, // sale/rent/exchange
     category: categoryInput.value ? (getNode(+categoryInput.value)?.name || "") : "",
     city: cityId ? (getNode(cityId)?.name || "") : "",
     district: districtId ? (getNode(districtId)?.name || "") : "",
@@ -268,6 +317,7 @@ form.addEventListener("submit", (e) => {
     floors: floorsInput.value ? +floorsInput.value : null,
     year: yearInput.value ? +yearInput.value : null,
     houseType: houseTypeSel.value || null,
+    extra, // <— ключ
     lat: tempCoords.lat,
     lng: tempCoords.lng,
     images: [...selectedImages],
@@ -293,38 +343,58 @@ function clearFormState() {
 }
 
 // ======= избранное =======
-function isFav(id) { return favorites.has(id); }
 function toggleFav(id) {
   if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
   localStorage.setItem(LS_FAVS, JSON.stringify([...favorites]));
   renderAll();
 }
+function isFav(id) { return favorites.has(id); }
 
 // ======= фильтрация =======
 function applyFilters(list) {
   let res = [...list];
 
-  // базовые 4
   const cityName = cityFilter.value ? nameById(+cityFilter.value) : "";
   const districtName = districtFilter.value ? nameById(+districtFilter.value) : "";
   const streetName = streetFilter.value ? nameById(+streetFilter.value) : "";
   const categoryName = categoryFilter.value ? nameById(+categoryFilter.value) : "";
+  const statusVal = statusFilter.value || "";
 
   if (cityName)     res = res.filter(o => (o.city||"")     === cityName);
   if (districtName) res = res.filter(o => (o.district||"") === districtName);
   if (streetName)   res = res.filter(o => (o.street||"")   === streetName);
   if (categoryName) res = res.filter(o => (o.category||"") === categoryName);
+  if (statusVal)    res = res.filter(o => (o.status||"")   === statusVal);
 
-  // доп. типы (пока просто визуальны — не фильтруем, т.к. не знаем, куда писать в объект)
-  // если потребуется — скажешь, в какие поля сохранять, я подключу.
+  // тип дома
+  if (houseTypeFilter.value) res = res.filter(o => (o.houseType||"") === houseTypeFilter.value);
 
-  // диапазоны
-  const num = v => (v==="" || v==null ? null : +v);
+  // динамические параметры (чекбоксы): внутри одного параметра — ИЛИ, между параметрами — И
+  const selectedByParam = {};
+  paramsFiltersBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    if (cb.checked) {
+      const p = cb.dataset.param;
+      if (!selectedByParam[p]) selectedByParam[p] = new Set();
+      selectedByParam[p].add(cb.value);
+    }
+  });
+
+  Object.keys(selectedByParam).forEach(pname=>{
+    const wanted = selectedByParam[pname];
+    res = res.filter(o => {
+      const got = new Set(o.extra?.[pname] || []);
+      // пересечение множеств
+      for (const val of wanted) { if (got.has(val)) return true; }
+      return false;
+    });
+  });
+
   const pMin = num(priceMin.value), pMax = num(priceMax.value);
   const rMin = num(roomsMin.value), rMax = num(roomsMax.value);
   const fMin = num(floorMin.value), fMax = num(floorMax.value);
   const fsMin= num(floorsMin.value), fsMax= num(floorsMax.value);
   const aMin = num(areaMin.value),  aMax = num(areaMax.value);
+  const yMin = num(yearMin.value),  yMax = num(yearMax.value);
 
   if (pMin!==null) res = res.filter(o => (o.price ?? Infinity) >= pMin);
   if (pMax!==null) res = res.filter(o => (o.price ?? -Infinity) <= pMax);
@@ -336,6 +406,8 @@ function applyFilters(list) {
   if (fsMax!==null) res = res.filter(o => (o.floors ?? -Infinity) <= fsMax);
   if (aMin!==null) res = res.filter(o => (o.area ?? Infinity) >= aMin);
   if (aMax!==null) res = res.filter(o => (o.area ?? -Infinity) <= aMax);
+  if (yMin!==null) res = res.filter(o => (o.year ?? Infinity) >= yMin);
+  if (yMax!==null) res = res.filter(o => (o.year ?? -Infinity) <= yMax);
 
   if (onlyFav.checked) res = res.filter(o => favorites.has(o.id));
 
@@ -348,12 +420,19 @@ function applyFilters(list) {
 }
 
 [
-  priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,sortSelect,onlyFav
+  priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,yearMin,yearMax,sortSelect,onlyFav,
+  statusFilter, houseTypeFilter
 ].forEach(el => el.addEventListener("input", () => { saveFilters(); renderAll(); }));
 
 resetFilters.addEventListener("click", () => {
-  [cityFilter,districtFilter,streetFilter,categoryFilter,priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,sortSelect].forEach(el => el.value = "");
-  onlyFav.checked = false; saveFilters(); initCascadeFilters(); buildExtraTypeFilters(); renderAll();
+  [cityFilter,districtFilter,streetFilter,categoryFilter,statusFilter,houseTypeFilter,
+   priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,yearMin,yearMax,sortSelect]
+   .forEach(el => el.value = "");
+  onlyFav.checked = false;
+  saveFilters();
+  initCascadeFilters();
+  buildParamsFilters();
+  renderAll();
 });
 
 // ======= рендер =======
@@ -373,22 +452,26 @@ function renderList(list){
     const card=document.createElement("article");
     card.className="card-item"; card.id=`card-${obj.id}`;
     const img0=obj.images?.[0]||""; const total=obj.images?.length||0;
+    const addr = [obj.city,obj.district,obj.street].filter(Boolean).join(", ");
+    const extras = obj.extra ? Object.entries(obj.extra).map(([k,v])=>`${k}: ${Array.isArray(v)?v.join(", "):v}`).join(" · ") : "";
     card.innerHTML=`
       <div class="slider"><img src="${img0}" style="${img0?'':'display:none'}"/><div class="count">${total?`1/${total}`:"без фото"}</div></div>
       <div class="card-body">
         <div class="card-title">${obj.title || "(без названия)"}</div>
         <div class="card-meta"><span>Цена: ${obj.price!=null?obj.price.toLocaleString():"—"}</span><span>Комнат: ${obj.rooms??"—"}</span></div>
         <div class="card-meta"><span>Категория: ${obj.category||"—"}</span><span>Статус: ${obj.status||"—"}</span></div>
-        <div class="card-meta"><span>${obj.city||"—"}${obj.district?", "+obj.district:""}${obj.street?", "+obj.street:""}</span></div>
+        <div class="card-meta"><span>${addr || "—"}</span></div>
         <div class="card-meta">
           ${obj.area?`<span>Площадь: ${obj.area} м²</span>`:""}
           ${obj.floor!=null||obj.floors!=null?`<span>Этаж/этажность: ${obj.floor??"—"} / ${obj.floors??"—"}</span>`:""}
           ${obj.year?`<span>Год: ${obj.year}</span>`:""}
+          ${obj.houseType?`<span>Тип дома: ${obj.houseType}</span>`:""}
         </div>
+        ${extras?`<div class="card-meta">${extras}</div>`:""}
         <div class="card-actions">
           <button class="btn" onclick="fillFormForEdit(${obj.id})">Редактировать</button>
           <button class="btn danger" onclick="deleteObj(${obj.id})">Удалить</button>
-          <button class="fav-btn ${favorites.has(obj.id)?"active":""}" onclick="toggleFav(${obj.id})">♥</button>
+          <button class="fav-btn ${isFav(obj.id)?"active":""}" onclick="toggleFav(${obj.id})">♥</button>
         </div>
       </div>`;
     resultsList.appendChild(card);
@@ -411,14 +494,18 @@ window.fillFormForEdit = function(id){
   editingId=o.id;
   titleInput.value=o.title||""; priceInput.value=o.price??""; roomsInput.value=o.rooms??"";
   statusInput.value=o.status||"sale";
-  const cat = typed("Категория").find(n => n.name === o.category);
+
+  // категория
   setOptions(categoryInput, typed("Категория"), "Категория");
-  categoryInput.value = cat ? String(cat.id) : "";
+  const catNode = typed("Категория").find(n => n.name === o.category);
+  if (catNode) categoryInput.value = String(catNode.id);
+
   addressInput.value=o.address||"";
   areaInput.value=o.area??""; floorInput.value=o.floor??""; floorsInput.value=o.floors??""; yearInput.value=o.year??""; houseTypeSel.value=o.houseType||"";
   selectedImages=[...(o.images||[])]; renderImagePreview();
   tempCoords={lat:o.lat,lng:o.lng};
 
+  // локация
   const cityN = typed("Город").find(n=>n.name===o.city);
   setOptions(citySel, typed("Город"), "Город");
   if (cityN) citySel.value = String(cityN.id);
@@ -428,6 +515,15 @@ window.fillFormForEdit = function(id){
   const streetN = distN ? childrenOf(distN.id).find(n=>n.type==="Массив / улица" && n.name===o.street) : null;
   setOptions(streetSel, distN?childrenOf(distN.id).filter(n=>n.type==="Массив / улица"):[], "Массив / улица");
   if (streetN) streetSel.value = String(streetN.id);
+
+  // параметры категории — отрисовать и отметить выбранные
+  renderParamsForm();
+  if (o.extra) {
+    document.querySelectorAll('#dynamicParamsForm input[type="checkbox"]').forEach(cb=>{
+      const pname = cb.dataset.param;
+      if (o.extra[pname]?.includes(cb.value)) cb.checked = true;
+    });
+  }
 
   formTitle.textContent="Редактировать объект";
 }
@@ -457,8 +553,11 @@ importJsonInp.addEventListener("change", (e) => {
 });
 exportCsvBtn.addEventListener("click", () => {
   if (!objects.length) return alert("Нет объектов");
-  const headers = ["id","title","price","rooms","status","category","city","district","street","address","area","floor","floors","year","lat","lng","createdAt"];
-  const rows = objects.map(o => headers.map(h => JSON.stringify(o[h] ?? "")).join(","));
+  const headers = ["id","title","price","rooms","status","category","city","district","street","address","area","floor","floors","year","houseType","lat","lng","createdAt","extra"];
+  const rows = objects.map(o => {
+    const row = {...o, extra: JSON.stringify(o.extra||{})};
+    return headers.map(h => JSON.stringify(row[h] ?? "")).join(",");
+  });
   const csv = headers.join(",") + "\n" + rows.join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -469,7 +568,6 @@ exportCsvBtn.addEventListener("click", () => {
 // ======= init =======
 function init() {
   initCascadeFilters();
-  buildExtraTypeFilters();
   initCascadeForm();
   loadFilters();
   renderAll();
@@ -480,10 +578,12 @@ function init() {
     const demoDist = demoCity ? childrenOf(demoCity.id).find(n=>n.type==="Район") : null;
     const demoStreet = demoDist ? childrenOf(demoDist.id).find(n=>n.type==="Массив / улица") : null;
     const catFlat = typed("Категория").find(n=>n.name==="Квартиры") || typed("Категория")[0];
+
     objects = [
       { id: Date.now(), title:"Квартира (демо)", price:50000, rooms:3, status:"sale",
         category: catFlat?catFlat.name:"", city: demoCity?demoCity.name:"", district: demoDist?demoDist.name:"", street: demoStreet?demoStreet.name:"",
-        area:67, floor:4, floors:9, lat:41.31, lng:69.28, images:[], createdAt: Date.now()
+        area:67, floor:4, floors:9, lat:41.31, lng:69.28, images:[], createdAt: Date.now(),
+        year: 2005, houseType: "panel", extra: {}
       }
     ];
     localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
