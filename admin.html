@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Админка v13.3</title>
+  <style>
+    body { font-family:sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
+    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin-bottom:16px; }
+    ul.tree { list-style:none; padding-left:20px; }
+    ul.tree li { margin:4px 0; }
+    input, select { padding:6px; border-radius:6px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
+    button { padding:6px 10px; border-radius:6px; border:none; cursor:pointer; }
+    .btn { background:#4da3ff; color:#001428; }
+    .btn-del { background:#ff6b6b; color:#fff; margin-left:6px; }
+  </style>
+</head>
+<body>
+
+<h1>Админка: дерево фильтров</h1>
+<div class="card">
+  <form id="nodeForm">
+    <input id="nodeName" placeholder="Название" required>
+    <select id="nodeType">
+      <option value="Город">Город</option>
+      <option value="Район">Район</option>
+      <option value="Улица">Улица</option>
+      <option value="Категория">Категория</option>
+    </select>
+    <select id="nodeParent"></select>
+    <button class="btn" type="submit">Добавить</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Дерево</h2>
+  <ul id="treeContainer" class="tree"></ul>
+</div>
+
+<script>
+let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
+
+function saveNodes(){
+  localStorage.setItem("treeNodes", JSON.stringify(nodes));
+  renderTree();
+  fillParentSelect();
+}
+
+function fillParentSelect(){
+  const sel = document.getElementById("nodeParent");
+  sel.innerHTML = `<option value="">(корень)</option>`;
+  nodes.forEach(n => {
+    sel.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+  });
+}
+
+function renderTree(parentId=null, container=document.getElementById("treeContainer")){
+  if(parentId===null) container.innerHTML = "";
+  const ul = document.createElement("ul");
+  nodes.filter(n=>n.parent==parentId).forEach(n=>{
+    const li = document.createElement("li");
+    li.textContent = `${n.name} (${n.type})`;
+    const del = document.createElement("button");
+    del.className="btn-del";
+    del.textContent="Удалить";
+    del.onclick=()=>{ nodes=nodes.filter(x=>x.id!==n.id); saveNodes(); };
+    li.appendChild(del);
+    renderTree(n.id, li);
+    ul.appendChild(li);
+  });
+  container.appendChild(ul);
+}
+
+document.getElementById("nodeForm").onsubmit=e=>{
+  e.preventDefault();
+  const name=document.getElementById("nodeName").value;
+  const type=document.getElementById("nodeType").value;
+  const parent=document.getElementById("nodeParent").value||null;
+  const id=Date.now();
+  nodes.push({id,name,type,parent:parent?+parent:null});
+  saveNodes();
+  e.target.reset();
+};
+
+saveNodes();
+</script>
+</body>
+</html>
