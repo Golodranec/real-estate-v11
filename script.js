@@ -1,18 +1,18 @@
-// ======= v12 bootstrap =======
-console.log("✅ script.js v12 loaded");
+// ======= v12.1 bootstrap =======
+console.log("✅ script.js v12.1 loaded");
 
-const LS_OBJECTS = "objects";           // совместимость с v10/v11
-const LS_FILTERS = "filters_v12";
-const LS_FAVS    = "favorites_v12";
+const LS_OBJECTS = "objects";
+const LS_FILTERS = "filters_v12_1";
+const LS_FAVS    = "favorites_v12_1";
 
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
 let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 let editingId = null;
-let selectedImages = [];        // массив dataURL для превью/сохранения
-let tempCoords = { lat: null, lng: null }; // храним скрыто выбранные координаты
+let selectedImages = [];
+let tempCoords = { lat: null, lng: null };
 
 // ======= карта (Leaflet) =======
-const map = L.map("map").setView([55.751244, 37.618423], 10);
+const map = L.map("map").setView([41.3111, 69.2797], 12); // Ташкент
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "© OpenStreetMap",
@@ -29,7 +29,8 @@ const categoryFilter= $("categoryFilter");
 const statusFilter  = $("statusFilter");
 const priceMin      = $("priceMin");
 const priceMax      = $("priceMax");
-const roomsFilter   = $("roomsFilter");
+const roomsMin      = $("roomsMin");
+const roomsMax      = $("roomsMax");
 const sortSelect    = $("sortSelect");
 const resetFilters  = $("resetFilters");
 
@@ -62,7 +63,8 @@ function loadFilters() {
   if (saved.status)   statusFilter.value = saved.status;
   if (typeof saved.priceMin === "number") priceMin.value = saved.priceMin;
   if (typeof saved.priceMax === "number") priceMax.value = saved.priceMax;
-  if (saved.rooms)    roomsFilter.value = saved.rooms;
+  if (typeof saved.roomsMin === "number") roomsMin.value = saved.roomsMin;
+  if (typeof saved.roomsMax === "number") roomsMax.value = saved.roomsMax;
   if (saved.sort)     sortSelect.value  = saved.sort;
 }
 function saveFilters() {
@@ -72,24 +74,25 @@ function saveFilters() {
     status: statusFilter.value,
     priceMin: priceMin.value ? Number(priceMin.value) : undefined,
     priceMax: priceMax.value ? Number(priceMax.value) : undefined,
-    rooms: roomsFilter.value,
+    roomsMin: roomsMin.value ? Number(roomsMin.value) : undefined,
+    roomsMax: roomsMax.value ? Number(roomsMax.value) : undefined,
     sort: sortSelect.value,
   };
   localStorage.setItem(LS_FILTERS, JSON.stringify(f));
 }
 
-// ======= фотки: добавление / превью / удаление =======
+// ======= фотки =======
 imagesInput.addEventListener("change", (e) => {
   const files = Array.from(e.target.files || []);
   files.forEach((file) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
-      selectedImages.push(ev.target.result); // добавляем, не затираем
+      selectedImages.push(ev.target.result);
       renderImagePreview();
     };
     reader.readAsDataURL(file);
   });
-  imagesInput.value = ""; // для повторного выбора тех же файлов
+  imagesInput.value = "";
 });
 
 function renderImagePreview() {
@@ -109,7 +112,7 @@ function renderImagePreview() {
   });
 }
 
-// ======= выбор точки на карте (без полей lat/lng) =======
+// ======= выбор точки на карте =======
 pickOnMapBtn.addEventListener("click", () => {
   pickOnMapBtn.disabled = true;
   pickOnMapBtn.textContent = "Кликни по карте…";
@@ -142,17 +145,12 @@ form.addEventListener("submit", (e) => {
     status: statusInput.value,
     category: categoryInput.value,
     address: addressInput.value.trim(),
-
-    // новые поля
     area: areaInput.value ? Number(areaInput.value) : null,
     floor: floorInput.value ? Number(floorInput.value) : null,
     year: yearInput.value ? Number(yearInput.value) : null,
     houseType: houseTypeSel.value || null,
-
-    // координаты (скрытые для пользователя)
     lat: tempCoords.lat,
     lng: tempCoords.lng,
-
     images: [...selectedImages],
     createdAt: base ? base.createdAt : Date.now(),
   };
@@ -196,7 +194,7 @@ function isFav(id) { return favorites.has(id); }
 function toggleFav(id) {
   if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
   localStorage.setItem(LS_FAVS, JSON.stringify(Array.from(favorites)));
-  renderAll(); // для обновления состояния иконок
+  renderAll();
 }
 
 // ======= фильтрация + поиск + сортировка =======
@@ -212,15 +210,17 @@ function applyFilters(list) {
 
   const cat = categoryFilter.value;
   const st  = statusFilter.value;
-  const rm  = roomsFilter.value;
   const pmin = priceMin.value ? Number(priceMin.value) : null;
   const pmax = priceMax.value ? Number(priceMax.value) : null;
+  const rmin = roomsMin.value ? Number(roomsMin.value) : null;
+  const rmax = roomsMax.value ? Number(roomsMax.value) : null;
 
   if (cat) res = res.filter(o => o.category === cat);
   if (st)  res = res.filter(o => o.status === st);
-  if (rm)  res = res.filter(o => rm === "4" ? o.rooms >= 4 : o.rooms === Number(rm));
   if (pmin !== null) res = res.filter(o => o.price >= pmin);
   if (pmax !== null) res = res.filter(o => o.price <= pmax);
+  if (rmin !== null) res = res.filter(o => o.rooms >= rmin);
+  if (rmax !== null) res = res.filter(o => o.rooms <= rmax);
 
   const sort = sortSelect.value;
   if (sort === "priceAsc") res.sort((a,b) => a.price - b.price);
@@ -231,15 +231,17 @@ function applyFilters(list) {
   return res;
 }
 
-[searchInput, categoryFilter, statusFilter, roomsFilter, priceMin, priceMax, sortSelect]
+[searchInput, categoryFilter, statusFilter, roomsMin, roomsMax, priceMin, priceMax, sortSelect]
   .forEach(elm => elm.addEventListener("input", () => { saveFilters(); renderAll(); }));
+
 resetFilters.addEventListener("click", () => {
   searchInput.value = "";
   categoryFilter.value = "";
   statusFilter.value = "";
-  roomsFilter.value = "";
   priceMin.value = "";
   priceMax.value = "";
+  roomsMin.value = "";
+  roomsMax.value = "";
   sortSelect.value = "";
   saveFilters();
   renderAll();
@@ -407,7 +409,7 @@ function humanCategory(v) {
   return { apartment: "Квартира", house: "Дом", land: "Участок", commercial: "Коммерция" }[v] || v;
 }
 function humanStatus(v) {
-  return { sale: "Продается", rent: "Сдается", sold: "Продано/Сдано" }[v] || v;
+  return { sale: "Продается", rent: "Сдается" }[v] || v;
 }
 function humanHouseType(v) {
   return { brick: "Кирпичный", panel: "Панельный", block: "Блочный", monolithic: "Монолит", wood: "Деревянный" }[v] || v;
@@ -417,7 +419,7 @@ function humanHouseType(v) {
 loadFilters();
 renderAll();
 
-// демо-объект если пусто (для наглядности)
+// демо-объект если пусто
 if (!objects.length) {
   const demo = {
     id: Date.now(),
@@ -427,7 +429,7 @@ if (!objects.length) {
     status: "sale",
     category: "apartment",
     address: "ул. Примерная, 1",
-    lat: 55.76, lng: 37.62,
+    lat: 41.3111, lng: 69.2797,
     images: [],
     area: 54.2, floor: 7, year: 2016, houseType: "monolithic",
     createdAt: Date.now(),
@@ -436,10 +438,3 @@ if (!objects.length) {
   localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
   renderAll();
 }
-
-// слушатели для мгновенной фильтрации/поиска/сортировки
-[searchInput, categoryFilter, statusFilter, roomsFilter, priceMin, priceMax, sortSelect]
-  .forEach(elm => elm.addEventListener("change", () => { saveFilters(); renderAll(); }));
-
-// небольшая защита от мобильного автозума
-document.addEventListener("touchstart", () => {}, {passive:true});
