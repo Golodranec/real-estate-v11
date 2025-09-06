@@ -1,25 +1,31 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Админка v13.3</title>
+  <meta charset="UTF-8" />
+  <title>Админка — v13.3.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family:sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
-    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin-bottom:16px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
+    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin:16px 0; }
+    input, select, button { padding:10px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
+    button { cursor:pointer; }
+    .btn { background:#4da3ff; color:#001428; border-color:#4da3ff; }
+    .btn-ghost { background:transparent; }
     ul.tree { list-style:none; padding-left:20px; }
     ul.tree li { margin:4px 0; }
-    input, select { padding:6px; border-radius:6px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
-    button { padding:6px 10px; border-radius:6px; border:none; cursor:pointer; }
-    .btn { background:#4da3ff; color:#001428; }
-    .btn-del { background:#ff6b6b; color:#fff; margin-left:6px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .node { display:flex; align-items:center; gap:8px; }
+    .node-type { opacity:.7; font-size:12px; }
+    .danger { background:#ff6b6b; color:#fff; border-color:#ff6b6b; }
   </style>
 </head>
 <body>
 
-<h1>Админка: дерево фильтров</h1>
+<h1>Админка: дерево для фильтров</h1>
+
 <div class="card">
-  <form id="nodeForm">
-    <input id="nodeName" placeholder="Название" required>
+  <div class="row">
+    <input id="nodeName" placeholder="Название" />
     <select id="nodeType">
       <option value="Город">Город</option>
       <option value="Район">Район</option>
@@ -27,61 +33,108 @@
       <option value="Категория">Категория</option>
     </select>
     <select id="nodeParent"></select>
-    <button class="btn" type="submit">Добавить</button>
-  </form>
+    <button id="addBtn" class="btn">Добавить</button>
+    <button id="clearAll" class="btn-ghost danger">Очистить всё</button>
+  </div>
+  <div style="margin-top:8px; opacity:.8; font-size:14px">
+    Подсказка: делай структуру так — Город → Район → Улица (по дереву). Категории не обязаны иметь родителей.
+  </div>
 </div>
 
 <div class="card">
-  <h2>Дерево</h2>
-  <ul id="treeContainer" class="tree"></ul>
+  <h3>Текущее дерево</h3>
+  <ul id="tree" class="tree"></ul>
 </div>
 
 <script>
 let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
 
-function saveNodes(){
+const $ = id => document.getElementById(id);
+
+function save() {
   localStorage.setItem("treeNodes", JSON.stringify(nodes));
-  renderTree();
-  fillParentSelect();
+  render();
+  fillParent();
 }
 
-function fillParentSelect(){
-  const sel = document.getElementById("nodeParent");
-  sel.innerHTML = `<option value="">(корень)</option>`;
+function fillParent() {
+  const sel = $("nodeParent");
+  sel.innerHTML = `<option value="">(без родителя)</option>`;
   nodes.forEach(n => {
-    sel.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+    const opt = document.createElement("option");
+    opt.value = n.id;
+    opt.textContent = `${n.name} (${n.type})`;
+    sel.appendChild(opt);
   });
 }
 
-function renderTree(parentId=null, container=document.getElementById("treeContainer")){
-  if(parentId===null) container.innerHTML = "";
+function treeChildren(parentId) {
+  return nodes.filter(n => n.parent === parentId);
+}
+
+function render(parentId = null, container = $("tree")) {
+  if (parentId === null) container.innerHTML = "";
   const ul = document.createElement("ul");
-  nodes.filter(n=>n.parent==parentId).forEach(n=>{
+  ul.className = "tree";
+  treeChildren(parentId).forEach(n => {
     const li = document.createElement("li");
-    li.textContent = `${n.name} (${n.type})`;
+    const row = document.createElement("div");
+    row.className = "node";
+    const title = document.createElement("span");
+    title.textContent = n.name;
+    const t = document.createElement("span");
+    t.className = "node-type";
+    t.textContent = `(${n.type})`;
+
     const del = document.createElement("button");
-    del.className="btn-del";
-    del.textContent="Удалить";
-    del.onclick=()=>{ nodes=nodes.filter(x=>x.id!==n.id); saveNodes(); };
-    li.appendChild(del);
-    renderTree(n.id, li);
+    del.className = "danger";
+    del.textContent = "Удалить";
+    del.onclick = () => {
+      // удаляем узел и всех потомков
+      const toDelete = new Set([n.id]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        nodes.forEach(x => {
+          if (toDelete.has(x.parent)) {
+            toDelete.add(x.id);
+            changed = true;
+          }
+        });
+      }
+      nodes = nodes.filter(x => !toDelete.has(x.id));
+      save();
+    };
+
+    row.appendChild(title);
+    row.appendChild(t);
+    row.appendChild(del);
+    li.appendChild(row);
+
+    render(n.id, li);
     ul.appendChild(li);
   });
   container.appendChild(ul);
 }
 
-document.getElementById("nodeForm").onsubmit=e=>{
-  e.preventDefault();
-  const name=document.getElementById("nodeName").value;
-  const type=document.getElementById("nodeType").value;
-  const parent=document.getElementById("nodeParent").value||null;
-  const id=Date.now();
-  nodes.push({id,name,type,parent:parent?+parent:null});
-  saveNodes();
-  e.target.reset();
+$("addBtn").onclick = () => {
+  const name = $("nodeName").value.trim();
+  const type = $("nodeType").value;
+  const parent = $("nodeParent").value ? +$("nodeParent").value : null;
+  if (!name) return alert("Введи название");
+  nodes.push({ id: Date.now(), name, type, parent });
+  $("nodeName").value = "";
+  save();
 };
 
-saveNodes();
+$("clearAll").onclick = () => {
+  if (confirm("Точно удалить всё дерево?")) {
+    nodes = [];
+    save();
+  }
+};
+
+save();
 </script>
 </body>
 </html>
