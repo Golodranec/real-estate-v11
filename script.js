@@ -1,41 +1,27 @@
-// ======= v13 bootstrap =======
-console.log("✅ script.js v13 loaded");
+// ======= v13.1 bootstrap =======
+console.log("✅ script.js v13.1 loaded");
 
-const LS_OBJECTS = "objects";              // совместимо с прошлым
-const LS_FILTERS = "filters_v13";
-const LS_FAVS    = "favorites_v13";
-const LS_FAVS_OLD = "favorites_v12_1";     // миграция
+const LS_OBJECTS = "objects";
+const LS_FILTERS = "filters_v13_1";
+const LS_FAVS    = "favorites_v13_1";
 
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
-// мигрируем избранное из старого ключа, если новый пустой
-let favInit = JSON.parse(localStorage.getItem(LS_FAVS) || "[]");
-if (!favInit.length) {
-  const old = JSON.parse(localStorage.getItem(LS_FAVS_OLD) || "[]");
-  if (old.length) {
-    localStorage.setItem(LS_FAVS, JSON.stringify(old));
-    favInit = old;
-  }
-}
-let favorites = new Set(favInit);
-
+let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
 
-// ======= карта (Leaflet) + кластеризация =======
+// ======= карта (Leaflet + кластеры) =======
 const map = L.map("map").setView([41.3111, 69.2797], 12); // Ташкент
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "© OpenStreetMap",
 }).addTo(map);
 
-// слой для маркера формы (точка редактируемого/нового объекта)
 const markerLayer = L.layerGroup().addTo(map);
-// кластер для объектов
-const cluster = L.markerClusterGroup({
-  showCoverageOnHover: false,
-  maxClusterRadius: 45
-});
+let formMarker = null;
+
+const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 });
 map.addLayer(cluster);
 
 // ======= элементы =======
@@ -48,6 +34,10 @@ const priceMin      = $("priceMin");
 const priceMax      = $("priceMax");
 const roomsMin      = $("roomsMin");
 const roomsMax      = $("roomsMax");
+const areaMin       = $("areaMin");
+const areaMax       = $("areaMax");
+const floorMin      = $("floorMin");
+const floorMax      = $("floorMax");
 const sortSelect    = $("sortSelect");
 const onlyFav       = $("onlyFav");
 const resetFilters  = $("resetFilters");
@@ -84,10 +74,14 @@ function loadFilters() {
   if (saved.q != null) searchInput.value = saved.q;
   if (saved.category) categoryFilter.value = saved.category;
   if (saved.status)   statusFilter.value = saved.status;
-  if (typeof saved.priceMin === "number") priceMin.value = saved.priceMin;
-  if (typeof saved.priceMax === "number") priceMax.value = saved.priceMax;
-  if (typeof saved.roomsMin === "number") roomsMin.value = saved.roomsMin;
-  if (typeof saved.roomsMax === "number") roomsMax.value = saved.roomsMax;
+  if (saved.priceMin) priceMin.value = saved.priceMin;
+  if (saved.priceMax) priceMax.value = saved.priceMax;
+  if (saved.roomsMin) roomsMin.value = saved.roomsMin;
+  if (saved.roomsMax) roomsMax.value = saved.roomsMax;
+  if (saved.areaMin)  areaMin.value = saved.areaMin;
+  if (saved.areaMax)  areaMax.value = saved.areaMax;
+  if (saved.floorMin) floorMin.value = saved.floorMin;
+  if (saved.floorMax) floorMax.value = saved.floorMax;
   if (saved.sort)     sortSelect.value  = saved.sort;
   if (saved.onlyFav)  onlyFav.checked = true;
 }
@@ -96,12 +90,16 @@ function saveFilters() {
     q: searchInput.value.trim(),
     category: categoryFilter.value,
     status: statusFilter.value,
-    priceMin: priceMin.value ? Number(priceMin.value) : undefined,
-    priceMax: priceMax.value ? Number(priceMax.value) : undefined,
-    roomsMin: roomsMin.value ? Number(roomsMin.value) : undefined,
-    roomsMax: roomsMax.value ? Number(roomsMax.value) : undefined,
+    priceMin: priceMin.value,
+    priceMax: priceMax.value,
+    roomsMin: roomsMin.value,
+    roomsMax: roomsMax.value,
+    areaMin: areaMin.value,
+    areaMax: areaMax.value,
+    floorMin: floorMin.value,
+    floorMax: floorMax.value,
     sort: sortSelect.value,
-    onlyFav: !!onlyFav.checked
+    onlyFav: onlyFav.checked
   };
   localStorage.setItem(LS_FILTERS, JSON.stringify(f));
 }
@@ -119,16 +117,12 @@ imagesInput.addEventListener("change", (e) => {
   });
   imagesInput.value = "";
 });
-
 function renderImagePreview() {
   imagePreview.innerHTML = "";
   selectedImages.forEach((src, idx) => {
     const wrap = document.createElement("div");
     wrap.className = "preview-item";
-    wrap.innerHTML = `
-      <img src="${src}" alt="photo"/>
-      <button type="button" aria-label="Удалить">✕</button>
-    `;
+    wrap.innerHTML = `<img src="${src}" /><button type="button">✕</button>`;
     wrap.querySelector("button").addEventListener("click", () => {
       selectedImages.splice(idx, 1);
       renderImagePreview();
@@ -142,9 +136,8 @@ pickOnMapBtn.addEventListener("click", () => {
   pickOnMapBtn.disabled = true;
   pickOnMapBtn.textContent = "Кликни по карте…";
   const once = (ev) => {
-    const { lat, lng } = ev.latlng;
-    tempCoords.lat = Number(lat.toFixed(6));
-    tempCoords.lng = Number(lng.toFixed(6));
+    tempCoords.lat = +ev.latlng.lat.toFixed(6);
+    tempCoords.lng = +ev.latlng.lng.toFixed(6);
     coordsBadge.textContent = `Выбрано: ${tempCoords.lat}, ${tempCoords.lng}`;
     coordsBadge.classList.remove("muted");
     if (formMarker) markerLayer.removeLayer(formMarker);
@@ -156,25 +149,22 @@ pickOnMapBtn.addEventListener("click", () => {
   map.on("click", once);
 });
 
-let formMarker = null;
-
 // ======= сохранение / редактирование =======
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-
   const base = editingId ? objects.find(o => o.id === editingId) : null;
 
   const obj = {
     id: editingId ?? Date.now(),
     title: titleInput.value.trim(),
-    price: Number(priceInput.value),
-    rooms: Number(roomsInput.value),
+    price: +priceInput.value,
+    rooms: +roomsInput.value,
     status: statusInput.value,
     category: categoryInput.value,
     address: addressInput.value.trim(),
-    area: areaInput.value ? Number(areaInput.value) : null,
-    floor: floorInput.value?.trim() || null, // строка: поддерживает "цоколь", "подвал"
-    year: yearInput.value ? Number(yearInput.value) : null,
+    area: areaInput.value ? +areaInput.value : null,
+    floor: floorInput.value ? +floorInput.value : null,
+    year: yearInput.value ? +yearInput.value : null,
     houseType: houseTypeSel.value || null,
     lat: tempCoords.lat,
     lng: tempCoords.lng,
@@ -187,359 +177,104 @@ form.addEventListener("submit", (e) => {
   } else {
     objects.push(obj);
   }
-
   localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
   clearFormState();
   renderAll();
 });
-
 cancelEditBtn.addEventListener("click", clearFormState);
-
-clearFormBtn.addEventListener("click", () => {
-  form.reset();
-  selectedImages = [];
-  tempCoords = { lat: null, lng: null };
-  coordsBadge.textContent = "Координаты не выбраны";
-  coordsBadge.classList.add("muted");
-  renderImagePreview();
-});
-
-function clearFormState() {
-  form.reset();
-  editingId = null;
-  selectedImages = [];
-  tempCoords = { lat: null, lng: null };
-  coordsBadge.textContent = "Координаты не выбраны";
-  coordsBadge.classList.add("muted");
-  renderImagePreview();
-  formTitle.textContent = "Добавить объект";
-  if (formMarker) { markerLayer.removeLayer(formMarker); formMarker = null; }
-}
+clearFormBtn.addEventListener("click", () => { form.reset(); selectedImages=[]; tempCoords={lat:null,lng:null}; renderImagePreview(); });
 
 // ======= избранное =======
 function isFav(id) { return favorites.has(id); }
 function toggleFav(id) {
   if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
-  localStorage.setItem(LS_FAVS, JSON.stringify(Array.from(favorites)));
+  localStorage.setItem(LS_FAVS, JSON.stringify([...favorites]));
   renderAll();
 }
 
-// ======= фильтрация + поиск + сортировка =======
+// ======= фильтрация =======
 function applyFilters(list) {
   let res = [...list];
   const q = searchInput.value.trim().toLowerCase();
-  if (q) {
-    res = res.filter(o =>
-      (o.title && o.title.toLowerCase().includes(q)) ||
-      (o.address && o.address.toLowerCase().includes(q))
-    );
-  }
+  if (q) res = res.filter(o => (o.title||"").toLowerCase().includes(q) || (o.address||"").toLowerCase().includes(q));
 
-  const cat = categoryFilter.value;
-  const st  = statusFilter.value;
-  const pmin = priceMin.value ? Number(priceMin.value) : null;
-  const pmax = priceMax.value ? Number(priceMax.value) : null;
-  const rmin = roomsMin.value ? Number(roomsMin.value) : null;
-  const rmax = roomsMax.value ? Number(roomsMax.value) : null;
+  if (categoryFilter.value) res = res.filter(o => o.category === categoryFilter.value);
+  if (statusFilter.value)   res = res.filter(o => o.status === statusFilter.value);
+  if (priceMin.value) res = res.filter(o => o.price >= +priceMin.value);
+  if (priceMax.value) res = res.filter(o => o.price <= +priceMax.value);
+  if (roomsMin.value) res = res.filter(o => o.rooms >= +roomsMin.value);
+  if (roomsMax.value) res = res.filter(o => o.rooms <= +roomsMax.value);
+  if (areaMin.value)  res = res.filter(o => (o.area||0) >= +areaMin.value);
+  if (areaMax.value)  res = res.filter(o => (o.area||0) <= +areaMax.value);
 
-  if (cat) res = res.filter(o => o.category === cat);
-  if (st)  res = res.filter(o => o.status === st);
-  if (pmin !== null) res = res.filter(o => o.price >= pmin);
-  if (pmax !== null) res = res.filter(o => o.price <= pmax);
-  if (rmin !== null) res = res.filter(o => o.rooms >= rmin);
-  if (rmax !== null) res = res.filter(o => o.rooms <= rmax);
+  if (floorMin.value) res = res.filter(o => (o.floor ?? 999) >= +floorMin.value);
+  if (floorMax.value) res = res.filter(o => (o.floor ?? -999) <= +floorMax.value);
+
   if (onlyFav.checked) res = res.filter(o => favorites.has(o.id));
 
-  const sort = sortSelect.value;
-  if (sort === "priceAsc") res.sort((a,b) => a.price - b.price);
-  if (sort === "priceDesc") res.sort((a,b) => b.price - a.price);
-  if (sort === "dateNew") res.sort((a,b) => b.createdAt - a.createdAt);
-  if (sort === "dateOld") res.sort((a,b) => a.createdAt - b.createdAt);
+  if (sortSelect.value==="priceAsc") res.sort((a,b)=>a.price-b.price);
+  if (sortSelect.value==="priceDesc")res.sort((a,b)=>b.price-a.price);
+  if (sortSelect.value==="dateNew")  res.sort((a,b)=>b.createdAt-a.createdAt);
+  if (sortSelect.value==="dateOld")  res.sort((a,b)=>a.createdAt-b.createdAt);
 
   return res;
 }
+[searchInput,categoryFilter,statusFilter,priceMin,priceMax,roomsMin,roomsMax,areaMin,areaMax,floorMin,floorMax,sortSelect,onlyFav]
+  .forEach(el=>el.addEventListener("input",()=>{saveFilters();renderAll();}));
+resetFilters.addEventListener("click",()=>{[searchInput,categoryFilter,statusFilter,priceMin,priceMax,roomsMin,roomsMax,areaMin,areaMax,floorMin,floorMax,sortSelect].forEach(el=>el.value="");onlyFav.checked=false;saveFilters();renderAll();});
 
-[
-  searchInput, categoryFilter, statusFilter, roomsMin, roomsMax,
-  priceMin, priceMax, sortSelect, onlyFav
-].forEach(elm => elm.addEventListener("input", () => { saveFilters(); renderAll(); }));
-
-resetFilters.addEventListener("click", () => {
-  searchInput.value = "";
-  categoryFilter.value = "";
-  statusFilter.value = "";
-  priceMin.value = "";
-  priceMax.value = "";
-  roomsMin.value = "";
-  roomsMax.value = "";
-  sortSelect.value = "";
-  onlyFav.checked = false;
-  saveFilters();
-  renderAll();
-});
-
-// ======= экспорт/импорт JSON + экспорт CSV =======
-exportJsonBtn.addEventListener("click", () => {
-  const data = JSON.stringify(objects, null, 2);
-  const blob = new Blob([data], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `objects_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
-
-importJsonBtn.addEventListener("click", () => importJsonInp.click());
-importJsonInp.addEventListener("change", (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const arr = JSON.parse(ev.target.result);
-      if (!Array.isArray(arr)) throw new Error("JSON должен быть массивом объектов");
-      // простая валидация
-      objects = arr.map(x => ({
-        id: x.id ?? Date.now() + Math.random(),
-        title: x.title ?? "",
-        price: Number(x.price ?? 0),
-        rooms: Number(x.rooms ?? 0),
-        status: x.status === "rent" ? "rent" : "sale",
-        category: x.category || "apartment",
-        address: x.address ?? "",
-        area: x.area ?? null,
-        floor: x.floor ?? null,
-        year: x.year ?? null,
-        houseType: x.houseType ?? null,
-        lat: (x.lat ?? null),
-        lng: (x.lng ?? null),
-        images: Array.isArray(x.images) ? x.images : [],
-        createdAt: x.createdAt ?? Date.now(),
-      }));
-      localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
-      renderAll();
-      alert("Импорт завершён");
-    } catch (err) {
-      alert("Ошибка импорта: " + err.message);
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = "";
-});
-
-exportCsvBtn.addEventListener("click", () => {
-  const fields = [
-    "id","title","price","rooms","status","category","address",
-    "area","floor","year","houseType","lat","lng","createdAt"
-  ];
-  const esc = (v) => {
-    if (v === null || v === undefined) return "";
-    const s = String(v).replace(/"/g, '""');
-    return `"${s}"`;
-  };
-  const rows = [fields.map(esc).join(",")];
-  applyFilters(objects).forEach(o => {
-    const row = fields.map(f => esc(o[f]));
-    rows.push(row.join(","));
-  });
-  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `objects_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
-
-// ======= рендер списка + карта =======
-function renderAll() {
-  const list = applyFilters(objects);
-  renderList(list);
-  renderMap(list);
-}
-
-function renderList(list) {
-  resultsList.innerHTML = "";
-  list.forEach(obj => {
-    const card = document.createElement("article");
-    card.className = "card-item";
-    card.id = `card-${obj.id}`;
-
-    const img0 = obj.images && obj.images.length ? obj.images[0] : "";
-    const total = obj.images ? obj.images.length : 0;
-
-    card.innerHTML = `
-      <div class="slider" data-id="${obj.id}">
-        <button class="nav prev" type="button" aria-label="Предыдущее">‹</button>
-        <img src="${img0 || ""}" alt="${obj.title}" ${img0 ? "" : 'style="display:none"'} />
-        <div class="count">${total ? `1 / ${total}` : "без фото"}</div>
-        <button class="nav next" type="button" aria-label="Следующее">›</button>
-      </div>
+// ======= рендер =======
+function renderAll(){const list=applyFilters(objects);renderList(list);renderMap(list);}
+function renderList(list){
+  resultsList.innerHTML="";
+  list.forEach(obj=>{
+    const card=document.createElement("article");
+    card.className="card-item"; card.id=`card-${obj.id}`;
+    const img0=obj.images?.[0]||""; const total=obj.images?.length||0;
+    card.innerHTML=`
+      <div class="slider"><img src="${img0}" style="${img0?'':'display:none'}"/><div class="count">${total?`1/${total}`:"без фото"}</div></div>
       <div class="card-body">
         <div class="card-title">${obj.title}</div>
+        <div class="card-meta"><span>Цена: ${obj.price.toLocaleString()}</span><span>Комнат: ${obj.rooms}</span></div>
+        <div class="card-meta"><span>Категория: ${obj.category}</span><span>Статус: ${obj.status}</span></div>
+        ${obj.address?`<div class="card-meta">Адрес: ${obj.address}</div>`:""}
         <div class="card-meta">
-          <span>Цена: ${Number(obj.price || 0).toLocaleString()}</span>
-          <span>Комнат: ${obj.rooms || "-"}</span>
-        </div>
-        <div class="card-meta">
-          <span>Категория: ${humanCategory(obj.category)}</span>
-          <span>Статус: ${humanStatus(obj.status)}</span>
-        </div>
-        ${obj.address ? `<div class="card-meta">Адрес: ${obj.address}</div>` : ""}
-        <div class="card-meta">
-          ${obj.area ? `<span>Площадь: ${obj.area} м²</span>` : ""}
-          ${obj.floor ? `<span>Этаж: ${obj.floor}</span>` : ""}
-          ${obj.year ? `<span>Год: ${obj.year}</span>` : ""}
-          ${obj.houseType ? `<span>Тип: ${humanHouseType(obj.houseType)}</span>` : ""}
+          ${obj.area?`<span>Площадь: ${obj.area} м²</span>`:""}
+          ${obj.floor!=null?`<span>Этаж: ${humanFloor(obj.floor)}</span>`:""}
+          ${obj.year?`<span>Год: ${obj.year}</span>`:""}
         </div>
         <div class="card-actions">
-          <button class="btn" data-edit="${obj.id}">Редактировать</button>
-          <button class="btn danger" data-del="${obj.id}">Удалить</button>
-          <button class="fav-btn ${isFav(obj.id) ? "active" : ""}" title="В избранное" data-fav="${obj.id}">♥</button>
+          <button class="btn" onclick="fillFormForEdit(${obj.id})">Редактировать</button>
+          <button class="btn danger" onclick="deleteObj(${obj.id})">Удалить</button>
+          <button class="fav-btn ${isFav(obj.id)?"active":""}" onclick="toggleFav(${obj.id})">♥</button>
         </div>
-      </div>
-    `;
-
-    attachSlider(card, obj);
-
-    card.querySelector('[data-edit]').addEventListener('click', () => fillFormForEdit(obj.id));
-    card.querySelector('[data-del]').addEventListener('click', () => {
-      objects = objects.filter(o => o.id !== obj.id);
-      favorites.delete(obj.id);
-      localStorage.setItem(LS_FAVS, JSON.stringify(Array.from(favorites)));
-      localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
-      renderAll();
-    });
-    card.querySelector('[data-fav]').addEventListener('click', () => toggleFav(obj.id));
-
+      </div>`;
     resultsList.appendChild(card);
   });
 }
-
-function attachSlider(card, obj) {
-  const slider = card.querySelector(".slider");
-  const img = slider.querySelector("img");
-  const prev = slider.querySelector(".prev");
-  const next = slider.querySelector(".next");
-  const count = slider.querySelector(".count");
-
-  if (!obj.images || obj.images.length === 0) {
-    prev.style.display = "none";
-    next.style.display = "none";
-    return;
-  }
-
-  let i = 0;
-  const total = obj.images.length;
-
-  function update() {
-    img.src = obj.images[i];
-    img.style.display = "block";
-    count.textContent = `${i+1} / ${total}`;
-  }
-  prev.addEventListener("click", () => { i = (i - 1 + total) % total; update(); });
-  next.addEventListener("click", () => { i = (i + 1) % total; update(); });
-}
-
-function renderMap(list) {
+function renderMap(list){
   cluster.clearLayers();
-  markerLayer.clearLayers(); // только для маркера формы
-
-  list.forEach(obj => {
-    if (obj.lat == null || obj.lng == null) return;
-    const m = L.marker([obj.lat, obj.lng]);
-    const img = obj.images && obj.images[0] ? `<img src="${obj.images[0]}" style="width:140px;height:100px;object-fit:cover;border-radius:8px" />` : "";
-    const html = `
-      <div style="text-align:center">
-        ${img ? `<a href="#card-${obj.id}" data-scroll="${obj.id}">${img}</a>` : ""}
-        <div style="margin-top:6px;font-weight:600">${obj.title}</div>
-        <div style="color:#666">${Number(obj.price||0).toLocaleString()} • ${obj.rooms || "-"} комн.</div>
-      </div>`;
-    m.bindPopup(html);
+  list.forEach(obj=>{
+    if(obj.lat==null||obj.lng==null)return;
+    const m=L.marker([obj.lat,obj.lng]);
+    m.bindPopup(`<b>${obj.title}</b><br>${obj.price.toLocaleString()}<br>${humanFloor(obj.floor)}`);
     cluster.addLayer(m);
-    m.on("popupopen", (e) => {
-      const a = e.popup.getElement().querySelector(`[data-scroll="${obj.id}"]`);
-      if (a) {
-        a.addEventListener("click", () => {
-          const card = document.getElementById(`card-${obj.id}`);
-          if (card) {
-            card.scrollIntoView({ behavior: "smooth", block: "center" });
-            card.classList.add("pulse");
-            setTimeout(() => card.classList.remove("pulse"), 900);
-          }
-        });
-      }
-    });
   });
 }
 
 // ======= редактирование =======
-function fillFormForEdit(id) {
-  const obj = objects.find(o => o.id === id);
-  if (!obj) return;
-  editingId = obj.id;
-
-  titleInput.value = obj.title || "";
-  priceInput.value = obj.price ?? "";
-  roomsInput.value = obj.rooms ?? "";
-  statusInput.value = obj.status || "sale";
-  categoryInput.value = obj.category || "apartment";
-  addressInput.value = obj.address || "";
-
-  areaInput.value = obj.area ?? "";
-  floorInput.value = obj.floor ?? "";
-  yearInput.value = obj.year ?? "";
-  houseTypeSel.value = obj.houseType || "";
-
-  tempCoords = { lat: obj.lat ?? null, lng: obj.lng ?? null };
-  if (tempCoords.lat != null && tempCoords.lng != null) {
-    coordsBadge.textContent = `Выбрано: ${tempCoords.lat}, ${tempCoords.lng}`;
-    coordsBadge.classList.remove("muted");
-    if (formMarker) markerLayer.removeLayer(formMarker);
-    formMarker = L.marker([tempCoords.lat, tempCoords.lng]).addTo(markerLayer);
-    map.setView([tempCoords.lat, tempCoords.lng], 13);
-  } else {
-    coordsBadge.textContent = "Координаты не выбраны";
-    coordsBadge.classList.add("muted");
-  }
-
-  selectedImages = Array.isArray(obj.images) ? [...obj.images] : [];
-  renderImagePreview();
-
-  formTitle.textContent = "Редактирование объекта";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+function fillFormForEdit(id){
+  const o=objects.find(x=>x.id===id); if(!o) return;
+  editingId=o.id;
+  titleInput.value=o.title; priceInput.value=o.price; roomsInput.value=o.rooms;
+  statusInput.value=o.status; categoryInput.value=o.category; addressInput.value=o.address||"";
+  areaInput.value=o.area||""; floorInput.value=o.floor??""; yearInput.value=o.year||""; houseTypeSel.value=o.houseType||"";
+  selectedImages=[...(o.images||[])]; renderImagePreview();
+  tempCoords={lat:o.lat,lng:o.lng};
+  formTitle.textContent="Редактировать объект";
 }
+function deleteObj(id){objects=objects.filter(o=>o.id!==id);favorites.delete(id);localStorage.setItem(LS_OBJECTS,JSON.stringify(objects));localStorage.setItem(LS_FAVS,JSON.stringify([...favorites]));renderAll();}
 
 // ======= утилиты =======
-function humanCategory(v) {
-  return { apartment: "Квартира", house: "Дом", land: "Участок", commercial: "Коммерция" }[v] || v;
-}
-function humanStatus(v) {
-  return { sale: "Продается", rent: "Сдается" }[v] || v;
-}
-function humanHouseType(v) {
-  return { brick: "Кирпичный", panel: "Панельный", block: "Блочный", monolithic: "Монолит", wood: "Деревянный" }[v] || v;
-}
-
-// ======= старт =======
-loadFilters();
-renderAll();
-
-// демо-объект если пусто
-if (!objects.length) {
-  const demo = {
-    id: Date.now(),
-    title: "Демо-квартира у парка",
-    price: 9200000,
-    rooms: 2,
-    status: "sale",
-    category: "apartment",
-    address: "ул. Примерная, 1",
-    lat: 41.3111, lng: 69.2797,
-    images: [],
-    area: 54.2, floor: "7", year: 2016, houseType: "monolithic",
-    createdAt: Date.now(),
-  };
-  objects.push(demo);
-  localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
-  renderAll();
-}
+function humanFloor(v){if(v===-2)return"Подвал"; if(v===-1)return"Цоколь"; return v;}
+loadFilters(); renderAll();
