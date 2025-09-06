@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Недвижимость v11</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Каталог недвижимости</h1>
+
+  <!-- Фильтры + сортировка -->
+  <div class="filters">
+    <select id="categoryFilter"></select>
+    <select id="statusFilter"></select>
+    <input type="number" id="priceMin" placeholder="Цена от">
+    <input type="number" id="priceMax" placeholder="Цена до">
+    <select id="roomsFilter"></select>
+
+    <!-- Новый селект сортировки -->
+    <select id="sortSelect">
+      <option value="">Сортировка</option>
+      <option value="priceAsc">Цена ↑</option>
+      <option value="priceDesc">Цена ↓</option>
+      <option value="dateNew">Новые</option>
+      <option value="dateOld">Старые</option>
+    </select>
+  </div>
+
+  <!-- Список объектов -->
+  <div id="objectsList"></div>
+
+  <!-- Карта -->
+  <div id="map"></div>
+
+  <!-- Форма добавления / редактирования -->
+  <form id="objectForm">
+    <input type="text" id="title" placeholder="Название" required>
+    <input type="number" id="price" placeholder="Цена" required>
+    <input type="number" id="rooms" placeholder="Комнаты" required>
+    <select id="status"></select>
+    <select id="category"></select>
+
+    <input type="file" id="images" multiple accept="image/*">
+    <div id="imagePreview"></div>
+
+    <button type="submit">Сохранить</button>
+  </form>
+
+  <footer style="text-align:center; margin-top:20px; opacity:0.6;">
+    Версия v11
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
