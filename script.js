@@ -1,26 +1,30 @@
-// ======= v13.4 =======
-console.log("✅ script.js v13.4 loaded");
+// ======= v13.4.2 =======
+console.log("✅ script.js v13.4.2 loaded");
 
-// ======= Хранилище =======
+// ======= Константы LS =======
 const LS_OBJECTS = "objects";
-const LS_FILTERS = "filters_v13_4";
-const LS_FAVS    = "favorites_v13_4";
+const LS_FILTERS = "filters_v13_4_2";
+const LS_FAVS    = "favorites_v13_4_2";
 
+// ======= Данные =======
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
 let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
 
-// ======= Дерево из админки =======
+// ======= Дерево/типы из админки =======
 let treeNodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
-// типы: "Город", "Район", "Массив / улица", "Категория" (в админке используй именно так)
+let nodeTypes = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
+defaultTypes.forEach(t => { if (!nodeTypes.includes(t)) nodeTypes.push(t); });
 
-// helpers
+// ======= helpers =======
 const $ = (id) => document.getElementById(id);
 const getNode = (id) => treeNodes.find(n => n.id === id) || null;
 const childrenOf = (parentId) => treeNodes.filter(n => n.parent === parentId);
 const typed = (type) => treeNodes.filter(n => n.type === type);
+const nameById = (id) => (getNode(id)?.name) || "";
 
 // ======= карта =======
 const map = L.map("map").setView([41.3111, 69.2797], 12);
@@ -34,7 +38,7 @@ let formMarker = null;
 // фильтры
 const cityFilter     = $("cityFilter");
 const districtFilter = $("districtFilter");
-const streetFilter   = $("streetFilter"); // "Массив / улица"
+const streetFilter   = $("streetFilter");
 const categoryFilter = $("categoryFilter");
 
 const priceMin = $("priceMin"), priceMax = $("priceMax");
@@ -46,6 +50,7 @@ const sortSelect = $("sortSelect");
 const onlyFav = $("onlyFav");
 const resetFilters = $("resetFilters");
 const filtersInfo = $("filtersInfo");
+const extraFiltersWrap = $("extraFilters");
 
 // экспорт/импорт
 const exportJsonBtn = $("exportJson");
@@ -81,7 +86,7 @@ const citySel = $("city");
 const districtSel = $("district");
 const streetSel = $("street");
 
-// ======= каскады из дерева =======
+// ======= утилиты =======
 function setOptions(select, items, placeholder) {
   const prev = select.value;
   select.innerHTML = `<option value="">${placeholder}</option>`;
@@ -94,13 +99,17 @@ function setOptions(select, items, placeholder) {
   if (prev && [...select.options].some(o => o.value === prev)) select.value = prev;
 }
 
+function showInfo(msg) {
+  filtersInfo.style.display = "block";
+  filtersInfo.textContent = msg;
+}
+function hideInfo() { filtersInfo.style.display = "none"; }
+
+// ======= Каскад фильтров (базовые 4) =======
 function initCascadeFilters() {
   if (!treeNodes.length) {
-    filtersInfo.style.display = "block";
-    filtersInfo.textContent = "Нет данных из админки. Открой ‘Админка (дерево)’ и добавь Город → Район → Массив / улица, а также Категории.";
-  } else {
-    filtersInfo.style.display = "none";
-  }
+    showInfo("Нет данных из админки. Открой ‘Админка (дерево)’ и добавь Город → Район → Массив / улица, а также Категории.");
+  } else hideInfo();
 
   setOptions(cityFilter, typed("Город"), "Город");
   setOptions(districtFilter, [], "Район");
@@ -122,6 +131,7 @@ function initCascadeFilters() {
   categoryFilter.onchange = () => { saveFilters(); renderAll(); };
 }
 
+// ======= Каскад формы =======
 function initCascadeForm() {
   setOptions(citySel, typed("Город"), "Город");
   setOptions(districtSel, [], "Район");
@@ -139,24 +149,61 @@ function initCascadeForm() {
   };
 }
 
+// ======= Доп. типы (динамические селекты) =======
+function buildExtraTypeFilters() {
+  // очищаем
+  extraFiltersWrap.innerHTML = "";
+  // какие типы показывать как дополнительные: все, кроме базовых 4
+  const extraTypes = nodeTypes.filter(t => !defaultTypes.includes(t));
+  if (!extraTypes.length) return;
+
+  const grid = document.createElement("div");
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = "repeat(3, minmax(160px,1fr))";
+  grid.style.gap = "10px";
+
+  extraTypes.forEach(type => {
+    const sel = document.createElement("select");
+    sel.className = "extra-type";
+    sel.dataset.type = type;
+    sel.innerHTML = `<option value="">${type}</option>`;
+    typed(type).forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = String(n.id);
+      opt.textContent = n.name;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener("change", () => { saveFilters(); renderAll(); });
+    grid.appendChild(sel);
+  });
+
+  extraFiltersWrap.appendChild(grid);
+}
+
 // ======= сохранение/загрузка фильтров =======
 function loadFilters() {
   const s = JSON.parse(localStorage.getItem(LS_FILTERS) || "{}");
-  if (s.city) cityFilter.value = s.city;
-  if (s.district) districtFilter.value = s.district;
-  if (s.street) streetFilter.value = s.street;
-  if (s.category) categoryFilter.value = s.category;
-  ["priceMin","priceMax","roomsMin","roomsMax","floorMin","floorMax","floorsMin","floorsMax","areaMin","areaMax","sort"]
+  ["cityFilter","districtFilter","streetFilter","categoryFilter"].forEach(k => { if (s[k]) $(k).value = s[k]; });
+  ["priceMin","priceMax","roomsMin","roomsMax","floorMin","floorMax","floorsMin","floorsMax","areaMin","areaMax","sortSelect"]
     .forEach(k => { if (s[k] != null) $(k).value = s[k]; });
-  if (s.onlyFav) onlyFav.checked = true;
+  onlyFav.checked = !!s.onlyFav;
+
+  // восстановим extra
+  document.querySelectorAll("#extraFilters select.extra-type").forEach(sel => {
+    const key = "extra_" + sel.dataset.type;
+    if (s[key]) sel.value = s[key];
+  });
 }
 function saveFilters() {
   const s = {
-    city: cityFilter.value, district: districtFilter.value, street: streetFilter.value, category: categoryFilter.value,
+    cityFilter: cityFilter.value, districtFilter: districtFilter.value, streetFilter: streetFilter.value, categoryFilter: categoryFilter.value,
     priceMin: priceMin.value, priceMax: priceMax.value, roomsMin: roomsMin.value, roomsMax: roomsMax.value,
     floorMin: floorMin.value, floorMax: floorMax.value, floorsMin: floorsMin.value, floorsMax: floorsMax.value,
-    areaMin: areaMin.value, areaMax: areaMax.value, sort: sortSelect.value, onlyFav: onlyFav.checked
+    areaMin: areaMin.value, areaMax: areaMax.value, sortSelect: sortSelect.value, onlyFav: onlyFav.checked
   };
+  document.querySelectorAll("#extraFilters select.extra-type").forEach(sel => {
+    s["extra_" + sel.dataset.type] = sel.value;
+  });
   localStorage.setItem(LS_FILTERS, JSON.stringify(s));
 }
 
@@ -257,18 +304,22 @@ function toggleFav(id) {
 function applyFilters(list) {
   let res = [...list];
 
-  const cityName = cityFilter.value ? (getNode(+cityFilter.value)?.name || "") : "";
-  const districtName = districtFilter.value ? (getNode(+districtFilter.value)?.name || "") : "";
-  const streetName = streetFilter.value ? (getNode(+streetFilter.value)?.name || "") : "";
-  const categoryName = categoryFilter.value ? (getNode(+categoryFilter.value)?.name || "") : "";
+  // базовые 4
+  const cityName = cityFilter.value ? nameById(+cityFilter.value) : "";
+  const districtName = districtFilter.value ? nameById(+districtFilter.value) : "";
+  const streetName = streetFilter.value ? nameById(+streetFilter.value) : "";
+  const categoryName = categoryFilter.value ? nameById(+categoryFilter.value) : "";
 
   if (cityName)     res = res.filter(o => (o.city||"")     === cityName);
   if (districtName) res = res.filter(o => (o.district||"") === districtName);
   if (streetName)   res = res.filter(o => (o.street||"")   === streetName);
   if (categoryName) res = res.filter(o => (o.category||"") === categoryName);
 
-  const num = v => (v==="" || v==null ? null : +v);
+  // доп. типы (пока просто визуальны — не фильтруем, т.к. не знаем, куда писать в объект)
+  // если потребуется — скажешь, в какие поля сохранять, я подключу.
 
+  // диапазоны
+  const num = v => (v==="" || v==null ? null : +v);
   const pMin = num(priceMin.value), pMax = num(priceMax.value);
   const rMin = num(roomsMin.value), rMax = num(roomsMax.value);
   const fMin = num(floorMin.value), fMax = num(floorMax.value);
@@ -302,7 +353,7 @@ function applyFilters(list) {
 
 resetFilters.addEventListener("click", () => {
   [cityFilter,districtFilter,streetFilter,categoryFilter,priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,sortSelect].forEach(el => el.value = "");
-  onlyFav.checked = false; saveFilters(); initCascadeFilters(); renderAll();
+  onlyFav.checked = false; saveFilters(); initCascadeFilters(); buildExtraTypeFilters(); renderAll();
 });
 
 // ======= рендер =======
@@ -328,9 +379,7 @@ function renderList(list){
         <div class="card-title">${obj.title || "(без названия)"}</div>
         <div class="card-meta"><span>Цена: ${obj.price!=null?obj.price.toLocaleString():"—"}</span><span>Комнат: ${obj.rooms??"—"}</span></div>
         <div class="card-meta"><span>Категория: ${obj.category||"—"}</span><span>Статус: ${obj.status||"—"}</span></div>
-        <div class="card-meta">
-          <span>${obj.city||"—"}${obj.district?", "+obj.district:""}${obj.street?", "+obj.street:""}</span>
-        </div>
+        <div class="card-meta"><span>${obj.city||"—"}${obj.district?", "+obj.district:""}${obj.street?", "+obj.street:""}</span></div>
         <div class="card-meta">
           ${obj.area?`<span>Площадь: ${obj.area} м²</span>`:""}
           ${obj.floor!=null||obj.floors!=null?`<span>Этаж/этажность: ${obj.floor??"—"} / ${obj.floors??"—"}</span>`:""}
@@ -339,7 +388,7 @@ function renderList(list){
         <div class="card-actions">
           <button class="btn" onclick="fillFormForEdit(${obj.id})">Редактировать</button>
           <button class="btn danger" onclick="deleteObj(${obj.id})">Удалить</button>
-          <button class="fav-btn ${isFav(obj.id)?"active":""}" onclick="toggleFav(${obj.id})">♥</button>
+          <button class="fav-btn ${favorites.has(obj.id)?"active":""}" onclick="toggleFav(${obj.id})">♥</button>
         </div>
       </div>`;
     resultsList.appendChild(card);
@@ -362,15 +411,14 @@ window.fillFormForEdit = function(id){
   editingId=o.id;
   titleInput.value=o.title||""; priceInput.value=o.price??""; roomsInput.value=o.rooms??"";
   statusInput.value=o.status||"sale";
-  // восстановим категорию по названию в дереве
   const cat = typed("Категория").find(n => n.name === o.category);
+  setOptions(categoryInput, typed("Категория"), "Категория");
   categoryInput.value = cat ? String(cat.id) : "";
   addressInput.value=o.address||"";
   areaInput.value=o.area??""; floorInput.value=o.floor??""; floorsInput.value=o.floors??""; yearInput.value=o.year??""; houseTypeSel.value=o.houseType||"";
   selectedImages=[...(o.images||[])]; renderImagePreview();
   tempCoords={lat:o.lat,lng:o.lng};
 
-  // локация — по названию найдём id
   const cityN = typed("Город").find(n=>n.name===o.city);
   setOptions(citySel, typed("Город"), "Город");
   if (cityN) citySel.value = String(cityN.id);
@@ -391,29 +439,22 @@ window.deleteObj = function(id){
   renderAll();
 }
 
-// ======= утилиты =======
-function saveObjects() { localStorage.setItem(LS_OBJECTS, JSON.stringify(objects)); }
-
-// ======= экспорт JSON =======
+// ======= экспорт / импорт =======
 exportJsonBtn.addEventListener("click", () => {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(objects, null, 2));
   const dl = document.createElement("a"); dl.href = dataStr;
   dl.download = "objects_" + new Date().toISOString().slice(0,10) + ".json"; dl.click();
 });
-
-// ======= импорт JSON =======
 importJsonBtn.addEventListener("click", () => importJsonInp.click());
 importJsonInp.addEventListener("change", (e) => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
-    try { const data = JSON.parse(ev.target.result); if (Array.isArray(data)) { objects = data; saveObjects(); renderAll(); alert("Импортировано: " + objects.length); } else alert("Неверный формат файла"); }
+    try { const data = JSON.parse(ev.target.result); if (Array.isArray(data)) { objects = data; localStorage.setItem(LS_OBJECTS, JSON.stringify(objects)); renderAll(); alert("Импортировано: " + objects.length); } else alert("Неверный формат файла"); }
     catch (err) { alert("Ошибка JSON: " + err.message); }
   };
   reader.readAsText(file); e.target.value = "";
 });
-
-// ======= экспорт CSV =======
 exportCsvBtn.addEventListener("click", () => {
   if (!objects.length) return alert("Нет объектов");
   const headers = ["id","title","price","rooms","status","category","city","district","street","address","area","floor","floors","year","lat","lng","createdAt"];
@@ -428,13 +469,14 @@ exportCsvBtn.addEventListener("click", () => {
 // ======= init =======
 function init() {
   initCascadeFilters();
+  buildExtraTypeFilters();
   initCascadeForm();
   loadFilters();
   renderAll();
 
-  // если нет ни одного объекта — подкинем парочку демо (один раз)
+  // демо, если пусто
   if (!objects.length) {
-    const demoCity = typed("Город").find(n=>n.name==="Ташкент");
+    const demoCity = typed("Город")[0];
     const demoDist = demoCity ? childrenOf(demoCity.id).find(n=>n.type==="Район") : null;
     const demoStreet = demoDist ? childrenOf(demoDist.id).find(n=>n.type==="Массив / улица") : null;
     const catFlat = typed("Категория").find(n=>n.name==="Квартиры") || typed("Категория")[0];
@@ -444,7 +486,8 @@ function init() {
         area:67, floor:4, floors:9, lat:41.31, lng:69.28, images:[], createdAt: Date.now()
       }
     ];
-    saveObjects(); renderAll();
+    localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
+    renderAll();
   }
 }
 init();
