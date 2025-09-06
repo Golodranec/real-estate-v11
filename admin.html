@@ -2,26 +2,25 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.3.1</title>
+  <title>Админка — v13.4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
     .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin:16px 0; }
     input, select, button { padding:10px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
     button { cursor:pointer; }
     .btn { background:#4da3ff; color:#001428; border-color:#4da3ff; }
-    .btn-ghost { background:transparent; }
+    .danger { background:#ff6b6b; color:#fff; border-color:#ff6b6b; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
     ul.tree { list-style:none; padding-left:20px; }
     ul.tree li { margin:4px 0; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; }
-    .node { display:flex; align-items:center; gap:8px; }
+    .node { display:flex; gap:8px; align-items:center; }
     .node-type { opacity:.7; font-size:12px; }
-    .danger { background:#ff6b6b; color:#fff; border-color:#ff6b6b; }
   </style>
 </head>
 <body>
 
-<h1>Админка: дерево для фильтров</h1>
+<h1>Админка: дерево фильтров</h1>
 
 <div class="card">
   <div class="row">
@@ -29,110 +28,63 @@
     <select id="nodeType">
       <option value="Город">Город</option>
       <option value="Район">Район</option>
-      <option value="Улица">Улица</option>
+      <option value="Массив / улица">Массив / улица</option>
       <option value="Категория">Категория</option>
     </select>
     <select id="nodeParent"></select>
     <button id="addBtn" class="btn">Добавить</button>
-    <button id="clearAll" class="btn-ghost danger">Очистить всё</button>
+    <button id="clearAll" class="danger">Очистить всё</button>
   </div>
   <div style="margin-top:8px; opacity:.8; font-size:14px">
-    Подсказка: делай структуру так — Город → Район → Улица (по дереву). Категории не обязаны иметь родителей.
+    Рекомендуемая структура: Город → Район → Массив / улица. Категория — отдельные корневые узлы.
   </div>
 </div>
 
 <div class="card">
-  <h3>Текущее дерево</h3>
+  <h3>Дерево</h3>
   <ul id="tree" class="tree"></ul>
 </div>
 
 <script>
 let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
-
 const $ = id => document.getElementById(id);
 
-function save() {
-  localStorage.setItem("treeNodes", JSON.stringify(nodes));
-  render();
-  fillParent();
-}
-
+function save() { localStorage.setItem("treeNodes", JSON.stringify(nodes)); render(); fillParent(); }
 function fillParent() {
   const sel = $("nodeParent");
   sel.innerHTML = `<option value="">(без родителя)</option>`;
-  nodes.forEach(n => {
-    const opt = document.createElement("option");
-    opt.value = n.id;
-    opt.textContent = `${n.name} (${n.type})`;
-    sel.appendChild(opt);
-  });
+  nodes.forEach(n => { const o=document.createElement("option"); o.value=n.id; o.textContent=`${n.name} (${n.type})`; sel.appendChild(o); });
 }
+function kids(parentId) { return nodes.filter(n=>n.parent===parentId); }
 
-function treeChildren(parentId) {
-  return nodes.filter(n => n.parent === parentId);
-}
-
-function render(parentId = null, container = $("tree")) {
-  if (parentId === null) container.innerHTML = "";
-  const ul = document.createElement("ul");
-  ul.className = "tree";
-  treeChildren(parentId).forEach(n => {
+function render(parentId=null, container=$("tree")) {
+  if (parentId===null) container.innerHTML="";
+  const ul = document.createElement("ul"); ul.className="tree";
+  kids(parentId).forEach(n=>{
     const li = document.createElement("li");
-    const row = document.createElement("div");
-    row.className = "node";
-    const title = document.createElement("span");
-    title.textContent = n.name;
-    const t = document.createElement("span");
-    t.className = "node-type";
-    t.textContent = `(${n.type})`;
-
-    const del = document.createElement("button");
-    del.className = "danger";
-    del.textContent = "Удалить";
+    const row = document.createElement("div"); row.className="node";
+    const t = document.createElement("span"); t.textContent=n.name;
+    const type = document.createElement("span"); type.className="node-type"; type.textContent=`(${n.type})`;
+    const del = document.createElement("button"); del.className="danger"; del.textContent="Удалить";
     del.onclick = () => {
-      // удаляем узел и всех потомков
-      const toDelete = new Set([n.id]);
-      let changed = true;
-      while (changed) {
-        changed = false;
-        nodes.forEach(x => {
-          if (toDelete.has(x.parent)) {
-            toDelete.add(x.id);
-            changed = true;
-          }
-        });
-      }
-      nodes = nodes.filter(x => !toDelete.has(x.id));
-      save();
+      const delSet = new Set([n.id]); let changed = true;
+      while (changed) { changed=false; nodes.forEach(x=>{ if (delSet.has(x.parent)) { delSet.add(x.id); changed=true; } }); }
+      nodes = nodes.filter(x=>!delSet.has(x.id)); save();
     };
-
-    row.appendChild(title);
-    row.appendChild(t);
-    row.appendChild(del);
-    li.appendChild(row);
-
-    render(n.id, li);
-    ul.appendChild(li);
+    row.appendChild(t); row.appendChild(type); row.appendChild(del); li.appendChild(row);
+    render(n.id, li); ul.appendChild(li);
   });
   container.appendChild(ul);
 }
 
 $("addBtn").onclick = () => {
-  const name = $("nodeName").value.trim();
+  const name = $("nodeName").value.trim(); if (!name) return alert("Введи название");
   const type = $("nodeType").value;
   const parent = $("nodeParent").value ? +$("nodeParent").value : null;
-  if (!name) return alert("Введи название");
   nodes.push({ id: Date.now(), name, type, parent });
-  $("nodeName").value = "";
-  save();
+  $("nodeName").value = ""; save();
 };
-
-$("clearAll").onclick = () => {
-  if (confirm("Точно удалить всё дерево?")) {
-    nodes = [];
-    save();
-  }
-};
+$("clearAll").onclick = () => { if (confirm("Удалить всё дерево?")) { nodes=[]; save(); } };
 
 save();
 </script>
