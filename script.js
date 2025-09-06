@@ -293,4 +293,62 @@ function deleteObj(id){objects=objects.filter(o=>o.id!==id);favorites.delete(id)
 
 // ======= утилиты =======
 function humanFloor(v){if(v===-2)return"Подвал"; if(v===-1)return"Цоколь"; return v;}
-loadFilters(); renderAll();
+
+// ======= экспорт JSON =======
+exportJsonBtn.addEventListener("click", () => {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(objects, null, 2));
+  const dl = document.createElement("a");
+  dl.setAttribute("href", dataStr);
+  dl.setAttribute("download", "objects_" + new Date().toISOString().slice(0,10) + ".json");
+  document.body.appendChild(dl);
+  dl.click();
+  dl.remove();
+});
+
+// ======= импорт JSON =======
+importJsonBtn.addEventListener("click", () => importJsonInp.click());
+importJsonInp.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        objects = data;
+        localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
+        renderAll();
+        alert("Импортировано объектов: " + objects.length);
+      } else {
+        alert("Файл не содержит массив объектов");
+      }
+    } catch (err) {
+      alert("Ошибка при чтении JSON: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+// ======= экспорт CSV =======
+exportCsvBtn.addEventListener("click", () => {
+  if (!objects.length) {
+    alert("Нет объектов для экспорта");
+    return;
+  }
+  const headers = ["id","title","price","rooms","status","category","address","area","floor","year","houseType","lat","lng","createdAt"];
+  const rows = objects.map(o => headers.map(h => JSON.stringify(o[h] ?? "")).join(","));
+  const csv = headers.join(",") + "\n" + rows.join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const dl = document.createElement("a");
+  dl.setAttribute("href", url);
+  dl.setAttribute("download", "objects_" + new Date().toISOString().slice(0,10) + ".csv");
+  document.body.appendChild(dl);
+  dl.click();
+  document.body.removeChild(dl);
+});
+
+loadFilters();
+renderAll();
