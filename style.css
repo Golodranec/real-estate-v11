@@ -1,77 +1,250 @@
-:root {
-  --bg: #0f1115;
-  --card: #161a22;
-  --text: #e8eaf0;
-  --muted: #9aa3b2;
-  --accent: #4da3ff;
-  --danger: #ff6b6b;
-  --border: #242938;
+// ======= v13.5.2 =======
+console.log("✅ script.js v13.5.2 loaded");
+
+// ======= Константы LS =======
+const LS_OBJECTS = "objects";
+const LS_FILTERS = "filters_v13_5";
+const LS_FAVS    = "favorites_v13_5";
+
+// ======= Данные =======
+let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
+let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
+let editingId = null;
+let selectedImages = [];
+let tempCoords = { lat: null, lng: null };
+
+// ======= Дерево/типы =======
+let treeNodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
+let nodeTypes = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
+defaultTypes.forEach(t => { if (!nodeTypes.includes(t)) nodeTypes.push(t); });
+
+// 🔥 теперь extraParams всегда берём заново
+function getExtraParams() {
+  return JSON.parse(localStorage.getItem("extraParams") || "[]");
 }
 
-* { box-sizing: border-box; }
-body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+// ======= helpers =======
+const $ = (id) => document.getElementById(id);
+const getNode = (id) => treeNodes.find(n => n.id === id) || null;
+const childrenOf = (parentId) => treeNodes.filter(n => n.parent === parentId);
+const typed = (type) => treeNodes.filter(n => n.type === type);
+const nameById = (id) => (getNode(id)?.name) || "";
+const num = v => (v==="" || v==null ? null : +v);
 
-.topbar { display:flex; align-items:center; gap:12px; margin-bottom: 12px; }
-.version { opacity:.7; font-size: 14px; }
-.admin-link { margin-left:auto; color: var(--accent); text-decoration:none; }
+// ======= карта =======
+const map = L.map("map").setView([41.3111, 69.2797], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+const markerLayer = L.layerGroup().addTo(map);
+const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 });
+map.addLayer(cluster);
+let formMarker = null;
 
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+// ======= фильтры DOM =======
+const cityFilter = $("cityFilter");
+const districtFilter = $("districtFilter");
+const streetFilter = $("streetFilter");
+const categoryFilter = $("categoryFilter");
+const statusFilter = $("statusFilter");
+const priceMin = $("priceMin"), priceMax = $("priceMax");
+const roomsMin = $("roomsMin"), roomsMax = $("roomsMax");
+const floorMin = $("floorMin"), floorMax = $("floorMax");
+const floorsMin= $("floorsMin"), floorsMax= $("floorsMax");
+const areaMin  = $("areaMin"),  areaMax  = $("areaMax");
+const yearMin  = $("yearMin"),  yearMax  = $("yearMax");
+const houseTypeFilter = $("houseTypeFilter");
+const sortSelect = $("sortSelect");
+const onlyFav = $("onlyFav");
+const resetFilters = $("resetFilters");
+const filtersInfo = $("filtersInfo");
+const paramsFiltersBox = $("dynamicParamsFilters");
+const adminSyncInfo = $("adminSyncInfo");
 
-.filters { display: grid; grid-template-columns: repeat(3, minmax(160px,1fr)); gap: 10px; }
-.filters select, .filters input, .filters button, .only-fav { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: #0d1016; color: var(--text); }
-.only-fav { display:flex; align-items:center; gap:8px; }
-.hint { color: var(--muted); font-size: 13px; }
-.tools { display:flex; gap:8px; flex-wrap:wrap; }
+// ======= форма DOM =======
+const resultsList   = $("resultsList");
+const form          = $("objectForm");
+const formTitle     = $("formTitle");
+const titleInput    = $("title");
+const priceInput    = $("price");
+const roomsInput    = $("rooms");
+const statusInput   = $("status");
+const categoryInput = $("category");
+const addressInput  = $("address");
+const areaInput     = $("area");
+const floorInput    = $("floor");
+const floorsInput   = $("floors");
+const yearInput     = $("year");
+const houseTypeSel  = $("houseType");
+const imagesInput   = $("images");
+const imagePreview  = $("imagePreview");
+const pickOnMapBtn  = $("pickOnMap");
+const coordsBadge   = $("coordsBadge");
+const cancelEditBtn = $("cancelEdit");
+const clearFormBtn  = $("clearForm");
+const citySel = $("city");
+const districtSel = $("district");
+const streetSel = $("street");
 
-.params-box { display: grid; grid-template-columns: repeat(3, minmax(160px,1fr)); gap: 10px; }
-.param-group { border:1px dashed var(--border); border-radius:10px; padding:10px; }
-.param-title { font-weight:600; margin-bottom:6px; }
-.param-values { display:flex; flex-wrap:wrap; gap:8px; }
-.param-chip { display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; background:#0d1016; }
-.param-chip input { margin:0; }
-
-.btn { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #0d1016; color: var(--text); cursor: pointer; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #001428; }
-.btn.ghost { background: transparent; }
-.btn.danger { border-color: var(--danger); color: var(--danger); }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-
-.badge { display:inline-block; padding:8px 10px; border-radius:10px; border:1px solid var(--border); font-size:14px; }
-.badge.muted { color: var(--muted); }
-
-#map { width: 100%; height: 360px; border-radius: 12px; }
-
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-
-.card-item { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #0d1016; }
-.card-body { padding: 10px; }
-.card-title { font-weight: 600; margin: 6px 0 4px; }
-.card-meta { color: var(--muted); font-size: 14px; margin-bottom: 6px; display:flex; flex-wrap:wrap; gap:8px; }
-.card-actions { display:flex; gap:8px; align-items:center; }
-
-.fav-btn { background: transparent; border: none; cursor: pointer; font-size: 20px; line-height: 1; color: #777; }
-.fav-btn.active { color: #ff6687; }
-
-.slider { position: relative; width: 100%; height: 190px; background: #0a0d12; display:flex; align-items:center; justify-content:center; }
-.slider img { width: 100%; height: 100%; object-fit: cover; display:block; }
-.slider .count { position:absolute; right:8px; bottom:8px; background: rgba(0,0,0,.6); color:#fff; padding:4px 8px; border-radius:10px; font-size:12px; }
-
-.preview { display:flex; flex-wrap:wrap; gap:8px; }
-.preview-item { position:relative; }
-.preview-item img { width:110px; height:90px; object-fit:cover; border-radius:10px; border:1px solid var(--border); }
-.preview-item button { position:absolute; top:4px; right:4px; background: rgba(0,0,0,.6); color:#fff; border:none; border-radius:10px; padding:2px 6px; cursor:pointer; }
-
-.form-row { display:grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom:8px; }
-.form-row input, .form-row select { padding:10px; border-radius:10px; border:1px solid var(--border); background:#0d1016; color:var(--text); }
-.form-actions { display:flex; gap:8px; margin-top:8px; }
-
-.range { display:grid; grid-template-columns: 1fr 1fr; gap:6px; max-width:280px; }
-
-.footer { text-align:center; opacity:.6; margin-top:10px; font-size:14px; }
-
-@media (max-width: 1000px) {
-  .filters { grid-template-columns: repeat(2, 1fr); }
-  .params-box { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr; }
-  .range { max-width: 100%; }
+// ======= утилиты =======
+function setOptions(select, items, placeholder) {
+  const prev = select.value;
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+  items.forEach(n => {
+    const opt = document.createElement("option");
+    opt.value = String(n.id);
+    opt.textContent = n.name;
+    select.appendChild(opt);
+  });
+  if (prev && [...select.options].some(o => o.value === prev)) select.value = prev;
 }
+function showInfo(msg) { filtersInfo.style.display = "block"; filtersInfo.textContent = msg; }
+function hideInfo() { filtersInfo.style.display = "none"; }
+
+// ======= Каскад фильтров =======
+function initCascadeFilters() {
+  setOptions(cityFilter, typed("Город"), "Город");
+  setOptions(districtFilter, [], "Район");
+  setOptions(streetFilter, [], "Массив / улица");
+  setOptions(categoryFilter, typed("Категория"), "Категория");
+
+  cityFilter.onchange = () => {
+    const id = cityFilter.value ? +cityFilter.value : null;
+    setOptions(districtFilter, id ? childrenOf(id).filter(n=>n.type==="Район") : [], "Район");
+    setOptions(streetFilter, [], "Массив / улица");
+    buildParamsFilters(); saveFilters(); renderAll();
+  };
+  districtFilter.onchange = () => {
+    const id = districtFilter.value ? +districtFilter.value : null;
+    setOptions(streetFilter, id ? childrenOf(id).filter(n=>n.type==="Массив / улица") : [], "Массив / улица");
+    saveFilters(); renderAll();
+  };
+  streetFilter.onchange = () => { saveFilters(); renderAll(); };
+  categoryFilter.onchange = () => { buildParamsFilters(); saveFilters(); renderAll(); };
+  statusFilter.onchange = () => { saveFilters(); renderAll(); };
+  houseTypeFilter.onchange = () => { saveFilters(); renderAll(); };
+}
+
+// ======= Каскад формы =======
+function initCascadeForm() {
+  setOptions(citySel, typed("Город"), "Город");
+  setOptions(districtSel, [], "Район");
+  setOptions(streetSel, [], "Массив / улица");
+  setOptions(categoryInput, typed("Категория"), "Категория");
+
+  citySel.onchange = () => {
+    const id = citySel.value ? +citySel.value : null;
+    setOptions(districtSel, id ? childrenOf(id).filter(n=>n.type==="Район") : [], "Район");
+    setOptions(streetSel, [], "Массив / улица");
+  };
+  districtSel.onchange = () => {
+    const id = districtSel.value ? +districtSel.value : null;
+    setOptions(streetSel, id ? childrenOf(id).filter(n=>n.type==="Массив / улица") : [], "Массив / улица");
+  };
+
+  categoryInput.onchange = () => { renderParamsForm(); };
+  renderParamsForm();
+}
+
+// ======= Динамические параметры: форма =======
+function paramsByCategoryId(catId) {
+  return getExtraParams().filter(p => p.categoryId === catId);
+}
+function renderParamsForm() {
+  const box = $("dynamicParamsForm");
+  box.innerHTML = "";
+  const catId = categoryInput.value ? +categoryInput.value : null;
+  if (!catId) return;
+
+  const params = paramsByCategoryId(catId);
+  params.forEach(p => {
+    const group = document.createElement("div");
+    group.className = "param-group";
+    group.innerHTML = `<div class="param-title">${p.name}</div>`;
+    const vals = document.createElement("div");
+    vals.className = "param-values";
+    (p.values||[]).forEach(val => {
+      const chip = document.createElement("label");
+      chip.className = "param-chip";
+      chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
+      vals.appendChild(chip);
+    });
+    group.appendChild(vals);
+    box.appendChild(group);
+  });
+}
+
+// ======= Динамические параметры: фильтры =======
+function buildParamsFilters() {
+  paramsFiltersBox.innerHTML = "";
+  const catId = categoryFilter.value ? +categoryFilter.value : null;
+  if (!catId) return;
+
+  const params = paramsByCategoryId(catId);
+  params.forEach(p => {
+    const group = document.createElement("div");
+    group.className = "param-group";
+    group.innerHTML = `<div class="param-title">${p.name}</div>`;
+    const vals = document.createElement("div");
+    vals.className = "param-values";
+    (p.values||[]).forEach(val => {
+      const chip = document.createElement("label");
+      chip.className = "param-chip";
+      chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
+      chip.querySelector("input").addEventListener("change", ()=>{ saveFilters(); renderAll(); });
+      vals.appendChild(chip);
+    });
+    group.appendChild(vals);
+    paramsFiltersBox.appendChild(group);
+  });
+}
+
+// ======= Подсказка о синхронизации =======
+function updateAdminSyncInfo() {
+  const cats = treeNodes.filter(n => n.type === "Категория").length;
+  const params = getExtraParams().length;
+  if (cats || params) {
+    adminSyncInfo.style.color = "#9aa3b2";
+    adminSyncInfo.textContent = `Загружено: ${cats} категорий, ${params} параметров из админки`;
+  } else {
+    adminSyncInfo.style.color = "#ff6b6b";
+    adminSyncInfo.textContent = "❌ Нет данных из админки";
+  }
+}
+
+// ======= фильтрация =======
+function applyFilters(list) {
+  let res = [...list];
+  const categoryName = categoryFilter.value ? nameById(+categoryFilter.value) : "";
+
+  if (categoryName) res = res.filter(o => (o.category||"") === categoryName);
+
+  // динамические параметры
+  const selectedByParam = {};
+  paramsFiltersBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    if (cb.checked) {
+      const p = cb.dataset.param;
+      if (!selectedByParam[p]) selectedByParam[p] = new Set();
+      selectedByParam[p].add(cb.value);
+    }
+  });
+  Object.keys(selectedByParam).forEach(pname=>{
+    const wanted = selectedByParam[pname];
+    res = res.filter(o => {
+      const got = new Set(o.extra?.[pname] || []);
+      for (const val of wanted) { if (got.has(val)) return true; }
+      return false;
+    });
+  });
+
+  return res;
+}
+
+// ======= init =======
+function init() {
+  initCascadeFilters();
+  initCascadeForm();
+  buildParamsFilters();
+  updateAdminSyncInfo();   // 🔥 новая строка
+  renderAll();
+}
+init();
