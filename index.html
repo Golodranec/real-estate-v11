@@ -2,112 +2,61 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Админка — Дерево категорий</title>
-  <style>
-    body { font-family: sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
-    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin-bottom:16px; }
-    ul.tree { list-style:none; padding-left:20px; }
-    ul.tree li { margin:4px 0; }
-    .actions button { margin-left:6px; font-size:12px; }
-    input, select { padding:6px; border-radius:6px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
-    .btn { padding:6px 10px; border-radius:6px; background:#4da3ff; border:none; cursor:pointer; color:#001428; }
-  </style>
+  <title>Каталог недвижимости v13.3</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <h1>Админка: Дерево категорий</h1>
-  <div class="card">
-    <form id="nodeForm">
-      <input id="nodeName" placeholder="Название" required>
-      <select id="nodeParent"></select>
-      <button class="btn" type="submit">Добавить</button>
-    </form>
+<header class="topbar">
+  <h1>Каталог недвижимости</h1>
+  <div class="version">ChatPatch v13.3</div>
+</header>
+
+<section class="card">
+  <h2>Фильтры</h2>
+  <div class="filters">
+    <select id="cityFilter"><option value="">Город</option></select>
+    <select id="districtFilter"><option value="">Район</option></select>
+    <select id="streetFilter"><option value="">Улица / массив</option></select>
+    <select id="categoryFilter"><option value="">Категория</option></select>
+
+    <!-- Цена -->
+    <div class="range">
+      <input type="number" id="priceMin" placeholder="Цена от">
+      <input type="number" id="priceMax" placeholder="Цена до">
+    </div>
+
+    <!-- Комнаты -->
+    <div class="range">
+      <input type="number" id="roomsMin" placeholder="Комнат от">
+      <input type="number" id="roomsMax" placeholder="Комнат до">
+    </div>
+
+    <!-- Этаж -->
+    <div class="range">
+      <input type="number" id="floorMin" placeholder="Этаж от">
+      <input type="number" id="floorMax" placeholder="Этаж до">
+    </div>
+
+    <!-- Этажность -->
+    <div class="range">
+      <input type="number" id="floorsMin" placeholder="Этажность от">
+      <input type="number" id="floorsMax" placeholder="Этажность до">
+    </div>
+
+    <!-- Площадь -->
+    <div class="range">
+      <input type="number" id="areaMin" placeholder="Площадь от">
+      <input type="number" id="areaMax" placeholder="Площадь до">
+    </div>
   </div>
+</section>
 
-  <div class="card">
-    <h2>Текущее дерево</h2>
-    <ul id="treeContainer" class="tree"></ul>
-  </div>
+<section id="results" class="card">
+  <h2>Результаты</h2>
+  <div id="resultsList" class="grid"></div>
+</section>
 
-  <div class="card">
-    <h2>Экспорт / Импорт</h2>
-    <button id="exportBtn" class="btn">Экспорт JSON</button>
-    <input type="file" id="importFile" accept="application/json">
-  </div>
-
-<script>
-let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
-
-function saveNodes(){
-  localStorage.setItem("treeNodes", JSON.stringify(nodes));
-  renderTree();
-  fillParentSelect();
-}
-
-function fillParentSelect(){
-  const sel = document.getElementById("nodeParent");
-  sel.innerHTML = `<option value="">(корень)</option>`;
-  nodes.forEach(n => {
-    sel.innerHTML += `<option value="${n.id}">${n.name}</option>`;
-  });
-}
-
-function renderTree(parentId=null, container=document.getElementById("treeContainer")){
-  if(parentId===null) container.innerHTML = "";
-  const ul = document.createElement("ul");
-  ul.className = "tree";
-  nodes.filter(n=>n.parent==parentId).forEach(n=>{
-    const li = document.createElement("li");
-    li.textContent = n.name;
-    const actions = document.createElement("span");
-    actions.className = "actions";
-    const del = document.createElement("button");
-    del.textContent = "Удалить";
-    del.onclick = ()=>{ nodes = nodes.filter(x=>x.id!==n.id); saveNodes(); };
-    actions.appendChild(del);
-    li.appendChild(actions);
-    renderTree(n.id, li);
-    ul.appendChild(li);
-  });
-  container.appendChild(ul);
-}
-
-document.getElementById("nodeForm").onsubmit = e=>{
-  e.preventDefault();
-  const name = document.getElementById("nodeName").value;
-  const parent = document.getElementById("nodeParent").value || null;
-  const id = Date.now();
-  nodes.push({id, name, parent: parent?+parent:null});
-  saveNodes();
-  e.target.reset();
-};
-
-// Экспорт JSON
-document.getElementById("exportBtn").onclick = ()=>{
-  const blob = new Blob([JSON.stringify(nodes, null, 2)], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "tree.json";
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-// Импорт JSON
-document.getElementById("importFile").onchange = (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = evt=>{
-    try {
-      nodes = JSON.parse(evt.target.result);
-      saveNodes();
-    } catch(err){ alert("Ошибка импорта: " + err.message); }
-  };
-  reader.readAsText(file);
-};
-
-saveNodes();
-</script>
+<script src="script.js"></script>
 </body>
 </html>
