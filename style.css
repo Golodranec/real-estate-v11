@@ -1,201 +1,230 @@
-/* ====== Общий стиль ====== */
+/* ===== style.css v13.9.2 ===== */
+
+/* базовые стили */
 body {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: #0f1115;
   color: #e8eaf0;
-  margin: 0;
-  padding: 0;
-}
-.container {
-  max-width: 1200px;
-  margin: auto;
-  padding: 20px;
-}
-h1, h2, h3 {
-  margin: 0 0 10px 0;
-}
-a {
-  color: #4da3ff;
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
-.version {
-  font-size: 14px;
-  opacity: 0.7;
-  margin-bottom: 10px;
-}
-.admin-link {
-  display: inline-block;
-  margin-bottom: 20px;
-  font-size: 14px;
 }
 
-/* ====== Карточки ====== */
-.card {
+h1, h2, h3 {
+  margin: 0 0 12px 0;
+  font-weight: 600;
+}
+
+header {
+  background: #161a22;
+  padding: 12px 20px;
+  border-bottom: 1px solid #242938;
+}
+
+header h1 {
+  font-size: 20px;
+}
+
+/* сетка */
+.grid-main {
+  display: grid;
+  grid-template-columns: 260px 1fr 360px;
+  grid-gap: 16px;
+  padding: 16px;
+}
+@media(max-width: 1100px) {
+  .grid-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* фильтры */
+.filters {
+  background: #161a22;
+  border: 1px solid #242938;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.filters h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.filters select,
+.filters input,
+.filters button {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+/* карта */
+#mapSection {
+  background: #161a22;
+  border: 1px solid #242938;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#map {
+  width: 100%;
+  height: 500px;
+}
+
+/* результаты */
+.results {
+  background: #161a22;
+  border: 1px solid #242938;
+  border-radius: 12px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.results h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+#resultsList .item {
+  border-bottom: 1px solid #242938;
+  padding: 8px 0;
+}
+
+#resultsList .item:last-child {
+  border-bottom: none;
+}
+
+#resultsList h3 {
+  font-size: 15px;
+  margin: 0 0 6px 0;
+}
+
+/* карточки */
+.price {
+  color: #4da3ff;
+  font-weight: 600;
+}
+
+.meta {
+  font-size: 13px;
+  opacity: 0.85;
+  margin: 2px 0;
+}
+
+.badge {
+  background: #242938;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* форма */
+.form-section {
   background: #161a22;
   border: 1px solid #242938;
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 20px;
-}
-.muted {
-  opacity: 0.7;
-  font-size: 14px;
+  margin: 16px;
 }
 
-/* ====== Форма ====== */
-.form-grid {
+.form-section h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
-  gap: 10px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 8px;
 }
-.form-row {
+
+.form-group {
+  margin-top: 10px;
+}
+
+.form-actions {
+  margin-top: 12px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
 }
-input, select, button {
-  padding: 10px;
+
+/* inputs */
+input, select, button, textarea {
+  padding: 8px;
   border-radius: 8px;
   border: 1px solid #242938;
   background: #0d1016;
   color: #e8eaf0;
 }
+
 button {
   cursor: pointer;
-  background: #4da3ff;
-  border-color: #4da3ff;
-  color: #001428;
-}
-button:hover {
-  background: #6bb4ff;
-}
-button:disabled {
-  background: #333;
-  cursor: not-allowed;
-}
-#coordsBadge {
-  font-size: 13px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #242938;
 }
 
-/* ====== Фильтры ====== */
-.filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
-  gap: 10px;
+.btn {
+  background: #4da3ff;
+  border: 1px solid #4da3ff;
+  color: #001428;
+  font-weight: 600;
 }
-.filters select, .filters button {
-  width: 100%;
+
+.ghost {
+  background: transparent;
+  border: 1px solid #4da3ff;
+  color: #4da3ff;
 }
+
 .hint {
-  font-size: 13px;
+  font-size: 12px;
   opacity: 0.8;
   margin-top: 4px;
 }
 
-/* ====== Параметры ====== */
-.params-box {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.param-group {
-  border: 1px solid #242938;
-  border-radius: 8px;
-  padding: 8px;
-}
-.param-title {
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-.param-values {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.param-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #0d1016;
-  border: 1px solid #242938;
-  border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 13px;
-}
-.param-chip input {
-  margin: 0;
-}
-
-/* ====== Результаты ====== */
-#resultsList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
-  gap: 14px;
-}
-.item {
-  background: #0d1016;
-  border: 1px solid #242938;
-  border-radius: 10px;
-  padding: 12px;
-}
-.item h3 {
-  margin: 0 0 6px;
-  font-size: 16px;
-}
-.price {
-  font-size: 16px;
-  color: #4da3ff;
-  margin-bottom: 6px;
-}
-.badge {
-  display: inline-block;
-  padding: 2px 6px;
-  font-size: 12px;
-  background: #242938;
-  border-radius: 6px;
-  margin-right: 4px;
-}
-.meta {
-  font-size: 13px;
-  margin-top: 2px;
-}
-
-/* ====== Превью фото ====== */
+/* превью фото */
 .preview-box {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 8px;
 }
+
 .preview-box img {
-  width: 72px;
-  height: 54px;
+  width: 80px;
+  height: 60px;
   object-fit: cover;
   border-radius: 6px;
   border: 1px solid #242938;
 }
 
-/* ====== Дерево (в админке) ====== */
-.tree {
-  list-style: none;
-  padding-left: 20px;
+/* параметры */
+.params-box {
+  margin-top: 12px;
+  border-top: 1px solid #242938;
+  padding-top: 8px;
 }
-.tree li {
-  margin: 4px 0;
+
+.param-group {
+  margin-bottom: 10px;
 }
-.node {
+
+.param-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.param-values {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  align-items: center;
 }
-.node-type {
-  opacity: 0.7;
-  font-size: 12px;
+
+.param-chip {
+  background: #242938;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.param-chip input {
+  margin-right: 4px;
 }
