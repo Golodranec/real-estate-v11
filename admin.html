@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.9.2</title>
+  <title>Админка — v13.9.3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0;padding:20px}
@@ -23,11 +23,12 @@
     textarea{width:100%;min-height:80px;resize:vertical}
     .save-badge{position:fixed;top:12px;right:12px;background:#4da3ff;color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s}
     .save-badge.show{opacity:1}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    a{color:#4da3ff}
   </style>
 </head>
 <body>
-<h1>Админка: узлы и параметры</h1>
+<h1>Админка: узлы и параметры <small style="opacity:.7">v13.9.3</small></h1>
+<p><a href="index.html">← к каталогу</a></p>
 <div id="saveBadge" class="save-badge">Сохранено ✓</div>
 
 <!-- Типы узлов -->
@@ -56,7 +57,7 @@
 
 <!-- Параметры -->
 <div class="card">
-  <h3>Параметры (привязаны к узлу — чаще всего к категории)</h3>
+  <h3>Параметры (привязаны к узлу — чаще к категории)</h3>
   <div class="row">
     <input id="paramName" placeholder="Название параметра (например: Тип недвижимости)" />
     <select id="paramCategory"></select>
@@ -77,32 +78,18 @@ let types = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
 let extraParams = JSON.parse(localStorage.getItem("extraParams") || "[]");
 
 const $=id=>document.getElementById(id), badge=$("saveBadge");
-const showSaved=()=>{ badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"),1200); };
+const showSaved=()=>{ badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"),1100); };
 
-// persist + notify
-function saveNodes(){
-  localStorage.setItem("treeNodes", JSON.stringify(nodes));
-  localStorage.setItem("treeNodes_last_change", String(Date.now()));
-  renderTree(); fillParent(); fillCategoriesSelect(); showSaved();
-}
-function saveTypes(){
-  localStorage.setItem("nodeTypes", JSON.stringify(types));
-  localStorage.setItem("nodeTypes_last_change", String(Date.now()));
-  renderTypes(); fillTypesSelect(); showSaved();
-}
-function saveParams(){
-  localStorage.setItem("extraParams", JSON.stringify(extraParams));
-  localStorage.setItem("extraParams_last_change", String(Date.now()));
-  renderParams(); showSaved();
-}
+function saveNodes(){ localStorage.setItem("treeNodes", JSON.stringify(nodes)); localStorage.setItem("treeNodes_last_change", String(Date.now())); renderTree(); fillParent(); fillCategoriesSelect(); showSaved(); }
+function saveTypes(){ localStorage.setItem("nodeTypes", JSON.stringify(types)); localStorage.setItem("nodeTypes_last_change", String(Date.now())); renderTypes(); fillTypesSelect(); showSaved(); }
+function saveParams(){ localStorage.setItem("extraParams", JSON.stringify(extraParams)); localStorage.setItem("extraParams_last_change", String(Date.now())); renderParams(); showSaved(); }
 
-// types UI
+// types
 function renderTypes(){
   const wrap=$("typesList"); wrap.innerHTML="";
-  if(!types.length){ wrap.innerHTML = `<div class="muted">Пока нет типов. Добавь хотя бы один (например, «Категория»).</div>`; }
+  if(!types.length){ wrap.innerHTML=`<div class="muted">Пока нет типов. Добавь хотя бы один (например, «Категория»).</div>`; }
   types.forEach((t,i)=>{
-    const row=document.createElement("div");
-    row.style.display="flex";row.style.gap="6px";row.style.marginBottom="6px";
+    const row=document.createElement("div"); row.style.display="flex";row.style.gap="6px";row.style.marginBottom="6px";
     const inp=document.createElement("input"); inp.value=t;
     inp.onchange=()=>{ types[i]=inp.value.trim(); saveTypes(); };
     const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
@@ -110,20 +97,11 @@ function renderTypes(){
     row.appendChild(inp); row.appendChild(del); wrap.appendChild(row);
   });
 }
-function fillTypesSelect(){
-  const sel=$("nodeType"); sel.innerHTML="";
-  types.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);});
-}
-function fillParent(){
-  const sel=$("nodeParent"); sel.innerHTML=`<option value="">(без родителя)</option>`;
-  nodes.forEach(n=>{ const o=document.createElement("option"); o.value=n.id; o.textContent=`${n.name} (${n.type})`; sel.appendChild(o); });
-}
-function fillCategoriesSelect(){
-  const sel=$("paramCategory"); sel.innerHTML="";
-  nodes.forEach(n=>{ const o=document.createElement("option"); o.value=n.id; o.textContent=`${n.name} (${n.type})`; sel.appendChild(o); });
-}
+function fillTypesSelect(){ const sel=$("nodeType"); sel.innerHTML=""; types.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);}); }
+function fillParent(){ const sel=$("nodeParent"); sel.innerHTML=`<option value="">(без родителя)</option>`; nodes.forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=`${n.name} (${n.type})`;sel.appendChild(o);}); }
+function fillCategoriesSelect(){ const sel=$("paramCategory"); sel.innerHTML=""; nodes.forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=`${n.name} (${n.type})`; sel.appendChild(o);}); }
 
-// tree UI
+// tree
 function renderTree(parent=null, container=$("tree")){
   if(parent===null) container.innerHTML="";
   const ul=document.createElement("ul"); ul.className="tree";
@@ -147,27 +125,22 @@ function renderTree(parent=null, container=$("tree")){
 }
 
 // actions
-$("addTypeBtn").onclick=()=>{
-  const t=$("typeName").value.trim(); if(!t) return alert("Тип?");
-  types.push(t); $("typeName").value=""; saveTypes();
-};
+$("addTypeBtn").onclick=()=>{ const t=$("typeName").value.trim(); if(!t) return alert("Тип?"); types.push(t); $("typeName").value=""; saveTypes(); };
 $("clearTypes").onclick=()=>{ if(confirm("Сбросить все типы?")){ types=[]; saveTypes(); } };
 
 $("addNode").onclick=()=>{
   const name=$("nodeName").value.trim(); if(!name) return alert("Название?");
-  const type=$("nodeType").value;
-  const parent=$("nodeParent").value?+$("nodeParent").value:null;
-  nodes.push({id:Date.now(),name,type,parent});
-  $("nodeName").value=""; saveNodes();
+  const type=$("nodeType").value; const parent=$("nodeParent").value?+$("nodeParent").value:null;
+  nodes.push({id:Date.now(),name,type,parent}); $("nodeName").value=""; saveNodes();
 };
 $("clearTree").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
 
-// params UI
+// params
 function renderParams(){
   const wrap=$("paramsList"); wrap.innerHTML="";
   if(!extraParams.length){ wrap.innerHTML=`<div class="muted">Пока нет параметров.</div>`; return; }
   extraParams.forEach(p=>{
-    const cat = nodes.find(n=>n.id===p.categoryId);
+    const cat=nodes.find(n=>n.id===p.categoryId);
     const div=document.createElement("div"); div.className="param-item";
     div.innerHTML=`
       <div class="param-header">
@@ -182,22 +155,16 @@ function renderParams(){
 }
 $("addParam").onclick=()=>{
   const name=$("paramName").value.trim(); if(!name) return alert("Название?");
-  const categoryId=$("paramCategory").value?+$("paramCategory").value:null;
-  if(!categoryId) return alert("Привяжи к узлу (обычно к категории)");
-  const raw=$("paramValues").value.trim();
-  const values=raw?raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean):[];
+  const categoryId=$("paramCategory").value?+$("paramCategory").value:null; if(!categoryId) return alert("Привяжи к узлу (обычно к категории)");
+  const raw=$("paramValues").value.trim(); const values=raw?raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean):[];
   if(!values.length) return alert("Добавь хотя бы одно значение");
   extraParams.push({id:Date.now(),name,categoryId,values});
-  $("paramName").value=""; $("paramValues").value="";
-  saveParams();
+  $("paramName").value=""; $("paramValues").value=""; saveParams();
 };
 $("clearParams").onclick=()=>{ if(confirm("Удалить все параметры?")){ extraParams=[]; saveParams(); } };
 
 // init
-(function init(){
-  renderTypes(); fillTypesSelect(); fillParent(); fillCategoriesSelect();
-  renderTree(); renderParams();
-})();
+(function init(){ renderTypes(); fillTypesSelect(); fillParent(); fillCategoriesSelect(); renderTree(); renderParams(); })();
 </script>
 </body>
 </html>
