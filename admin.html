@@ -2,28 +2,28 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.9.5 (dev)</title>
+  <title>Админка — v13.9.6 (dev)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0;padding:20px}
     .card{background:#161a22;border:1px solid #242938;border-radius:12px;padding:16px;margin:16px 0}
-    input,select,button,textarea{padding:8px;border-radius:8px;border:1px solid #242938;background:#0d1016;color:#e8eaf0}
+    input,select,button,textarea{padding:6px;border-radius:6px;border:1px solid #242938;background:#0d1016;color:#e8eaf0}
     button{cursor:pointer}
     .btn{background:#4da3ff;color:#001428;border-color:#4da3ff}
     .danger{background:#ff6b6b;color:#fff;border-color:#ff6b6b}
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-    ul.tree{list-style:none;padding-left:20px}
     .muted{opacity:.8;font-size:13px}
     .save-badge{position:fixed;top:12px;right:12px;background:#4da3ff;color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s}
     .save-badge.show{opacity:1}
     a{color:#4da3ff}
-    .field-item{display:flex;align-items:center;gap:8px;background:#0d1016;border:1px solid #242938;border-radius:8px;padding:6px;margin-bottom:6px;cursor:grab}
-    .field-item input[type="text"]{flex:1}
+    .field-item{display:grid;grid-template-columns:30px 1fr 120px 100px 60px 1fr;align-items:center;gap:6px;background:#0d1016;border:1px solid #242938;border-radius:8px;padding:6px;margin-bottom:6px;cursor:grab}
     .field-item.dragging{opacity:.5}
+    .field-item input[type="text"]{width:100%}
+    .field-item select{width:100%}
+    .field-item .chk{text-align:center}
   </style>
 </head>
 <body>
-<h1>Админка <small style="opacity:.7">v13.9.5 (dev)</small></h1>
+<h1>Админка <small style="opacity:.7">v13.9.6 (dev)</small></h1>
 <p><a href="index.html">← к каталогу</a></p>
 <div id="saveBadge" class="save-badge">Сохранено ✓</div>
 
@@ -31,7 +31,7 @@
 <div class="card">
   <h3>Поля формы</h3>
   <div id="fieldsList"></div>
-  <button id="resetFields" class="danger">Сбросить поля</button>
+  <button id="resetFields" class="danger">Сбросить к дефолту</button>
 </div>
 
 <script>
@@ -39,14 +39,15 @@ let formFields = JSON.parse(localStorage.getItem("formFields") || "null");
 
 // дефолтные поля
 const defaultFields = [
-  {id:"title",   label:"Заголовок",    enabled:true},
-  {id:"price",   label:"Цена",         enabled:true},
-  {id:"area",    label:"Площадь, м²", enabled:true},
-  {id:"rooms",   label:"Комнат",      enabled:true},
-  {id:"floor",   label:"Этаж",        enabled:true},
-  {id:"floors",  label:"Этажность",   enabled:true},
-  {id:"year",    label:"Год постройки",enabled:true},
-  {id:"address", label:"Адрес",       enabled:true}
+  {id:"title",   label:"Заголовок",   type:"text",     required:true,  placeholder:"Введите название", enabled:true},
+  {id:"price",   label:"Цена",        type:"number",   required:true,  placeholder:"в сумах", enabled:true},
+  {id:"area",    label:"Площадь, м²",type:"number",   required:false, placeholder:"например 60", enabled:true},
+  {id:"rooms",   label:"Комнат",     type:"number",   required:false, placeholder:"", enabled:true},
+  {id:"floor",   label:"Этаж",       type:"number",   required:false, placeholder:"", enabled:true},
+  {id:"floors",  label:"Этажность",  type:"number",   required:false, placeholder:"", enabled:true},
+  {id:"year",    label:"Год постройки", type:"number",required:false, placeholder:"например 2010", enabled:true},
+  {id:"address", label:"Адрес",      type:"text",     required:false, placeholder:"", enabled:true},
+  {id:"desc",    label:"Описание",   type:"textarea", required:false, placeholder:"", enabled:false}
 ];
 
 if (!formFields) formFields = defaultFields;
@@ -60,18 +61,33 @@ function saveFields(){ localStorage.setItem("formFields", JSON.stringify(formFie
 function renderFields(){
   const wrap=$("fieldsList"); wrap.innerHTML="";
   formFields.forEach((f,i)=>{
-    const div=document.createElement("div"); div.className="field-item"; div.draggable=true;
-    div.dataset.index=i;
+    const div=document.createElement("div"); div.className="field-item"; div.draggable=true; div.dataset.index=i;
 
-    const chk=document.createElement("input"); chk.type="checkbox"; chk.checked=f.enabled;
+    const chk=document.createElement("input"); chk.type="checkbox"; chk.className="chk"; chk.checked=f.enabled;
     chk.onchange=()=>{ f.enabled=chk.checked; saveFields(); };
 
     const inp=document.createElement("input"); inp.type="text"; inp.value=f.label;
     inp.oninput=()=>{ f.label=inp.value; saveFields(); };
 
-    const lab=document.createElement("span"); lab.textContent=f.id; lab.style.opacity=.6;fontSize="12px";
+    const sel=document.createElement("select");
+    ["text","number","date","select","textarea"].forEach(t=>{
+      const o=document.createElement("option"); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; sel.appendChild(o);
+    });
+    sel.onchange=()=>{ f.type=sel.value; saveFields(); };
 
-    div.appendChild(chk); div.appendChild(inp); div.appendChild(lab);
+    const req=document.createElement("input"); req.type="checkbox"; req.checked=f.required;
+    req.onchange=()=>{ f.required=req.checked; saveFields(); };
+
+    const ph=document.createElement("input"); ph.type="text"; ph.placeholder="placeholder"; ph.value=f.placeholder||"";
+    ph.oninput=()=>{ f.placeholder=ph.value; saveFields(); };
+
+    div.appendChild(chk);
+    div.appendChild(inp);
+    div.appendChild(sel);
+    div.appendChild(req);
+    div.appendChild(ph);
+    const idSpan=document.createElement("span"); idSpan.textContent=f.id; idSpan.style.opacity=.6; div.appendChild(idSpan);
+
     wrap.appendChild(div);
 
     // drag&drop
@@ -103,7 +119,7 @@ function updateOrder(){
   saveFields();
 }
 
-$("resetFields").onclick=()=>{ if(confirm("Сбросить все поля?")){ formFields=defaultFields; saveFields(); } };
+$("resetFields").onclick=()=>{ if(confirm("Сбросить поля к дефолту?")){ formFields=defaultFields; saveFields(); } };
 
 // init
 renderFields();
