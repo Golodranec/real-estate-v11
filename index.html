@@ -1,86 +1,85 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.9</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-
-  <link rel="stylesheet" href="style.css?v=13.9" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Каталог недвижимости</title>
+  <link rel="stylesheet" href="style.css?v=13.9.2">
 </head>
 <body>
-  <header class="topbar">
+  <div class="container">
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13.9</div>
-    <a class="admin-link" href="admin.html" target="_blank">Админка</a>
-  </header>
+    <div class="version">ChatPatch v13.9.2</div>
+    <a href="admin.html" class="admin-link">Админка (дерево и параметры)</a>
 
-  <!-- Фильтры (строятся скриптом) -->
-  <section class="filters card" id="filtersBox">
-    <div id="adminSyncInfo" class="hint" style="grid-column:1/-1;"></div>
-    <div id="dynamicParamsFilters" class="params-box" style="grid-column:1/-1;"></div>
-    <div id="scriptStatus" class="hint" style="grid-column:1/-1; color:#ffd24d;">⏳ Загружается…</div>
-  </section>
+    <!-- ===== Фильтры ===== -->
+    <section class="card">
+      <h2>Фильтры</h2>
+      <div class="filters" id="filtersBox"></div>
+    </section>
 
-  <section id="mapContainer" class="card"><div id="map"></div></section>
-  <section id="results" class="card"><div id="resultsList" class="grid"></div></section>
+    <!-- ===== Карта ===== -->
+    <section class="card">
+      <div id="map" style="height:400px;"></div>
+    </section>
 
-  <!-- Форма «Добавить объект» (строится частично скриптом) -->
-  <section class="card">
-    <h2 id="formTitle">Добавить объект</h2>
-    <form id="objectForm" autocomplete="off">
-      <div id="dynamicLocationForm" class="form-row"></div>
+    <!-- ===== Результаты ===== -->
+    <section class="card">
+      <h2>Результаты</h2>
+      <div id="resultsList"></div>
+    </section>
 
-      <div class="form-row">
-        <select id="form_status">
-          <option value="sale">Продается</option>
-          <option value="rent">Сдается</option>
-          <option value="exchange">Обмен</option>
-        </select>
-        <input id="title" type="text" placeholder="Название" />
-        <input id="address" type="text" placeholder="Адрес" />
-      </div>
-
-      <div class="form-row">
-        <div class="range">
-          <input id="price" type="number" placeholder="Цена" />
-          <input id="area" type="number" step="0.1" placeholder="Площадь" />
+    <!-- ===== Добавить объект ===== -->
+    <section class="card">
+      <h2>Добавить объект</h2>
+      <form id="objectForm">
+        <div class="form-row">
+          <select id="form_status">
+            <option value="sale">Продается</option>
+            <option value="rent">Сдается</option>
+            <option value="exchange">Обмен</option>
+          </select>
         </div>
-        <div class="range">
-          <input id="rooms" type="number" placeholder="Комнаты" />
-          <input id="year" type="number" placeholder="Год" />
+
+        <div id="dynamicLocationForm" class="form-grid"></div>
+
+        <div class="form-grid">
+          <input type="text" id="title" placeholder="Название">
+          <input type="text" id="address" placeholder="Адрес">
+          <input type="number" id="price" placeholder="Цена">
+          <input type="number" id="area" placeholder="Площадь">
+          <input type="number" id="rooms" placeholder="Комнаты">
+          <input type="number" id="floor" placeholder="Этаж">
+          <input type="number" id="floors" placeholder="Этажность">
+          <input type="number" id="year" placeholder="Год">
         </div>
-        <div class="range">
-          <input id="floor" type="number" placeholder="Этаж" />
-          <input id="floors" type="number" placeholder="Этажность" />
+
+        <div id="dynamicParamsForm" class="params-box"></div>
+
+        <div class="form-row">
+          <button type="button" id="pickOnMap">Поставить точку на карте</button>
+          <span id="coordsBadge">Координаты не выбраны</span>
         </div>
-      </div>
 
-      <div id="dynamicParamsForm" class="params-box"></div>
+        <div class="form-row">
+          <input type="file" id="images" multiple accept="image/*">
+        </div>
+        <div id="imagePreview" class="preview-box"></div>
 
-      <div class="form-row">
-        <button id="pickOnMap" type="button" class="btn">Поставить точку на карте</button>
-        <span id="coordsBadge" class="badge muted">Координаты не выбраны</span>
-        <input id="images" type="file" accept="image/*" multiple />
-      </div>
-      <div id="imagePreview" class="preview"></div>
+        <div class="form-row">
+          <button type="submit">Сохранить</button>
+          <button type="button" id="clearForm">Очистить</button>
+        </div>
+      </form>
+    </section>
+  </div>
 
-      <div class="form-actions">
-        <button type="submit" class="btn primary">Сохранить</button>
-        <button id="clearForm" type="button" class="btn danger ghost">Очистить</button>
-      </div>
-    </form>
-  </section>
-
-  <footer class="footer">Версия: ChatPatch v13.9</footer>
-
+  <!-- ===== Подключения ===== -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="script.js?v=13.9"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script src="script.v13.9.2.js"></script>
 </body>
 </html>
