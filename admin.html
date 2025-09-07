@@ -3,125 +3,77 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Admin All-in-One — Финал</title>
+<title>Admin — каскадные фильтры</title>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
-  :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff;}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui}
-  header{padding:10px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
-  .btn{background:var(--accent);color:#fff}
-  .btn.secondary{background:#2a3140}
-  .btn.ghost{background:transparent;border:1px solid #2a3140;color:#e6e6e6}
-  .tabs{display:flex;gap:8px}
-  .tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
-  .tab.active{background:var(--accent);color:#fff}
-  main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
-  .panel{padding:12px}
-  h3{margin:6px 0}
-  .draggable-item{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:#1f2530;border:1px solid #2a3140;border-radius:6px;cursor:grab}
-  .draggable-item input,.draggable-item select{padding:4px;border-radius:4px;border:1px solid #333;background:#111722;color:#fff}
-  .draggable-item button{background:#2a3140;color:#fff;border:none;border-radius:4px;padding:2px 6px}
-  .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;
-    background:#0b0d12;border:1px dashed #333;padding:6px;min-height:70vh;border-radius:10px}
-  .block{background:#1f2530;border:1px solid #2a3140;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
-  .block.drag{opacity:.7;outline:1px dashed #8fb2ff}
-  .resize{position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--accent)}
-  .toolbar{position:absolute;top:2px;right:2px}
-  .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px solid #2a3140;padding:6px;border-radius:10px}
-  .preview-block{background:#1a202c;border:1px solid #2a3140;border-radius:6px;padding:8px;overflow:auto}
-  .field{margin-bottom:6px}
-  .field label{font-size:12px;display:block;margin-bottom:2px;color:#ccc}
-  .field input,.field select,.field textarea{width:100%;padding:6px;border-radius:4px;border:1px solid #333;background:#111722;color:#fff}
+body{margin:0;background:#0f1115;color:#e6e6e6;font:14px system-ui}
+header{padding:10px;background:#161a22;display:flex;gap:10px}
+button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
+.btn{background:#5b9cff;color:#fff}
+.draggable-item{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:#1f2530;border:1px solid #2a3140;border-radius:6px}
+input,select{padding:4px;background:#111722;border:1px solid #333;border-radius:4px;color:#fff}
+.field{margin-bottom:6px}
+.field label{display:block;font-size:12px;color:#ccc}
+.field input,.field select{width:100%;padding:6px;background:#111722;border:1px solid #333;border-radius:4px;color:#fff}
+.preview-grid{display:grid;grid-template-columns:1fr;gap:6px;padding:10px}
+.preview-block{background:#1a202c;padding:8px;border-radius:6px}
 </style>
 </head>
 <body>
 <header>
-  <div class="tabs">
-    <div class="tab active" data-tab="content">⚙️ Фильтры и поля</div>
-    <div class="tab" data-tab="layout">🖼️ Макет</div>
-    <div class="tab" data-tab="preview">👀 Предпросмотр</div>
-  </div>
-  <button class="btn secondary" id="exportBtn">Экспорт</button>
-  <label class="btn secondary">Импорт<input id="importInput" type="file" hidden></label>
-  <button class="btn ghost" id="resetBtn">Сброс</button>
+  <button class="btn" onclick="addFilter()">Добавить фильтр</button>
+  <button class="btn" onclick="reset()">Сброс</button>
 </header>
-<main>
-  <section class="panel" id="contentPanel">
+
+<main style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px">
+  <section>
     <h3>Фильтры</h3>
     <div id="filtersList"></div>
-    <button class="btn" onclick="addFilter()">Добавить фильтр</button>
-    <hr>
-    <h3>Поля формы</h3>
-    <div id="fieldsList"></div>
-    <button class="btn" onclick="addField()">Добавить поле</button>
   </section>
-
-  <section class="panel" id="layoutPanel" style="display:none">
-    <h3>Редактор макета</h3>
-    <button class="btn" onclick="addBlock('map')">Карта</button>
-    <button class="btn" onclick="addBlock('filters')">Фильтры</button>
-    <button class="btn" onclick="addBlock('form')">Форма</button>
-    <button class="btn" onclick="addBlock('cards')">Список</button>
-    <button class="btn" onclick="addBlock('table')">Таблица</button>
-    <button class="btn" onclick="addBlock('banner')">Реклама</button>
-    <button class="btn" onclick="addBlock('gallery')">Галерея</button>
-    <div class="canvas" id="canvas"></div>
-  </section>
-
-  <section class="panel" id="previewPanel" style="display:none">
+  <section>
     <h3>Предпросмотр</h3>
-    <div class="preview-grid" id="preview"></div>
+    <div id="preview" class="preview-grid"></div>
   </section>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
-const KEY="admin-final";
-const COLS=12, ROW=80, GAP=6;
-let data = load() || {filtersConfig:[],formFields:[],layout:[]};
+const KEY="admin-linked";
+let data = load() || {filtersConfig:[
+  {label:"Категория",field:"category",type:"select",options:["Квартира","Дом","Коммерция"]},
+  {label:"Подкатегория",field:"subCategory",type:"select-linked",parent:"category",
+   options:{
+     "Квартира":["Продажа","Аренда"],
+     "Дом":["Продажа","Аренда"],
+     "Коммерция":["Офис","Склад","Магазин"]
+   }},
+  {label:"Тип сделки",field:"dealType",type:"select-linked",parent:"subCategory",
+   options:{
+     "Продажа":["Новострой","Вторичка"],
+     "Аренда":["Посуточно","Долгосрочно"]
+   }}
+]};
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||"")}catch(e){return null}}
-function reset(){if(confirm("Сбросить?")){localStorage.removeItem(KEY);location.reload()}}
+function reset(){localStorage.removeItem(KEY);location.reload()}
 
-// вкладки
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.onclick=()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    const id=tab.dataset.tab;
-    document.getElementById("contentPanel").style.display=id==="content"?"block":"none";
-    document.getElementById("layoutPanel").style.display=id==="layout"?"block":"none";
-    document.getElementById("previewPanel").style.display=id==="preview"?"block":"none";
-    renderAll();
-  }
-});
+function addFilter(){
+  data.filtersConfig.push({label:"Новый фильтр",field:"field",type:"select"});save();renderFilters();renderPreview();
+}
 
-// экспорт/импорт
-document.getElementById("exportBtn").onclick=()=>{
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);const a=document.createElement("a");
-  a.href=url;a.download="admin-config.json";a.click();URL.revokeObjectURL(url);
-};
-document.getElementById("importInput").addEventListener("change",async e=>{
-  const f=e.target.files?.[0];if(!f) return;
-  const txt=await f.text();data=JSON.parse(txt);save();renderAll();
-});
-document.getElementById("resetBtn").onclick=reset;
-
-// ===== Фильтры и поля (с drag сортировкой) =====
-function addFilter(){data.filtersConfig.push({label:"Новый фильтр",field:"field",type:"select"});save();renderFilters()}
 function renderFilters(){
   const list=document.getElementById("filtersList");list.innerHTML="";
   data.filtersConfig.forEach((f,i)=>{
     const div=document.createElement("div");div.className="draggable-item";
-    div.innerHTML=`<input value="${f.label}" oninput="data.filtersConfig[${i}].label=this.value;save();renderPreview()">
-    <input value="${f.field}" oninput="data.filtersConfig[${i}].field=this.value;save();renderPreview()">
-    <select onchange="data.filtersConfig[${i}].type=this.value;save();renderPreview()">
-      <option value="select" ${f.type==='select'?'selected':''}>select</option>
-      <option value="range" ${f.type==='range'?'selected':''}>range</option>
-      <option value="text" ${f.type==='text'?'selected':''}>text</option>
-    </select>
-    <button onclick="data.filtersConfig.splice(${i},1);save();renderFilters();renderPreview()">✖</button>`;
+    div.innerHTML=`
+      <input value="${f.label}" oninput="data.filtersConfig[${i}].label=this.value;save();renderPreview()">
+      <input value="${f.field}" oninput="data.filtersConfig[${i}].field=this.value;save();renderPreview()">
+      <select onchange="data.filtersConfig[${i}].type=this.value;save();renderFilters();renderPreview()">
+        <option value="select" ${f.type==='select'?'selected':''}>select</option>
+        <option value="range" ${f.type==='range'?'selected':''}>range</option>
+        <option value="text" ${f.type==='text'?'selected':''}>text</option>
+        <option value="select-linked" ${f.type==='select-linked'?'selected':''}>select-linked</option>
+      </select>
+      <button onclick="data.filtersConfig.splice(${i},1);save();renderFilters();renderPreview()">✖</button>`;
     list.appendChild(div);
   });
   Sortable.create(list,{animation:150,onEnd:evt=>{
@@ -130,88 +82,42 @@ function renderFilters(){
   }});
 }
 
-function addField(){data.formFields.push({label:"Новое поле",id:"id",type:"text"});save();renderFields()}
-function renderFields(){
-  const list=document.getElementById("fieldsList");list.innerHTML="";
-  data.formFields.forEach((f,i)=>{
-    const div=document.createElement("div");div.className="draggable-item";
-    div.innerHTML=`<input value="${f.label}" oninput="data.formFields[${i}].label=this.value;save();renderPreview()">
-    <input value="${f.id}" oninput="data.formFields[${i}].id=this.value;save();renderPreview()">
-    <select onchange="data.formFields[${i}].type=this.value;save();renderPreview()">
-      <option value="text" ${f.type==='text'?'selected':''}>text</option>
-      <option value="number" ${f.type==='number'?'selected':''}>number</option>
-      <option value="select" ${f.type==='select'?'selected':''}>select</option>
-      <option value="textarea" ${f.type==='textarea'?'selected':''}>textarea</option>
-    </select>
-    <button onclick="data.formFields.splice(${i},1);save();renderFields();renderPreview()">✖</button>`;
-    list.appendChild(div);
-  });
-  Sortable.create(list,{animation:150,onEnd:evt=>{
-    const moved=data.formFields.splice(evt.oldIndex,1)[0];
-    data.formFields.splice(evt.newIndex,0,moved);save();renderPreview();
-  }});
-}
-
-// ===== Макет drag+resize =====
-const canvas=document.getElementById("canvas");
-let drag=null,resize=null;
-function addBlock(type){data.layout.push({id:Date.now(),type,x:1,y:1,w:6,h:2});save();renderLayout();renderPreview()}
-function delBlock(id){data.layout=data.layout.filter(b=>b.id!==id);save();renderLayout();renderPreview()}
-function renderLayout(){
-  canvas.innerHTML="";
-  data.layout.forEach(b=>{
-    const el=document.createElement("div");
-    el.className="block";el.style.gridColumn=`${b.x}/span ${b.w}`;el.style.gridRow=`${b.y}/span ${b.h}`;
-    el.innerHTML=`${b.type}<div class="resize"></div><div class="toolbar"><button onclick="delBlock(${b.id})">✖</button></div>`;
-    el.addEventListener("mousedown",e=>{
-      if(e.target.closest(".toolbar")||e.target.classList.contains("resize")) return;
-      e.preventDefault();const rect=canvas.getBoundingClientRect();const cellW=rect.width/COLS;const cellH=ROW+GAP;
-      drag={block:b,startX:e.clientX,startY:e.clientY,startGridX:b.x,startGridY:b.y,cellW,cellH};
-      el.classList.add("drag");window.addEventListener("mousemove",onDragMove);window.addEventListener("mouseup",onDragEnd);
-    });
-    el.querySelector(".resize").addEventListener("mousedown",e=>{
-      e.stopPropagation();resize={block:b,startX:e.clientX,startY:e.clientY,startW:b.w,startH:b.h};
-      window.addEventListener("mousemove",onResizeMove);window.addEventListener("mouseup",onResizeEnd);
-    });
-    canvas.appendChild(el);
-  });
-}
-function onDragMove(e){
-  if(!drag)return;const {block,startX,startY,startGridX,startGridY,cellW,cellH}=drag;
-  let newX=startGridX+Math.round((e.clientX-startX)/cellW);let newY=startGridY+Math.round((e.clientY-startY)/cellH);
-  newX=Math.max(1,Math.min(COLS-block.w+1,newX));newY=Math.max(1,newY);
-  block.x=newX;block.y=newY;save();renderLayout();
-}
-function onDragEnd(){drag=null;window.removeEventListener("mousemove",onDragMove);window.removeEventListener("mouseup",onDragEnd);renderPreview()}
-function onResizeMove(e){
-  if(!resize)return;const {block,startX,startY,startW,startH}=resize;
-  const rect=canvas.getBoundingClientRect();const cellW=rect.width/COLS;let w=startW+Math.round((e.clientX-startX)/cellW);let h=startH+Math.round((e.clientY-startY)/ROW);
-  w=Math.max(1,Math.min(COLS-block.x+1,w));h=Math.max(1,h);block.w=w;block.h=h;save();renderLayout();
-}
-function onResizeEnd(){resize=null;window.removeEventListener("mousemove",onResizeMove);window.removeEventListener("mouseup",onResizeEnd);renderPreview()}
-
-// ===== Предпросмотр =====
 function renderPreview(){
   const preview=document.getElementById("preview");preview.innerHTML="";
-  data.layout.forEach(b=>{
-    const el=document.createElement("div");el.className="preview-block";el.style.gridColumn=`${b.x}/span ${b.w}`;el.style.gridRow=`${b.y}/span ${b.h}`;
-    if(b.type==="map") el.innerHTML="🗺️ Карта";
-    if(b.type==="filters"){el.innerHTML="<h4>Фильтры</h4>";data.filtersConfig.forEach(f=>{
-      el.innerHTML+=`<div class="field"><label>${f.label}</label>${f.type==="range"?"<input placeholder='от'><input placeholder='до'>":f.type==="select"?"<select><option>—</option></select>":"<input>"}</div>`;
-    });}
-    if(b.type==="form"){el.innerHTML="<h4>Форма</h4>";data.formFields.forEach(ff=>{
-      el.innerHTML+=`<div class="field"><label>${ff.label}</label>${ff.type==="textarea"?"<textarea></textarea>":ff.type==="select"?"<select><option>—</option></select>":"<input>"}</div>`;
-    });}
-    if(b.type==="cards") el.innerHTML="📋 Список";
-    if(b.type==="table") el.innerHTML="📊 Таблица";
-    if(b.type==="banner") el.innerHTML="<div style='background:#223355;padding:20px'>Реклама</div>";
-    if(b.type==="gallery") el.innerHTML="<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:6px'><div style='background:#333;height:60px'></div><div style='background:#333;height:60px'></div><div style='background:#333;height:60px'></div></div>";
-    preview.appendChild(el);
+  const state={};
+  data.filtersConfig.forEach(f=>{
+    if(f.type==="select"){
+      let sel=document.createElement("select");
+      sel.innerHTML="<option>—</option>"+(f.options||[]).map(o=>`<option>${o}</option>`).join("");
+      sel.onchange=()=>{state[f.field]=sel.value;renderPreview()};
+      let wrap=document.createElement("div");wrap.className="field";
+      wrap.innerHTML=`<label>${f.label}</label>`;wrap.appendChild(sel);
+      preview.appendChild(wrap);
+    }
+    if(f.type==="select-linked"){
+      const parentVal=state[f.parent];
+      if(parentVal && f.options[parentVal]){
+        let sel=document.createElement("select");
+        sel.innerHTML="<option>—</option>"+f.options[parentVal].map(o=>`<option>${o}</option>`).join("");
+        sel.onchange=()=>{state[f.field]=sel.value;renderPreview()};
+        let wrap=document.createElement("div");wrap.className="field";
+        wrap.innerHTML=`<label>${f.label}</label>`;wrap.appendChild(sel);
+        preview.appendChild(wrap);
+      }
+    }
+    if(f.type==="range"){
+      let wrap=document.createElement("div");wrap.className="field";
+      wrap.innerHTML=`<label>${f.label}</label><input placeholder="от"><input placeholder="до">`;
+      preview.appendChild(wrap);
+    }
+    if(f.type==="text"){
+      let wrap=document.createElement("div");wrap.className="field";
+      wrap.innerHTML=`<label>${f.label}</label><input placeholder="${f.field}">`;
+      preview.appendChild(wrap);
+    }
   });
 }
-
-function renderAll(){renderFilters();renderFields();renderLayout();renderPreview()}
-renderAll();
+renderFilters();renderPreview();
 </script>
 </body>
 </html>
