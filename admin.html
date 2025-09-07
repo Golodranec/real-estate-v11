@@ -2,126 +2,319 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.9.6 (dev)</title>
+  <title>Админка — v13.9.7 (dev)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0;padding:20px}
-    .card{background:#161a22;border:1px solid #242938;border-radius:12px;padding:16px;margin:16px 0}
-    input,select,button,textarea{padding:6px;border-radius:6px;border:1px solid #242938;background:#0d1016;color:#e8eaf0}
-    button{cursor:pointer}
-    .btn{background:#4da3ff;color:#001428;border-color:#4da3ff}
-    .danger{background:#ff6b6b;color:#fff;border-color:#ff6b6b}
+    :root{
+      --bg:#0f1115; --card:#161a22; --line:#242938; --text:#e8eaf0; --blue:#4da3ff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    a{color:var(--blue);text-decoration:none}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+    header h1{margin:0;font-size:18px;font-weight:600}
+    .wrap{max-width:1200px;margin:0 auto;padding:14px}
+    .cards{display:grid;grid-template-columns:1fr;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+    .card h3{margin:0 0 10px;font-size:16px}
     .muted{opacity:.8;font-size:13px}
-    .save-badge{position:fixed;top:12px;right:12px;background:#4da3ff;color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input,select,button,textarea{padding:8px;border-radius:8px;border:1px solid var(--line);background:#0d1016;color:var(--text)}
+    button{cursor:pointer}
+    .btn{background:var(--blue);border:1px solid var(--blue);color:#001428;font-weight:600}
+    .danger{background:#ff6b6b;border:1px solid #ff6b6b;color:#fff}
+    .ghost{background:transparent;border:1px solid var(--blue);color:var(--blue)}
+    .save-badge{position:fixed;top:12px;right:12px;background:var(--blue);color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;z-index:9}
     .save-badge.show{opacity:1}
-    a{color:#4da3ff}
-    .field-item{display:grid;grid-template-columns:30px 1fr 120px 100px 60px 1fr;align-items:center;gap:6px;background:#0d1016;border:1px solid #242938;border-radius:8px;padding:6px;margin-bottom:6px;cursor:grab}
+
+    /* ===== Page Layout builder ===== */
+    .blocks{display:flex;flex-direction:column;gap:8px}
+    .block-item{display:grid;grid-template-columns:34px 1fr 120px 110px 110px 1fr;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0d1016;cursor:grab}
+    .block-item.dragging{opacity:.5}
+    .block-id{opacity:.6;font-size:12px;text-align:right}
+    .subrow{display:flex;gap:8px;align-items:center}
+
+    /* ===== Form Fields builder ===== */
+    .field-item{display:grid;grid-template-columns:34px 1fr 130px 100px 1fr 90px 1fr;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:#0d1016;cursor:grab}
     .field-item.dragging{opacity:.5}
-    .field-item input[type="text"]{width:100%}
-    .field-item select{width:100%}
-    .field-item .chk{text-align:center}
+    .mini{font-size:12px;opacity:.7}
+
+    @media (max-width:980px){
+      .block-item{grid-template-columns:30px 1fr 110px 100px 100px 1fr}
+      .field-item{grid-template-columns:30px 1fr 120px 90px 1fr 80px 1fr}
+    }
   </style>
 </head>
 <body>
-<h1>Админка <small style="opacity:.7">v13.9.6 (dev)</small></h1>
-<p><a href="index.html">← к каталогу</a></p>
+<header>
+  <h1>Админка — v13.9.7 (dev)</h1>
+  <div class="row">
+    <a href="index.html" class="ghost" style="padding:6px 10px;border-radius:8px">← к каталогу</a>
+  </div>
+</header>
+
 <div id="saveBadge" class="save-badge">Сохранено ✓</div>
 
-<!-- Конструктор полей -->
-<div class="card">
-  <h3>Поля формы</h3>
-  <div id="fieldsList"></div>
-  <button id="resetFields" class="danger">Сбросить к дефолту</button>
+<div class="wrap">
+  <div class="cards">
+
+    <!-- ===== Структура страницы (Page Layout) ===== -->
+    <div class="card">
+      <h3>Структура страницы</h3>
+      <div class="muted">Тащи мышкой блоки, включай/выключай, меняй заголовки и размеры. Это как редактор уровней в игре — только для сайта.</div>
+      <div id="blocksList" class="blocks" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="resetLayout" class="danger">Сбросить структуру</button>
+        <span class="muted">Сохраняется в localStorage.pageLayout</span>
+      </div>
+    </div>
+
+    <!-- ===== Конструктор полей формы ===== -->
+    <div class="card">
+      <h3>Поля формы</h3>
+      <div class="muted">Включай/выключай поля, меняй названия, типы, плейсхолдер, обязательность и порядок перетаскиванием.</div>
+      <div id="fieldsList"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="resetFields" class="danger">Сбросить поля к дефолту</button>
+        <span class="muted">Сохраняется в localStorage.formFields</span>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-let formFields = JSON.parse(localStorage.getItem("formFields") || "null");
+/* =================== STATE & HELPERS =================== */
+const $ = (id)=>document.getElementById(id);
+const badge = $("saveBadge");
+const showSaved = ()=>{ badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"), 900); };
 
-// дефолтные поля
-const defaultFields = [
-  {id:"title",   label:"Заголовок",   type:"text",     required:true,  placeholder:"Введите название", enabled:true},
-  {id:"price",   label:"Цена",        type:"number",   required:true,  placeholder:"в сумах", enabled:true},
-  {id:"area",    label:"Площадь, м²",type:"number",   required:false, placeholder:"например 60", enabled:true},
-  {id:"rooms",   label:"Комнат",     type:"number",   required:false, placeholder:"", enabled:true},
-  {id:"floor",   label:"Этаж",       type:"number",   required:false, placeholder:"", enabled:true},
-  {id:"floors",  label:"Этажность",  type:"number",   required:false, placeholder:"", enabled:true},
-  {id:"year",    label:"Год постройки", type:"number",required:false, placeholder:"например 2010", enabled:true},
-  {id:"address", label:"Адрес",      type:"text",     required:false, placeholder:"", enabled:true},
-  {id:"desc",    label:"Описание",   type:"textarea", required:false, placeholder:"", enabled:false}
+function lsGet(k, fallback){ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? fallback; }catch{ return fallback; } }
+function lsSet(k, v){ localStorage.setItem(k, JSON.stringify(v)); showSaved(); }
+
+/* =================== DEFAULTS =================== */
+/* Блоки страницы: id фиксированный, остальное ты меняешь как хочешь */
+const DEFAULT_LAYOUT = [
+  { id:"filters",  title:"Фильтры",     enabled:true,  width:1, height:0,  options:{} },
+  { id:"map",      title:"Карта",       enabled:true,  width:2, height:500, options:{controls:true} },
+  { id:"results",  title:"Результаты",  enabled:true,  width:1, height:0,  options:{showCount:true} },
+  { id:"form",     title:"Добавить объект", enabled:true, width:1, height:0, options:{} }
+];
+/*
+  width — условные колонки: 1,2,3 (как ты потом решишь в верстке)
+  height — актуально для карты; 0 = авто
+  options — доп. настройки блока, расширяемо
+*/
+
+const DEFAULT_FIELDS = [
+  {id:"title",   label:"Заголовок",    type:"text",     required:true,  placeholder:"Введите название", enabled:true,  showInCard:true },
+  {id:"price",   label:"Цена",         type:"number",   required:true,  placeholder:"в сумах",          enabled:true,  showInCard:true },
+  {id:"area",    label:"Площадь, м²",  type:"number",   required:false, placeholder:"например 60",      enabled:true,  showInCard:true },
+  {id:"rooms",   label:"Комнат",       type:"number",   required:false, placeholder:"",                  enabled:true,  showInCard:true },
+  {id:"floor",   label:"Этаж",         type:"number",   required:false, placeholder:"",                  enabled:true,  showInCard:false},
+  {id:"floors",  label:"Этажность",    type:"number",   required:false, placeholder:"",                  enabled:true,  showInCard:false},
+  {id:"year",    label:"Год постройки",type:"number",   required:false, placeholder:"например 2015",     enabled:true,  showInCard:false},
+  {id:"address", label:"Адрес",        type:"text",     required:false, placeholder:"",                  enabled:true,  showInCard:true },
+  {id:"desc",    label:"Описание",     type:"textarea", required:false, placeholder:"",                  enabled:false, showInCard:false}
 ];
 
-if (!formFields) formFields = defaultFields;
+/* =================== LOAD CURRENT =================== */
+let pageLayout = lsGet("pageLayout", DEFAULT_LAYOUT);
+let formFields = lsGet("formFields", DEFAULT_FIELDS);
 
-// helpers
-const $=id=>document.getElementById(id), badge=$("saveBadge");
-const showSaved=()=>{ badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"),1100); };
-function saveFields(){ localStorage.setItem("formFields", JSON.stringify(formFields)); showSaved(); renderFields(); }
+/* =================== PAGE LAYOUT UI =================== */
+const blocksList = $("blocksList");
 
-// рендер списка полей
-function renderFields(){
-  const wrap=$("fieldsList"); wrap.innerHTML="";
-  formFields.forEach((f,i)=>{
-    const div=document.createElement("div"); div.className="field-item"; div.draggable=true; div.dataset.index=i;
+function renderBlocks(){
+  blocksList.innerHTML = "";
+  pageLayout.forEach((b, i)=>{
+    const row = document.createElement("div");
+    row.className = "block-item";
+    row.draggable = true;
+    row.dataset.index = i;
 
-    const chk=document.createElement("input"); chk.type="checkbox"; chk.className="chk"; chk.checked=f.enabled;
-    chk.onchange=()=>{ f.enabled=chk.checked; saveFields(); };
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.checked = !!b.enabled;
+    chk.onchange = ()=>{ b.enabled = chk.checked; saveLayout(); };
 
-    const inp=document.createElement("input"); inp.type="text"; inp.value=f.label;
-    inp.oninput=()=>{ f.label=inp.value; saveFields(); };
+    const title = document.createElement("input");
+    title.type = "text";
+    title.value = b.title || "";
+    title.placeholder = "Заголовок блока";
+    title.oninput = ()=>{ b.title = title.value; saveLayout(); };
 
-    const sel=document.createElement("select");
-    ["text","number","date","select","textarea"].forEach(t=>{
-      const o=document.createElement("option"); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; sel.appendChild(o);
-    });
-    sel.onchange=()=>{ f.type=sel.value; saveFields(); };
+    const width = document.createElement("select");
+    [1,2,3].forEach(n=>{ const o=document.createElement("option"); o.value=n; o.textContent=`ширина ${n}`; if(+b.width===n) o.selected=true; width.appendChild(o); });
+    width.onchange = ()=>{ b.width = +width.value; saveLayout(); };
 
-    const req=document.createElement("input"); req.type="checkbox"; req.checked=f.required;
-    req.onchange=()=>{ f.required=req.checked; saveFields(); };
+    const height = document.createElement("input");
+    height.type = "number"; height.min = "0"; height.value = b.height||0;
+    height.placeholder = "высота";
+    height.title = "Для карты можно указать высоту в пикселях (0 — авто)";
+    height.onchange = ()=>{ b.height = +height.value||0; saveLayout(); };
 
-    const ph=document.createElement("input"); ph.type="text"; ph.placeholder="placeholder"; ph.value=f.placeholder||"";
-    ph.oninput=()=>{ f.placeholder=ph.value; saveFields(); };
+    const opt = document.createElement("input");
+    opt.type="text";
+    opt.placeholder="options (JSON)";
+    try{ opt.value = b.options && Object.keys(b.options).length ? JSON.stringify(b.options) : ""; }catch{ opt.value=""; }
+    opt.onchange = ()=>{
+      try{ b.options = opt.value.trim()? JSON.parse(opt.value):{}; saveLayout(); }
+      catch{ alert("Некорректный JSON в опциях"); }
+    };
 
-    div.appendChild(chk);
-    div.appendChild(inp);
-    div.appendChild(sel);
-    div.appendChild(req);
-    div.appendChild(ph);
-    const idSpan=document.createElement("span"); idSpan.textContent=f.id; idSpan.style.opacity=.6; div.appendChild(idSpan);
+    const idSpan = document.createElement("div");
+    idSpan.className="block-id";
+    idSpan.textContent = b.id;
 
-    wrap.appendChild(div);
+    row.appendChild(chk);
+    row.appendChild(title);
+    row.appendChild(width);
+    row.appendChild(height);
+    row.appendChild(opt);
+    row.appendChild(idSpan);
 
-    // drag&drop
-    div.addEventListener("dragstart",()=>{div.classList.add("dragging");});
-    div.addEventListener("dragend",()=>{div.classList.remove("dragging"); updateOrder();});
+    // drag events
+    row.addEventListener("dragstart", ()=> row.classList.add("dragging"));
+    row.addEventListener("dragend",   ()=>{ row.classList.remove("dragging"); updateBlocksOrder(); });
+
+    blocksList.appendChild(row);
   });
 
-  wrap.addEventListener("dragover", e=>{
+  blocksList.addEventListener("dragover", e=>{
     e.preventDefault();
-    const dragging=wrap.querySelector(".dragging");
-    const after=getDragAfterElement(wrap,e.clientY);
-    if(after==null) wrap.appendChild(dragging);
-    else wrap.insertBefore(dragging,after);
+    const dragging = blocksList.querySelector(".dragging");
+    if (!dragging) return;
+    const after = getAfterElement(blocksList, e.clientY);
+    if (after==null) blocksList.appendChild(dragging);
+    else blocksList.insertBefore(dragging, after);
   });
 }
-
-function getDragAfterElement(container,y){
-  const els=[...container.querySelectorAll(".field-item:not(.dragging)")];
-  return els.reduce((closest,child)=>{
-    const box=child.getBoundingClientRect();
-    const offset=y-box.top-box.height/2;
-    if(offset<0 && offset>closest.offset) return {offset:offset,element:child};
+function getAfterElement(container, y){
+  const els = [...container.querySelectorAll(".block-item:not(.dragging)")];
+  return els.reduce((closest, child)=>{
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height/2;
+    if (offset < 0 && offset > closest.offset) return {offset, element:child};
     else return closest;
-  },{offset:Number.NEGATIVE_INFINITY}).element;
+  }, {offset: Number.NEGATIVE_INFINITY}).element;
 }
-function updateOrder(){
-  const items=[...document.querySelectorAll(".field-item")];
-  formFields=items.map(item=>formFields[+item.dataset.index]);
+function updateBlocksOrder(){
+  const items = [...blocksList.querySelectorAll(".block-item")];
+  pageLayout = items.map(it => pageLayout[+it.dataset.index]);
+  saveLayout();
+}
+function saveLayout(){
+  lsSet("pageLayout", pageLayout);
+  renderBlocks();
+}
+
+/* =================== FORM FIELDS UI =================== */
+const fieldsList = $("fieldsList");
+
+function renderFields(){
+  fieldsList.innerHTML = "";
+  formFields.forEach((f, i)=>{
+    const row = document.createElement("div");
+    row.className = "field-item";
+    row.draggable = true;
+    row.dataset.index = i;
+
+    const chk = document.createElement("input");
+    chk.type="checkbox"; chk.checked = !!f.enabled;
+    chk.onchange = ()=>{ f.enabled = chk.checked; saveFields(); };
+
+    const label = document.createElement("input");
+    label.type="text"; label.value=f.label||""; label.placeholder="Название поля";
+    label.oninput = ()=>{ f.label = label.value; saveFields(); };
+
+    const type = document.createElement("select");
+    ["text","number","date","select","textarea"].forEach(t=>{
+      const o=document.createElement("option"); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; type.appendChild(o);
+    });
+    type.onchange = ()=>{ f.type = type.value; saveFields(); renderFields(); };
+
+    const req = document.createElement("select");
+    [["false","не обяз."],["true","обязат."]].forEach(([v,txt])=>{
+      const o=document.createElement("option"); o.value=v; o.textContent=txt; if(String(!!f.required)===v) o.selected=true; req.appendChild(o);
+    });
+    req.onchange = ()=>{ f.required = (req.value==="true"); saveFields(); };
+
+    const ph = document.createElement("input");
+    ph.type="text"; ph.placeholder="placeholder"; ph.value=f.placeholder||"";
+    ph.oninput = ()=>{ f.placeholder = ph.value; saveFields(); };
+
+    const showCard = document.createElement("select");
+    [["true","в карточке"],["false","скрыть в карточке"]].forEach(([v,txt])=>{
+      const o=document.createElement("option"); o.value=v; o.textContent=txt; if(String(!!f.showInCard)===v) o.selected=true; showCard.appendChild(o);
+    });
+    showCard.onchange = ()=>{ f.showInCard = (showCard.value==="true"); saveFields(); };
+
+    // опции для select
+    const opts = document.createElement("input");
+    opts.type="text"; opts.placeholder="опции для select: Знач1, Знач2";
+    opts.value = Array.isArray(f.options)? f.options.join(", ") : (f.options||"");
+    opts.style.display = (f.type==="select") ? "block":"none";
+    opts.oninput = ()=>{
+      if (f.type==="select"){
+        const list = opts.value.split(",").map(s=>s.trim()).filter(Boolean);
+        f.options = list;
+        saveFields();
+      }
+    };
+
+    const idSpan = document.createElement("div");
+    idSpan.className="mini";
+    idSpan.textContent = f.id;
+
+    row.appendChild(chk);
+    row.appendChild(label);
+    row.appendChild(type);
+    row.appendChild(req);
+    row.appendChild(ph);
+    row.appendChild(showCard);
+    row.appendChild(opts);
+
+    // drag events
+    row.addEventListener("dragstart", ()=> row.classList.add("dragging"));
+    row.addEventListener("dragend",   ()=>{ row.classList.remove("dragging"); updateFieldsOrder(); });
+
+    fieldsList.appendChild(row);
+  });
+
+  fieldsList.addEventListener("dragover", e=>{
+    e.preventDefault();
+    const dragging = fieldsList.querySelector(".field-item.dragging");
+    if (!dragging) return;
+    const after = getAfterElement(fieldsList, e.clientY);
+    if (after==null) fieldsList.appendChild(dragging);
+    else fieldsList.insertBefore(dragging, after);
+  });
+}
+function updateFieldsOrder(){
+  const items = [...fieldsList.querySelectorAll(".field-item")];
+  formFields = items.map(it => formFields[+it.dataset.index]);
   saveFields();
 }
+function saveFields(){
+  lsSet("formFields", formFields);
+  renderFields();
+}
 
-$("resetFields").onclick=()=>{ if(confirm("Сбросить поля к дефолту?")){ formFields=defaultFields; saveFields(); } };
+/* =================== RESET BTNs =================== */
+$("resetLayout").onclick = ()=>{
+  if (!confirm("Сбросить структуру страницы к дефолту?")) return;
+  pageLayout = JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
+  saveLayout();
+};
+$("resetFields").onclick = ()=>{
+  if (!confirm("Сбросить поля формы к дефолту?")) return;
+  formFields = JSON.parse(JSON.stringify(DEFAULT_FIELDS));
+  saveFields();
+};
 
-// init
+/* =================== INIT =================== */
+renderBlocks();
 renderFields();
 </script>
 </body>
