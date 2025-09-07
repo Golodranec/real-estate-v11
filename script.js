@@ -1,172 +1,445 @@
-// ======= v13.7.1 =======
-console.log("✅ script.js v13.7.1 loaded");
+// ======= v13.9 =======
+console.log("✅ script.js v13.9 loaded");
 
-// хранилище
+// keys
 const LS_OBJECTS = "objects";
-const LS_FAVS    = "favorites_v13_7";
+const LS_FAVS    = "favorites_v13_9";
 
-// объекты/избранное
+// state
 let objects   = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
 let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
+let selectedImages = []; // {name,size,dataUrl}
+let tempCoords = null;   // {lat,lng}
+let pickMode = false;
 
-// всегда свежие данные из админки
+// storage getters (always fresh)
 const getTreeNodes   = () => JSON.parse(localStorage.getItem("treeNodes")   || "[]");
+const getNodeTypes   = () => JSON.parse(localStorage.getItem("nodeTypes")   || "[]");
 const getExtraParams = () => JSON.parse(localStorage.getItem("extraParams") || "[]");
 
-// утилиты
+// helpers
 const $ = id => document.getElementById(id);
-const childrenOf = id => getTreeNodes().filter(n=>n.parent===id);
-const typed = t => getTreeNodes().filter(n=>n.type===t);
-const nameById = id => (getTreeNodes().find(n=>n.id===id)?.name)||"";
-function setOptions(sel, items, placeholder){
-  const prev = sel.value;
-  sel.innerHTML = `<option value="">${placeholder}</option>`;
-  items.forEach(n=>{
-    const o=document.createElement("option");
-    o.value=String(n.id); o.textContent=n.name;
-    sel.appendChild(o);
-  });
-  if(prev && [...sel.options].some(o=>o.value===prev)) sel.value=prev;
-}
+const nodesByType = (t) => getTreeNodes().filter(n => n.type === t);
+const nameById = (id) => (getTreeNodes().find(n => n.id === id)?.name) || "";
+const detectCategoryType = () => {
+  const types = getNodeTypes();
+  // ищем «Категория» / «Тип» / «Category»
+  const exact = types.find(t => t.trim().toLowerCase() === "категория");
+  if (exact) return exact;
+  const byWord = types.find(t => /кат|тип|category/i.test(t));
+  return byWord || types[0] || null;
+};
 
-// карта
-const map = L.map("map").setView([41.3111,69.2797],12);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
-const cluster = L.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:45});
+// map
+const map = L.map("map").setView([41.3111, 69.2797], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+const cluster = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:45 });
 map.addLayer(cluster);
 
-// фильтры DOM
-const cityFilter=$("cityFilter"), districtFilter=$("districtFilter"), streetFilter=$("streetFilter");
-const categoryFilter=$("categoryFilter"), statusFilter=$("statusFilter");
-const priceMin=$("priceMin"), priceMax=$("priceMax");
-const roomsMin=$("roomsMin"), roomsMax=$("roomsMax");
-const floorMin=$("floorMin"), floorMax=$("floorMax");
-const floorsMin=$("floorsMin"), floorsMax=$("floorsMax");
-const areaMin=$("areaMin"), areaMax=$("areaMax");
-const yearMin=$("yearMin"), yearMax=$("yearMax");
-const houseTypeFilter=$("houseTypeFilter"), sortSelect=$("sortSelect"), onlyFav=$("onlyFav");
-const resetFilters=$("resetFilters"), adminSyncInfo=$("adminSyncInfo"), paramsFiltersBox=$("dynamicParamsFilters");
+// build Filters (fully dynamic)
+function buildFilters() {
+  const box = $("filtersBox");
+  if (!box) return;
+  box.innerHTML = "";
 
-// форма DOM
-const resultsList=$("resultsList");
-const categoryInput=$("category"), statusInput=$("status");
-const citySel=$("city"), districtSel=$("district"), streetSel=$("street");
-const titleInput=$("title"), priceInput=$("price"), roomsInput=$("rooms");
-const areaInput=$("area"), floorInput=$("floor"), floorsInput=$("floors"), yearInput=$("year");
-const addressInput=$("address"), houseTypeSel=$("houseType");
-const dynamicParamsForm=$("dynamicParamsForm");
+  const types = getNodeTypes();
+  const nodes = getTreeNodes();
 
-// построение каскадов фильтров
-function initCascadeFilters(){
-  setOptions(cityFilter, typed("Город"), "Город");
-  setOptions(districtFilter, [], "Район");
-  setOptions(streetFilter, [], "Массив / улица");
-  setOptions(categoryFilter, typed("Категория"), "Категория");
-
-  cityFilter.onchange=()=>{
-    const id=cityFilter.value?+cityFilter.value:null;
-    setOptions(districtFilter, id?childrenOf(id).filter(n=>n.type==="Район"):[], "Район");
-    setOptions(streetFilter, [], "Массив / улица");
-    renderAll();
-  };
-  districtFilter.onchange=()=>{
-    const id=districtFilter.value?+districtFilter.value:null;
-    setOptions(streetFilter, id?childrenOf(id).filter(n=>n.type==="Массив / улица"):[], "Массив / улица");
-    renderAll();
-  };
-  streetFilter.onchange=renderAll;
-  categoryFilter.onchange=()=>{ renderAll(); };
-  [statusFilter,houseTypeFilter,priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,yearMin,yearMax,sortSelect,onlyFav]
-    .forEach(el=> el && (el.onchange=renderAll));
-  resetFilters.onclick=()=>{
-    [cityFilter,districtFilter,streetFilter,categoryFilter,statusFilter,houseTypeFilter,sortSelect].forEach(s=>s.value="");
-    [priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,yearMin,yearMax].forEach(i=>i.value="");
-    onlyFav.checked=false;
-    renderAll();
-  };
-}
-
-// построение каскадов формы
-function initCascadeForm(){
-  setOptions(categoryInput, typed("Категория"), "Категория");
-  setOptions(citySel, typed("Город"), "Город");
-  setOptions(districtSel, [], "Район");
-  setOptions(streetSel, [], "Массив / улица");
-
-  citySel.onchange=()=>{
-    const id = citySel.value?+citySel.value:null;
-    setOptions(districtSel, id?childrenOf(id).filter(n=>n.type==="Район"):[], "Район");
-    setOptions(streetSel, [], "Массив / улица");
-  };
-  districtSel.onchange=()=>{
-    const id=districtSel.value?+districtSel.value:null;
-    setOptions(streetSel, id?childrenOf(id).filter(n=>n.type==="Массив / улица"):[], "Массив / улица");
-  };
-  categoryInput.onchange=renderParamsForm;
-  renderParamsForm();
-}
-
-// динамические параметры
-function paramsByCategoryId(id){ return getExtraParams().filter(p=>p.categoryId===id); }
-function renderParamsForm(){
-  dynamicParamsForm.innerHTML="";
-  const catId = categoryInput.value?+categoryInput.value:null;
-  if(!catId) return;
-  const params = paramsByCategoryId(catId);
-  params.forEach(p=>{
-    const group=document.createElement("div"); group.className="param-group";
-    group.innerHTML=`<div class="param-title">${p.name}</div>`;
-    const vals=document.createElement("div"); vals.className="param-values";
-    (p.values||[]).forEach(v=>{
-      const chip=document.createElement("label"); chip.className="param-chip";
-      chip.innerHTML=`<input type="checkbox" data-param="${p.name}" value="${v}"><span>${v}</span>`;
-      vals.appendChild(chip);
+  // dynamic selects for each type
+  types.forEach(typeName => {
+    const sel = document.createElement("select");
+    sel.id = `filter_${typeName}`;
+    sel.innerHTML = `<option value="">${typeName}</option>`;
+    nodes.filter(n => n.type === typeName).forEach(n => {
+      const o = document.createElement("option");
+      o.value = n.id; o.textContent = n.name; sel.appendChild(o);
     });
-    group.appendChild(vals); dynamicParamsForm.appendChild(group);
+    sel.onchange = renderAll;
+    box.appendChild(sel);
+  });
+
+  // status filter
+  const status = document.createElement("select");
+  status.id = "filter_status";
+  status.innerHTML = `
+    <option value="">Статус</option>
+    <option value="sale">Продается</option>
+    <option value="rent">Сдается</option>
+    <option value="exchange">Обмен</option>`;
+  status.onchange = renderAll;
+  box.appendChild(status);
+
+  // reset
+  const resetBtn = document.createElement("button");
+  resetBtn.textContent = "Сбросить";
+  resetBtn.className = "btn ghost";
+  resetBtn.onclick = () => { buildFilters(); renderAll(); };
+  box.appendChild(resetBtn);
+
+  // info + dynamic params placeholder + status
+  const sync = document.createElement("div");
+  sync.id = "adminSyncInfo"; sync.className = "hint"; sync.style.gridColumn = "1/-1";
+  box.appendChild(sync);
+
+  const dyn = document.createElement("div");
+  dyn.id = "dynamicParamsFilters"; dyn.className = "params-box"; dyn.style.gridColumn = "1/-1";
+  box.appendChild(dyn);
+
+  const statusText = document.createElement("div");
+  statusText.id = "scriptStatus"; statusText.className = "hint";
+  statusText.style.gridColumn = "1/-1"; statusText.style.color = "#4dff91";
+  statusText.textContent = "✔ Скрипт загружен";
+  box.appendChild(statusText);
+
+  // build param filters tied to selected category
+  buildParamsFilters();
+}
+
+// build Form selects for each type
+function buildForm() {
+  const box = $("dynamicLocationForm"); if (!box) return;
+  box.innerHTML = "";
+
+  const types = getNodeTypes();
+  const nodes = getTreeNodes();
+
+  types.forEach(typeName => {
+    const sel = document.createElement("select");
+    sel.id = `form_${typeName}`;
+    sel.innerHTML = `<option value="">${typeName}</option>`;
+    nodes.filter(n => n.type === typeName).forEach(n => {
+      const o = document.createElement("option");
+      o.value = n.id; o.textContent = n.name; sel.appendChild(o);
+    });
+    sel.onchange = () => {
+      // если это категория — перестроим параметры формы
+      if (typeName === detectCategoryType()) renderParamsForm();
+    };
+    box.appendChild(sel);
   });
 }
-function buildParamsFilters(){
-  paramsFiltersBox.innerHTML="";
-  const catId = categoryFilter.value?+categoryFilter.value:null;
-  if(!catId) return;
-  const params = paramsByCategoryId(catId);
-  params.forEach(p=>{
-    const group=document.createElement("div"); group.className="param-group";
-    group.innerHTML=`<div class="param-title">${p.name}</div>`;
-    const vals=document.createElement("div"); vals.className="param-values";
-    (p.values||[]).forEach(v=>{
-      const chip=document.createElement("label"); chip.className="param-chip";
-      chip.innerHTML=`<input type="checkbox" data-param="${p.name}" value="${v}"><span>${v}</span>`;
+
+// dynamic params in form (by selected category node)
+function paramsForCategoryNode(catNodeId) {
+  return getExtraParams().filter(p => p.categoryId === catNodeId);
+}
+function currentCategoryNodeIdFromForm() {
+  const catType = detectCategoryType(); if (!catType) return null;
+  const sel = $(`form_${catType}`); if (!sel || !sel.value) return null;
+  return +sel.value;
+}
+function currentCategoryNodeIdFromFilters() {
+  const catType = detectCategoryType(); if (!catType) return null;
+  const sel = $(`filter_${catType}`); if (!sel || !sel.value) return null;
+  return +sel.value;
+}
+function renderParamsForm() {
+  const box = $("dynamicParamsForm"); if (!box) return;
+  box.innerHTML = "";
+  const catId = currentCategoryNodeIdFromForm();
+  if (!catId) return;
+  const list = paramsForCategoryNode(catId);
+  list.forEach(p => {
+    const group = document.createElement("div");
+    group.className = "param-group";
+    group.innerHTML = `<div class="param-title">${p.name}</div>`;
+    const vals = document.createElement("div");
+    vals.className = "param-values";
+    (p.values||[]).forEach(val => {
+      const chip = document.createElement("label");
+      chip.className = "param-chip";
+      chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}"> <span>${val}</span>`;
+      vals.appendChild(chip);
+    });
+    group.appendChild(vals);
+    box.appendChild(group);
+  });
+}
+function buildParamsFilters() {
+  const box = $("dynamicParamsFilters"); if (!box) return;
+  box.innerHTML = "";
+  const catId = currentCategoryNodeIdFromFilters();
+  if (!catId) return;
+  const list = paramsForCategoryNode(catId);
+  list.forEach(p => {
+    const group = document.createElement("div");
+    group.className = "param-group";
+    group.innerHTML = `<div class="param-title">${p.name}</div>`;
+    const vals = document.createElement("div");
+    vals.className = "param-values";
+    (p.values||[]).forEach(val => {
+      const chip = document.createElement("label");
+      chip.className = "param-chip";
+      chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}"> <span>${val}</span>`;
       chip.querySelector("input").addEventListener("change", renderAll);
       vals.appendChild(chip);
     });
-    group.appendChild(vals); paramsFiltersBox.appendChild(group);
+    group.appendChild(vals);
+    box.appendChild(group);
   });
-}
 
-// индикатор синхронизации
-function updateAdminSyncInfo(){
-  const cats = typed("Категория").length;
-  const params = getExtraParams().length;
-  if (cats||params){
-    adminSyncInfo.style.color="#4dff91";
-    adminSyncInfo.textContent=`✔ Синхронизировано: ${cats} категорий, ${params} параметров`;
-  }else{
-    adminSyncInfo.style.color="#ff6b6b";
-    adminSyncInfo.textContent="✖ Нет данных из админки";
+  // перестраиваем при смене категории
+  const catType = detectCategoryType();
+  if (catType) {
+    const catSel = $(`filter_${catType}`);
+    if (catSel) catSel.onchange = () => { buildParamsFilters(); renderAll(); };
   }
 }
 
-// рендер
-function renderAll(){
-  initCascadeFilters();
-  initCascadeForm();
-  buildParamsFilters();
-  updateAdminSyncInfo();
+// sync indicator
+function updateAdminSyncInfo() {
+  const types = getNodeTypes().length;
+  const nodes = getTreeNodes().length;
+  const params = getExtraParams().length;
+  const el = $("adminSyncInfo"); if (!el) return;
+  if (nodes || params) {
+    el.style.color = "#4dff91";
+    el.textContent = `✔ Синхронизировано: типов ${types}, узлов ${nodes}, параметров ${params}`;
+  } else {
+    el.style.color = "#ff6b6b";
+    el.textContent = "✖ Нет данных из админки";
+  }
 }
 
-// запуск
+// images handling (add one-by-one or many)
+function dedupImages(arr){
+  const seen=new Set();
+  return arr.filter(f=>{
+    const key = `${f.name}|${f.size}`;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+function attachImagesHandler() {
+  const input = $("images"); const preview = $("imagePreview");
+  input.onchange = async () => {
+    const files = Array.from(input.files || []);
+    for (const file of files) {
+      const dataUrl = await fileToDataUrl(file);
+      selectedImages.push({ name:file.name, size:file.size, dataUrl });
+    }
+    selectedImages = dedupImages(selectedImages);
+    renderImagePreview(preview);
+    // чтобы можно было выбирать те же файлы снова — чистим value
+    input.value = "";
+  };
+}
+function fileToDataUrl(file){
+  return new Promise(res=>{
+    const fr=new FileReader();
+    fr.onload=()=>res(fr.result);
+    fr.readAsDataURL(file);
+  });
+}
+function renderImagePreview(previewEl){
+  previewEl.innerHTML = "";
+  selectedImages.forEach(img=>{
+    const el=document.createElement("img");
+    el.src = img.dataUrl; el.alt = img.name;
+    previewEl.appendChild(el);
+  });
+}
+
+// pick point on map
+function attachPickOnMap() {
+  const btn = $("pickOnMap"); const badge = $("coordsBadge");
+  btn.onclick = () => {
+    pickMode = true;
+    badge.textContent = "Кликните по карте…";
+    badge.style.background = "#444d";
+  };
+  map.on("click", (e) => {
+    if (!pickMode) return;
+    tempCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+    badge.textContent = `Выбрано: ${tempCoords.lat.toFixed(5)}, ${tempCoords.lng.toFixed(5)}`;
+    badge.style.background = "#242938";
+    pickMode = false;
+    renderMarkers(); // показать маркер будущего объекта отдельно не храним — отобразим после сохранения
+  });
+}
+
+// save object
+function attachFormSubmit() {
+  const form = $("objectForm");
+  $("clearForm").onclick = () => { resetForm(); };
+
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+
+    // собрать локации по типам (id узлов)
+    const loc = {};
+    getNodeTypes().forEach(t=>{
+      const sel = $(`form_${t}`);
+      if (sel && sel.value) loc[t] = +sel.value;
+    });
+
+    // собрать параметры
+    const extra = {};
+    document.querySelectorAll('#dynamicParamsForm input[type="checkbox"]').forEach(cb=>{
+      const pname = cb.dataset.param;
+      if (!extra[pname]) extra[pname] = [];
+      if (cb.checked) extra[pname].push(cb.value);
+    });
+
+    const obj = {
+      id: Date.now(),
+      status: $("form_status").value || "",
+      title: $("title").value.trim(),
+      address: $("address").value.trim(),
+      price: +($("price").value || 0),
+      area: +($("area").value || 0),
+      rooms: +($("rooms").value || 0),
+      floor: +($("floor").value || 0),
+      floors: +($("floors").value || 0),
+      year: +($("year").value || 0),
+      loc,            // {Тип: nodeId}
+      extra,          // {Параметр: [значения]}
+      images: selectedImages.slice(0), // копия
+      coords: tempCoords ? { ...tempCoords } : null,
+      createdAt: Date.now()
+    };
+
+    // сохранить
+    objects.push(obj);
+    localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
+    // уведомим другие вкладки
+    localStorage.setItem("objects_last_change", String(Date.now()));
+
+    // сброс формы
+    resetForm();
+    renderAll();
+  };
+}
+function resetForm(){
+  // чистим тексты/числа
+  ["title","address","price","area","rooms","floor","floors","year"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
+  // чистим селекты типов
+  getNodeTypes().forEach(t=>{ const el=$(`form_${t}`); if(el) el.value=""; });
+  // чистим статус
+  const st = $("form_status"); if (st) st.value = "sale";
+  // чистим параметры
+  $("dynamicParamsForm").innerHTML = "";
+  // чистим фото
+  selectedImages = [];
+  $("imagePreview").innerHTML = "";
+  // координаты
+  tempCoords = null;
+  const badge = $("coordsBadge"); if (badge) { badge.textContent = "Координаты не выбраны"; }
+}
+
+// filters -> apply
+function gatherActiveFilters() {
+  const filters = { byType:{}, status:null, params:{} };
+  getNodeTypes().forEach(t=>{
+    const el = $(`filter_${t}`);
+    if (el && el.value) filters.byType[t] = +el.value;
+  });
+  const st = $("filter_status");
+  if (st && st.value) filters.status = st.value;
+
+  // параметры
+  document.querySelectorAll('#dynamicParamsFilters input[type="checkbox"]').forEach(cb=>{
+    if (!cb.checked) return;
+    const pname = cb.dataset.param;
+    if (!filters.params[pname]) filters.params[pname] = new Set();
+    filters.params[pname].add(cb.value);
+  });
+  return filters;
+}
+function applyFilters(list){
+  const f = gatherActiveFilters();
+  let res = list.slice();
+
+  // по типам (узлам)
+  Object.entries(f.byType).forEach(([typeName,nodeId])=>{
+    res = res.filter(o => (o.loc && o.loc[typeName] === nodeId));
+  });
+
+  // по статусу
+  if (f.status) res = res.filter(o => o.status === f.status);
+
+  // по параметрам (OR внутри одного параметра, AND между параметрами)
+  Object.entries(f.params).forEach(([pname, set])=>{
+    res = res.filter(o => {
+      const got = new Set(o.extra?.[pname] || []);
+      for (const v of set) if (got.has(v)) return true;
+      return false;
+    });
+  });
+
+  return res;
+}
+
+// markers + results
+function renderMarkers(list = objects) {
+  cluster.clearLayers();
+  list.forEach(o=>{
+    if (!o.coords) return;
+    const m = L.marker([o.coords.lat, o.coords.lng]);
+    const catType = detectCategoryType();
+    const catName = catType && o.loc?.[catType] ? nameById(o.loc[catType]) : "";
+    const html = `
+      <div style="min-width:180px">
+        <b>${o.title || "(без названия)"}</b><br/>
+        ${catName ? `<span class="badge">${catName}</span><br/>` : ""}
+        ${o.price ? `<div class="price">${o.price.toLocaleString()} сум</div>` : ""}
+        ${o.address ? `<div class="meta">${o.address}</div>` : ""}
+      </div>`;
+    m.bindPopup(html);
+    cluster.addLayer(m);
+  });
+}
+function renderResults(list = objects) {
+  const wrap = $("resultsList"); wrap.innerHTML = "";
+  if (!list.length) { wrap.innerHTML = `<div class="muted">Нет объектов</div>`; return; }
+  list.forEach(o=>{
+    const card = document.createElement("div");
+    card.className = "item";
+    const catType = detectCategoryType();
+    const catName = catType && o.loc?.[catType] ? nameById(o.loc[catType]) : "";
+
+    const imgs = (o.images||[]).slice(0,4).map(im=>`<img src="${im.dataUrl}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:4px;margin-right:4px">`).join("");
+
+    card.innerHTML = `
+      <h3>${o.title || "(без названия)"} ${catName ? `<span class="badge">${catName}</span>`:""}</h3>
+      <div class="price">${o.price ? `${o.price.toLocaleString()} сум` : ""}</div>
+      <div class="meta">${o.address || ""}</div>
+      <div style="margin-top:6px;display:flex;align-items:center">${imgs}${o.images?.length>4?`<span class="badge">+${o.images.length-4}</span>`:""}</div>
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+// render All
+function renderAll(){
+  buildFilters();
+  buildForm();
+  renderParamsForm();
+  updateAdminSyncInfo();
+
+  const filtered = applyFilters(objects);
+  renderMarkers(filtered);
+  renderResults(filtered);
+}
+
+// storage sync across tabs (admin <-> index)
+window.addEventListener("storage", (e)=>{
+  if (["treeNodes","nodeTypes","extraParams","objects","objects_last_change"].includes(e.key)) {
+    // перечитаем
+    objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
+    renderAll();
+  }
+});
+
+// init
 function init(){
+  // handlers
+  attachImagesHandler();
+  attachPickOnMap();
+  attachFormSubmit();
+
+  // first render
   renderAll();
+  const ss = $("scriptStatus"); if (ss) ss.textContent = "✔ Скрипт загружен и работает";
 }
 init();
