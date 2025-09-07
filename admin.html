@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Admin — финальный конструктор (дерево + dnd + layout + preview)</title>
+<title>Admin — финальный конструктор</title>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
   :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
@@ -20,21 +20,20 @@
   main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
   .panel{padding:12px;overflow:auto}
   h3{margin:6px 0}
-  .chip{padding:2px 6px;border-radius:999px;background:#2a3140;color:#cfe; font-size:12px}
+  .chip{padding:2px 6px;border-radius:999px;background:#2a3140;color:#cfe;font-size:12px}
 
   /* дерево */
-  .tree{list-style:none;margin:0;padding-left:0}
-  .tree .node-card{background:var(--muted);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}
+  ul.tree{list-style:none;margin:0;padding-left:0}
+  .node-card{background:var(--muted);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}
   .node-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .node-head input[type="text"]{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff;min-width:200px}
-  .node-body{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
-  .node-col{background:#121721;border:1px solid #283142;border-radius:10px;padding:10px}
+  .node-head input[type="text"]{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff;min-width:220px}
+  .node-body{display:flex;align-items:flex-start;gap:12px;margin-top:10px}
+  .node-col{flex:1;min-width:280px;background:#121721;border:1px solid #283142;border-radius:10px;padding:10px;max-height:50vh;overflow:auto}
   .node-col h4{margin:0 0 8px 0;font-size:13px;color:#cfd8e3}
   .list{min-height:10px}
   .item{background:#1b2230;border:1px solid #2f3a4c;border-radius:8px;padding:6px 8px;margin:6px 0;display:flex;align-items:center;gap:6px}
   .item input[type="text"]{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff;flex:1}
-  .inline{display:flex;gap:6px;align-items:center}
-  select{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff}
+  .item select{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff}
 
   /* макет */
   .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px dashed #333;padding:6px;min-height:60vh;border-radius:12px}
@@ -60,7 +59,7 @@
   <button class="btn secondary" id="exportBtn">Экспорт</button>
   <label class="btn secondary">Импорт<input id="importInput" type="file" hidden></label>
   <button class="btn ghost" id="resetBtn">Сброс</button>
-  <span class="chip">Drag & drop для узлов, подузлов, параметров и макета</span>
+  <span class="chip">Drag & drop везде: узлы, подузлы, параметры, макет</span>
 </header>
 
 <main>
@@ -95,45 +94,26 @@
 </main>
 
 <script>
-/* ===== база/хранилище ===== */
-const KEY="admin_final_tree_layout_preview_v2";
+/* ===== база ===== */
+const KEY="admin_final_v3";
 const COLS=12, ROW=80, GAP=6;
 let data = load() || demoData();
-let previewState = {}; // выборы в предпросмотре
+let previewState = {};
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||"")}catch(e){return null}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function reset(){localStorage.removeItem(KEY);location.reload()}
 function demoData(){
   return {
-    nodes: [
-      {
-        name:"Город", params:[{label:"Цена",type:"range"},{label:"Комнаты",type:"select",options:["1","2","3","4","5+"]}],
+    nodes:[
+      { name:"Город", params:[{label:"Цена",type:"range"},{label:"Комнаты",type:"select",options:["1","2","3","4","5+"]}],
         children:[
-          { name:"Ташкент",
-            params:[{label:"Этаж",type:"number"}],
-            children:[
-              { name:"Юнусабад", children:[{name:"Абай",params:[]},{name:"Мукими",params:[]}] },
-              { name:"Чиланзар", children:[{name:"Беруни",params:[]},{name:"Гагарина",params:[]}] }
-            ]
-          },
-          { name:"Самарканд",
-            children:[
-              { name:"Регистан" },
-              { name:"Афросиёб" }
-            ]
-          }
+          { name:"Ташкент", params:[{label:"Этаж",type:"number"}],
+            children:[ {name:"Юнусабад",children:[{name:"Абай"},{name:"Мукими"}]}, {name:"Чиланзар",children:[{name:"Беруни"},{name:"Гагарина"}]} ] },
+          { name:"Самарканд", children:[{name:"Регистан"},{name:"Афросиёб"}] }
         ]
       },
-      {
-        name:"Категория",
-        children:[
-          { name:"Квартира", params:[{label:"Площадь",type:"number"}],
-            children:[ {name:"Продажа"}, {name:"Аренда"} ] },
-          { name:"Дом", children:[ {name:"Продажа"}, {name:"Аренда"} ] },
-          { name:"Коммерция", children:[ {name:"Офис"}, {name:"Склад"}, {name:"Магазин"} ] }
-        ]
-      }
+      { name:"Категория", children:[ {name:"Квартира",params:[{label:"Площадь",type:"number"}],children:[{name:"Продажа"},{name:"Аренда"}]}, {name:"Дом",children:[{name:"Продажа"},{name:"Аренда"}]} ] }
     ],
     layout:[
       {id:1,type:"filters",x:1,y:1,w:4,h:4},
@@ -143,7 +123,7 @@ function demoData(){
   }
 }
 
-/* ===== вкладки ===== */
+/* ===== вкладки/экспорт/импорт ===== */
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -155,8 +135,6 @@ document.querySelectorAll(".tab").forEach(tab=>{
     renderAll();
   }
 });
-
-/* ===== экспорт/импорт/сброс ===== */
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob); const a=document.createElement("a");
@@ -168,54 +146,37 @@ document.getElementById("importInput").addEventListener("change",async e=>{
 });
 document.getElementById("resetBtn").onclick=reset;
 
-/* ===== утилиты пути ===== */
-function getByPath(obj, pathArr){
-  return pathArr.reduce((o,k)=>o?.[k], obj);
+/* ===== helpers ===== */
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
+function pathToArray(path){const out=[];path.replace(/\.?([a-zA-Z_]\w*)|\[(\d+)\]/g,(_,k,i)=>{out.push(k!==undefined?k:Number(i))});return out}
+function getByPath(obj, arr){return arr.reduce((o,k)=>o?.[k], obj)}
+function setByPath(obj, arr, value){const a=[...arr];const last=a.pop();const parent=getByPath(obj,a);parent[last]=value}
+function arrayByDatasetPath(pathStr){ // вернёт массив по data-path контейнера
+  const arr = pathToArray(pathStr); return getByPath(data, arr);
 }
-function setByPath(obj, pathArr, value){
-  const last = pathArr.pop();
-  const parent = getByPath(obj, pathArr);
-  parent[last]=value;
-}
-function arrayByPath(pathStr){
-  // pathStr вида: nodes[0].children[2].children — достаём массив
-  if(!pathStr) return null;
-  const parts = pathStr.replace(/\]/g,"").split(/\[|\]\.|\./).filter(Boolean);
-  // например ["nodes","0","children","2","children"]
-  let ref = data;
-  for(let i=0;i<parts.length;i++){
-    const k = isFinite(parts[i]) ? Number(parts[i]) : parts[i];
-    ref = ref[k];
+function scrollToNewItem(containerPath){
+  const all = document.querySelectorAll('[data-path]');
+  for(const el of all){
+    if(el.dataset.path===containerPath && el.lastElementChild){
+      el.lastElementChild.scrollIntoView({behavior:'smooth', block:'nearest'});
+      break;
+    }
   }
-  return ref;
 }
 
-/* ===== рендер узлов/параметров с dnd ===== */
-function addRootNode(){
-  data.nodes.push({name:"Новый узел",children:[],params:[]});
-  save(); renderNodes();
-}
+/* ===== дерево: рендер + DND ===== */
+function addRootNode(){data.nodes.push({name:"Новый узел",children:[],params:[]});save();renderNodes()}
 function renderNodes(){
-  const root = document.getElementById("rootNodes");
-  root.innerHTML = "";
-  root.dataset.path = "nodes";
-  data.nodes.forEach((node,i)=>{
-    root.appendChild(renderNode(node, `nodes[${i}]`));
-  });
-  // DND для корневых узлов
-  makeSortable(root, "nodes", (evt)=>{
-    moveInArray(evt, "node");
-  });
+  const root=document.getElementById("rootNodes"); root.innerHTML="";
+  root.dataset.path="nodes";
+  data.nodes.forEach((n,i)=>root.appendChild(renderNode(n,`nodes[${i}]`)));
+  makeSortable(root,"nodes",evt=>moveInArray(evt));
 }
 function renderNode(node, path){
-  const li = document.createElement("li");
-  li.className="node-card";
-  li.dataset.path = path;
+  const li=document.createElement("li"); li.className="node-card"; li.dataset.path=path;
 
-  // шапка узла
-  const head = document.createElement("div");
-  head.className="node-head";
-  head.innerHTML = `
+  const head=document.createElement("div"); head.className="node-head";
+  head.innerHTML=`
     <input type="text" value="${escapeHtml(node.name||'')}" placeholder="Название узла" oninput="onRenameNode('${path}', this.value)">
     <button class="btn" onclick="addChild('${path}')">+ Подузел</button>
     <button class="btn" onclick="addParam('${path}')">+ Параметр</button>
@@ -223,316 +184,177 @@ function renderNode(node, path){
   `;
   li.appendChild(head);
 
-  // тело узла: колонки «Параметры» и «Подузлы»
-  const body = document.createElement("div");
-  body.className="node-body";
+  const body=document.createElement("div"); body.className="node-body";
 
-  // колонка параметров
-  const colParams = document.createElement("div");
-  colParams.className="node-col";
-  colParams.innerHTML = `<h4>Параметры</h4>`;
-  const paramsList = document.createElement("div");
-  paramsList.className = "list";
-  paramsList.dataset.path = path + ".params";
+  // Параметры
+  const colParams=document.createElement("div"); colParams.className="node-col";
+  colParams.innerHTML=`<h4>Параметры</h4>`;
+  const paramsList=document.createElement("div"); paramsList.className="list"; paramsList.dataset.path=path+".params";
   (node.params||[]).forEach((p,j)=>{
-    const row = document.createElement("div");
-    row.className="item";
-    row.dataset.index=j;
-    row.innerHTML = `
-      <input type="text" value="${escapeHtml(p.label||'')}" placeholder="Метка" oninput="onParamLabel('${path}', ${j}, this.value)">
-      <select onchange="onParamType('${path}', ${j}, this.value)">
+    const row=document.createElement("div"); row.className="item"; row.dataset.index=j;
+    row.innerHTML=`
+      <input type="text" value="${escapeHtml(p.label||'')}" placeholder="Метка" oninput="onParamLabel('${path}',${j},this.value)">
+      <select onchange="onParamType('${path}',${j},this.value)">
         <option value="text" ${p.type==='text'?'selected':''}>text</option>
         <option value="number" ${p.type==='number'?'selected':''}>number</option>
         <option value="select" ${p.type==='select'?'selected':''}>select</option>
         <option value="range" ${p.type==='range'?'selected':''}>range</option>
       </select>
-      ${p.type==='select'?`<input type="text" placeholder="Варианты через запятую" value="${escapeHtml((p.options||[]).join(', '))}" oninput="onParamOptions('${path}', ${j}, this.value)">`:''}
-      <button class="btn ghost" onclick="deleteParam('${path}', ${j})">✖</button>
+      ${p.type==='select'?`<input type="text" value="${escapeHtml((p.options||[]).join(', '))}" placeholder="Варианты через запятую" oninput="onParamOptions('${path}',${j},this.value)">`:''}
+      <button class="btn ghost" onclick="deleteParam('${path}',${j})">✖</button>
     `;
     paramsList.appendChild(row);
   });
   colParams.appendChild(paramsList);
   body.appendChild(colParams);
 
-  // колонка подузлов
-  const colChildren = document.createElement("div");
-  colChildren.className="node-col";
-  colChildren.innerHTML = `<h4>Подузлы</h4>`;
-  const childrenList = document.createElement("ul");
-  childrenList.className="tree";
-  childrenList.dataset.path = path + ".children";
-  (node.children||[]).forEach((ch,k)=>{
-    childrenList.appendChild(renderNode(ch, `${path}.children[${k}]`));
-  });
+  // Подузлы
+  const colChildren=document.createElement("div"); colChildren.className="node-col";
+  colChildren.innerHTML=`<h4>Подузлы</h4>`;
+  const childrenList=document.createElement("ul"); childrenList.className="tree"; childrenList.dataset.path=path+".children";
+  (node.children||[]).forEach((ch,k)=>childrenList.appendChild(renderNode(ch,`${path}.children[${k}]`)));
   colChildren.appendChild(childrenList);
   body.appendChild(colChildren);
 
   li.appendChild(body);
 
-  // DND: параметры
-  makeSortable(paramsList, "params", (evt)=>{
-    moveInArray(evt, "param");
-  });
-  // DND: подузлы (между собой и перенос к другим узлам)
-  makeSortable(childrenList, "nodes", (evt)=>{
-    moveInArray(evt, "node");
-  });
+  // DND
+  makeSortable(paramsList,"params",evt=>moveInArray(evt));
+  makeSortable(childrenList,"nodes",evt=>moveInArray(evt));
 
   return li;
 }
-
-function makeSortable(container, groupName, onEnd){
-  Sortable.create(container,{
-    animation:150,
-    group:{name:groupName, pull:true, put:true},
-    handle: undefined,
-    onEnd
-  });
+function makeSortable(container, group, onEnd){
+  Sortable.create(container,{animation:150,group:{name:group,pull:true,put:true},onEnd});
 }
-function moveInArray(evt, kind){
-  // kind: "node" или "param"
-  const fromPathArr = evt.from.dataset.path;
-  const toPathArr   = evt.to.dataset.path;
-  if(!fromPathArr || !toPathArr) return;
-  const fromArray = arrayByPath(fromPathArr);
-  const toArray   = arrayByPath(toPathArr);
-  if(!fromArray || !toArray) return;
-
-  // элемент, который двигаем
-  const moved = fromArray.splice(evt.oldIndex,1)[0];
-  toArray.splice(evt.newIndex,0,moved);
-
-  save();
-  renderNodes();
+function moveInArray(evt){
+  const fromPath = evt.from.dataset.path;
+  const toPath   = evt.to.dataset.path;
+  if(!fromPath || !toPath) return;
+  const fromArr = arrayByDatasetPath(fromPath);
+  const toArr   = arrayByDatasetPath(toPath);
+  if(!fromArr || !toArr) return;
+  const moved = fromArr.splice(evt.oldIndex,1)[0];
+  toArr.splice(evt.newIndex,0,moved);
+  save(); renderNodes(); renderPreview();
 }
 
-/* ==== узлы и параметры: действия ==== */
-function onRenameNode(path, val){
-  const ref = getByPath(data, pathToArray(path));
-  ref.name = val; save();
-}
+/* узлы/параметры: действия */
+function onRenameNode(path,val){ const ref=getByPath(data,pathToArray(path)); ref.name=val; save(); }
 function addChild(path){
-  const list = getByPath(data, pathToArray(path + ".children")) || [];
-  list.push({name:"Подузел",children:[],params:[]});
-  setByPath(data, pathToArray(path + ".children"), list);
-  save(); renderNodes();
+  const arrPath=pathToArray(path+".children"); const list=getByPath(data,arrPath)||[];
+  list.push({name:"Подузел",children:[],params:[]}); setByPath(data,arrPath,list); save(); renderNodes();
+  // автоскролл к новому
+  scrollToNewItem(path+".children");
 }
 function addParam(path){
-  const list = getByPath(data, pathToArray(path + ".params")) || [];
-  list.push({label:"Параметр",type:"text"});
-  setByPath(data, pathToArray(path + ".params"), list);
-  save(); renderNodes();
+  const arrPath=pathToArray(path+".params"); const list=getByPath(data,arrPath)||[];
+  list.push({label:"Параметр",type:"text"}); setByPath(data,arrPath,list); save(); renderNodes();
 }
 function deleteNode(path){
-  const parentPath = path.replace(/\.\w+\[\d+\]$/,""); // обрежем последний сегмент
-  const index = +path.match(/\[(\d+)\]$/)[1];
-  const list = getByPath(data, pathToArray(parentPath)) || [];
-  list.splice(index,1);
-  setByPath(data, pathToArray(parentPath), list);
-  save(); renderNodes();
+  const arr=pathToArray(path); const index=arr.pop();
+  const parent=getByPath(data,arr); if(Array.isArray(parent)){ parent.splice(index,1); save(); renderNodes(); renderPreview(); }
 }
-function onParamLabel(path, idx, val){
-  const p = getByPath(data, pathToArray(path + `.params[${idx}]`));
-  p.label = val; save();
-}
-function onParamType(path, idx, val){
-  const p = getByPath(data, pathToArray(path + `.params[${idx}]`));
-  p.type = val;
-  if(val!=="select") delete p.options;
-  save(); renderNodes();
-}
-function onParamOptions(path, idx, csv){
-  const p = getByPath(data, pathToArray(path + `.params[${idx}]`));
-  p.options = csv.split(",").map(s=>s.trim()).filter(Boolean);
-  save();
-}
-function deleteParam(path, idx){
-  const list = getByPath(data, pathToArray(path + `.params`)) || [];
-  list.splice(idx,1);
-  setByPath(data, pathToArray(path + `.params`), list);
-  save(); renderNodes();
-}
+function onParamLabel(path,i,val){ const p=getByPath(data,pathToArray(path+".params["+i+"]")); p.label=val; save(); }
+function onParamType(path,i,val){ const p=getByPath(data,pathToArray(path+".params["+i+"]")); p.type=val; if(val!=="select") delete p.options; save(); renderNodes(); }
+function onParamOptions(path,i,csv){ const p=getByPath(data,pathToArray(path+".params["+i+"]")); p.options=csv.split(",").map(s=>s.trim()).filter(Boolean); save(); }
+function deleteParam(path,i){ const list=getByPath(data,pathToArray(path+".params"))||[]; list.splice(i,1); setByPath(data,pathToArray(path+".params"),list); save(); renderNodes(); }
 
 /* ===== макет: drag + resize ===== */
-const canvas=document.getElementById("canvas");
-let drag=null, size=null;
-
-function addBlock(type){
-  data.layout.push({id:Date.now(),type,x:1,y:1,w:4,h:2});
-  save(); renderLayout(); renderPreview();
-}
-function delBlock(id){
-  data.layout=data.layout.filter(b=>b.id!==id);
-  save(); renderLayout(); renderPreview();
-}
+const canvas=document.getElementById("canvas"); let drag=null,size=null;
+function addBlock(type){data.layout.push({id:Date.now(),type,x:1,y:1,w:4,h:2}); save(); renderLayout(); renderPreview();}
 function renderLayout(){
   canvas.innerHTML="";
   data.layout.forEach(b=>{
-    const el=document.createElement("div");
-    el.className="block";
-    el.style.gridColumn=`${b.x}/span ${b.w}`;
-    el.style.gridRow=`${b.y}/span ${b.h}`;
+    const el=document.createElement("div"); el.className="block";
+    el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
     el.innerHTML=`${labelByType(b.type)}<div class="resize"></div>`;
-    // drag
     el.addEventListener("mousedown",e=>{
       if(e.target.classList.contains("resize"))return;
-      e.preventDefault();
-      const rect=canvas.getBoundingClientRect(),cellW=rect.width/COLS,cellH=ROW+GAP;
+      const rect=canvas.getBoundingClientRect(), cellW=rect.width/COLS, cellH=ROW+GAP;
       drag={block:b,startX:e.clientX,startY:e.clientY,startGX:b.x,startGY:b.y,cellW,cellH,el};
       el.classList.add("drag");
-      window.addEventListener("mousemove",onDragMove);
-      window.addEventListener("mouseup",onDragEnd);
+      window.addEventListener("mousemove",onDragMove); window.addEventListener("mouseup",onDragEnd);
     });
-    // resize
     el.querySelector(".resize").addEventListener("mousedown",e=>{
-      e.stopPropagation();
-      const rect=canvas.getBoundingClientRect(),cellW=rect.width/COLS;
+      e.stopPropagation(); const rect=canvas.getBoundingClientRect(), cellW=rect.width/COLS;
       size={block:b,startX:e.clientX,startY:e.clientY,startW:b.w,startH:b.h,cellW};
-      window.addEventListener("mousemove",onResizeMove);
-      window.addEventListener("mouseup",onResizeEnd);
+      window.addEventListener("mousemove",onResizeMove); window.addEventListener("mouseup",onResizeEnd);
     });
     canvas.appendChild(el);
   });
 }
-function onDragMove(e){
-  if(!drag) return;
-  const {block,startX,startY,startGX,startGY,cellW,cellH}=drag;
-  let nx=startGX + Math.round((e.clientX-startX)/cellW);
-  let ny=startGY + Math.round((e.clientY-startY)/cellH);
-  nx=Math.max(1,Math.min(COLS-block.w+1,nx));
-  ny=Math.max(1,ny);
-  block.x=nx; block.y=ny;
-  save(); renderLayout();
+function onDragMove(e){ if(!drag)return;
+  let {block,startX,startY,startGX,startGY,cellW,cellH}=drag;
+  let nx=startGX+Math.round((e.clientX-startX)/cellW), ny=startGY+Math.round((e.clientY-startY)/cellH);
+  nx=Math.max(1,Math.min(COLS-block.w+1,nx)); ny=Math.max(1,ny); block.x=nx; block.y=ny; save(); renderLayout();
 }
-function onDragEnd(){
-  if(!drag) return;
-  drag.el.classList.remove("drag");
-  drag=null;
-  window.removeEventListener("mousemove",onDragMove);
-  window.removeEventListener("mouseup",onDragEnd);
-  renderPreview();
+function onDragEnd(){ if(!drag)return; drag.el.classList.remove("drag"); drag=null;
+  window.removeEventListener("mousemove",onDragMove); window.removeEventListener("mouseup",onDragEnd); renderPreview();
 }
-function onResizeMove(e){
-  if(!size) return;
-  const {block,startX,startY,startW,startH,cellW}=size;
-  let w=startW + Math.round((e.clientX-startX)/cellW);
-  let h=startH + Math.round((e.clientY-startY)/ROW);
-  w=Math.max(1,Math.min(COLS-block.x+1,w));
-  h=Math.max(1,h);
-  block.w=w; block.h=h;
-  save(); renderLayout();
+function onResizeMove(e){ if(!size)return;
+  let {block,startX,startY,startW,startH,cellW}=size;
+  let w=startW+Math.round((e.clientX-startX)/cellW), h=startH+Math.round((e.clientY-startY)/ROW);
+  w=Math.max(1,Math.min(COLS-block.x+1,w)); h=Math.max(1,h); block.w=w; block.h=h; save(); renderLayout();
 }
-function onResizeEnd(){
-  size=null;
-  window.removeEventListener("mousemove",onResizeMove);
-  window.removeEventListener("mouseup",onResizeEnd);
-  renderPreview();
-}
-function labelByType(t){
-  return ({
-    filters:"Фильтры",
-    map:"Карта",
-    form:"Форма",
-    cards:"Список",
-    table:"Таблица",
-    banner:"Реклама"
-  })[t]||t;
-}
+function onResizeEnd(){ size=null; window.removeEventListener("mousemove",onResizeMove); window.removeEventListener("mouseup",onResizeEnd); renderPreview(); }
+function labelByType(t){return({filters:"Фильтры",map:"Карта",form:"Форма",cards:"Список",table:"Таблица",banner:"Реклама"})[t]||t}
 
 /* ===== предпросмотр ===== */
 function renderPreview(){
-  const wrap=document.getElementById("preview");
-  wrap.innerHTML="";
+  const wrap=document.getElementById("preview"); wrap.innerHTML="";
   data.layout.forEach(b=>{
-    const el=document.createElement("div");
-    el.className="preview-block";
-    el.style.gridColumn=`${b.x}/span ${b.w}`;
-    el.style.gridRow=`${b.y}/span ${b.h}`;
-    if(b.type==="map"){ el.innerHTML="🗺️ Карта"; }
+    const el=document.createElement("div"); el.className="preview-block";
+    el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
+    if(b.type==="map") el.innerHTML="🗺️ Карта";
     if(b.type==="filters"){ el.innerHTML="<h4>Фильтры</h4>"; renderPreviewFilters(el); }
     if(b.type==="form"){ el.innerHTML="<h4>Форма</h4>"; renderPreviewForm(el); }
-    if(b.type==="cards"){ el.innerHTML="📋 Список"; }
-    if(b.type==="table"){ el.innerHTML="📊 Таблица"; }
-    if(b.type==="banner"){ el.innerHTML="<div style='background:#223355;padding:20px;border-radius:8px'>Рекламный блок</div>"; }
+    if(b.type==="cards") el.innerHTML="📋 Список";
+    if(b.type==="table") el.innerHTML="📊 Таблица";
+    if(b.type==="banner") el.innerHTML="<div style='background:#223355;padding:20px;border-radius:8px'>Рекламный блок</div>";
     wrap.appendChild(el);
   });
 }
 function renderPreviewFilters(container){
-  // Правило: каждый корневой узел = отдельная каскадная цепочка select'ов (по его поддереву)
-  data.nodes.forEach((root, idx)=>{
+  data.nodes.forEach((root,idx)=>{
     drawTreeSelect(container, root, `root${idx}`);
-    // + Параметры корневого уровня:
-    renderParams(container, root.params||[], `${root.name}`);
+    renderParams(container, root.params||[], root.name);
   });
 }
-function drawTreeSelect(container, node, chainKey){
-  // рендер по уровням: пока есть children — строим select
-  let levelNodes = [node]; // стартуем с текущего узла, но показываем его children
-  let level = -1; // -1 означает: следующий уровень — дети текущего node
+function drawTreeSelect(container, node, key){
+  let level = -1; let nodes = [node];
   while(true){
-    const current = (level<0 ? levelNodes[0].children : levelNodes); // первый уровень: дети корня
-    if(!current || !current.length) break;
-
-    const val = (previewState[chainKey]||[])[level+1];
+    const list = (level<0 ? nodes[0].children : nodes);
+    if(!list || !list.length) break;
+    const chosen = (previewState[key]||[])[level+1] || "";
     const sel = document.createElement("select");
-    sel.innerHTML = "<option value=''>—</option>" + current.map(n=>`<option ${val===n.name?'selected':''}>${escapeHtml(n.name)}</option>`).join("");
-    const box = document.createElement("div"); box.className="field";
-    box.innerHTML=`<label>${node.name}${level>=0?` — уровень ${level+2}`:''}</label>`;
+    sel.innerHTML = "<option value=''>—</option>" + list.map(n=>`<option ${chosen===n.name?'selected':''}>${escapeHtml(n.name)}</option>`).join("");
+    const box=document.createElement("div"); box.className="field"; box.innerHTML=`<label>${node.name}${level>=0?` — уровень ${level+2}`:''}</label>`;
     box.appendChild(sel); container.appendChild(box);
-
-    sel.onchange = ()=>{
-      const chain = (previewState[chainKey]||[]).slice(0, level+1);
-      if(sel.value) chain[level+1] = sel.value;
-      previewState[chainKey]=chain; renderPreview();
-    };
-
-    // найдём выбранный и пойдём вниз
-    const chosen = current.find(n=>n.name === val);
-    if(chosen && chosen.children && chosen.children.length){
-      levelNodes = chosen.children;
-      level++;
-    }else{
-      break;
-    }
+    sel.onchange = ()=>{ const chain=(previewState[key]||[]).slice(0,level+1); if(sel.value) chain[level+1]=sel.value; previewState[key]=chain; renderPreview(); };
+    const found = list.find(n=>n.name===chosen);
+    if(found && found.children && found.children.length){ nodes = found.children; level++; } else break;
   }
 }
-function renderParams(container, params, titlePrefix){
+function renderParams(container, params, title){
   (params||[]).forEach(p=>{
     const box=document.createElement("div"); box.className="field";
-    box.innerHTML=`<label>${escapeHtml(titlePrefix)} — ${escapeHtml(p.label||'')}</label>`;
-    if(p.type==="range"){
-      box.innerHTML+=`<div style="display:flex;gap:6px"><input placeholder="от"><input placeholder="до"></div>`;
-    }else if(p.type==="select"){
-      const opts=(p.options||[]).map(o=>`<option>${escapeHtml(o)}</option>`).join("");
-      box.innerHTML+=`<select><option>—</option>${opts}</select>`;
-    }else if(p.type==="number"){
-      box.innerHTML+=`<input type="number">`;
-    }else{
-      box.innerHTML+=`<input type="text">`;
-    }
+    box.innerHTML=`<label>${escapeHtml(title)} — ${escapeHtml(p.label||'')}</label>`;
+    if(p.type==="range") box.innerHTML+=`<div style="display:flex;gap:6px"><input placeholder="от"><input placeholder="до"></div>`;
+    else if(p.type==="select"){ const opts=(p.options||[]).map(o=>`<option>${escapeHtml(o)}</option>`).join(""); box.innerHTML+=`<select><option>—</option>${opts}</select>`; }
+    else if(p.type==="number") box.innerHTML+=`<input type="number">`;
+    else box.innerHTML+=`<input type="text">`;
     container.appendChild(box);
   });
 }
 function renderPreviewForm(container){
-  // Для формы просто покажем все параметры всех узлов (как пример)
   data.nodes.forEach(root=>{
     renderParams(container, root.params||[], root.name);
-    (root.children||[]).forEach(ch=>{
-      renderParams(container, ch.params||[], `${root.name} → ${ch.name}`);
-    });
+    (root.children||[]).forEach(ch=>renderParams(container, ch.params||[], `${root.name} → ${ch.name}`));
   });
 }
 
-/* ===== helpers ===== */
-function escapeHtml(s){return (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
-function pathToArray(path){
-  // "nodes[0].children[2]" -> ["nodes",0,"children",2]
-  const out=[];
-  path.replace(/\.?([a-zA-Z_]\w*)|\[(\d+)\]/g,(_,k,i)=>{ out.push(k!==undefined?k:Number(i)) });
-  return out;
-}
-
-/* ===== старт ===== */
+/* ===== запуск ===== */
 function renderAll(){ renderNodes(); renderLayout(); renderPreview(); }
 renderAll();
 </script>
