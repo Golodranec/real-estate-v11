@@ -1,85 +1,89 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Каталог недвижимости</title>
-  <link rel="stylesheet" href="style.css?v=13.9.2">
+  <meta charset="UTF-8" />
+  <title>Каталог недвижимости — v13.9.2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css?v=13.9.2" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 </head>
 <body>
-  <div class="container">
+  <header>
     <h1>Каталог недвижимости</h1>
-    <div class="version">ChatPatch v13.9.2</div>
-    <a href="admin.html" class="admin-link">Админка (дерево и параметры)</a>
+  </header>
 
-    <!-- ===== Фильтры ===== -->
-    <section class="card">
+  <main class="grid-main">
+    <!-- Фильтры -->
+    <aside class="filters">
       <h2>Фильтры</h2>
-      <div class="filters" id="filtersBox"></div>
+      <div id="filtersBox" class="filters-box"></div>
+    </aside>
+
+    <!-- Карта -->
+    <section id="mapSection">
+      <div id="map"></div>
     </section>
 
-    <!-- ===== Карта ===== -->
-    <section class="card">
-      <div id="map" style="height:400px;"></div>
-    </section>
-
-    <!-- ===== Результаты ===== -->
-    <section class="card">
+    <!-- Результаты -->
+    <section class="results">
       <h2>Результаты</h2>
       <div id="resultsList"></div>
     </section>
+  </main>
 
-    <!-- ===== Добавить объект ===== -->
-    <section class="card">
-      <h2>Добавить объект</h2>
-      <form id="objectForm">
-        <div class="form-row">
-          <select id="form_status">
-            <option value="sale">Продается</option>
-            <option value="rent">Сдается</option>
-            <option value="exchange">Обмен</option>
-          </select>
-        </div>
+  <hr/>
 
-        <div id="dynamicLocationForm" class="form-grid"></div>
+  <!-- Форма добавления объекта -->
+  <section class="form-section">
+    <h2>Добавить объект</h2>
+    <form id="objectForm">
+      <div class="grid">
+        <input id="title" placeholder="Заголовок" required />
+        <input id="address" placeholder="Адрес" />
+        <input id="price" type="number" placeholder="Цена" />
+        <input id="area" type="number" placeholder="Площадь, м²" />
+        <input id="rooms" type="number" placeholder="Комнат" />
+        <input id="floor" type="number" placeholder="Этаж" />
+        <input id="floors" type="number" placeholder="Этажность" />
+        <input id="year" type="number" placeholder="Год постройки" />
 
-        <div class="form-grid">
-          <input type="text" id="title" placeholder="Название">
-          <input type="text" id="address" placeholder="Адрес">
-          <input type="number" id="price" placeholder="Цена">
-          <input type="number" id="area" placeholder="Площадь">
-          <input type="number" id="rooms" placeholder="Комнаты">
-          <input type="number" id="floor" placeholder="Этаж">
-          <input type="number" id="floors" placeholder="Этажность">
-          <input type="number" id="year" placeholder="Год">
-        </div>
+        <select id="form_status">
+          <option value="sale">Продается</option>
+          <option value="rent">Сдается</option>
+          <option value="exchange">Обмен</option>
+        </select>
+      </div>
 
-        <div id="dynamicParamsForm" class="params-box"></div>
+      <!-- динамические узлы (город/район/категория и т.п.) -->
+      <div id="dynamicLocationForm" class="grid"></div>
 
-        <div class="form-row">
-          <button type="button" id="pickOnMap">Поставить точку на карте</button>
-          <span id="coordsBadge">Координаты не выбраны</span>
-        </div>
+      <!-- динамические параметры -->
+      <div id="dynamicParamsForm" class="params-box"></div>
 
-        <div class="form-row">
-          <input type="file" id="images" multiple accept="image/*">
-        </div>
+      <!-- фотографии -->
+      <div class="form-group">
+        <label for="images">Фотографии:</label>
+        <input id="images" type="file" accept="image/*" multiple />
         <div id="imagePreview" class="preview-box"></div>
+      </div>
 
-        <div class="form-row">
-          <button type="submit">Сохранить</button>
-          <button type="button" id="clearForm">Очистить</button>
-        </div>
-      </form>
-    </section>
-  </div>
+      <!-- координаты -->
+      <div class="form-group">
+        <button type="button" id="pickOnMap" class="btn">Поставить точку на карте</button>
+        <span id="coordsBadge" class="hint">Координаты не выбраны</span>
+      </div>
 
-  <!-- ===== Подключения ===== -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+      <div class="form-actions">
+        <button type="submit" class="btn">Сохранить</button>
+        <button type="button" id="clearForm" class="ghost">Очистить</button>
+      </div>
+    </form>
+  </section>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-  <script src="script.v13.9.2.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="script.js?v=13.9.2"></script>
 </body>
 </html>
