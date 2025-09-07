@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Admin — полный с Parent и Options</title>
+<title>Admin — конструктор (дерево значений + макет + предпросмотр)</title>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
   :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
@@ -13,17 +13,28 @@
   .tabs{display:flex;gap:8px}
   .tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
   .tab.active{background:var(--accent);color:#fff}
-  button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
+  button{padding:6px 10px;border-radius:6px;border:1px solid transparent;cursor:pointer}
   .btn{background:var(--accent);color:#fff}
-  .btn.secondary{background:#2a3140}
+  .btn.secondary{background:#2a3140;color:#fff}
   .btn.ghost{background:transparent;border:1px solid #2a3140;color:#e6e6e6}
   main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
   .panel{padding:12px}
   h3{margin:6px 0}
-  .draggable-item{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:var(--muted);border:1px solid var(--line);border-radius:8px;flex-wrap:wrap}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .chip{padding:2px 6px;border-radius:999px;background:#2a3140;color:#cfe; font-size:12px}
+  .draggable-item{display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:8px;background:var(--muted);border:1px solid var(--line);border-radius:8px;flex-wrap:wrap}
   .draggable-item input,.draggable-item select{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff;min-width:120px}
-  .draggable-item input[placeholder="options"]{min-width:280px;flex:1}
-  .draggable-item button{background:#2a3140;color:#fff;border:none;border-radius:6px;padding:6px 10px}
+  .draggable-item button{background:#2a3140;color:#fff;border:1px solid #3b4252;border-radius:6px;padding:6px 10px}
+  .tree-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .tree-card{width:min(900px,96vw);max-height:90vh;overflow:auto;background:#0b0f17;border:1px solid #263042;border-radius:12px;padding:14px}
+  .tree-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .tree{padding-left:0}
+  .tree ul{list-style:none;margin:0;padding-left:18px;border-left:1px dashed #334}
+  .tree li{margin:6px 0;position:relative}
+  .tree li::before{content:"";position:absolute;left:-10px;top:10px;width:10px;height:1px;background:#334}
+  .node{display:flex;gap:6px;align-items:center}
+  .node input{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff;min-width:180px}
+  .node .btn{padding:4px 8px}
   .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px dashed #333;padding:6px;min-height:70vh;border-radius:12px}
   .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
   .block.drag{opacity:.7;outline:1px dashed #8fb2ff}
@@ -47,6 +58,7 @@
   <button class="btn secondary" id="exportBtn">Экспорт</button>
   <label class="btn secondary">Импорт<input id="importInput" type="file" hidden></label>
   <button class="btn ghost" id="resetBtn">Сброс</button>
+  <span class="chip">Drag & resize включены</span>
 </header>
 
 <main>
@@ -54,7 +66,10 @@
   <section class="panel" id="contentPanel">
     <h3>Фильтры</h3>
     <div id="filtersList"></div>
-    <button class="btn" onclick="addFilter()">Добавить фильтр</button>
+    <div class="row">
+      <button class="btn" onclick="addFilter()">Добавить фильтр</button>
+      <span class="chip">Типы: select, range, text, number, tree-select</span>
+    </div>
     <hr>
     <h3>Поля формы</h3>
     <div id="fieldsList"></div>
@@ -64,7 +79,7 @@
   <!-- МАКЕТ -->
   <section class="panel" id="layoutPanel" style="display:none">
     <h3>Редактор макета</h3>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+    <div class="row" style="margin-bottom:8px">
       <button class="btn" onclick="addBlock('filters')">Фильтры</button>
       <button class="btn" onclick="addBlock('map')">Карта</button>
       <button class="btn" onclick="addBlock('form')">Форма</button>
@@ -83,12 +98,56 @@
   </section>
 </main>
 
+<!-- МОДАЛКА ДЕРЕВА -->
+<div class="tree-modal" id="treeModal">
+  <div class="tree-card">
+    <div class="tree-header">
+      <div class="row"><strong>Значения фильтра:</strong> <span id="treeTitle" class="chip"></span></div>
+      <div class="row">
+        <button class="btn" onclick="addRootNode()">Добавить значение</button>
+        <button class="btn ghost" onclick="closeTree()">Закрыть</button>
+      </div>
+    </div>
+    <div class="tree" id="treeContainer"></div>
+  </div>
+</div>
+
 <script>
 /* ===== база ===== */
-const KEY="admin_full_parent_options_v1";
+const KEY="admin_tree_layout_preview_v1";
 const COLS=12, ROW=80, GAP=6;
-let data = load() || {filtersConfig:[],formFields:[],layout:[]};
-let previewState = {}; // значения выбранных фильтров в предпросмотре
+
+let data = load() || {
+  filtersConfig: [
+    // пример стартовых данных
+    { label:"Город/Район/Улица", field:"geo", type:"tree-select",
+      tree:[
+        { value:"Ташкент", children:[
+          { value:"Юнусабад", children:[ {value:"Абай"}, {value:"Мукими"} ] },
+          { value:"Чиланзар", children:[ {value:"Беруни"}, {value:"Гагарина"} ] }
+        ]},
+        { value:"Самарканд", children:[
+          { value:"Регистан", children:[ {value:"Навои"} ] },
+          { value:"Афросиёб", children:[ {value:"Амир Темур"} ] }
+        ]}
+      ]
+    },
+    { label:"Цена", field:"price", type:"range" },
+    { label:"Комнаты", field:"rooms", type:"select", options:["1","2","3","4","5+"] }
+  ],
+  formFields: [
+    {label:"Заголовок", id:"title", type:"text"},
+    {label:"Описание", id:"description", type:"textarea"},
+    {label:"Телефон", id:"phone", type:"text"}
+  ],
+  layout: [
+    {id:1,type:"filters",x:1,y:1,w:4,h:4},
+    {id:2,type:"map",x:5,y:1,w:8,h:6},
+    {id:3,type:"cards",x:1,y:5,w:12,h:6}
+  ]
+};
+
+let previewState = {}; // значения выбранных фильтров/уровней
 
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||"")}catch(e){return null}}
@@ -111,8 +170,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;a.download="admin-config.json";a.click();
+  const a=document.createElement("a"); a.href=url; a.download="admin-config.json"; a.click();
   URL.revokeObjectURL(url);
 };
 document.getElementById("importInput").addEventListener("change",async e=>{
@@ -123,7 +181,7 @@ document.getElementById("resetBtn").onclick=resetAll;
 
 /* ===== фильтры ===== */
 function addFilter(){
-  data.filtersConfig.push({label:"Новый фильтр",field:"field",type:"select",parent:"",options:""});
+  data.filtersConfig.push({label:"Новый фильтр",field:"field",type:"select",options:[]});
   save(); renderFilters(); renderPreview();
 }
 function renderFilters(){
@@ -132,16 +190,20 @@ function renderFilters(){
     const row=document.createElement("div"); row.className="draggable-item";
     row.innerHTML=`
       <input placeholder="Название" value="${f.label||""}" oninput="data.filtersConfig[${i}].label=this.value;save();renderPreview()">
-      <input placeholder="field" value="${f.field||""}" oninput="data.filtersConfig[${i}].field=this.value;save();renderPreview()">
+      <input placeholder="field (англ.)" value="${f.field||""}" oninput="data.filtersConfig[${i}].field=this.value;save();renderPreview()">
       <select onchange="data.filtersConfig[${i}].type=this.value;save();renderFilters();renderPreview()">
-        <option value="select" ${f.type==='select'?'selected':''}>select</option>
-        <option value="select-linked" ${f.type==='select-linked'?'selected':''}>select-linked</option>
-        <option value="range" ${f.type==='range'?'selected':''}>range</option>
+        <option value="select" ${f.type==='select'?'selected':''}>select (простой)</option>
+        <option value="tree-select" ${f.type==='tree-select'?'selected':''}>tree-select (каскады)</option>
+        <option value="range" ${f.type==='range'?'selected':''}>range (от–до)</option>
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
         <option value="number" ${f.type==='number'?'selected':''}>number</option>
       </select>
-      <input placeholder="parent" value="${f.parent||""}" oninput="data.filtersConfig[${i}].parent=this.value;save();renderPreview()">
-      <input placeholder="options (CSV или JSON)" value='${f.options||""}' oninput="data.filtersConfig[${i}].options=this.value;save();renderPreview()">
+      ${f.type==='select'
+        ? `<button class="btn" onclick="openFlatEditor(${i})">Значения</button>`
+        : f.type==='tree-select'
+          ? `<button class="btn" onclick="openTree(${i})">Открыть значения</button>`
+          : ''
+      }
       <button onclick="data.filtersConfig.splice(${i},1);save();renderFilters();renderPreview()">✖</button>
     `;
     list.appendChild(row);
@@ -150,6 +212,101 @@ function renderFilters(){
     const moved=data.filtersConfig.splice(e.oldIndex,1)[0];
     data.filtersConfig.splice(e.newIndex,0,moved); save(); renderPreview();
   }});
+}
+
+/* ===== редактор простого select (список строк) ===== */
+function openFlatEditor(idx){
+  const vals = (data.filtersConfig[idx].options||[]).join(", ");
+  const res = prompt("Значения через запятую:", vals);
+  if(res!==null){
+    data.filtersConfig[idx].options = res.split(",").map(s=>s.trim()).filter(Boolean);
+    save(); renderPreview();
+  }
+}
+
+/* ===== редактор дерева ===== */
+let treeIdx = null;
+const treeModal = document.getElementById("treeModal");
+const treeContainer = document.getElementById("treeContainer");
+const treeTitle = document.getElementById("treeTitle");
+
+function openTree(idx){
+  treeIdx = idx;
+  const f = data.filtersConfig[idx];
+  if(!f.tree) f.tree = [];
+  treeTitle.textContent = f.label || f.field || 'без названия';
+  renderTree();
+  treeModal.style.display="flex";
+}
+function closeTree(){ treeModal.style.display="none"; treeIdx=null; save(); renderPreview(); }
+
+function addRootNode(){
+  const name = prompt("Название значения:");
+  if(!name) return;
+  data.filtersConfig[treeIdx].tree.push({value:name, children:[]});
+  save(); renderTree();
+}
+function addChildNode(path){
+  const name = prompt("Название подзначения:");
+  if(!name) return;
+  const node = getNodeByPath(data.filtersConfig[treeIdx].tree, path);
+  node.children = node.children || [];
+  node.children.push({value:name, children:[]});
+  save(); renderTree();
+}
+function renameNode(path){
+  const node = getNodeByPath(data.filtersConfig[treeIdx].tree, path);
+  const name = prompt("Новое название:", node.value);
+  if(!name) return;
+  node.value = name;
+  save(); renderTree();
+}
+function deleteNode(path){
+  if(!confirm("Удалить это значение со всеми подзначениями?")) return;
+  removeNodeByPath(data.filtersConfig[treeIdx].tree, path);
+  save(); renderTree();
+}
+
+function renderTree(){
+  const f = data.filtersConfig[treeIdx];
+  treeContainer.innerHTML = buildTreeHTML(f.tree, []);
+}
+function buildTreeHTML(list, path){
+  const ul = document.createElement("ul");
+  (list||[]).forEach((n,idx)=>{
+    const li = document.createElement("li");
+    const p = path.concat(idx);
+    li.innerHTML = `
+      <div class="node">
+        <input value="${escapeHtml(n.value)}" oninput="onInlineRename('${p.join(".")}', this.value)">
+        <button class="btn" onclick="addChildNode([${p.join(",")}])">+ Подзначение</button>
+        <button class="btn secondary" onclick="renameNode([${p.join(",")}])">Переимен.</button>
+        <button class="btn ghost" onclick="deleteNode([${p.join(",")}])">Удалить</button>
+      </div>
+    `;
+    if(n.children && n.children.length){
+      const child = buildTreeHTML(n.children, p);
+      li.appendChild(child);
+    }
+    ul.appendChild(li);
+  });
+  return ul.outerHTML;
+}
+function onInlineRename(pathStr, val){
+  const path = pathStr.split(".").map(s=>+s);
+  const node = getNodeByPath(data.filtersConfig[treeIdx].tree, path);
+  node.value = val;
+  save();
+}
+function getNodeByPath(list, path){
+  let cur = {children:list};
+  path.forEach(i=>{ cur = cur.children[i]; });
+  return cur;
+}
+function removeNodeByPath(list, path){
+  if(path.length===1){ list.splice(path[0],1); return; }
+  const first = path[0];
+  removeNodeByPath(list[first].children, path.slice(1));
 }
 
 /* ===== поля формы ===== */
@@ -163,7 +320,7 @@ function renderFields(){
     const row=document.createElement("div"); row.className="draggable-item";
     row.innerHTML=`
       <input placeholder="Метка" value="${f.label||""}" oninput="data.formFields[${i}].label=this.value;save();renderPreview()">
-      <input placeholder="id" value="${f.id||""}" oninput="data.formFields[${i}].id=this.value;save();renderPreview()">
+      <input placeholder="id (англ.)" value="${f.id||""}" oninput="data.formFields[${i}].id=this.value;save();renderPreview()">
       <select onchange="data.formFields[${i}].type=this.value;save();renderPreview()">
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
         <option value="number" ${f.type==='number'?'selected':''}>number</option>
@@ -277,6 +434,9 @@ function labelByType(t){
 /* ===== предпросмотр ===== */
 function renderPreview(){
   const wrap=document.getElementById("preview"); wrap.innerHTML="";
+  // сбрасываем выбор при перестроении макета (оставим по-простому)
+  // можно хранить, если нужно — убери следующую строку:
+  // previewState = {};
   data.layout.forEach(b=>{
     const el=document.createElement("div");
     el.className="preview-block";
@@ -285,18 +445,17 @@ function renderPreview(){
     if(b.type==="map"){ el.innerHTML="🗺️ Карта"; }
     if(b.type==="filters"){ el.innerHTML="<h4>Фильтры</h4>"; renderPreviewFilters(el); }
     if(b.type==="form"){ el.innerHTML="<h4>Форма</h4>"; renderPreviewForm(el); }
-    if(b.type==="cards"){ el.innerHTML="📋 Список"; }
-    if(b.type==="table"){ el.innerHTML="📊 Таблица"; }
+    if(b.type==="cards"){ el.innerHTML="📋 Список мок-объявлений"; }
+    if(b.type==="table"){ el.innerHTML="📊 Таблица результатов"; }
     if(b.type==="banner"){ el.innerHTML="<div style='background:#223355;padding:20px;border-radius:8px'>Рекламный блок</div>"; }
     if(b.type==="gallery"){ el.innerHTML="<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:6px'><div style='background:#333;height:60px'></div><div style='background:#333;height:60px'></div><div style='background:#333;height:60px'></div></div>"; }
     wrap.appendChild(el);
   });
 }
 function renderPreviewFilters(container){
-  // рендерим в одном состоянии (previewState), чтобы каскады работали
   data.filtersConfig.forEach(f=>{
     if(f.type==="select"){
-      const opts = parseCSV(f.options);
+      const opts = (f.options||[]);
       const sel = document.createElement("select");
       sel.innerHTML = "<option value=''>—</option>" + opts.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join("");
       sel.onchange = ()=>{ previewState[f.field]=sel.value; renderPreview(); };
@@ -304,18 +463,9 @@ function renderPreviewFilters(container){
       box.innerHTML=`<label>${f.label}</label>`;
       box.appendChild(sel); container.appendChild(box);
     }
-    if(f.type==="select-linked"){
-      const parentVal = previewState[f.parent];
-      const map = parseJSONMap(f.options);
-      if(parentVal && map[parentVal]){
-        const sel = document.createElement("select");
-        const list = map[parentVal] || [];
-        sel.innerHTML = "<option value=''>—</option>" + list.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join("");
-        sel.onchange = ()=>{ previewState[f.field]=sel.value; renderPreview(); };
-        const box = document.createElement("div"); box.className="field";
-        box.innerHTML=`<label>${f.label}</label>`;
-        box.appendChild(sel); container.appendChild(box);
-      }
+    if(f.type==="tree-select"){
+      // рисуем каскады по дереву
+      drawTreeSelect(container, f);
     }
     if(f.type==="range"){
       const box=document.createElement("div"); box.className="field";
@@ -334,6 +484,40 @@ function renderPreviewFilters(container){
     }
   });
 }
+function drawTreeSelect(container, f){
+  const chainKey = `tree:${f.field}`; // ключ для цепочки уровней
+  const chain = previewState[chainKey] || []; // массив выбранных значений по уровням
+  // строим селекты по уровням на основе дерева
+  let levelNodes = f.tree || [];
+  let level = 0;
+  while(levelNodes && levelNodes.length){
+    // селект на текущем уровне
+    const sel = document.createElement("select");
+    sel.innerHTML = "<option value=''>—</option>" + levelNodes.map(n=>`<option ${chain[level]===n.value?'selected':''}>${escapeHtml(n.value)}</option>`).join("");
+    const box = document.createElement("div"); box.className="field";
+    box.innerHTML = `<label>${f.label}${level?` — уровень ${level+1}`:''}</label>`;
+    box.appendChild(sel); container.appendChild(box);
+
+    sel.onchange = ()=>{
+      const val = sel.value || "";
+      const newChain = chain.slice(0, level); // обрезаем до текущего уровня
+      if(val) newChain[level]=val;
+      previewState[chainKey]=newChain;
+      renderPreview();
+    };
+
+    // идём вниз по дереву согласно выбору
+    const chosen = levelNodes.find(n=>n.value===chain[level]);
+    if(chosen && chosen.children && chosen.children.length){
+      levelNodes = chosen.children;
+      level++;
+    }else{
+      break;
+    }
+  }
+}
+
+/* ===== форма в предпросмотре ===== */
 function renderPreviewForm(container){
   data.formFields.forEach(ff=>{
     const box=document.createElement("div"); box.className="field";
@@ -347,16 +531,7 @@ function renderPreviewForm(container){
 }
 
 /* ===== утилиты ===== */
-function parseCSV(s){
-  if(!s) return [];
-  return s.split(",").map(t=>t.trim()).filter(Boolean);
-}
-function parseJSONMap(s){
-  if(!s) return {};
-  try{ return JSON.parse(s); }catch(e){ return {}; }
-}
-
-/* ===== старт ===== */
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
 function renderAll(){ renderFilters(); renderFields(); renderLayout(); renderPreview(); }
 renderAll();
 </script>
