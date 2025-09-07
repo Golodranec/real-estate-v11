@@ -2,9 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Каталог недвижимости — v13.9.2</title>
+  <title>Каталог недвижимости — v13.9.3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css?v=13.9.2" />
+  <link rel="stylesheet" href="style.css?v=13.9.3" />
+  <!-- Leaflet & MarkerCluster CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -12,6 +13,10 @@
 <body>
   <header>
     <h1>Каталог недвижимости</h1>
+    <nav>
+      <a class="nav-link" href="admin.html">Админка</a>
+    </nav>
+    <div id="versionBadge" class="version-badge">v13.9.3</div>
   </header>
 
   <main class="grid-main">
@@ -48,7 +53,6 @@
         <input id="floor" type="number" placeholder="Этаж" />
         <input id="floors" type="number" placeholder="Этажность" />
         <input id="year" type="number" placeholder="Год постройки" />
-
         <select id="form_status">
           <option value="sale">Продается</option>
           <option value="rent">Сдается</option>
@@ -82,8 +86,11 @@
     </form>
   </section>
 
+  <!-- Leaflet & MarkerCluster JS (строго до нашего скрипта) -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="script.js?v=13.9.2"></script>
+
+  <!-- Наш код -->
+  <script src="script.js?v=13.9.3"></script>
 </body>
 </html>
