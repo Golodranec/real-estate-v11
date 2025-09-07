@@ -1,34 +1,33 @@
-// ======= v13.5.1 =======
-console.log("✅ script.js v13.5.1 loaded");
+// ======= v13.5.3 =======
+console.log("✅ script.js v13.5.3 loaded");
 
-// ======= Константы LS =======
 const LS_OBJECTS = "objects";
 const LS_FILTERS = "filters_v13_5";
 const LS_FAVS    = "favorites_v13_5";
 
-// ======= Данные =======
+// ======= данные =======
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
 let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
 
-// ======= Дерево/типы =======
-let treeNodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");  
-let nodeTypes = JSON.parse(localStorage.getItem("nodeTypes") || "[]");  
-const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
-defaultTypes.forEach(t => { if (!nodeTypes.includes(t)) nodeTypes.push(t); });
-
-// 🔥 теперь extraParams всегда берём заново
+// ======= всегда берём актуальные =======
+function getTreeNodes() {
+  return JSON.parse(localStorage.getItem("treeNodes") || "[]");
+}
+function getNodeTypes() {
+  return JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+}
 function getExtraParams() {
   return JSON.parse(localStorage.getItem("extraParams") || "[]");
 }
 
 // ======= helpers =======
 const $ = (id) => document.getElementById(id);
-const getNode = (id) => treeNodes.find(n => n.id === id) || null;
-const childrenOf = (parentId) => treeNodes.filter(n => n.parent === parentId);
-const typed = (type) => treeNodes.filter(n => n.type === type);
+const getNode = (id) => getTreeNodes().find(n => n.id === id) || null;
+const childrenOf = (parentId) => getTreeNodes().filter(n => n.parent === parentId);
+const typed = (type) => getTreeNodes().filter(n => n.type === type);
 const nameById = (id) => (getNode(id)?.name) || "";
 const num = v => (v==="" || v==null ? null : +v);
 
@@ -58,6 +57,7 @@ const onlyFav = $("onlyFav");
 const resetFilters = $("resetFilters");
 const filtersInfo = $("filtersInfo");
 const paramsFiltersBox = $("dynamicParamsFilters");
+const adminSyncInfo = $("adminSyncInfo");
 
 // ======= форма DOM =======
 const resultsList   = $("resultsList");
@@ -80,8 +80,6 @@ const pickOnMapBtn  = $("pickOnMap");
 const coordsBadge   = $("coordsBadge");
 const cancelEditBtn = $("cancelEdit");
 const clearFormBtn  = $("clearForm");
-
-// локация в форме
 const citySel = $("city");
 const districtSel = $("district");
 const streetSel = $("street");
@@ -101,7 +99,7 @@ function setOptions(select, items, placeholder) {
 function showInfo(msg) { filtersInfo.style.display = "block"; filtersInfo.textContent = msg; }
 function hideInfo() { filtersInfo.style.display = "none"; }
 
-// ======= Каскад фильтров =======
+// ======= каскад фильтров =======
 function initCascadeFilters() {
   setOptions(cityFilter, typed("Город"), "Город");
   setOptions(districtFilter, [], "Район");
@@ -112,20 +110,20 @@ function initCascadeFilters() {
     const id = cityFilter.value ? +cityFilter.value : null;
     setOptions(districtFilter, id ? childrenOf(id).filter(n=>n.type==="Район") : [], "Район");
     setOptions(streetFilter, [], "Массив / улица");
-    buildParamsFilters(); saveFilters(); renderAll();
+    buildParamsFilters(); renderAll();
   };
   districtFilter.onchange = () => {
     const id = districtFilter.value ? +districtFilter.value : null;
     setOptions(streetFilter, id ? childrenOf(id).filter(n=>n.type==="Массив / улица") : [], "Массив / улица");
-    saveFilters(); renderAll();
+    renderAll();
   };
-  streetFilter.onchange = () => { saveFilters(); renderAll(); };
-  categoryFilter.onchange = () => { buildParamsFilters(); saveFilters(); renderAll(); };
-  statusFilter.onchange = () => { saveFilters(); renderAll(); };
-  houseTypeFilter.onchange = () => { saveFilters(); renderAll(); };
+  streetFilter.onchange = () => { renderAll(); };
+  categoryFilter.onchange = () => { buildParamsFilters(); renderAll(); };
+  statusFilter.onchange = () => { renderAll(); };
+  houseTypeFilter.onchange = () => { renderAll(); };
 }
 
-// ======= Каскад формы =======
+// ======= каскад формы =======
 function initCascadeForm() {
   setOptions(citySel, typed("Город"), "Город");
   setOptions(districtSel, [], "Район");
@@ -146,7 +144,7 @@ function initCascadeForm() {
   renderParamsForm();
 }
 
-// ======= Динамические параметры: форма =======
+// ======= динамические параметры =======
 function paramsByCategoryId(catId) {
   return getExtraParams().filter(p => p.categoryId === catId);
 }
@@ -173,8 +171,6 @@ function renderParamsForm() {
     box.appendChild(group);
   });
 }
-
-// ======= Динамические параметры: фильтры =======
 function buildParamsFilters() {
   paramsFiltersBox.innerHTML = "";
   const catId = categoryFilter.value ? +categoryFilter.value : null;
@@ -191,12 +187,25 @@ function buildParamsFilters() {
       const chip = document.createElement("label");
       chip.className = "param-chip";
       chip.innerHTML = `<input type="checkbox" data-param="${p.name}" value="${val}" /> <span>${val}</span>`;
-      chip.querySelector("input").addEventListener("change", ()=>{ saveFilters(); renderAll(); });
+      chip.querySelector("input").addEventListener("change", ()=>{ renderAll(); });
       vals.appendChild(chip);
     });
     group.appendChild(vals);
     paramsFiltersBox.appendChild(group);
   });
+}
+
+// ======= инфо =======
+function updateAdminSyncInfo() {
+  const cats = typed("Категория").length;
+  const params = getExtraParams().length;
+  if (cats || params) {
+    adminSyncInfo.style.color = "#9aa3b2";
+    adminSyncInfo.textContent = `Загружено: ${cats} категорий, ${params} параметров из админки`;
+  } else {
+    adminSyncInfo.style.color = "#ff6b6b";
+    adminSyncInfo.textContent = "❌ Нет данных из админки";
+  }
 }
 
 // ======= фильтрация =======
@@ -206,7 +215,6 @@ function applyFilters(list) {
 
   if (categoryName) res = res.filter(o => (o.category||"") === categoryName);
 
-  // динамические параметры
   const selectedByParam = {};
   paramsFiltersBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
     if (cb.checked) {
@@ -232,6 +240,7 @@ function init() {
   initCascadeFilters();
   initCascadeForm();
   buildParamsFilters();
+  updateAdminSyncInfo();
   renderAll();
 }
 init();
