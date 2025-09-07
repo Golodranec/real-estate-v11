@@ -1,9 +1,8 @@
-// ======= v13.5.3 =======
-console.log("✅ script.js v13.5.3 loaded");
+// ======= v13.6 =======
+console.log("✅ script.js v13.6 loaded");
 
 const LS_OBJECTS = "objects";
-const LS_FILTERS = "filters_v13_5";
-const LS_FAVS    = "favorites_v13_5";
+const LS_FAVS    = "favorites_v13_6";
 
 // ======= данные =======
 let objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
@@ -12,12 +11,9 @@ let editingId = null;
 let selectedImages = [];
 let tempCoords = { lat: null, lng: null };
 
-// ======= всегда берём актуальные =======
+// ======= всегда актуальные =======
 function getTreeNodes() {
   return JSON.parse(localStorage.getItem("treeNodes") || "[]");
-}
-function getNodeTypes() {
-  return JSON.parse(localStorage.getItem("nodeTypes") || "[]");
 }
 function getExtraParams() {
   return JSON.parse(localStorage.getItem("extraParams") || "[]");
@@ -34,7 +30,6 @@ const num = v => (v==="" || v==null ? null : +v);
 // ======= карта =======
 const map = L.map("map").setView([41.3111, 69.2797], 12);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
-const markerLayer = L.layerGroup().addTo(map);
 const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 });
 map.addLayer(cluster);
 let formMarker = null;
@@ -195,16 +190,16 @@ function buildParamsFilters() {
   });
 }
 
-// ======= инфо =======
+// ======= индикатор =======
 function updateAdminSyncInfo() {
   const cats = typed("Категория").length;
   const params = getExtraParams().length;
   if (cats || params) {
-    adminSyncInfo.style.color = "#9aa3b2";
-    adminSyncInfo.textContent = `Загружено: ${cats} категорий, ${params} параметров из админки`;
+    adminSyncInfo.style.color = "#4dff91";
+    adminSyncInfo.textContent = `✔ Синхронизировано: ${cats} категорий, ${params} параметров`;
   } else {
     adminSyncInfo.style.color = "#ff6b6b";
-    adminSyncInfo.textContent = "❌ Нет данных из админки";
+    adminSyncInfo.textContent = "✖ Нет данных из админки";
   }
 }
 
