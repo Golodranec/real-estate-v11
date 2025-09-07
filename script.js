@@ -1,9 +1,9 @@
-// ======= v13.9.3 =======
-console.log("✅ script.js v13.9.3 loaded");
+// ======= v13.9.4 (dev) =======
+console.log("✅ script.js v13.9.4 loaded");
 
 // keys
 const LS_OBJECTS = "objects";
-const LS_FAVS    = "favorites_v13_9_3";
+const LS_FAVS    = "favorites_v13_9_4";
 
 // state
 let objects   = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
@@ -45,17 +45,20 @@ function buildFilters() {
   const types = getNodeTypes();
   const nodes = getTreeNodes();
 
-  // селекты по каждому типу
+  // селекты по каждому типу (сортировка по order)
   types.forEach(typeName => {
     const sel = document.createElement("select");
     sel.id = `filter_${typeName}`;
     sel.innerHTML = `<option value="">${typeName}</option>`;
-    nodes.filter(n => n.type === typeName).forEach(n => {
-      const o = document.createElement("option");
-      o.value = n.id;
-      o.textContent = n.name;
-      sel.appendChild(o);
-    });
+    nodes
+      .filter(n => n.type === typeName)
+      .sort((a,b)=>(a.order||0)-(b.order||0))
+      .forEach(n => {
+        const o = document.createElement("option");
+        o.value = n.id;
+        o.textContent = n.name;
+        sel.appendChild(o);
+      });
     sel.onchange = () => { buildParamsFilters(); renderAll(); };
     box.appendChild(sel);
   });
@@ -150,12 +153,15 @@ function buildForm() {
     const sel = document.createElement("select");
     sel.id = `form_${typeName}`;
     sel.innerHTML = `<option value="">${typeName}</option>`;
-    nodes.filter(n => n.type === typeName).forEach(n => {
-      const o = document.createElement("option");
-      o.value = n.id;
-      o.textContent = n.name;
-      sel.appendChild(o);
-    });
+    nodes
+      .filter(n => n.type === typeName)
+      .sort((a,b)=>(a.order||0)-(b.order||0))
+      .forEach(n => {
+        const o = document.createElement("option");
+        o.value = n.id;
+        o.textContent = n.name;
+        sel.appendChild(o);
+      });
     sel.onchange = () => {
       if (typeName === detectCategoryType()) renderParamsForm();
     };
@@ -379,7 +385,7 @@ function renderMarkers(list = objects) {
 
     const html = `
       <div style="min-width:210px">
-        <b>${o.title || "(без названия)"}</b> ${catName ? `<span class="badge">${catName}</span>`:""}<br/>
+        <b>${o.title || "(без названия)"} </b> ${catName ? `<span class="badge">${catName}</span>`:""}<br/>
         ${o.price ? `<div class="price" style="margin:6px 0">${fmtNum(o.price)} сум</div>` : ""}
         ${pRooms ? `<div class="meta">Комнаты: ${pRooms}</div>` : ""}
         ${pArea  ? `<div class="meta">Площадь: ${pArea}</div>` : ""}
