@@ -2,42 +2,30 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.5.2</title>
+  <title>Админка — v13.7</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#0f1115; color:#e8eaf0; padding:20px; }
-    .card { background:#161a22; border:1px solid #242938; border-radius:12px; padding:16px; margin:16px 0; }
-    input, select, button, textarea { padding:10px; border-radius:8px; border:1px solid #242938; background:#0d1016; color:#e8eaf0; }
-    button { cursor:pointer; }
-    .btn { background:#4da3ff; color:#001428; border-color:#4da3ff; }
-    .danger { background:#ff6b6b; color:#fff; border-color:#ff6b6b; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; }
-    ul.tree { list-style:none; padding-left:20px; }
-    ul.tree li { margin:4px 0; }
-    .node { display:flex; gap:8px; align-items:center; }
-    .node-type { opacity:.7; font-size:12px; }
-    .grid { display:grid; grid-template-columns: repeat(3, minmax(220px,1fr)); gap:10px; }
-    .param-item { border:1px solid #242938; border-radius:10px; padding:10px; }
-    .param-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-    .muted { opacity:.8; font-size:13px; }
-    textarea { width:100%; min-height:80px; resize:vertical; }
-    .save-badge {
-      position: fixed; top: 12px; right: 12px;
-      background: #4da3ff; color: #001428;
-      padding: 8px 12px; border-radius: 10px;
-      font-size: 14px; opacity: 0; transition: opacity .3s;
-    }
-    .save-badge.show { opacity: 1; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0;padding:20px}
+    .card{background:#161a22;border:1px solid #242938;border-radius:12px;padding:16px;margin:16px 0}
+    input,select,button,textarea{padding:10px;border-radius:8px;border:1px solid #242938;background:#0d1016;color:#e8eaf0}
+    button{cursor:pointer}.btn{background:#4da3ff;color:#001428;border-color:#4da3ff}.danger{background:#ff6b6b;color:#fff;border-color:#ff6b6b}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    ul.tree{list-style:none;padding-left:20px} ul.tree li{margin:4px 0}
+    .node{display:flex;gap:8px;align-items:center}.node-type{opacity:.7;font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
+    .param-item{border:1px solid #242938;border-radius:10px;padding:10px}
+    .param-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .muted{opacity:.8;font-size:13px}
+    textarea{width:100%;min-height:80px;resize:vertical}
+    .save-badge{position:fixed;top:12px;right:12px;background:#4da3ff;color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s}
+    .save-badge.show{opacity:1}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-
 <h1>Админка: дерево и доп. параметры</h1>
-
 <div id="saveBadge" class="save-badge">Сохранено ✓</div>
 
-<!-- Типы узлов -->
 <div class="card">
   <h3>Типы узлов</h3>
   <div class="row">
@@ -46,11 +34,10 @@
     <button id="clearTypes" class="danger">Сбросить к базовым</button>
   </div>
   <div class="muted" style="margin-top:8px">
-    Базовые: <b>Город</b>, <b>Район</b>, <b>Массив / улица</b>, <b>Категория</b>. Можно добавлять свои.
+    Базовые: <b>Город</b>, <b>Район</b>, <b>Массив / улица</b>, <b>Категория</b>.
   </div>
 </div>
 
-<!-- Дерево -->
 <div class="card">
   <h3>Дерево локаций и категорий</h3>
   <div class="row">
@@ -63,7 +50,6 @@
   <ul id="tree" class="tree" style="margin-top:12px"></ul>
 </div>
 
-<!-- Доп. параметры -->
 <div class="card">
   <h3>Доп. параметры (привязка к категории)</h3>
   <div class="row">
@@ -71,13 +57,12 @@
     <select id="paramCategory"></select>
   </div>
   <div class="row" style="margin-top:8px">
-    <textarea id="paramValues" placeholder="Значения, по одному на строку (например: Офисы↵Склады↵Бутики)"></textarea>
+    <textarea id="paramValues" placeholder="Значения, по одному на строку"></textarea>
   </div>
   <div class="row" style="margin-top:8px">
     <button id="addParam" class="btn">Добавить параметр</button>
     <button id="clearParams" class="danger">Удалить все параметры</button>
   </div>
-
   <div id="paramsList" class="grid" style="margin-top:12px"></div>
 </div>
 
@@ -85,50 +70,33 @@
 let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
 let types = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
 let extraParams = JSON.parse(localStorage.getItem("extraParams") || "[]");
-const defaultTypes = ["Город", "Район", "Массив / улица", "Категория"];
-defaultTypes.forEach(t => { if (!types.includes(t)) types.push(t); });
+const defaultTypes = ["Город","Район","Массив / улица","Категория"];
+defaultTypes.forEach(t=>{ if(!types.includes(t)) types.push(t); });
 
-const $ = id => document.getElementById(id);
-const badge = $("saveBadge");
-function showSaved() {
-  badge.classList.add("show");
-  setTimeout(() => badge.classList.remove("show"), 1500);
-}
+const $=id=>document.getElementById(id), badge=$("saveBadge");
+const showSaved=()=>{ badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"),1500); };
 
-function saveNodes() { localStorage.setItem("treeNodes", JSON.stringify(nodes)); renderTree(); fillParent(); fillCategoriesSelect(); showSaved(); }
-function saveTypes() { localStorage.setItem("nodeTypes", JSON.stringify(types)); fillTypes(); showSaved(); }
-function saveParams() { localStorage.setItem("extraParams", JSON.stringify(extraParams)); renderParams(); showSaved(); }
+function saveNodes(){ localStorage.setItem("treeNodes",JSON.stringify(nodes)); renderTree(); fillParent(); fillCategoriesSelect(); showSaved(); }
+function saveTypes(){ localStorage.setItem("nodeTypes",JSON.stringify(types)); fillTypes(); showSaved(); }
+function saveParams(){ localStorage.setItem("extraParams",JSON.stringify(extraParams)); renderParams(); showSaved(); }
 
-function fillTypes() {
-  const sel = $("nodeType"); sel.innerHTML = "";
-  types.forEach(t => { const opt=document.createElement("option"); opt.value=t; opt.textContent=t; sel.appendChild(opt); });
-}
-function fillParent() {
-  const sel = $("nodeParent"); sel.innerHTML = `<option value="">(без родителя)</option>`;
-  nodes.forEach(n => { const o=document.createElement("option"); o.value=n.id; o.textContent=`${n.name} (${n.type})`; sel.appendChild(o); });
-}
-function fillCategoriesSelect() {
-  const sel = $("paramCategory"); sel.innerHTML = "";
-  nodes.filter(n => n.type==="Категория").forEach(n => {
-    const opt=document.createElement("option"); opt.value=n.id; opt.textContent=n.name; sel.appendChild(opt);
-  });
-}
-function kids(parentId) { return nodes.filter(n=>n.parent===parentId); }
+function fillTypes(){ const sel=$("nodeType"); sel.innerHTML=""; types.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);}); }
+function fillParent(){ const sel=$("nodeParent"); sel.innerHTML=`<option value="">(без родителя)</option>`; nodes.forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=`${n.name} (${n.type})`;sel.appendChild(o);}); }
+function fillCategoriesSelect(){ const sel=$("paramCategory"); sel.innerHTML=""; nodes.filter(n=>n.type==="Категория").forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=n.name;sel.appendChild(o);}); }
 
-function renderTree(parentId=null, container=$("tree")) {
-  if (parentId===null) container.innerHTML="";
+function renderTree(parent=null, container=$("tree")){
+  if(parent===null) container.innerHTML="";
   const ul=document.createElement("ul"); ul.className="tree";
-  nodes.filter(n=>n.parent===parentId).forEach(n=>{
+  nodes.filter(n=>n.parent===parent).forEach(n=>{
     const li=document.createElement("li");
     const row=document.createElement("div"); row.className="node";
     const name=document.createElement("span"); name.textContent=n.name;
     const type=document.createElement("span"); type.className="node-type"; type.textContent=`(${n.type})`;
     const del=document.createElement("button"); del.className="danger"; del.textContent="Удалить";
     del.onclick=()=>{
-      const delSet=new Set([n.id]); let changed=true;
-      while(changed){ changed=false; nodes.forEach(x=>{ if(delSet.has(x.parent)){ delSet.add(x.id); changed=true; } }); }
-      nodes=nodes.filter(x=>!delSet.has(x.id));
-      extraParams = extraParams.filter(p => !delSet.has(p.categoryId));
+      const delIds=new Set([n.id]); let changed=true;
+      while(changed){changed=false; nodes.forEach(x=>{if(delIds.has(x.parent)){delIds.add(x.id);changed=true;}});}
+      nodes=nodes.filter(x=>!delIds.has(x.id)); extraParams=extraParams.filter(p=>!delIds.has(p.categoryId));
       saveNodes(); saveParams();
     };
     row.appendChild(name); row.appendChild(type); row.appendChild(del); li.appendChild(row);
@@ -138,66 +106,49 @@ function renderTree(parentId=null, container=$("tree")) {
 }
 
 $("addNode").onclick=()=>{
-  const name=$("nodeName").value.trim(); if(!name) return alert("Введите название");
+  const name=$("nodeName").value.trim(); if(!name) return alert("Название?");
   const type=$("nodeType").value;
   const parent=$("nodeParent").value?+$("nodeParent").value:null;
-  nodes.push({id:Date.now(),name,type,parent});
-  $("nodeName").value=""; saveNodes();
+  nodes.push({id:Date.now(),name,type,parent}); $("nodeName").value=""; saveNodes();
 };
 $("clearTree").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
 
 $("addTypeBtn").onclick=()=>{
-  const t=$("typeName").value.trim(); if(!t) return alert("Введите название типа");
+  const t=$("typeName").value.trim(); if(!t) return alert("Тип?");
   if(types.includes(t)) return alert("Такой тип уже есть");
   types.push(t); $("typeName").value=""; saveTypes();
 };
-$("clearTypes").onclick=()=>{ if(confirm("Сбросить типы к базовым?")){ types=[...defaultTypes]; saveTypes(); } };
+$("clearTypes").onclick=()=>{ if(confirm("Сбросить к базовым?")){ types=[...defaultTypes]; saveTypes(); } };
 
-function renderParams() {
-  const wrap = $("paramsList"); wrap.innerHTML = "";
-  if (!extraParams.length) {
-    wrap.innerHTML = `<div class="muted">Пока нет параметров.</div>`; return;
-  }
+function renderParams(){
+  const wrap=$("paramsList"); wrap.innerHTML="";
+  if(!extraParams.length){ wrap.innerHTML=`<div class="muted">Пока нет параметров.</div>`; return; }
   extraParams.forEach(p=>{
-    const cat = nodes.find(n=>n.id===p.categoryId);
-    const div = document.createElement("div");
-    div.className = "param-item";
-    div.innerHTML = `
+    const cat=nodes.find(n=>n.id===p.categoryId);
+    const div=document.createElement("div"); div.className="param-item";
+    div.innerHTML=`
       <div class="param-header">
-        <div><b>${p.name}</b> <span class="muted">/ ${cat ? cat.name : "—"}</span></div>
+        <div><b>${p.name}</b> <span class="muted">/ ${cat?cat.name:"—"}</span></div>
         <button class="danger">Удалить</button>
       </div>
       <div class="muted">Значения:</div>
-      <div style="margin-top:6px">${(p.values||[]).map(v=>`<span style="display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border:1px solid #242938;border-radius:8px;">${v}</span>`).join("") || "—"}</div>
-    `;
-    div.querySelector("button").onclick = ()=>{
-      if (confirm("Удалить параметр?")) {
-        extraParams = extraParams.filter(x=>x.id!==p.id);
-        saveParams();
-      }
-    };
+      <div style="margin-top:6px">${(p.values||[]).map(v=>`<span style="display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border:1px solid #242938;border-radius:8px;">${v}</span>`).join("")||"—"}</div>`;
+    div.querySelector("button").onclick=()=>{ if(confirm("Удалить параметр?")){ extraParams=extraParams.filter(x=>x.id!==p.id); saveParams(); } };
     wrap.appendChild(div);
   });
 }
 
 $("addParam").onclick=()=>{
-  const name = $("paramName").value.trim(); if(!name) return alert("Название?");
-  const categoryId = $("paramCategory").value ? +$("paramCategory").value : null;
-  if(!categoryId) return alert("Выбери категорию");
-  const raw = $("paramValues").value.trim();
-  const values = raw ? raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean) : [];
-  if (!values.length) return alert("Добавь хотя бы одно значение");
-  extraParams.push({ id: Date.now(), name, categoryId, values });
-  $("paramName").value=""; $("paramValues").value="";
-  saveParams();
+  const name=$("paramName").value.trim(); if(!name) return alert("Название?");
+  const categoryId=$("paramCategory").value?+$("paramCategory").value:null; if(!categoryId) return alert("Категория?");
+  const raw=$("paramValues").value.trim(); const values=raw?raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean):[];
+  if(!values.length) return alert("Добавь хотя бы одно значение");
+  extraParams.push({id:Date.now(),name,categoryId,values});
+  $("paramName").value=""; $("paramValues").value=""; saveParams();
 };
-$("clearParams").onclick=()=>{ if (confirm("Удалить все параметры?")) { extraParams=[]; saveParams(); } };
+$("clearParams").onclick=()=>{ if(confirm("Удалить все параметры?")){ extraParams=[]; saveParams(); } };
 
-function init() {
-  fillTypes(); fillParent(); fillCategoriesSelect();
-  renderTree(); renderParams();
-}
-init();
+(function init(){ fillTypes(); fillParent(); fillCategoriesSelect(); renderTree(); renderParams(); })();
 </script>
 </body>
 </html>
