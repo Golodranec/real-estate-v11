@@ -3,34 +3,38 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Admin — Полная версия с Parent</title>
+<title>Admin — полный с Parent и Options</title>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
-body{margin:0;background:#0f1115;color:#e6e6e6;font:14px system-ui}
-header{padding:10px;background:#161a22;display:flex;gap:10px;align-items:center}
-button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
-.btn{background:#5b9cff;color:#fff}
-.btn.secondary{background:#2a3140}
-.btn.ghost{background:transparent;border:1px solid #2a3140;color:#e6e6e6}
-.tabs{display:flex;gap:8px}
-.tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
-.tab.active{background:#5b9cff;color:#fff}
-main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
-.panel{padding:12px}
-h3{margin:6px 0}
-.draggable-item{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:#1f2530;border:1px solid #2a3140;border-radius:6px;flex-wrap:wrap}
-.draggable-item input,.draggable-item select{padding:4px;background:#111722;border:1px solid #333;border-radius:4px;color:#fff;margin:2px}
-.draggable-item button{background:#2a3140;color:#fff;border:none;border-radius:4px;padding:2px 6px}
-.canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px dashed #333;padding:6px;min-height:70vh;border-radius:10px}
-.block{background:#1f2530;border:1px solid #2a3140;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
-.block.drag{opacity:.7;outline:1px dashed #8fb2ff}
-.resize{position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:#5b9cff}
-.toolbar{position:absolute;top:2px;right:2px}
-.preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px solid #2a3140;padding:6px;border-radius:10px}
-.preview-block{background:#1a202c;border:1px solid #2a3140;border-radius:6px;padding:8px;overflow:auto}
-.field{margin-bottom:6px}
-.field label{font-size:12px;display:block;margin-bottom:2px;color:#ccc}
-.field input,.field select,.field textarea{width:100%;padding:6px;background:#111722;border:1px solid #333;border-radius:4px;color:#fff}
+  :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui}
+  header{padding:10px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tabs{display:flex;gap:8px}
+  .tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
+  .tab.active{background:var(--accent);color:#fff}
+  button{padding:6px 12px;border-radius:6px;border:none;cursor:pointer}
+  .btn{background:var(--accent);color:#fff}
+  .btn.secondary{background:#2a3140}
+  .btn.ghost{background:transparent;border:1px solid #2a3140;color:#e6e6e6}
+  main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
+  .panel{padding:12px}
+  h3{margin:6px 0}
+  .draggable-item{display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:6px;background:var(--muted);border:1px solid var(--line);border-radius:8px;flex-wrap:wrap}
+  .draggable-item input,.draggable-item select{padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff;min-width:120px}
+  .draggable-item input[placeholder="options"]{min-width:280px;flex:1}
+  .draggable-item button{background:#2a3140;color:#fff;border:none;border-radius:6px;padding:6px 10px}
+  .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px dashed #333;padding:6px;min-height:70vh;border-radius:12px}
+  .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
+  .block.drag{opacity:.7;outline:1px dashed #8fb2ff}
+  .resize{position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--accent);border-top-left-radius:3px;border-bottom-right-radius:9px}
+  .toolbar{position:absolute;top:4px;right:4px;display:flex;gap:4px}
+  .toolbar button{padding:2px 6px}
+  .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px solid #2a3140;padding:6px;border-radius:12px}
+  .preview-block{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:10px;overflow:auto}
+  .field{margin-bottom:8px}
+  .field label{font-size:12px;display:block;margin-bottom:4px;color:#cfd8e3}
+  .field input,.field select,.field textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #333;background:#111722;color:#fff}
 </style>
 </head>
 <body>
@@ -46,7 +50,7 @@ h3{margin:6px 0}
 </header>
 
 <main>
-  <!-- Фильтры и поля -->
+  <!-- ФИЛЬТРЫ И ПОЛЯ -->
   <section class="panel" id="contentPanel">
     <h3>Фильтры</h3>
     <div id="filtersList"></div>
@@ -57,20 +61,22 @@ h3{margin:6px 0}
     <button class="btn" onclick="addField()">Добавить поле</button>
   </section>
 
-  <!-- Макет -->
+  <!-- МАКЕТ -->
   <section class="panel" id="layoutPanel" style="display:none">
     <h3>Редактор макета</h3>
-    <button class="btn" onclick="addBlock('map')">Карта</button>
-    <button class="btn" onclick="addBlock('filters')">Фильтры</button>
-    <button class="btn" onclick="addBlock('form')">Форма</button>
-    <button class="btn" onclick="addBlock('cards')">Список</button>
-    <button class="btn" onclick="addBlock('table')">Таблица</button>
-    <button class="btn" onclick="addBlock('banner')">Реклама</button>
-    <button class="btn" onclick="addBlock('gallery')">Галерея</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn" onclick="addBlock('filters')">Фильтры</button>
+      <button class="btn" onclick="addBlock('map')">Карта</button>
+      <button class="btn" onclick="addBlock('form')">Форма</button>
+      <button class="btn" onclick="addBlock('cards')">Список</button>
+      <button class="btn" onclick="addBlock('table')">Таблица</button>
+      <button class="btn" onclick="addBlock('banner')">Реклама</button>
+      <button class="btn" onclick="addBlock('gallery')">Галерея</button>
+    </div>
     <div class="canvas" id="canvas"></div>
   </section>
 
-  <!-- Предпросмотр -->
+  <!-- ПРЕДПРОСМОТР -->
   <section class="panel" id="previewPanel" style="display:none">
     <h3>Предпросмотр</h3>
     <div class="preview-grid" id="preview"></div>
@@ -78,13 +84,17 @@ h3{margin:6px 0}
 </main>
 
 <script>
-const KEY="admin-parent";
+/* ===== база ===== */
+const KEY="admin_full_parent_options_v1";
+const COLS=12, ROW=80, GAP=6;
 let data = load() || {filtersConfig:[],formFields:[],layout:[]};
+let previewState = {}; // значения выбранных фильтров в предпросмотре
+
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||"")}catch(e){return null}}
-function reset(){localStorage.removeItem(KEY);location.reload()}
+function resetAll(){localStorage.removeItem(KEY);location.reload()}
 
-// вкладки
+/* ===== вкладки ===== */
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -97,154 +107,257 @@ document.querySelectorAll(".tab").forEach(tab=>{
   }
 });
 
-// экспорт/импорт
+/* ===== экспорт/импорт/сброс ===== */
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);const a=document.createElement("a");
-  a.href=url;a.download="admin-config.json";a.click();URL.revokeObjectURL(url);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="admin-config.json";a.click();
+  URL.revokeObjectURL(url);
 };
 document.getElementById("importInput").addEventListener("change",async e=>{
-  const f=e.target.files?.[0];if(!f) return;
-  const txt=await f.text();data=JSON.parse(txt);save();renderAll();
+  const f=e.target.files?.[0]; if(!f) return;
+  const txt=await f.text(); data=JSON.parse(txt); save(); renderAll();
 });
-document.getElementById("resetBtn").onclick=reset;
+document.getElementById("resetBtn").onclick=resetAll;
 
-// ===== Фильтры с Parent =====
-function addFilter(){data.filtersConfig.push({label:"Новый фильтр",field:"field",type:"select",parent:""});save();renderFilters();renderPreview()}
+/* ===== фильтры ===== */
+function addFilter(){
+  data.filtersConfig.push({label:"Новый фильтр",field:"field",type:"select",parent:"",options:""});
+  save(); renderFilters(); renderPreview();
+}
 function renderFilters(){
-  const list=document.getElementById("filtersList");list.innerHTML="";
+  const list=document.getElementById("filtersList"); list.innerHTML="";
   data.filtersConfig.forEach((f,i)=>{
-    const div=document.createElement("div");div.className="draggable-item";
-    div.innerHTML=`
+    const row=document.createElement("div"); row.className="draggable-item";
+    row.innerHTML=`
       <input placeholder="Название" value="${f.label||""}" oninput="data.filtersConfig[${i}].label=this.value;save();renderPreview()">
       <input placeholder="field" value="${f.field||""}" oninput="data.filtersConfig[${i}].field=this.value;save();renderPreview()">
       <select onchange="data.filtersConfig[${i}].type=this.value;save();renderFilters();renderPreview()">
         <option value="select" ${f.type==='select'?'selected':''}>select</option>
+        <option value="select-linked" ${f.type==='select-linked'?'selected':''}>select-linked</option>
         <option value="range" ${f.type==='range'?'selected':''}>range</option>
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
-        <option value="select-linked" ${f.type==='select-linked'?'selected':''}>select-linked</option>
+        <option value="number" ${f.type==='number'?'selected':''}>number</option>
       </select>
       <input placeholder="parent" value="${f.parent||""}" oninput="data.filtersConfig[${i}].parent=this.value;save();renderPreview()">
-      <button onclick="data.filtersConfig.splice(${i},1);save();renderFilters();renderPreview()">✖</button>`;
-    list.appendChild(div);
+      <input placeholder="options (CSV или JSON)" value='${f.options||""}' oninput="data.filtersConfig[${i}].options=this.value;save();renderPreview()">
+      <button onclick="data.filtersConfig.splice(${i},1);save();renderFilters();renderPreview()">✖</button>
+    `;
+    list.appendChild(row);
   });
-  Sortable.create(list,{animation:150,onEnd:evt=>{
-    const moved=data.filtersConfig.splice(evt.oldIndex,1)[0];
-    data.filtersConfig.splice(evt.newIndex,0,moved);save();renderPreview();
+  Sortable.create(list,{animation:150,onEnd:e=>{
+    const moved=data.filtersConfig.splice(e.oldIndex,1)[0];
+    data.filtersConfig.splice(e.newIndex,0,moved); save(); renderPreview();
   }});
 }
 
-// ===== Поля формы =====
-function addField(){data.formFields.push({label:"Новое поле",id:"id",type:"text"});save();renderFields();renderPreview()}
+/* ===== поля формы ===== */
+function addField(){
+  data.formFields.push({label:"Новое поле",id:"id",type:"text"});
+  save(); renderFields(); renderPreview();
+}
 function renderFields(){
-  const list=document.getElementById("fieldsList");list.innerHTML="";
+  const list=document.getElementById("fieldsList"); list.innerHTML="";
   data.formFields.forEach((f,i)=>{
-    const div=document.createElement("div");div.className="draggable-item";
-    div.innerHTML=`
-      <input value="${f.label}" oninput="data.formFields[${i}].label=this.value;save();renderPreview()">
-      <input value="${f.id}" oninput="data.formFields[${i}].id=this.value;save();renderPreview()">
+    const row=document.createElement("div"); row.className="draggable-item";
+    row.innerHTML=`
+      <input placeholder="Метка" value="${f.label||""}" oninput="data.formFields[${i}].label=this.value;save();renderPreview()">
+      <input placeholder="id" value="${f.id||""}" oninput="data.formFields[${i}].id=this.value;save();renderPreview()">
       <select onchange="data.formFields[${i}].type=this.value;save();renderPreview()">
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
         <option value="number" ${f.type==='number'?'selected':''}>number</option>
         <option value="select" ${f.type==='select'?'selected':''}>select</option>
         <option value="textarea" ${f.type==='textarea'?'selected':''}>textarea</option>
       </select>
-      <button onclick="data.formFields.splice(${i},1);save();renderFields();renderPreview()">✖</button>`;
-    list.appendChild(div);
+      <button onclick="data.formFields.splice(${i},1);save();renderFields();renderPreview()">✖</button>
+    `;
+    list.appendChild(row);
   });
-  Sortable.create(list,{animation:150,onEnd:evt=>{
-    const moved=data.formFields.splice(evt.oldIndex,1)[0];
-    data.formFields.splice(evt.newIndex,0,moved);save();renderPreview();
+  Sortable.create(list,{animation:150,onEnd:e=>{
+    const moved=data.formFields.splice(e.oldIndex,1)[0];
+    data.formFields.splice(e.newIndex,0,moved); save(); renderPreview();
   }});
 }
 
-// ===== Макет (drag+resize) =====
+/* ===== макет: drag + resize ===== */
 const canvas=document.getElementById("canvas");
-let drag=null,resize=null;
-function addBlock(type){data.layout.push({id:Date.now(),type,x:1,y:1,w:6,h:2});save();renderLayout();renderPreview()}
-function delBlock(id){data.layout=data.layout.filter(b=>b.id!==id);save();renderLayout();renderPreview()}
+let drag=null, size=null;
+
+function addBlock(type){
+  data.layout.push({id:Date.now(),type,x:1,y:1,w:6,h:2});
+  save(); renderLayout(); renderPreview();
+}
+function delBlock(id){
+  data.layout=data.layout.filter(b=>b.id!==id);
+  save(); renderLayout(); renderPreview();
+}
 function renderLayout(){
   canvas.innerHTML="";
   data.layout.forEach(b=>{
     const el=document.createElement("div");
-    el.className="block";el.style.gridColumn=`${b.x}/span ${b.w}`;el.style.gridRow=`${b.y}/span ${b.h}`;
-    el.innerHTML=`${b.type}<div class="resize"></div><div class="toolbar"><button onclick="delBlock(${b.id})">✖</button></div>`;
+    el.className="block";
+    el.style.gridColumn=`${b.x}/span ${b.w}`;
+    el.style.gridRow=`${b.y}/span ${b.h}`;
+    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div>
+      <div class="toolbar"><button onclick="delBlock(${b.id})">✖</button></div>`;
+
+    // drag
     el.addEventListener("mousedown",e=>{
-      if(e.target.closest(".toolbar")||e.target.classList.contains("resize")) return;
-      e.preventDefault();const rect=canvas.getBoundingClientRect();const cellW=rect.width/12;const cellH=ROW+GAP;
-      drag={block:b,startX:e.clientX,startY:e.clientY,startGridX:b.x,startGridY:b.y,cellW,cellH};
-      el.classList.add("drag");window.addEventListener("mousemove",onDragMove);window.addEventListener("mouseup",onDragEnd);
+      if(e.target.closest(".toolbar") || e.target.classList.contains("resize")) return;
+      e.preventDefault();
+      const rect=canvas.getBoundingClientRect();
+      const cellW=rect.width/COLS;
+      const cellH=ROW+GAP;
+      drag={block:b,startX:e.clientX,startY:e.clientY,startGX:b.x,startGY:b.y,cellW,cellH,el};
+      el.classList.add("drag");
+      window.addEventListener("mousemove",onDragMove);
+      window.addEventListener("mouseup",onDragEnd);
     });
+
+    // resize
     el.querySelector(".resize").addEventListener("mousedown",e=>{
-      e.stopPropagation();resize={block:b,startX:e.clientX,startY:e.clientY,startW:b.w,startH:b.h};
-      window.addEventListener("mousemove",onResizeMove);window.addEventListener("mouseup",onResizeEnd);
+      e.stopPropagation();
+      const rect=canvas.getBoundingClientRect();
+      const cellW=rect.width/COLS;
+      size={block:b,startX:e.clientX,startY:e.clientY,startW:b.w,startH:b.h,cellW};
+      window.addEventListener("mousemove",onResizeMove);
+      window.addEventListener("mouseup",onResizeEnd);
     });
+
     canvas.appendChild(el);
   });
 }
-const ROW=80,GAP=6;
-function onDragMove(e){if(!drag)return;const {block,startX,startY,startGridX,startGridY,cellW,cellH}=drag;let newX=startGridX+Math.round((e.clientX-startX)/cellW);let newY=startGridY+Math.round((e.clientY-startY)/cellH);newX=Math.max(1,Math.min(12-block.w+1,newX));newY=Math.max(1,newY);block.x=newX;block.y=newY;save();renderLayout()}
-function onDragEnd(){drag=null;window.removeEventListener("mousemove",onDragMove);window.removeEventListener("mouseup",onDragEnd);renderPreview()}
-function onResizeMove(e){if(!resize)return;const {block,startX,startY,startW,startH}=resize;const rect=canvas.getBoundingClientRect();const cellW=rect.width/12;let w=startW+Math.round((e.clientX-startX)/cellW);let h=startH+Math.round((e.clientY-startY)/ROW);w=Math.max(1,Math.min(12-block.x+1,w));h=Math.max(1,h);block.w=w;block.h=h;save();renderLayout()}
-function onResizeEnd(){resize=null;window.removeEventListener("mousemove",onResizeMove);window.removeEventListener("mouseup",onResizeEnd);renderPreview()}
-
-// ===== Предпросмотр =====
-function renderPreview(){
-  const preview=document.getElementById("preview");preview.innerHTML="";
-  const state={};
-  data.layout.forEach(b=>{
-    const el=document.createElement("div");el.className="preview-block";el.style.gridColumn=`${b.x}/span ${b.w}`;el.style.gridRow=`${b.y}/span ${b.h}`;
-    if(b.type==="map") el.innerHTML="🗺️ Карта";
-    if(b.type==="filters"){el.innerHTML="<h4>Фильтры</h4>";renderFilterFields(el,state);}
-    if(b.type==="form"){el.innerHTML="<h4>Форма</h4>";renderFormFields(el);}
-    if(b.type==="cards") el.innerHTML="📋 Список";
-    if(b.type==="table") el.innerHTML="📊 Таблица";
-    if(b.type==="banner") el.innerHTML="<div style='background:#223355;padding:20px'>Реклама</div>";
-    if(b.type==="gallery") el.innerHTML="<div style='background:#333;height:100px'>Галерея</div>";
-    preview.appendChild(el);
-  });
+function onDragMove(e){
+  if(!drag) return;
+  const {block,startX,startY,startGX,startGY,cellW,cellH}=drag;
+  let nx=startGX + Math.round((e.clientX-startX)/cellW);
+  let ny=startGY + Math.round((e.clientY-startY)/cellH);
+  nx=Math.max(1,Math.min(COLS-block.w+1,nx));
+  ny=Math.max(1,ny);
+  block.x=nx; block.y=ny;
+  save(); renderLayout();
+}
+function onDragEnd(){
+  if(!drag) return;
+  drag.el.classList.remove("drag");
+  drag=null;
+  window.removeEventListener("mousemove",onDragMove);
+  window.removeEventListener("mouseup",onDragEnd);
+  renderPreview();
+}
+function onResizeMove(e){
+  if(!size) return;
+  const {block,startX,startY,startW,startH,cellW}=size;
+  let w=startW + Math.round((e.clientX-startX)/cellW);
+  let h=startH + Math.round((e.clientY-startY)/ROW);
+  w=Math.max(1,Math.min(COLS-block.x+1,w));
+  h=Math.max(1,h);
+  block.w=w; block.h=h;
+  save(); renderLayout();
+}
+function onResizeEnd(){
+  size=null;
+  window.removeEventListener("mousemove",onResizeMove);
+  window.removeEventListener("mouseup",onResizeEnd);
+  renderPreview();
+}
+function labelByType(t){
+  return ({
+    filters:"Фильтры",
+    map:"Карта",
+    form:"Форма",
+    cards:"Список",
+    table:"Таблица",
+    banner:"Реклама",
+    gallery:"Галерея"
+  })[t]||t;
 }
 
-function renderFilterFields(container,state){
+/* ===== предпросмотр ===== */
+function renderPreview(){
+  const wrap=document.getElementById("preview"); wrap.innerHTML="";
+  data.layout.forEach(b=>{
+    const el=document.createElement("div");
+    el.className="preview-block";
+    el.style.gridColumn=`${b.x}/span ${b.w}`;
+    el.style.gridRow=`${b.y}/span ${b.h}`;
+    if(b.type==="map"){ el.innerHTML="🗺️ Карта"; }
+    if(b.type==="filters"){ el.innerHTML="<h4>Фильтры</h4>"; renderPreviewFilters(el); }
+    if(b.type==="form"){ el.innerHTML="<h4>Форма</h4>"; renderPreviewForm(el); }
+    if(b.type==="cards"){ el.innerHTML="📋 Список"; }
+    if(b.type==="table"){ el.innerHTML="📊 Таблица"; }
+    if(b.type==="banner"){ el.innerHTML="<div style='background:#223355;padding:20px;border-radius:8px'>Рекламный блок</div>"; }
+    if(b.type==="gallery"){ el.innerHTML="<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:6px'><div style='background:#333;height:60px'></div><div style='background:#333;height:60px'></div><div style='background:#333;height:60px'></div></div>"; }
+    wrap.appendChild(el);
+  });
+}
+function renderPreviewFilters(container){
+  // рендерим в одном состоянии (previewState), чтобы каскады работали
   data.filtersConfig.forEach(f=>{
     if(f.type==="select"){
-      let sel=document.createElement("select");
-      sel.innerHTML="<option>—</option>"+(f.options||[]).map(o=>`<option>${o}</option>`).join("");
-      sel.onchange=()=>{state[f.field]=sel.value;renderPreview()};
-      let wrap=document.createElement("div");wrap.className="field";wrap.innerHTML=`<label>${f.label}</label>`;wrap.appendChild(sel);container.appendChild(wrap);
+      const opts = parseCSV(f.options);
+      const sel = document.createElement("select");
+      sel.innerHTML = "<option value=''>—</option>" + opts.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join("");
+      sel.onchange = ()=>{ previewState[f.field]=sel.value; renderPreview(); };
+      const box = document.createElement("div"); box.className="field";
+      box.innerHTML=`<label>${f.label}</label>`;
+      box.appendChild(sel); container.appendChild(box);
     }
     if(f.type==="select-linked"){
-      const parentVal=state[f.parent];
-      if(parentVal && f.options && f.options[parentVal]){
-        let sel=document.createElement("select");
-        sel.innerHTML="<option>—</option>"+f.options[parentVal].map(o=>`<option>${o}</option>`).join("");
-        sel.onchange=()=>{state[f.field]=sel.value;renderPreview()};
-        let wrap=document.createElement("div");wrap.className="field";wrap.innerHTML=`<label>${f.label}</label>`;wrap.appendChild(sel);container.appendChild(wrap);
+      const parentVal = previewState[f.parent];
+      const map = parseJSONMap(f.options);
+      if(parentVal && map[parentVal]){
+        const sel = document.createElement("select");
+        const list = map[parentVal] || [];
+        sel.innerHTML = "<option value=''>—</option>" + list.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join("");
+        sel.onchange = ()=>{ previewState[f.field]=sel.value; renderPreview(); };
+        const box = document.createElement("div"); box.className="field";
+        box.innerHTML=`<label>${f.label}</label>`;
+        box.appendChild(sel); container.appendChild(box);
       }
     }
     if(f.type==="range"){
-      let wrap=document.createElement("div");wrap.className="field";
-      wrap.innerHTML=`<label>${f.label}</label><input placeholder="от"><input placeholder="до">`;container.appendChild(wrap);
+      const box=document.createElement("div"); box.className="field";
+      box.innerHTML=`<label>${f.label}</label><div style="display:flex;gap:6px"><input placeholder="от"><input placeholder="до"></div>`;
+      container.appendChild(box);
     }
     if(f.type==="text"){
-      let wrap=document.createElement("div");wrap.className="field";
-      wrap.innerHTML=`<label>${f.label}</label><input placeholder="${f.field}">`;container.appendChild(wrap);
+      const box=document.createElement("div"); box.className="field";
+      box.innerHTML=`<label>${f.label}</label><input placeholder="${f.field}">`;
+      container.appendChild(box);
+    }
+    if(f.type==="number"){
+      const box=document.createElement("div"); box.className="field";
+      box.innerHTML=`<label>${f.label}</label><input type="number" placeholder="${f.field}">`;
+      container.appendChild(box);
     }
   });
 }
-
-function renderFormFields(container){
+function renderPreviewForm(container){
   data.formFields.forEach(ff=>{
-    let wrap=document.createElement("div");wrap.className="field";wrap.innerHTML=`<label>${ff.label}</label>`;
-    if(ff.type==="textarea") wrap.innerHTML+=`<textarea></textarea>`;
-    else if(ff.type==="select") wrap.innerHTML+=`<select><option>—</option></select>`;
-    else if(ff.type==="number") wrap.innerHTML+=`<input type="number">`;
-    else wrap.innerHTML+=`<input type="text">`;
-    container.appendChild(wrap);
+    const box=document.createElement("div"); box.className="field";
+    box.innerHTML=`<label>${ff.label}</label>`;
+    if(ff.type==="textarea") box.innerHTML+=`<textarea rows="3"></textarea>`;
+    else if(ff.type==="select") box.innerHTML+=`<select><option>—</option></select>`;
+    else if(ff.type==="number") box.innerHTML+=`<input type="number">`;
+    else box.innerHTML+=`<input type="text">`;
+    container.appendChild(box);
   });
 }
 
-function renderAll(){renderFilters();renderFields();renderLayout();renderPreview()}
+/* ===== утилиты ===== */
+function parseCSV(s){
+  if(!s) return [];
+  return s.split(",").map(t=>t.trim()).filter(Boolean);
+}
+function parseJSONMap(s){
+  if(!s) return {};
+  try{ return JSON.parse(s); }catch(e){ return {}; }
+}
+
+/* ===== старт ===== */
+function renderAll(){ renderFilters(); renderFields(); renderLayout(); renderPreview(); }
 renderAll();
 </script>
 </body>
