@@ -65,7 +65,7 @@
 </header>
 
 <main>
-  <!-- ... (фильтры, поля и прочее без изменений) ... -->
+  <!-- здесь остаётся весь твой код фильтров и полей -->
   <section class="panel" id="layoutPanel" style="display:none">
     <h3>Редактор макета</h3>
     <div class="row" style="margin-bottom:8px">
@@ -114,7 +114,6 @@ function renderLayout(){
     const el=document.createElement("div"); el.className="block";
     el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
     el.innerHTML=`${labelByType(b.type)}<div class="resize"></div><button class="del" onclick="deleteBlock(${b.id})">✖</button>`;
-    // ... (drag & resize без изменений)
     canvas.appendChild(el);
   });
 }
