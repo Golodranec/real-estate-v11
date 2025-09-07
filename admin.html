@@ -1,552 +1,447 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Админка-конструктор + Предпросмотр</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin All-in-One — Drag & Resize Grid</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#161a22; --muted:#1f2530; --text:#e6e6e6; --soft:#99a3b3; --accent:#5b9cff;
-    --ok:#36c275; --warn:#f0b429; --bad:#f05353;
+    --bg:#0f1115; --panel:#161a22; --muted:#1f2530; --line:#2a3140; --text:#e6e6e6; --accent:#5b9cff;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-  a{color:var(--accent);text-decoration:none}
-  .app{display:grid;grid-template-rows:auto 1fr;min-height:100dvh}
-  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--panel);border-bottom:1px solid #202634;position:sticky;top:0;z-index:2}
+  header{padding:10px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #202634}
+  button{padding:6px 12px;border-radius:8px;border:1px solid transparent;cursor:pointer}
+  .btn{background:var(--accent);color:#fff}
+  .btn.secondary{background:#2a3140;color:#fff}
+  .btn.ghost{background:transparent;border-color:#2a3140;color:#d6d6e6}
   .tabs{display:flex;gap:8px}
-  .tab{padding:8px 12px;border-radius:10px;background:var(--muted);cursor:pointer;user-select:none}
+  .tab{padding:6px 12px;background:#2a3140;border-radius:8px;cursor:pointer}
   .tab.active{background:var(--accent);color:#fff}
-  .actions{display:flex;gap:8px;align-items:center}
-  button,.btn{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
-  .btn.secondary{background:#2a3140}
-  .btn.ghost{background:transparent;border:1px solid #2a3140}
-  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:12px}
-  .panel{background:var(--panel);border:1px solid #202634;border-radius:14px;padding:12px}
-  .title{font-weight:700;margin:0 0 8px 0}
-  .muted{color:var(--soft)}
+  main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
+  .panel{padding:12px}
+  h3{margin:6px 0 10px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input,select,textarea{background:#0f131b;border:1px solid #263044;border-radius:8px;padding:8px;color:#e6e6e6}
   .list{display:flex;flex-direction:column;gap:8px}
-  .item{background:var(--muted);padding:8px;border-radius:10px;border:1px solid #263044;display:flex;align-items:center;gap:8px}
-  .item.dragging{opacity:.5}
-  .handle{cursor:grab;font-size:16px;color:#8894a8}
-  .grow{flex:1}
-  .row{display:flex;gap:8px;align-items:center}
-  .row+.row{margin-top:6px}
-  input[type="text"],input[type="number"],select,textarea{
-    width:100%;background:#0f131b;border:1px solid #263044;border-radius:8px;padding:8px;color:var(--text)
+  .item{display:grid;grid-template-columns:1.2fr 1fr auto;gap:8px;align-items:center;padding:8px;background:#121722;border:1px solid #263044;border-radius:10px}
+  .item .del{background:#2a3140}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .canvas-wrap{display:flex;flex-direction:column;gap:8px}
+  .grid-help{font-size:12px;color:#9fb0c9}
+  .canvas{
+    position:relative;
+    display:grid;grid-template-columns:repeat(12,1fr);
+    grid-auto-rows:80px;gap:6px;
+    background:#0b0d12;border:1px dashed #333;padding:6px;min-height:70vh;border-radius:10px;
   }
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-  .divider{height:1px;background:#202634;margin:12px 0}
-  /* PREVIEW */
-  .preview-wrap{display:flex;flex-direction:column;gap:12px}
-  .preview-bar{display:flex;gap:8px;align-items:center;justify-content:space-between}
-  .preview-surface{background:#0b0d12;border:1px dashed #2a3140;border-radius:14px;padding:12px}
-  .filters-grid,.form-grid{
-    display:grid;grid-template-columns:repeat(4,1fr);gap:8px
+  .grid-bg{
+    position:absolute;inset:6px;pointer-events:none;display:grid;grid-template-columns:repeat(12,1fr);gap:6px;opacity:.25;
   }
-  .field{background:#0f131b;border:1px solid #263044;border-radius:10px;padding:8px;position:relative}
-  .field .lbl{font-size:12px;color:#aab3c2;margin-bottom:4px}
-  .field input,.field select{width:100%;background:#0a0d13;border:1px solid #233049;border-radius:8px;padding:8px;color:#dfe6f3}
-  .width-badge{
-    position:absolute;right:6px;top:6px;font-size:11px;background:#223453;color:#cfe0ff;border:1px solid #36517a;border-radius:999px;padding:2px 6px;cursor:pointer;user-select:none
+  .grid-bg div{border:1px dashed #2a3140;border-radius:6px}
+  .block{
+    background:var(--muted);border:1px solid var(--line);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+    user-select:none;
   }
-  .tip{font-size:12px;color:#93a0b5}
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .card{background:#0f131b;border:1px solid #263044;border-radius:14px;overflow:hidden}
-  .card .ph{background:#111826;height:140px}
-  .card .cnt{padding:10px;display:grid;gap:6px}
-  .pill{display:inline-block;background:#172235;padding:2px 8px;border-radius:999px;font-size:12px;color:#bcd1ff;border:1px solid #2b4777}
-  /* width mapping */
-  .w-25{grid-column:span 1}
-  .w-50{grid-column:span 2}
-  .w-100{grid-column:span 4}
-  /* drag styles */
-  .draggable{user-select:none}
-  .ghost{opacity:.4}
-  .empty-note{padding:10px;border:1px dashed #2b3344;border-radius:10px;background:#0d1016}
-  /* small */
-  @media (max-width:1000px){
-    .grid{grid-template-columns:1fr}
-    .cards{grid-template-columns:1fr 1fr}
-    .filters-grid,.form-grid{grid-template-columns:repeat(2,1fr)}
-    .w-100{grid-column:span 2}
-  }
+  .block .label{pointer-events:none}
+  .block.drag{opacity:.7;outline:1px dashed #8fb2ff}
+  .resize{position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:var(--accent);border-top-left-radius:4px}
+  .toolbar{position:absolute;top:4px;right:4px;display:flex;gap:4px}
+  .toolbar button{padding:2px 6px;font-size:11px}
+  .hint{position:absolute;left:6px;top:4px;font-size:11px;color:#cfe0ff;background:#1b2a46;border:1px solid #2e4a7a;border-radius:999px;padding:2px 6px}
+  .preview-surface{background:#0b0d12;border:1px solid #2a3140;padding:10px;border-radius:10px;margin-bottom:10px}
+  .field{margin-bottom:6px}
+  .field label{font-size:12px;color:#cfd8e6;display:block;margin-bottom:2px}
+  .field input,.field select,.field textarea{width:100%;padding:6px;border-radius:6px;border:1px solid #333;background:#111722;color:#fff}
+  .card{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:10px;margin-bottom:8px}
+  .banner{background:#223355;color:#fff;padding:20px;text-align:center;border-radius:8px}
+  .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .gallery div{background:#333;height:60px;border-radius:6px}
+  @media (max-width:1100px){ main{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="tabs">
-      <div class="tab active" data-tab="builder">Конструктор</div>
-      <div class="tab" data-tab="preview">Предпросмотр</div>
+<header>
+  <div class="tabs">
+    <div class="tab active" data-tab="content">⚙️ Фильтры и поля</div>
+    <div class="tab" data-tab="layout">🖼️ Макет</div>
+    <div class="tab" data-tab="preview">👀 Предпросмотр</div>
+  </div>
+  <div class="row" style="margin-left:auto">
+    <button class="btn secondary" id="exportBtn">Экспорт JSON</button>
+    <label class="btn secondary">Импорт<input id="importInput" type="file" hidden></label>
+    <button class="btn ghost" id="resetBtn">Сброс</button>
+  </div>
+</header>
+
+<main>
+  <!-- Контент -->
+  <section class="panel" id="contentPanel">
+    <h3>Фильтры</h3>
+    <div id="filtersList" class="list"></div>
+    <div class="row">
+      <input id="filterLabel" placeholder="Название: Город, Цена..." />
+      <input id="filterField" placeholder="field: cityId, price..." />
+      <select id="filterType">
+        <option value="select">select</option>
+        <option value="range">range</option>
+        <option value="text">text</option>
+      </select>
+      <button class="btn" id="addFilterBtn">Добавить</button>
     </div>
-    <div class="actions">
-      <label class="btn ghost" for="importInput">Импорт JSON</label>
-      <input id="importInput" type="file" accept="application/json" hidden>
-      <button class="btn secondary" id="exportBtn">Экспорт JSON</button>
-      <button id="resetBtn" class="btn" title="Сбросить к дефолту">Сброс</button>
-      <span class="muted">Сохраняется в localStorage автоматически</span>
+    <hr style="border-color:#263044;margin:16px 0">
+    <h3>Поля формы</h3>
+    <div id="fieldsList" class="list"></div>
+    <div class="row">
+      <input id="fieldLabel" placeholder="Метка: Заголовок, Цена..." />
+      <input id="fieldId" placeholder="id: title, price..." />
+      <select id="fieldType">
+        <option value="text">text</option>
+        <option value="number">number</option>
+        <option value="select">select</option>
+        <option value="textarea">textarea</option>
+      </select>
+      <button class="btn" id="addFieldBtn">Добавить</button>
     </div>
-  </header>
+  </section>
 
-  <main class="grid">
-    <!-- LEFT BUILDER -->
-    <section class="panel" id="builderPanel">
-      <h3 class="title">Фильтры поиска</h3>
-      <div class="tip">Перетаскивай строки за «⋮⋮». Клик по селекту «Ширина» меняет ширину в предпросмотре.</div>
-      <div class="list" id="filtersList"></div>
-      <div class="divider"></div>
-      <div class="two">
-        <select id="newFilterType">
-          <option value="select">select</option>
-          <option value="range">range</option>
-          <option value="checkbox">checkbox</option>
-        </select>
-        <input id="newFilterField" type="text" placeholder="field (англ.): price, cityId, rooms..." />
+  <!-- Макет -->
+  <section class="panel" id="layoutPanel" style="display:none">
+    <h3>Редактор макета</h3>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn" onclick="addBlock('map')">Карта</button>
+      <button class="btn" onclick="addBlock('filters')">Фильтры</button>
+      <button class="btn" onclick="addBlock('form')">Форма</button>
+      <button class="btn" onclick="addBlock('cards')">Список</button>
+      <button class="btn" onclick="addBlock('table')">Таблица</button>
+      <button class="btn" onclick="addBlock('banner')">Реклама</button>
+      <button class="btn" onclick="addBlock('gallery')">Галерея</button>
+    </div>
+    <div class="canvas-wrap">
+      <div class="grid-help">Сетка 12 колонок. Хватай блок за центр — перетаскивай. Тяни угол — меняй размер. Изменения сохраняются автоматически.</div>
+      <div id="canvas" class="canvas">
+        <div class="grid-bg" aria-hidden="true"></div>
       </div>
-      <div class="two" style="margin-top:8px">
-        <input id="newFilterLabel" type="text" placeholder="Название (для людей): Цена, Город..." />
-        <select id="newFilterWidth">
-          <option value="25">Ширина 25%</option>
-          <option value="50">Ширина 50%</option>
-          <option value="100" selected>Ширина 100%</option>
-        </select>
-      </div>
-      <div class="three" style="margin-top:8px">
-        <input id="newFilterMin" type="number" placeholder="min (для range)" />
-        <input id="newFilterMax" type="number" placeholder="max (для range)" />
-        <input id="newFilterStep" type="number" placeholder="шаг (для range)" />
-      </div>
-      <div class="row" style="margin-top:8px">
-        <input id="newFilterOptions" type="text" placeholder="опции (для select/checkbox), через запятую" />
-        <button id="addFilterBtn">Добавить фильтр</button>
-      </div>
+    </div>
+  </section>
 
-      <div class="divider"></div>
-      <h3 class="title">Поля формы (объявление)</h3>
-      <div class="list" id="fieldsList"></div>
-      <div class="divider"></div>
-      <div class="two">
-        <select id="newFieldType">
-          <option value="text">text</option>
-          <option value="number">number</option>
-          <option value="select">select</option>
-          <option value="textarea">textarea</option>
-        </select>
-        <input id="newFieldId" type="text" placeholder="id (англ.): title, price, area..." />
-      </div>
-      <div class="two" style="margin-top:8px">
-        <input id="newFieldLabel" type="text" placeholder="Метка: Заголовок, Цена..." />
-        <select id="newFieldWidth">
-          <option value="25">Ширина 25%</option>
-          <option value="50">Ширина 50%</option>
-          <option value="100" selected>Ширина 100%</option>
-        </select>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <input id="newFieldOptions" type="text" placeholder="Опции (для select), через запятую" />
-        <button id="addFieldBtn">Добавить поле</button>
-      </div>
-    </section>
-
-    <!-- RIGHT PREVIEW -->
-    <section class="panel" id="previewPanel" style="display:none">
-      <div class="preview-wrap">
-        <div class="preview-bar">
-          <div class="row">
-            <strong>Предпросмотр сайта</strong>
-            <span class="tip">Клик по бейджу ширины на поле — переключает 25/50/100</span>
-          </div>
-          <div class="row">
-            <button class="btn secondary" id="reloadPreview">Обновить</button>
-          </div>
-        </div>
-
-        <div class="preview-surface">
-          <h4 style="margin:0 0 8px">Фильтры</h4>
-          <div id="filtersPreview" class="filters-grid"></div>
-        </div>
-
-        <div class="preview-surface">
-          <h4 style="margin:0 0 8px">Форма добавления</h4>
-          <div id="formPreview" class="form-grid"></div>
-        </div>
-
-        <div class="preview-surface">
-          <h4 style="margin:0 0 8px">Результаты</h4>
-          <div class="cards" id="cardsPreview"></div>
-        </div>
-      </div>
-    </section>
-  </main>
-</div>
+  <!-- Предпросмотр -->
+  <section class="panel" id="previewPanel" style="display:none">
+    <h3>Предпросмотр</h3>
+    <div id="preview"></div>
+  </section>
+</main>
 
 <script>
-/* ==========
-   ДАННЫЕ
-========== */
-const DEFAULT_DATA = {
-  filtersConfig: [
-    {type:'select', field:'cityId', label:'Город', width:50, options:['1:Ташкент','2:Самарканд']},
-    {type:'select', field:'districtId', label:'Район', width:50, options:['11:Мирзо-Улугбек','12:Юнусабад']},
-    {type:'range', field:'price', label:'Цена', width:100, min:100, max:1000000, step:100},
-    {type:'range', field:'rooms', label:'Комнаты', width:50, min:1, max:10, step:1},
-    {type:'range', field:'floor', label:'Этаж', width:50, min:1, max:25, step:1}
+const KEY="admin-all-in-one-v2";
+let data = load() || {
+  filtersConfig:[
+    {label:"Город", field:"cityId", type:"select"},
+    {label:"Район", field:"districtId", type:"select"},
+    {label:"Цена", field:"price", type:"range"},
+    {label:"Комнаты", field:"rooms", type:"range"}
   ],
-  formFields: [
-    {id:'title', label:'Заголовок', type:'text', width:100},
-    {id:'price', label:'Цена', type:'number', width:50},
-    {id:'area', label:'Площадь (м²)', type:'number', width:50},
-    {id:'rooms', label:'Комнат', type:'number', width:50},
-    {id:'floor', label:'Этаж', type:'number', width:50},
-    {id:'cityId', label:'Город', type:'select', width:50, options:['1:Ташкент','2:Самарканд']},
-    {id:'districtId', label:'Район', type:'select', width:50, options:['11:Мирзо-Улугбек','12:Юнусабад']},
-    {id:'desc', label:'Описание', type:'textarea', width:100}
+  formFields:[
+    {label:"Заголовок", id:"title", type:"text"},
+    {label:"Цена", id:"price", type:"number"},
+    {label:"Город", id:"cityId", type:"select"},
+    {label:"Район", id:"districtId", type:"select"},
+    {label:"Описание", id:"desc", type:"textarea"}
   ],
-  demoCards: [
-    {title:'2-комн в Юнусабаде', price:'78 000 у.е.', tag:'Квартира', img:true},
-    {title:'Дача в Чарваке', price:'2 500 000 сум/сутки', tag:'Дача', img:true},
-    {title:'3-комн Мирзо-Улугбек', price:'115 000 у.е.', tag:'Квартира', img:true},
-    {title:'Дом Самарканд', price:'250 000 у.е.', tag:'Дом', img:true},
-    {title:'Участок 6 соток', price:'45 000 у.е.', tag:'Земля', img:true},
-    {title:'Лофт в центре', price:'900 у.е./мес', tag:'Аренда', img:true}
+  layout:[
+    {id:1,type:"map",x:1,y:1,w:6,h:3},
+    {id:2,type:"filters",x:7,y:1,w:6,h:2},
+    {id:3,type:"cards",x:7,y:3,w:6,h:2}
   ]
 };
 
-const KEY = 'builder-data-v1';
-let app = load() || structuredClone(DEFAULT_DATA);
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||""); }catch(e){ return null; } }
+function reset(){ if(confirm("Сбросить конфиг?")){ localStorage.removeItem(KEY); location.reload(); } }
 
-/* ==========
-   УТИЛИТЫ
-========== */
-function save(){ localStorage.setItem(KEY, JSON.stringify(app)); }
-function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||''); }catch(e){ return null; } }
-function reset(){ app = structuredClone(DEFAULT_DATA); save(); renderAll(); }
-function widthClass(w){ return w==25?'w-25':(w==50?'w-50':'w-100'); }
-function cycleWidth(w){ return w==25?50:(w==50?100:25); }
-
-/* ==========
-   UI ПЕРЕКЛЮЧЕНИЕ ТАБОВ
-========== */
-const tabs = document.querySelectorAll('.tab');
-const builderPanel = document.getElementById('builderPanel');
-const previewPanel = document.getElementById('previewPanel');
-tabs.forEach(t=>{
-  t.addEventListener('click',()=>{
-    tabs.forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    const id = t.dataset.tab;
-    builderPanel.style.display = (id==='builder')?'block':'none';
-    previewPanel.style.display = (id==='preview')?'block':'none';
-    if(id==='preview'){ renderPreview(); }
-  });
-});
-
-/* ==========
-   РЕНДЕР ЛЕВОЙ КОЛОНКИ (СПИСКИ)
-========== */
-const filtersList = document.getElementById('filtersList');
-const fieldsList = document.getElementById('fieldsList');
-
-function renderFiltersList(){
-  filtersList.innerHTML = '';
-  if(!app.filtersConfig.length){
-    filtersList.innerHTML = `<div class="empty-note">Фильтров нет. Добавь ниже.</div>`;
-    return;
+// вкладки
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    const id=tab.dataset.tab;
+    document.getElementById("contentPanel").style.display = id==="content"?"block":"none";
+    document.getElementById("layoutPanel").style.display  = id==="layout" ?"block":"none";
+    document.getElementById("previewPanel").style.display = id==="preview"?"block":"none";
+    renderAll();
   }
-  app.filtersConfig.forEach((f,idx)=>{
-    const el = document.createElement('div');
-    el.className='item draggable';
-    el.draggable=true;
-    el.dataset.index=idx;
-    el.innerHTML = `
-      <div class="handle" title="Тяни для перестановки">⋮⋮</div>
-      <div class="grow">
-        <div class="row">
-          <strong>${f.label||f.field}</strong>
-          <span class="pill">${f.type}</span>
-        </div>
-        <div class="row">
-          <input type="text" data-k="field" value="${f.field||''}" placeholder="field (англ.)" />
-          <input type="text" data-k="label" value="${f.label||''}" placeholder="Название (рус.)" />
-          <select data-k="width">
-            <option value="25" ${f.width==25?'selected':''}>25%</option>
-            <option value="50" ${f.width==50?'selected':''}>50%</option>
-            <option value="100" ${f.width==100?'selected':''}>100%</option>
-          </select>
-        </div>
-        ${f.type==='range' ? `
-          <div class="three" style="margin-top:6px">
-            <input type="number" data-k="min" value="${f.min??''}" placeholder="min" />
-            <input type="number" data-k="max" value="${f.max??''}" placeholder="max" />
-            <input type="number" data-k="step" value="${f.step??''}" placeholder="шаг" />
-          </div>
-        `:``}
-        ${(f.type==='select'||f.type==='checkbox') ? `
-          <div class="row" style="margin-top:6px">
-            <input type="text" data-k="options" value="${(f.options||[]).join(', ')}" placeholder="опции через запятую" />
-          </div>
-        `:``}
-      </div>
-      <button class="btn ghost" data-del>×</button>
-    `;
-    // inputs binding
-    el.querySelectorAll('input,select').forEach(inp=>{
-      inp.addEventListener('input',()=>{
-        const k = inp.dataset.k;
-        let v = inp.value;
-        if(['min','max','step','width'].includes(k)) v = Number(v||0);
-        if(k==='options') v = v.split(',').map(s=>s.trim()).filter(Boolean);
-        f[k]=v; save(); // live save
-      });
-    });
-    el.querySelector('[data-del]').addEventListener('click',()=>{
-      app.filtersConfig.splice(idx,1); save(); renderAll();
-    });
-    enableDrag(el, app.filtersConfig, renderFiltersList);
-    filtersList.appendChild(el);
-  });
-}
-
-function renderFieldsList(){
-  fieldsList.innerHTML = '';
-  if(!app.formFields.length){
-    fieldsList.innerHTML = `<div class="empty-note">Полей нет. Добавь ниже.</div>`;
-    return;
-  }
-  app.formFields.forEach((ff,idx)=>{
-    const el = document.createElement('div');
-    el.className='item draggable';
-    el.draggable=true;
-    el.dataset.index=idx;
-    el.innerHTML = `
-      <div class="handle" title="Тяни">⋮⋮</div>
-      <div class="grow">
-        <div class="row">
-          <strong>${ff.label||ff.id}</strong>
-          <span class="pill">${ff.type}</span>
-        </div>
-        <div class="row">
-          <input type="text" data-k="id" value="${ff.id||''}" placeholder="id (англ.)" />
-          <input type="text" data-k="label" value="${ff.label||''}" placeholder="Метка (рус.)" />
-          <select data-k="width">
-            <option value="25" ${ff.width==25?'selected':''}>25%</option>
-            <option value="50" ${ff.width==50?'selected':''}>50%</option>
-            <option value="100" ${ff.width==100?'selected':''}>100%</option>
-          </select>
-        </div>
-        ${ff.type==='select' ? `
-          <div class="row" style="margin-top:6px">
-            <input type="text" data-k="options" value="${(ff.options||[]).join(', ')}" placeholder="опции через запятую" />
-          </div>
-        `:``}
-      </div>
-      <button class="btn ghost" data-del>×</button>
-    `;
-    el.querySelectorAll('input,select').forEach(inp=>{
-      inp.addEventListener('input',()=>{
-        const k = inp.dataset.k;
-        let v = inp.value;
-        if(k==='width') v = Number(v||0);
-        if(k==='options') v = v.split(',').map(s=>s.trim()).filter(Boolean);
-        ff[k]=v; save();
-      });
-    });
-    el.querySelector('[data-del]').addEventListener('click',()=>{
-      app.formFields.splice(idx,1); save(); renderAll();
-    });
-    enableDrag(el, app.formFields, renderFieldsList);
-    fieldsList.appendChild(el);
-  });
-}
-
-/* ==========
-   DRAG & DROP
-========== */
-function enableDrag(el, arr, rerender){
-  el.addEventListener('dragstart', e=>{
-    el.classList.add('dragging');
-    e.dataTransfer.setData('text/plain', el.dataset.index);
-  });
-  el.addEventListener('dragend', ()=>{
-    el.classList.remove('dragging');
-    rerender(); save();
-  });
-  el.addEventListener('dragover', e=>{
-    e.preventDefault();
-    const dragging = document.querySelector('.dragging');
-    if(!dragging || dragging===el) return;
-    const list = el.parentElement;
-    const nodes = [...list.children];
-    const currIndex = nodes.indexOf(el);
-    const dragIndex = nodes.indexOf(dragging);
-    if(currIndex > dragIndex){
-      list.insertBefore(dragging, el.nextSibling);
-    }else{
-      list.insertBefore(dragging, el);
-    }
-  });
-  el.addEventListener('drop', e=>{
-    e.preventDefault();
-    const list = el.parentElement;
-    const nodes = [...list.children];
-    const newOrder = nodes.map(n=>arr[Number(n.dataset.index)]);
-    arr.length = 0; newOrder.forEach(x=>arr.push(x));
-    save(); // rerender вызывается в dragend
-  });
-}
-
-/* ==========
-   КНОПКИ ДОБАВИТЬ
-========== */
-document.getElementById('addFilterBtn').addEventListener('click', ()=>{
-  const type = document.getElementById('newFilterType').value.trim();
-  const field = document.getElementById('newFilterField').value.trim();
-  const label = document.getElementById('newFilterLabel').value.trim();
-  const width = Number(document.getElementById('newFilterWidth').value);
-  const min = Number(document.getElementById('newFilterMin').value||0);
-  const max = Number(document.getElementById('newFilterMax').value||0);
-  const step = Number(document.getElementById('newFilterStep').value||0);
-  const optsStr = document.getElementById('newFilterOptions').value.trim();
-  if(!field){ alert('Укажи field (англ.)'); return; }
-  const item = {type, field, label: label||field, width: width||100};
-  if(type==='range'){ item.min=min; item.max=max; item.step=step||1; }
-  if(type==='select'||type==='checkbox'){ item.options = optsStr? optsStr.split(',').map(s=>s.trim()).filter(Boolean):[]; }
-  app.filtersConfig.push(item); save(); renderFiltersList();
 });
 
-document.getElementById('addFieldBtn').addEventListener('click', ()=>{
-  const type = document.getElementById('newFieldType').value.trim();
-  const id = document.getElementById('newFieldId').value.trim();
-  const label = document.getElementById('newFieldLabel').value.trim();
-  const width = Number(document.getElementById('newFieldWidth').value);
-  const optsStr = document.getElementById('newFieldOptions').value.trim();
-  if(!id){ alert('Укажи id (англ.)'); return; }
-  const item = {id, label: label||id, type, width: width||100};
-  if(type==='select'){ item.options = optsStr? optsStr.split(',').map(s=>s.trim()).filter(Boolean):[]; }
-  app.formFields.push(item); save(); renderFieldsList();
-});
-
-/* ==========
-   ИМПОРТ / ЭКСПОРТ / СБРОС
-========== */
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(app,null,2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download='layout-config.json'; a.click();
-  URL.revokeObjectURL(url);
-});
-document.getElementById('importInput').addEventListener('change', async (e)=>{
-  const f = e.target.files?.[0]; if(!f) return;
+// экспорт/импорт/сброс
+document.getElementById("exportBtn").onclick=()=>{
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download="admin-config.json"; a.click(); URL.revokeObjectURL(url);
+};
+document.getElementById("importInput").addEventListener("change", async e=>{
+  const f=e.target.files?.[0]; if(!f) return;
   const txt = await f.text();
-  try{
-    const obj = JSON.parse(txt);
-    if(obj.filtersConfig) app.filtersConfig = obj.filtersConfig;
-    if(obj.formFields) app.formFields = obj.formFields;
-    if(obj.demoCards) app.demoCards = obj.demoCards;
-    save(); renderAll();
-    // переключим на предпросмотр, чтобы сразу увидеть
-    document.querySelector('.tab[data-tab="preview"]').click();
-  }catch(err){
-    alert('Ошибка JSON: '+err.message);
-  }
+  try{ data = JSON.parse(txt); save(); renderAll(); }
+  catch(err){ alert("Ошибка JSON: "+err.message); }
 });
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(confirm('Сбросить к дефолту?')) reset();
-});
+document.getElementById("resetBtn").onclick=reset;
 
-/* ==========
-   ПРЕДПРОСМОТР
-========== */
-const filtersPreview = document.getElementById('filtersPreview');
-const formPreview = document.getElementById('formPreview');
-const cardsPreview = document.getElementById('cardsPreview');
-document.getElementById('reloadPreview').addEventListener('click', renderPreview);
-
-function renderPreview(){
-  // Фильтры
-  filtersPreview.innerHTML = '';
-  for(const f of app.filtersConfig){
-    const el = document.createElement('div');
-    el.className = `field ${widthClass(f.width||100)}`;
-    el.innerHTML = `
-      <div class="width-badge" title="Клик — смена ширины">${f.width||100}%</div>
-      <div class="lbl">${f.label||f.field}</div>
-      ${f.type==='range' ? `
-        <div class="two">
-          <input type="number" placeholder="от ${f.min??''}" />
-          <input type="number" placeholder="до ${f.max??''}" />
-        </div>
-      `: f.type==='select' ? `
-        <select>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>
-      `: f.type==='checkbox' ? `
-        <div class="row" style="flex-wrap:wrap;gap:6px">${(f.options||[]).map(o=>`<label style="display:flex;gap:6px;align-items:center;background:#0a0e15;border:1px solid #233049;padding:4px 8px;border-radius:8px"><input type="checkbox"> ${o}</label>`).join('')}</div>
-      `: `
-        <input type="text" placeholder="введите значение" />
-      `}
-    `;
-    const badge = el.querySelector('.width-badge');
-    badge.addEventListener('click', ()=>{
-      f.width = cycleWidth(f.width||100);
-      save(); renderPreview(); renderFiltersList();
-    });
-    filtersPreview.appendChild(el);
-  }
-
-  // Форма
-  formPreview.innerHTML = '';
-  for(const ff of app.formFields){
-    const el = document.createElement('div');
-    el.className = `field ${widthClass(ff.width||100)}`;
-    el.innerHTML = `
-      <div class="width-badge" title="Клик — смена ширины">${ff.width||100}%</div>
-      <div class="lbl">${ff.label||ff.id}</div>
-      ${ff.type==='textarea' ? `<textarea rows="3" placeholder="Введите ${ff.label||ff.id}"></textarea>` :
-        ff.type==='select' ? `<select>${(ff.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>` :
-        `<input type="${ff.type==='number'?'number':'text'}" placeholder="Введите ${ff.label||ff.id}"/>`
-      }
-    `;
-    el.querySelector('.width-badge').addEventListener('click', ()=>{
-      ff.width = cycleWidth(ff.width||100);
-      save(); renderPreview(); renderFieldsList();
-    });
-    formPreview.appendChild(el);
-  }
-
-  // Карточки
-  cardsPreview.innerHTML = '';
-  for(const c of (app.demoCards||[])){
-    const el = document.createElement('div');
-    el.className='card';
-    el.innerHTML = `
-      <div class="ph"></div>
-      <div class="cnt">
-        <div class="row" style="justify-content:space-between">
-          <strong>${c.title}</strong>
-          <span class="pill">${c.tag||'Объявление'}</span>
-        </div>
-        <div class="row"><span>${c.price||''}</span></div>
-        <div class="row"><button class="btn secondary">Открыть</button></div>
+// ======== ФИЛЬТРЫ / ПОЛЯ =========
+function renderFilters(){
+  const list = document.getElementById("filtersList");
+  list.innerHTML="";
+  data.filtersConfig.forEach((f,i)=>{
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <input value="${f.label||""}" placeholder="Название"/>
+      <input value="${f.field||""}" placeholder="field"/>
+      <div class="row" style="justify-content:flex-end">
+        <select>
+          <option value="select" ${f.type==="select"?"selected":""}>select</option>
+          <option value="range"  ${f.type==="range" ?"selected":""}>range</option>
+          <option value="text"   ${f.type==="text"  ?"selected":""}>text</option>
+        </select>
+        <button class="del">✖</button>
       </div>
     `;
-    cardsPreview.appendChild(el);
-  }
+    const [inLabel,inField] = row.querySelectorAll("input");
+    const sel = row.querySelector("select");
+    inLabel.oninput = e=>{ f.label=e.target.value; save(); };
+    inField.oninput = e=>{ f.field=e.target.value; save(); };
+    sel.oninput     = e=>{ f.type=e.target.value; save(); };
+    row.querySelector(".del").onclick = ()=>{ data.filtersConfig.splice(i,1); save(); renderFilters(); renderPreview(); };
+    list.appendChild(row);
+  });
+}
+function renderFields(){
+  const list = document.getElementById("fieldsList");
+  list.innerHTML="";
+  data.formFields.forEach((f,i)=>{
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `
+      <input value="${f.label||""}" placeholder="Метка"/>
+      <input value="${f.id||""}" placeholder="id"/>
+      <div class="row" style="justify-content:flex-end">
+        <select>
+          <option value="text" ${f.type==="text"?"selected":""}>text</option>
+          <option value="number" ${f.type==="number"?"selected":""}>number</option>
+          <option value="select" ${f.type==="select"?"selected":""}>select</option>
+          <option value="textarea" ${f.type==="textarea"?"selected":""}>textarea</option>
+        </select>
+        <button class="del">✖</button>
+      </div>
+    `;
+    const [inLabel,inId] = row.querySelectorAll("input");
+    const sel = row.querySelector("select");
+    inLabel.oninput = e=>{ f.label=e.target.value; save(); };
+    inId.oninput    = e=>{ f.id=e.target.value; save(); };
+    sel.oninput     = e=>{ f.type=e.target.value; save(); };
+    row.querySelector(".del").onclick = ()=>{ data.formFields.splice(i,1); save(); renderFields(); renderPreview(); };
+    list.appendChild(row);
+  });
+}
+document.getElementById("addFilterBtn").onclick=()=>{
+  data.filtersConfig.push({label:"Новый фильтр", field:"field", type:"select"});
+  save(); renderFilters(); renderPreview();
+};
+document.getElementById("addFieldBtn").onclick=()=>{
+  data.formFields.push({label:"Новое поле", id:"id", type:"text"});
+  save(); renderFields(); renderPreview();
+};
+
+// ======== МАКЕТ: DRAG + RESIZE НА СЕТКЕ 12 ========
+const canvas = document.getElementById("canvas");
+const gridBg = canvas.querySelector(".grid-bg");
+for(let i=0;i<12;i++){ const c=document.createElement("div"); gridBg.appendChild(c); }
+
+let drag = null; // {block, startX, startY, startGridX, startGridY, offsetX, offsetY}
+let resize = null; // {block, startX, startY, startW, startH}
+const COLS = 12;
+
+function addBlock(type){
+  const id = Date.now();
+  data.layout.push({id,type,x:1,y:1,w:6,h:2});
+  save(); renderLayout(); renderPreview();
+}
+function delBlock(id){
+  data.layout = data.layout.filter(b=>b.id!==id);
+  save(); renderLayout(); renderPreview();
 }
 
-/* ==========
-   РЕНДЕР ВСЁ
-========== */
+function renderLayout(){
+  canvas.querySelectorAll(".block").forEach(el=>el.remove());
+  data.layout.forEach(b=>{
+    const el = document.createElement("div");
+    el.className="block";
+    el.style.gridColumn = `${b.x}/span ${b.w}`;
+    el.style.gridRow    = `${b.y}/span ${b.h}`;
+    el.dataset.id = b.id;
+    el.innerHTML = `
+      <div class="hint">${b.x},${b.y} · ${b.w}×${b.h}</div>
+      <div class="label">${typeName(b.type)}</div>
+      <div class="resize"></div>
+      <div class="toolbar"><button class="btn ghost" data-del>✖</button></div>
+    `;
+    // drag start (по центру блока)
+    el.addEventListener("mousedown", (e)=>{
+      const isResizer = e.target.classList.contains("resize") || e.target.closest(".toolbar");
+      if(isResizer) return; // не стартуем драг, если жмём на резайзер/кнопки
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const cellW = (rect.width - 12*0 + 0) / COLS; // точный рассчёт ширины колонки
+      const cellH = 80 + 6; // "высота строки + gap" (грубый снап по y)
+      drag = {
+        block: b,
+        startX: e.clientX,
+        startY: e.clientY,
+        startGridX: b.x,
+        startGridY: b.y,
+        cellW, cellH
+      };
+      el.classList.add("drag");
+      window.addEventListener("mousemove", onDragMove);
+      window.addEventListener("mouseup", onDragEnd);
+    });
+    // resize
+    el.querySelector(".resize").addEventListener("mousedown", (e)=>{
+      e.stopPropagation();
+      e.preventDefault();
+      resize = {
+        block:b,
+        startX:e.clientX,
+        startY:e.clientY,
+        startW:b.w,
+        startH:b.h
+      };
+      window.addEventListener("mousemove", onResizeMove);
+      window.addEventListener("mouseup", onResizeEnd);
+    });
+    // delete
+    el.querySelector("[data-del]").onclick=()=>delBlock(b.id);
+    canvas.appendChild(el);
+  });
+}
+
+function onDragMove(e){
+  if(!drag) return;
+  const {block, startX, startY, startGridX, startGridY, cellW, cellH} = drag;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+
+  // пересчёт в клетки
+  let newX = startGridX + Math.round(dx / cellW);
+  let newY = startGridY + Math.round(dy / (cellH)); // шаг по строкам
+
+  // границы
+  newX = Math.max(1, Math.min(COLS - block.w + 1, newX));
+  newY = Math.max(1, newY);
+
+  block.x = newX;
+  block.y = newY;
+  save();
+  renderLayout(); // перерисовываем, чтобы блок прыгал по сетке
+}
+function onDragEnd(){
+  const active = canvas.querySelector(".block.drag");
+  if(active) active.classList.remove("drag");
+  window.removeEventListener("mousemove", onDragMove);
+  window.removeEventListener("mouseup", onDragEnd);
+  drag = null;
+}
+
+function onResizeMove(e){
+  if(!resize) return;
+  const {block, startX, startY, startW, startH} = resize;
+  const rect = canvas.getBoundingClientRect();
+  const cellW = rect.width / COLS;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+
+  let w = startW + Math.round(dx / cellW);
+  let h = startH + Math.round(dy / 80); // 80px — базовая высота строки
+
+  w = Math.max(1, Math.min(COLS - block.x + 1, w));
+  h = Math.max(1, h);
+
+  block.w = w;
+  block.h = h;
+  save();
+  renderLayout();
+}
+function onResizeEnd(){
+  window.removeEventListener("mousemove", onResizeMove);
+  window.removeEventListener("mouseup", onResizeEnd);
+  resize = null;
+}
+
+function typeName(t){
+  return ({
+    map:"🗺️ Карта",
+    filters:"🔎 Фильтры",
+    form:"📝 Форма",
+    cards:"📋 Список",
+    table:"📊 Таблица",
+    banner:"📰 Реклама",
+    gallery:"🖼️ Галерея"
+  })[t] || t;
+}
+
+// ======== ПРЕДПРОСМОТР =========
+function renderPreview(){
+  const wrap = document.getElementById("preview");
+  wrap.innerHTML = "";
+  // рисуем в порядке по Y, потом по X (чтобы визуально было ближе к макету)
+  const sorted = [...data.layout].sort((a,b)=> a.y===b.y ? a.x-b.x : a.y-b.y);
+
+  sorted.forEach(b=>{
+    const pv = document.createElement("div");
+    pv.className = "preview-surface";
+    if(b.type==="map"){
+      pv.innerHTML = "<div style='background:#223;height:240px;border-radius:8px;display:flex;align-items:center;justify-content:center'>🗺️ Карта</div>";
+    }else if(b.type==="filters"){
+      pv.innerHTML = "<h4 style='margin:0 0 6px'>Фильтры</h4>";
+      (data.filtersConfig||[]).forEach(f=>{
+        pv.innerHTML += `<div class="field"><label>${f.label||f.field}</label>${
+          f.type==="select" ? `<select><option>—</option></select>` :
+          f.type==="range"  ? `<div class="row"><input type="number" placeholder="от"><input type="number" placeholder="до"></div>` :
+                              `<input type="text" placeholder="${f.field}">`
+        }</div>`;
+      });
+    }else if(b.type==="form"){
+      pv.innerHTML = "<h4 style='margin:0 0 6px'>Форма</h4>";
+      (data.formFields||[]).forEach(ff=>{
+        pv.innerHTML += `<div class="field"><label>${ff.label||ff.id}</label>${
+          ff.type==="textarea" ? `<textarea rows="3" placeholder="${ff.id}"></textarea>` :
+          ff.type==="select"   ? `<select><option>—</option></select>` :
+          ff.type==="number"   ? `<input type="number" placeholder="${ff.id}">` :
+                                 `<input type="text" placeholder="${ff.id}">`
+        }</div>`;
+      });
+    }else if(b.type==="cards"){
+      pv.innerHTML = `<h4 style='margin:0 0 6px'>Список</h4>
+        <div class="card">Объявление 1 • 78 000 у.е.</div>
+        <div class="card">Объявление 2 • 2 500 000 сум/мес</div>`;
+    }else if(b.type==="table"){
+      pv.innerHTML = "<h4 style='margin:0 0 6px'>Таблица</h4><table border=1 width=100% style='border-collapse:collapse'><tr><th>ID</th><th>Заголовок</th><th>Цена</th></tr><tr><td>1</td><td>Квартира</td><td>78 000</td></tr></table>";
+    }else if(b.type==="banner"){
+      pv.innerHTML = "<div class='banner'>Рекламный блок</div>";
+    }else if(b.type==="gallery"){
+      pv.innerHTML = "<div class='gallery'><div></div><div></div><div></div></div>";
+    }
+    wrap.appendChild(pv);
+  });
+}
+
+// ======== РЕНДЕР ВСЁ =========
 function renderAll(){
-  renderFiltersList();
-  renderFieldsList();
-  if(document.querySelector('.tab.active')?.dataset.tab==='preview'){
-    renderPreview();
-  }
+  renderFilters();
+  renderFields();
+  renderLayout();
+  renderPreview();
 }
-
-/* init */
 renderAll();
 </script>
 </body>
