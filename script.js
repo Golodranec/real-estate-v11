@@ -1,5 +1,5 @@
-// ======= v13.7 =======
-console.log("✅ script.js v13.7 loaded");
+// ======= v13.7.1 =======
+console.log("✅ script.js v13.7.1 loaded");
 
 // хранилище
 const LS_OBJECTS = "objects";
@@ -10,14 +10,14 @@ let objects   = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
 let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 
 // всегда свежие данные из админки
-const getTreeNodes  = () => JSON.parse(localStorage.getItem("treeNodes")   || "[]");
-const getExtraParams= () => JSON.parse(localStorage.getItem("extraParams") || "[]");
+const getTreeNodes   = () => JSON.parse(localStorage.getItem("treeNodes")   || "[]");
+const getExtraParams = () => JSON.parse(localStorage.getItem("extraParams") || "[]");
 
 // утилиты
 const $ = id => document.getElementById(id);
-const nameById = id => (getTreeNodes().find(n=>n.id===id)?.name)||"";
 const childrenOf = id => getTreeNodes().filter(n=>n.parent===id);
 const typed = t => getTreeNodes().filter(n=>n.type===t);
+const nameById = id => (getTreeNodes().find(n=>n.id===id)?.name)||"";
 function setOptions(sel, items, placeholder){
   const prev = sel.value;
   sel.innerHTML = `<option value="">${placeholder}</option>`;
@@ -30,7 +30,7 @@ function setOptions(sel, items, placeholder){
 }
 
 // карта
-const map = L.map("map").setView([41.3111, 69.2797], 12);
+const map = L.map("map").setView([41.3111,69.2797],12);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
 const cluster = L.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:45});
 map.addLayer(cluster);
@@ -67,7 +67,7 @@ function initCascadeFilters(){
     const id=cityFilter.value?+cityFilter.value:null;
     setOptions(districtFilter, id?childrenOf(id).filter(n=>n.type==="Район"):[], "Район");
     setOptions(streetFilter, [], "Массив / улица");
-    buildParamsFilters(); renderAll();
+    renderAll();
   };
   districtFilter.onchange=()=>{
     const id=districtFilter.value?+districtFilter.value:null;
@@ -75,14 +75,14 @@ function initCascadeFilters(){
     renderAll();
   };
   streetFilter.onchange=renderAll;
-  categoryFilter.onchange=()=>{ buildParamsFilters(); renderAll(); };
+  categoryFilter.onchange=()=>{ renderAll(); };
   [statusFilter,houseTypeFilter,priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,yearMin,yearMax,sortSelect,onlyFav]
     .forEach(el=> el && (el.onchange=renderAll));
   resetFilters.onclick=()=>{
     [cityFilter,districtFilter,streetFilter,categoryFilter,statusFilter,houseTypeFilter,sortSelect].forEach(s=>s.value="");
     [priceMin,priceMax,roomsMin,roomsMax,floorMin,floorMax,floorsMin,floorsMax,areaMin,areaMax,yearMin,yearMax].forEach(i=>i.value="");
     onlyFav.checked=false;
-    buildParamsFilters(); renderAll();
+    renderAll();
   };
 }
 
@@ -157,20 +157,16 @@ function updateAdminSyncInfo(){
   }
 }
 
-// фильтрация и рендер (заглушка — под свои данные)
-function applyFilters(list){ return list; }
+// рендер
 function renderAll(){
-  // здесь должен быть твой рендер списка/маркеров; оставляю пустым, чтобы не ломать текущую логику
-  // пример: const filtered = applyFilters(objects);  затем обновить markers и resultsList
+  initCascadeFilters();
+  initCascadeForm();
+  buildParamsFilters();
   updateAdminSyncInfo();
 }
 
 // запуск
 function init(){
-  initCascadeFilters();
-  initCascadeForm();
-  buildParamsFilters();
-  updateAdminSyncInfo();
   renderAll();
 }
 init();
