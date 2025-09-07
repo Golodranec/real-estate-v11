@@ -1,57 +1,201 @@
-/* ======= ChatPatch v13.9 ======= */
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0}
-h1,h2,h3{margin:0 0 12px;font-weight:600}
-h1{font-size:24px}h2{font-size:20px}h3{font-size:18px}
-a{color:#4da3ff;text-decoration:none}a:hover{text-decoration:underline}
-
-.topbar{display:flex;align-items:center;justify-content:space-between;background:#161a22;padding:12px 20px;border-bottom:1px solid #242938}
-.version{font-size:13px;opacity:.7}.admin-link{font-size:13px}
-
-.card{background:#161a22;border:1px solid #242938;border-radius:12px;padding:16px;margin:16px}
-
-.filters{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(220px,1fr));
-  gap:14px 18px;
-  align-items:end;
+/* ====== Общий стиль ====== */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #0f1115;
+  color: #e8eaf0;
+  margin: 0;
+  padding: 0;
 }
-@media (max-width:1100px){.filters{grid-template-columns:repeat(2, minmax(220px,1fr))}}
-@media (max-width:600px){.filters{grid-template-columns:1fr}}
-
-.filters > *{min-width:0}
-.range{display:flex;gap:8px}
-.range input{flex:1}
-
-input,select,button,textarea{
-  padding:9px 11px;border-radius:8px;border:1px solid #242938;background:#0d1016;color:#e8eaf0;font-size:14px
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
 }
-button{cursor:pointer}
-.btn{background:#4da3ff;border-color:#4da3ff;color:#001428;font-weight:600}
-.btn.ghost{background:transparent;color:#4da3ff}
-.btn.danger{background:#ff6b6b;border-color:#ff6b6b;color:#fff}
+h1, h2, h3 {
+  margin: 0 0 10px 0;
+}
+a {
+  color: #4da3ff;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+.version {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-bottom: 10px;
+}
+.admin-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
 
-.only-fav{display:flex;align-items:center;gap:6px;font-size:14px}
-.hint{font-size:13px;margin-top:2px;opacity:.9}
-.badge{display:inline-block;padding:3px 8px;border-radius:8px;font-size:12px;background:#242938}
+/* ====== Карточки ====== */
+.card {
+  background: #161a22;
+  border: 1px solid #242938;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.muted {
+  opacity: 0.7;
+  font-size: 14px;
+}
 
-#map{height:420px;border-radius:12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+/* ====== Форма ====== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+input, select, button {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #242938;
+  background: #0d1016;
+  color: #e8eaf0;
+}
+button {
+  cursor: pointer;
+  background: #4da3ff;
+  border-color: #4da3ff;
+  color: #001428;
+}
+button:hover {
+  background: #6bb4ff;
+}
+button:disabled {
+  background: #333;
+  cursor: not-allowed;
+}
+#coordsBadge {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #242938;
+}
 
-.item{background:#0d1016;border:1px solid #242938;border-radius:12px;padding:12px}
-.item h3{margin:0 0 8px;font-size:16px}
-.item .meta{font-size:13px;opacity:.8}
-.item .price{font-weight:700;margin:6px 0}
+/* ====== Фильтры ====== */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 10px;
+}
+.filters select, .filters button {
+  width: 100%;
+}
+.hint {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
 
-.form-row{display:flex;gap:8px;margin-bottom:10px}
+/* ====== Параметры ====== */
+.params-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.param-group {
+  border: 1px solid #242938;
+  border-radius: 8px;
+  padding: 8px;
+}
+.param-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+.param-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.param-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #0d1016;
+  border: 1px solid #242938;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+.param-chip input {
+  margin: 0;
+}
 
-.preview{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.preview img{width:80px;height:60px;object-fit:cover;border-radius:6px}
+/* ====== Результаты ====== */
+#resultsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+  gap: 14px;
+}
+.item {
+  background: #0d1016;
+  border: 1px solid #242938;
+  border-radius: 10px;
+  padding: 12px;
+}
+.item h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.price {
+  font-size: 16px;
+  color: #4da3ff;
+  margin-bottom: 6px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  background: #242938;
+  border-radius: 6px;
+  margin-right: 4px;
+}
+.meta {
+  font-size: 13px;
+  margin-top: 2px;
+}
 
-.params-box{margin:12px 0;display:grid;gap:10px}
-.param-group{background:#0d1016;border:1px solid #242938;border-radius:8px;padding:8px}
-.param-title{font-size:14px;font-weight:600;margin-bottom:6px}
-.param-values{display:flex;flex-wrap:wrap;gap:6px}
-.param-chip{background:#161a22;border:1px solid #242938;border-radius:6px;padding:4px 8px;display:flex;align-items:center;gap:4px;font-size:13px}
+/* ====== Превью фото ====== */
+.preview-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.preview-box img {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #242938;
+}
 
-.form-actions{display:flex;gap:10px;margin-top:10px}
-.footer{text-align:center;padding:16px;font-size:13px;opacity:.7}
+/* ====== Дерево (в админке) ====== */
+.tree {
+  list-style: none;
+  padding-left: 20px;
+}
+.tree li {
+  margin: 4px 0;
+}
+.node {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.node-type {
+  opacity: 0.7;
+  font-size: 12px;
+}
