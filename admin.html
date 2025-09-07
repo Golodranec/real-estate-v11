@@ -34,7 +34,6 @@
   .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
   .block.drag{opacity:.7;outline:1px dashed #8fb2ff}
   .resize{position:absolute;right:0;bottom:0;width:12px;height:12px;background:var(--accent);cursor:se-resize;border-top-left-radius:3px;border-bottom-right-radius:9px}
-  .del{position:absolute;top:4px;right:4px;background:#ff4d4d;border:none;color:#fff;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:18px;font-size:12px}
   /* предпросмотр */
   .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:80px;gap:6px;background:#0b0d12;border:1px solid #2a3140;padding:6px;border-radius:12px}
   .preview-block{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:10px;overflow:auto}
@@ -46,9 +45,6 @@
   .card{width:min(1000px,96vw);max-height:90vh;overflow:auto;background:#0b0f17;border:1px solid #263042;border-radius:12px;padding:14px}
   textarea{width:100%;min-height:220px;padding:10px;border-radius:8px;border:1px solid #333;background:#0f1522;color:#fff;resize:vertical}
   .hint{color:#9fb3d6;font-size:12px;margin-top:6px}
-  /* уведомления */
-  .notify{position:fixed;top:20px;right:20px;background:#222;color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.3s;z-index:1000}
-  .notify.show{opacity:1}
 </style>
 </head>
 <body>
@@ -65,7 +61,27 @@
 </header>
 
 <main>
-  <!-- здесь остаётся весь твой код фильтров и полей -->
+  <!-- ФИЛЬТРЫ -->
+  <section class="panel" id="filtersPanel">
+    <h3>Ряды фильтров</h3>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn" onclick="addGroup()">+ Ряд</button>
+      <button class="btn" onclick="addFilter()">+ Фильтр</button>
+    </div>
+    <div id="groupsWrap"></div>
+    <hr>
+    <h3>Все фильтры (таблица)</h3>
+    <div id="filtersTable"></div>
+  </section>
+
+  <!-- ПОЛЯ -->
+  <section class="panel" id="fieldsPanel" style="display:none">
+    <h3>Поля формы</h3>
+    <div id="fieldsList"></div>
+    <button class="btn" onclick="addField()">Добавить поле</button>
+  </section>
+
+  <!-- МАКЕТ -->
   <section class="panel" id="layoutPanel" style="display:none">
     <h3>Редактор макета</h3>
     <div class="row" style="margin-bottom:8px">
@@ -78,49 +94,491 @@
     </div>
     <div class="canvas" id="canvas"></div>
   </section>
+
+  <!-- ПРЕДПРОСМОТР -->
+  <section class="panel" id="previewPanel" style="display:none">
+    <h3>Предпросмотр</h3>
+    <div class="preview-grid" id="preview"></div>
+  </section>
 </main>
 
-<div class="modal" id="modal"><div class="card"><strong id="modalTitle">Редактор</strong><div id="modalBody"></div></div></div>
-<div id="notify" class="notify"></div>
+<!-- МОДАЛКИ -->
+<div class="modal" id="modal">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong id="modalTitle">Редактор</strong>
+      <button class="btn ghost" onclick="closeModal()">Закрыть</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
 
 <script>
-/* ==== уведомления ==== */
-function notify(msg){
-  const box=document.getElementById("notify");
-  box.textContent=msg;
-  box.classList.add("show");
-  setTimeout(()=>box.classList.remove("show"),2000);
+/* ===== данные ===== */
+const KEY="admin_groups_cascade_v1";
+const COLS=12, ROW=80, GAP=6;
+let data = load() || demoData();
+let previewState = {}; // выбранные значения в предпросмотре
+
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||"")}catch(e){return null}}
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function resetAll(){localStorage.removeItem(KEY);location.reload()}
+
+/* демо */
+function demoData(){
+  return {
+    groups:[
+      {id:1, name:"Верхняя линия", filters:["country","city","district","category","subcategory","type"]},
+      {id:2, name:"Нижняя линия", filters:["price","rooms"]}
+    ],
+    filters:[
+      {label:"Страна", field:"country", type:"select", options:["Узбекистан"], rules:[]},
+      {label:"Город", field:"city", type:"select", options:["Ташкент","Самарканд"], rules:[
+        // примеры: country > Узбекистан = [Ташкент, Самарканд]
+        {path:["Страна","Узбекистан"], options:["Ташкент","Самарканд"]}
+      ]},
+      {label:"Район", field:"district", type:"select", options:[], rules:[
+        {path:["Город","Ташкент"], options:["Юнусабад","Чиланзар"]},
+        {path:["Город","Самарканд"], options:["Регистан","Афросиёб"]}
+      ]},
+      {label:"Категория", field:"category", type:"select", options:["Квартира","Коммерция"], rules:[]},
+      {label:"Подкатегория", field:"subcategory", type:"select", options:[], rules:[
+        {path:["Категория","Квартира"], options:["Продажа","Аренда","Обмен"]},
+        {path:["Категория","Коммерция"], options:["Продажа","Аренда"]}
+      ]},
+      {label:"Тип недвижимости", field:"type", type:"select", options:[], rules:[
+        {path:["Категория","Квартира","Подкатегория","Продажа"], options:["Новостройка","Вторичка"]},
+        {path:["Категория","Квартира","Подкатегория","Аренда"], options:["Долгосрочная","Краткосрочная"]},
+        {path:["Категория","Коммерция","Подкатегория","Продажа"], options:["Офис","Склад"]}
+      ]},
+      {label:"Цена", field:"price", type:"range"},
+      {label:"Комнаты", field:"rooms", type:"select", options:["1","2","3","4","5+"]}
+    ],
+    fields:[
+      {label:"Заголовок", id:"title", type:"text"},
+      {label:"Описание", id:"desc", type:"textarea"},
+      {label:"Телефон", id:"phone", type:"text"}
+    ],
+    layout:[
+      {id:1,type:"filters",x:1,y:1,w:12,h:2},
+      {id:2,type:"map",x:1,y:3,w:7,h:6},
+      {id:3,type:"cards",x:8,y:3,w:5,h:6}
+    ]
+  }
 }
 
-/* ==== экспорт/импорт ==== */
+/* ===== вкладки ===== */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    const id=tab.dataset.tab;
+    document.getElementById("filtersPanel").style.display=id==="filters"?"block":"none";
+    document.getElementById("fieldsPanel").style.display=id==="fields"?"block":"none";
+    document.getElementById("layoutPanel").style.display=id==="layout"?"block":"none";
+    document.getElementById("previewPanel").style.display=id==="preview"?"block":"none";
+    renderAll();
+  }
+});
+
+/* ===== экспорт/импорт ===== */
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a"); a.href=url; a.download="admin-config.json"; a.click();
-  URL.revokeObjectURL(url);
-  notify("✅ Файл сохранён");
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download="admin-config.json"; a.click(); URL.revokeObjectURL(url);
 };
 document.getElementById("importInput").addEventListener("change",async e=>{
   const f=e.target.files?.[0]; if(!f) return;
-  const txt=await f.text(); data=JSON.parse(txt); save();
-  notify("✅ Данные загружены");
-  setTimeout(()=>location.reload(),800);
+  const txt=await f.text(); data=JSON.parse(txt); save(); renderAll();
 });
+document.getElementById("resetBtn").onclick=resetAll;
 
-/* ==== макет ==== */
+/* ===== утилки ===== */
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]))}
+function byField(field){return data.filters.find(f=>f.field===field)}
+function ensureGroupsContainExistingFilters(){
+  // добавить пропавшие фильтры в первый ряд
+  const all = new Set(data.filters.map(f=>f.field));
+  data.groups.forEach(g=>g.filters.forEach(x=>all.delete(x)));
+  const missing = [...all];
+  if(missing.length){
+    if(!data.groups.length) data.groups.push({id:Date.now(),name:"Линия",filters:[]});
+    data.groups[0].filters.push(...missing);
+  }
+}
+
+/* ===== РЯДЫ И ФИЛЬТРЫ (UI) ===== */
+function addGroup(){ data.groups.push({id:Date.now(),name:"Новый ряд",filters:[]}); save(); renderGroups(); }
+function addFilter(){
+  const f={label:"Фильтр",field:"field_"+Date.now(),type:"select",options:[],rules:[]};
+  data.filters.push(f);
+  if(!data.groups.length) data.groups.push({id:Date.now(),name:"Линия",filters:[]});
+  data.groups[0].filters.push(f.field);
+  save(); renderGroups(); renderFiltersTable(); renderPreview();
+}
+
+function renderGroups(){
+  ensureGroupsContainExistingFilters();
+  const wrap=document.getElementById("groupsWrap"); wrap.innerHTML="";
+  data.groups.forEach((g,gi)=>{
+    const box=document.createElement("div"); box.className="group";
+    box.innerHTML=`
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <h4 contenteditable oninput="data.groups[${gi}].name=this.innerText;save()">${escapeHtml(g.name)}</h4>
+        </div>
+        <div class="row">
+          <button class="btn ghost" onclick="deleteGroup(${gi})">Удалить ряд</button>
+        </div>
+      </div>
+      <div class="list" id="group_${g.id}" data-group="${g.id}"></div>
+    `;
+    wrap.appendChild(box);
+
+    const list = box.querySelector(".list");
+    // отрисуем фильтры этого ряда в виде «чипов»
+    g.filters.forEach(field=>{
+      const f=byField(field); if(!f) return;
+      const chip=document.createElement("div"); chip.className="filter-chip"; chip.dataset.field=f.field;
+      chip.innerHTML=`
+        <input class="grow" placeholder="Название" value="${escapeHtml(f.label||"")}" oninput="onFilterChange('${f.field}','label',this.value)">
+        <input placeholder="field" value="${escapeHtml(f.field)}" oninput="onFilterRenameField('${f.field}', this.value)">
+        <select onchange="onFilterChange('${f.field}','type',this.value)">
+          <option value="select" ${f.type==='select'?'selected':''}>select</option>
+          <option value="range" ${f.type==='range'?'selected':''}>range</option>
+          <option value="text" ${f.type==='text'?'selected':''}>text</option>
+          <option value="number" ${f.type==='number'?'selected':''}>number</option>
+        </select>
+        ${f.type==='select'?`
+          <button class="btn" onclick="openOptions('${f.field}')">Значения</button>
+          <button class="btn secondary" onclick="openRules('${f.field}')">Связи</button>
+        `:''}
+        <select onchange="moveFilterToGroup('${f.field}', this.value)">
+          ${data.groups.map(gr=>`<option value="${gr.id}" ${gr.id===g.id?'selected':''}>${escapeHtml(gr.name)}</option>`).join('')}
+        </select>
+        <button class="btn ghost" onclick="removeFilter('${f.field}')">✖</button>
+      `;
+      list.appendChild(chip);
+    });
+
+    // dnd внутри ряда
+    Sortable.create(list,{animation:150,group:{name:"filters_dnd",pull:true,put:true},onEnd:e=>{
+      const fromId=+e.from.dataset.group, toId=+e.to.dataset.group;
+      const from=data.groups.find(x=>x.id===fromId);
+      const to=data.groups.find(x=>x.id===toId);
+      const moved=from.filters.splice(e.oldIndex,1)[0];
+      to.filters.splice(e.newIndex,0,moved);
+      save(); renderGroups(); renderPreview();
+    }});
+  });
+}
+
+function deleteGroup(gi){
+  const id=data.groups[gi].id; const fields=data.groups[gi].filters;
+  // поля не теряем — перекинем в первый ряд
+  if(data.groups.length>1){
+    const dest=(gi===0?1:0);
+    data.groups[dest].filters.push(...fields);
+    data.groups.splice(gi,1);
+  }else{
+    // если ряд один — оставляем ряд, но чистим
+    data.groups[gi].filters=[];
+  }
+  save(); renderGroups(); renderPreview();
+}
+
+function onFilterChange(field,key,val){
+  const f=byField(field); if(!f) return;
+  f[key]=val; save(); renderGroups(); renderFiltersTable(); renderPreview();
+}
+function onFilterRenameField(oldField,newField){
+  if(!newField || oldField===newField) return;
+  // обновим имя поля и ссылки в группах
+  if(byField(newField)){ alert("Такой field уже есть"); return; }
+  const f=byField(oldField); f.field=newField;
+  data.groups.forEach(g=>g.filters=g.filters.map(x=>x===oldField?newField:x));
+  // также заменим в правилах путей метку, если совпадает с предыдущим label (необязательно)
+  save(); renderGroups(); renderFiltersTable(); renderPreview();
+}
+function moveFilterToGroup(field, groupId){
+  groupId=+groupId;
+  data.groups.forEach(g=>g.filters=g.filters.filter(x=>x!==field));
+  const target=data.groups.find(x=>x.id===groupId);
+  target.filters.push(field);
+  save(); renderGroups(); renderPreview();
+}
+function removeFilter(field){
+  // убрать из групп
+  data.groups.forEach(g=>g.filters=g.filters.filter(x=>x!==field));
+  // убрать сам фильтр
+  data.filters = data.filters.filter(f=>f.field!==field);
+  // убрать выбранные значения в предпросмотре
+  delete previewState[field];
+  save(); renderGroups(); renderFiltersTable(); renderPreview();
+}
+
+/* ===== таблица фильтров (ниже) ===== */
+function renderFiltersTable(){
+  const box=document.getElementById("filtersTable"); box.innerHTML="";
+  data.filters.forEach(f=>{
+    const row=document.createElement("div"); row.className="item";
+    row.innerHTML=`
+      <div class="grow"><b>${escapeHtml(f.label)}</b> <span style="opacity:.8">(${escapeHtml(f.field)})</span></div>
+      <div>тип: ${f.type}</div>
+      ${f.type==='select'?`<button class="btn" onclick="openOptions('${f.field}')">Значения</button>
+      <button class="btn secondary" onclick="openRules('${f.field}')">Связи</button>`:''}
+    `;
+    box.appendChild(row);
+  });
+}
+
+/* ===== значения и связи ===== */
+function openOptions(field){
+  const f=byField(field);
+  openModal(`Значения: ${f.label}`, `
+    <p>Введи варианты через запятую:</p>
+    <textarea id="optArea">${(f.options||[]).join(", ")}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="saveOptions('${field}')">Сохранить</button>
+    </div>
+  `);
+}
+function saveOptions(field){
+  const f=byField(field);
+  const val=document.getElementById("optArea").value;
+  f.options = val.split(",").map(s=>s.trim()).filter(Boolean);
+  save(); closeModal(); renderPreview();
+}
+
+/*
+  Бесконечные связи через правила:
+  Каждая строка формата:
+    Путь = значения
+  где Путь — цепочка «Метка1 > Значение1 > Метка2 > Значение2 > ...»
+  Примеры:
+    Категория > Квартира = Продажа, Аренда, Обмен
+    Категория > Квартира > Подкатегория > Продажа = Новостройка, Вторичка
+    Город > Ташкент = Юнусабад, Чиланзар
+*/
+function openRules(field){
+  const f=byField(field);
+  const lines=(f.rules||[]).map(r=>`${r.path.join(" > ")} = ${(r.options||[]).join(", ")}`).join("\n");
+  openModal(`Связи (бесконечные): ${f.label}`, `
+    <p>Одна строка — одно правило. Путь слева, варианты справа.</p>
+    <p class="hint">Примеры:<br>
+    Категория > Квартира = Продажа, Аренда, Обмен<br>
+    Категория > Квартира > Подкатегория > Продажа = Новостройка, Вторичка</p>
+    <textarea id="rulesArea" placeholder="Категория > Квартира = Продажа, Аренда\nКатегория > Квартира > Подкатегория > Продажа = Новостройка, Вторичка">${lines}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="saveRules('${field}')">Сохранить</button>
+    </div>
+  `);
+}
+function saveRules(field){
+  const f=byField(field);
+  const txt=document.getElementById("rulesArea").value;
+  f.rules=[];
+  txt.split("\n").forEach(line=>{
+    if(!line.trim()) return;
+    const parts=line.split("=");
+    if(parts.length<2) return;
+    const left=parts[0].trim();
+    const right=parts[1].trim();
+    const path=left.split(">").map(s=>s.trim()).filter(Boolean);
+    const options=right.split(",").map(s=>s.trim()).filter(Boolean);
+    if(path.length && options.length) f.rules.push({path, options});
+  });
+  save(); closeModal(); renderPreview();
+}
+
+/* ===== ПОЛЯ ===== */
+function addField(){
+  data.fields.push({label:"Поле",id:"id_"+Date.now(),type:"text"});
+  save(); renderFields(); renderPreview();
+}
+function renderFields(){
+  const list=document.getElementById("fieldsList"); list.innerHTML="";
+  data.fields.forEach((f,i)=>{
+    const row=document.createElement("div"); row.className="item";
+    row.innerHTML=`
+      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();renderPreview()">
+      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();renderPreview()">
+      <select onchange="data.fields[${i}].type=this.value;save();renderPreview()">
+        <option value="text" ${f.type==='text'?'selected':''}>text</option>
+        <option value="number" ${f.type==='number'?'selected':''}>number</option>
+        <option value="select" ${f.type==='select'?'selected':''}>select</option>
+        <option value="textarea" ${f.type==='textarea'?'selected':''}>textarea</option>
+      </select>
+      <button class="btn ghost" onclick="data.fields.splice(${i},1);save();renderFields();renderPreview()">✖</button>
+    `;
+    list.appendChild(row);
+  });
+  Sortable.create(list,{animation:150,onEnd:e=>{
+    const moved=data.fields.splice(e.oldIndex,1)[0];
+    data.fields.splice(e.newIndex,0,moved); save(); renderPreview();
+  }});
+}
+
+/* ===== МАКЕТ ===== */
+const canvas=document.getElementById("canvas"); let drag=null,size=null;
+function addBlock(type){
+  data.layout.push({id:Date.now(),type,x:1,y:1,w:4,h:2});
+  save(); renderLayout(); renderPreview();
+}
 function renderLayout(){
   canvas.innerHTML="";
   data.layout.forEach(b=>{
     const el=document.createElement("div"); el.className="block";
     el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
-    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div><button class="del" onclick="deleteBlock(${b.id})">✖</button>`;
+    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div>`;
+    // drag
+    el.addEventListener("mousedown",e=>{
+      if(e.target.classList.contains("resize"))return;
+      const rect=canvas.getBoundingClientRect(),cellW=rect.width/COLS,cellH=ROW+GAP;
+      drag={block:b,startX:e.clientX,startY:e.clientY,startGX:b.x,startGY:b.y,cellW,cellH,el};
+      el.classList.add("drag");
+      window.addEventListener("mousemove",onDragMove); window.addEventListener("mouseup",onDragEnd);
+    });
+    // resize
+    el.querySelector(".resize").addEventListener("mousedown",e=>{
+      e.stopPropagation(); const rect=canvas.getBoundingClientRect(),cellW=rect.width/COLS;
+      size={block:b,startX:e.clientX,startY:e.clientY,startW:b.w,startH:b.h,cellW};
+      window.addEventListener("mousemove",onResizeMove); window.addEventListener("mouseup",onResizeEnd);
+    });
     canvas.appendChild(el);
   });
 }
-function deleteBlock(id){
-  data.layout=data.layout.filter(b=>b.id!==id);
-  save(); renderLayout(); renderPreview();
+function onDragMove(e){ if(!drag) return;
+  let {block,startX,startY,startGX,startGY,cellW,cellH}=drag;
+  let nx=startGX+Math.round((e.clientX-startX)/cellW), ny=startGY+Math.round((e.clientY-startY)/cellH);
+  nx=Math.max(1,Math.min(COLS-block.w+1,nx)); ny=Math.max(1,ny); block.x=nx; block.y=ny; save(); renderLayout();
 }
+function onDragEnd(){ if(!drag)return; drag.el.classList.remove("drag"); drag=null;
+  window.removeEventListener("mousemove",onDragMove); window.removeEventListener("mouseup",onDragEnd); renderPreview();
+}
+function onResizeMove(e){ if(!size)return;
+  let {block,startX,startY,startW,startH,cellW}=size;
+  let w=startW+Math.round((e.clientX-startX)/cellW), h=startH+Math.round((e.clientY-startY)/ROW);
+  w=Math.max(1,Math.min(COLS-block.x+1,w)); h=Math.max(1,h); block.w=w; block.h=h; save(); renderLayout();
+}
+function onResizeEnd(){ size=null; window.removeEventListener("mousemove",onResizeMove); window.removeEventListener("mouseup",onResizeEnd); renderPreview(); }
+function labelByType(t){return({filters:"Фильтры",map:"Карта",form:"Форма",cards:"Список",table:"Таблица",banner:"Реклама"})[t]||t}
+
+/* ===== ПРЕДПРОСМОТР ===== */
+function renderPreview(){
+  const wrap=document.getElementById("preview"); wrap.innerHTML="";
+  data.layout.forEach(b=>{
+    const el=document.createElement("div"); el.className="preview-block";
+    el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
+    if(b.type==="filters"){ el.appendChild(renderPreviewFilters()); }
+    else if(b.type==="form"){ el.appendChild(renderPreviewForm()); }
+    else if(b.type==="map"){ el.innerHTML="🗺️ Карта"; }
+    else if(b.type==="cards"){ el.innerHTML="📋 Список объявлений"; }
+    else if(b.type==="table"){ el.innerHTML="📊 Таблица результатов"; }
+    else if(b.type==="banner"){ el.innerHTML="<div style='background:#223355;padding:20px;border-radius:8px'>Рекламный блок</div>"; }
+    wrap.appendChild(el);
+  });
+}
+function renderPreviewFilters(){
+  const wrap=document.createElement("div");
+  // идём по рядам сверху вниз
+  data.groups.forEach(g=>{
+    const row=document.createElement("div"); row.className="filters-row";
+    g.filters.forEach(field=>{
+      const f=byField(field); if(!f) return;
+      // для select — учитываем бесконечные правила
+      const box=document.createElement("div"); box.className="field";
+      box.innerHTML=`<label>${escapeHtml(f.label)}</label>`;
+      if(f.type==="select"){
+        const sel=document.createElement("select");
+        const opts = computeOptionsFor(f, previewState, data.filters);
+        sel.innerHTML = "<option value=''>—</option>" + opts.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${escapeHtml(o)}</option>`).join("");
+        sel.onchange=()=>{ previewState[f.field]=sel.value; /* сбросим зависимые */ resetDependents(f.field); renderPreview(); };
+        box.appendChild(sel);
+      }else if(f.type==="range"){
+        box.innerHTML+=`<div style="display:flex;gap:8px"><input placeholder="от"><input placeholder="до"></div>`;
+      }else if(f.type==="number"){
+        box.innerHTML+=`<input type="number" placeholder="${escapeHtml(f.field)}">`;
+      }else{
+        box.innerHTML+=`<input placeholder="${escapeHtml(f.field)}">`;
+      }
+      row.appendChild(box);
+    });
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+// вычисляем список значений для select с учётом бесконечных правил
+function computeOptionsFor(filter, state, allFilters){
+  // базовые значения
+  let base = filter.options || [];
+  // правила вида {path:[label,val,label,val,...], options:[...]}
+  // найдём самое глубокое совпадение по текущему состоянию
+  let best = null, bestDepth=-1;
+  (filter.rules||[]).forEach(r=>{
+    // пример path: ["Категория","Квартира","Подкатегория","Продажа"]
+    // проверим, что для каждой метки в path выбранное значение совпадает
+    let ok=true, depth=0;
+    for(let i=0;i<r.path.length;i+=2){
+      const label=r.path[i], val=r.path[i+1];
+      const parentFilter = allFilters.find(ff=>ff.label===label);
+      if(!parentFilter){ ok=false; break; }
+      const picked = state[parentFilter.field] || "";
+      if(picked!==val){ ok=false; break; }
+      depth++; // каждое совпавшее «label+value» считаем уровнем
+    }
+    if(ok && depth>bestDepth){ best=r; bestDepth=depth; }
+  });
+  if(best) return best.options||[];
+  return base;
+}
+// при смене значения сбрасываем все поля справа (зависимые по правилам)
+function resetDependents(changedField){
+  // если у правила в path фигурирует фильтр с label X, значит зависимый может потребовать сброса
+  const changed = byField(changedField); if(!changed) return;
+  // найдём все фильтры, чьи правила в path ссылаются на label changed.label, и дальше — транзитивно
+  const queue=[changed.label], visited=new Set();
+  while(queue.length){
+    const lab=queue.shift(); visited.add(lab);
+    data.filters.forEach(f=>{
+      const uses = (f.rules||[]).some(r=>{
+        for(let i=0;i<r.path.length;i+=2){ if(r.path[i]===lab) return true; }
+        return false;
+      });
+      if(uses){
+        // сброс выбранного
+        delete previewState[f.field];
+        if(!visited.has(f.label)) queue.push(f.label);
+      }
+    });
+  }
+}
+
+function renderPreviewForm(){
+  const c=document.createElement("div");
+  data.fields.forEach(ff=>{
+    const box=document.createElement("div"); box.className="field";
+    box.innerHTML=`<label>${escapeHtml(ff.label)}</label>`;
+    if(ff.type==="textarea") box.innerHTML+=`<textarea rows="3"></textarea>`;
+    else if(ff.type==="select") box.innerHTML+=`<select><option>—</option></select>`;
+    else if(ff.type==="number") box.innerHTML+=`<input type="number">`;
+    else box.innerHTML+=`<input type="text">`;
+    c.appendChild(box);
+  });
+  return c;
+}
+
+/* ===== модалка ===== */
+const modal=document.getElementById("modal"), modalTitle=document.getElementById("modalTitle"), modalBody=document.getElementById("modalBody");
+function openModal(title, html){ modalTitle.textContent=title; modalBody.innerHTML=html; modal.style.display="flex"; }
+function closeModal(){ modal.style.display="none"; }
+
+/* ===== рендер всего ===== */
+function renderAll(){ renderGroups(); renderFiltersTable(); renderFields(); renderLayout(); renderPreview(); }
+
+/* старт */
+renderAll();
 </script>
 </body>
 </html>
