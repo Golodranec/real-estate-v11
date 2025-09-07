@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Админка — v13.9.3</title>
+  <title>Админка — v13.9.4 (dev)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0;padding:20px}
@@ -24,10 +24,11 @@
     .save-badge{position:fixed;top:12px;right:12px;background:#4da3ff;color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s}
     .save-badge.show{opacity:1}
     a{color:#4da3ff}
+    .order-input{width:60px}
   </style>
 </head>
 <body>
-<h1>Админка: узлы и параметры <small style="opacity:.7">v13.9.3</small></h1>
+<h1>Админка: узлы и параметры <small style="opacity:.7">v13.9.4 (dev)</small></h1>
 <p><a href="index.html">← к каталогу</a></p>
 <div id="saveBadge" class="save-badge">Сохранено ✓</div>
 
@@ -105,11 +106,15 @@ function fillCategoriesSelect(){ const sel=$("paramCategory"); sel.innerHTML="";
 function renderTree(parent=null, container=$("tree")){
   if(parent===null) container.innerHTML="";
   const ul=document.createElement("ul"); ul.className="tree";
-  nodes.filter(n=>n.parent===parent).forEach(n=>{
+  nodes.filter(n=>n.parent===parent).sort((a,b)=>(a.order||0)-(b.order||0)).forEach(n=>{
     const li=document.createElement("li");
     const row=document.createElement("div"); row.className="node";
     const name=document.createElement("span"); name.textContent=n.name;
     const type=document.createElement("span"); type.className="node-type"; type.textContent=`(${n.type})`;
+
+    const order=document.createElement("input"); order.type="number"; order.className="order-input"; order.value=n.order||0;
+    order.onchange=()=>{ n.order=+order.value; saveNodes(); };
+
     const del=document.createElement("button"); del.className="danger"; del.textContent="Удалить";
     del.onclick=()=>{
       const delIds=new Set([n.id]); let changed=true;
@@ -118,7 +123,9 @@ function renderTree(parent=null, container=$("tree")){
       extraParams=extraParams.filter(p=>!delIds.has(p.categoryId));
       saveNodes(); saveParams();
     };
-    row.appendChild(name); row.appendChild(type); row.appendChild(del); li.appendChild(row);
+
+    row.appendChild(name); row.appendChild(type); row.appendChild(order); row.appendChild(del);
+    li.appendChild(row);
     renderTree(n.id, li); ul.appendChild(li);
   });
   container.appendChild(ul);
@@ -131,7 +138,7 @@ $("clearTypes").onclick=()=>{ if(confirm("Сбросить все типы?")){ 
 $("addNode").onclick=()=>{
   const name=$("nodeName").value.trim(); if(!name) return alert("Название?");
   const type=$("nodeType").value; const parent=$("nodeParent").value?+$("nodeParent").value:null;
-  nodes.push({id:Date.now(),name,type,parent}); $("nodeName").value=""; saveNodes();
+  nodes.push({id:Date.now(),name,type,parent,order:0}); $("nodeName").value=""; saveNodes();
 };
 $("clearTree").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
 
