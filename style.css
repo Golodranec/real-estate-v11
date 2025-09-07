@@ -1,4 +1,4 @@
-/* ======= ChatPatch v13.5.2 ======= */
+/* ======= ChatPatch v13.5.3 ======= */
 
 body {
   margin: 0;
@@ -44,6 +44,8 @@ a:hover { text-decoration: underline; }
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 10px;
 }
+.filters > * { margin-bottom: 6px; }
+.filters button { align-self: end; }
 
 .range { display: flex; gap: 6px; }
 .range input { flex: 1; }
