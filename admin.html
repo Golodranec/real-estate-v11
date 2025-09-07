@@ -1,740 +1,553 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<title>Админка — v14.1.0 (alpha2)</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Админка-конструктор + Предпросмотр</title>
 <style>
-  :root{--bg:#0f1115;--card:#161a22;--line:#242938;--text:#e8eaf0;--blue:#4da3ff;--ok:#4dff91;--mut:#9aa3b2}
+  :root{
+    --bg:#0f1115; --panel:#161a22; --muted:#1f2530; --text:#e6e6e6; --soft:#99a3b3; --accent:#5b9cff;
+    --ok:#36c275; --warn:#f0b429; --bad:#f05353;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
-  a{color:var(--blue);text-decoration:none}
-  header{display:flex;justify-content:space-between;align-items:center;background:var(--card);padding:14px 16px;border-bottom:1px solid var(--line)}
-  h1{margin:0;font-size:18px}
-  .wrap{max-width:1280px;margin:0 auto;padding:16px}
-  .grid{display:grid;grid-template-columns:1fr;gap:14px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-  .card h3{margin:0 0 10px;font-size:16px}
-  .muted{color:var(--mut);font-size:13px}
-  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  input,select,button,textarea{padding:8px;border-radius:8px;border:1px solid var(--line);background:#0d1016;color:var(--text)}
-  button{cursor:pointer}
-  .btn{background:var(--blue);border:1px solid var(--blue);color:#001428;font-weight:600}
-  .ghost{background:transparent;border:1px solid var(--blue);color:var(--blue)}
-  .danger{background:#ff6b6b;border:1px solid #ff6b6b;color:#fff}
-  .save-badge{position:fixed;top:12px;right:12px;background:var(--blue);color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:.25s;z-index:9}
-  .save-badge.show{opacity:1}
-
-  /* списки настроек */
-  .list{display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px}
-  .item{display:flex;gap:8px;align-items:center;background:#0d1016;border:1px solid var(--line);border-radius:8px;padding:6px}
-  .mini{font-size:12px;opacity:.75}
-
-  /* фильтры/сортировки/поля */
-  .filter-item{display:grid;grid-template-columns:120px 1fr 1fr 1fr 1fr 1fr 90px;gap:8px;align-items:center;padding:8px;background:#0d1016;border:1px solid var(--line);border-radius:10px}
-  .sort-item{display:grid;grid-template-columns:1fr 160px 120px 90px;gap:8px;align-items:center;padding:8px;background:#0d1016;border:1px solid var(--line);border-radius:10px}
-  .field-item{display:grid;grid-template-columns:30px 1fr 120px 90px 1fr 120px 1fr;gap:8px;align-items:center;padding:8px;background:#0d1016;border:1px solid var(--line);border-radius:10px}
-  .field-item.dragging{opacity:.5}
-
-  /* предпросмотр + сетка */
-  .preview{border:2px dashed var(--line);border-radius:12px;background:#1b1f29;padding:14px}
-  .layout{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:12px;min-height:100px}
-  .cell{position:relative;border:1px solid var(--line);border-radius:10px;background:#0d1016;padding:10px}
-  .cell h4{margin:0 0 8px}
-  .cell .handle{position:absolute;top:4px;right:4px;display:flex;gap:4px}
-  .drag-btn,.resize-btn,.height-btn{font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid #2a3247;background:#1e2536;color:#cfe3ff;cursor:grab}
-  .cell.dragging{outline:2px dashed var(--blue)}
-  .cell.resizing{outline:2px dashed #ffb84d}
-  .res-guide{position:absolute;top:-14px;right:0;font-size:11px;color:#ffb84d}
-  .fake-map{display:flex;align-items:center;justify-content:center;background:#2c3140;color:#c9cbd1;border-radius:8px}
-  .filters .row>input,.filters .row>select{background:#fff;color:#111;border:1px solid #ccc}
-  .form .row>input,.form .row>select,.form .row>textarea{background:#fff;color:#111;border:1px solid #ccc}
-  .results .card-r{display:flex;gap:10px;border:1px solid #d9d9d9;background:#fff;color:#111;border-radius:8px;padding:8px;margin:6px 0;align-items:center}
-  .results .pic{width:72px;height:54px;background:#e9e9e9;border-radius:6px}
-  .results .meta{font-size:13px;opacity:.85}
-  .ad{display:flex;align-items:center;justify-content:center;border:1px dashed #888;background:#111;padding:10px;color:#bbb;border-radius:8px}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  a{color:var(--accent);text-decoration:none}
+  .app{display:grid;grid-template-rows:auto 1fr;min-height:100dvh}
+  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--panel);border-bottom:1px solid #202634;position:sticky;top:0;z-index:2}
+  .tabs{display:flex;gap:8px}
+  .tab{padding:8px 12px;border-radius:10px;background:var(--muted);cursor:pointer;user-select:none}
+  .tab.active{background:var(--accent);color:#fff}
+  .actions{display:flex;gap:8px;align-items:center}
+  button,.btn{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:10px;cursor:pointer}
+  .btn.secondary{background:#2a3140}
+  .btn.ghost{background:transparent;border:1px solid #2a3140}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:12px}
+  .panel{background:var(--panel);border:1px solid #202634;border-radius:14px;padding:12px}
+  .title{font-weight:700;margin:0 0 8px 0}
+  .muted{color:var(--soft)}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{background:var(--muted);padding:8px;border-radius:10px;border:1px solid #263044;display:flex;align-items:center;gap:8px}
+  .item.dragging{opacity:.5}
+  .handle{cursor:grab;font-size:16px;color:#8894a8}
+  .grow{flex:1}
+  .row{display:flex;gap:8px;align-items:center}
+  .row+.row{margin-top:6px}
+  input[type="text"],input[type="number"],select,textarea{
+    width:100%;background:#0f131b;border:1px solid #263044;border-radius:8px;padding:8px;color:var(--text)
+  }
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .divider{height:1px;background:#202634;margin:12px 0}
+  /* PREVIEW */
+  .preview-wrap{display:flex;flex-direction:column;gap:12px}
+  .preview-bar{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .preview-surface{background:#0b0d12;border:1px dashed #2a3140;border-radius:14px;padding:12px}
+  .filters-grid,.form-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px
+  }
+  .field{background:#0f131b;border:1px solid #263044;border-radius:10px;padding:8px;position:relative}
+  .field .lbl{font-size:12px;color:#aab3c2;margin-bottom:4px}
+  .field input,.field select{width:100%;background:#0a0d13;border:1px solid #233049;border-radius:8px;padding:8px;color:#dfe6f3}
+  .width-badge{
+    position:absolute;right:6px;top:6px;font-size:11px;background:#223453;color:#cfe0ff;border:1px solid #36517a;border-radius:999px;padding:2px 6px;cursor:pointer;user-select:none
+  }
+  .tip{font-size:12px;color:#93a0b5}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .card{background:#0f131b;border:1px solid #263044;border-radius:14px;overflow:hidden}
+  .card .ph{background:#111826;height:140px}
+  .card .cnt{padding:10px;display:grid;gap:6px}
+  .pill{display:inline-block;background:#172235;padding:2px 8px;border-radius:999px;font-size:12px;color:#bcd1ff;border:1px solid #2b4777}
+  /* width mapping */
+  .w-25{grid-column:span 1}
+  .w-50{grid-column:span 2}
+  .w-100{grid-column:span 4}
+  /* drag styles */
+  .draggable{user-select:none}
+  .ghost{opacity:.4}
+  .empty-note{padding:10px;border:1px dashed #2b3344;border-radius:10px;background:#0d1016}
+  /* small */
+  @media (max-width:1000px){
+    .grid{grid-template-columns:1fr}
+    .cards{grid-template-columns:1fr 1fr}
+    .filters-grid,.form-grid{grid-template-columns:repeat(2,1fr)}
+    .w-100{grid-column:span 2}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Админка — v14.1.0 (alpha2)</h1>
-  <div class="row">
-    <a href="index.html" class="ghost" style="padding:6px 10px;border-radius:8px">← к каталогу</a>
-    <button id="exportBtn" class="btn">Экспорт JSON</button>
-    <label class="ghost" style="padding:6px 10px;border-radius:8px;cursor:pointer">
-      Импорт JSON <input id="importInput" type="file" accept=".json" style="display:none">
-    </label>
-  </div>
-</header>
-
-<div id="saveBadge" class="save-badge">Сохранено ✓</div>
-
-<div class="wrap">
-  <div class="grid">
-
-    <!-- Справочники -->
-    <div class="card">
-      <h3>Справочники: города → районы → улицы/массивы → категории</h3>
-      <div class="row">
-        <input id="cityName" placeholder="Город">
-        <button id="addCity" class="btn">Добавить город</button>
-      </div>
-      <div id="cities" class="list"></div>
-
-      <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
-
-      <div class="row">
-        <select id="districtCity"></select>
-        <input id="districtName" placeholder="Район">
-        <button id="addDistrict" class="btn">Добавить район</button>
-      </div>
-      <div id="districts" class="list"></div>
-
-      <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
-
-      <div class="row">
-        <select id="streetDistrict"></select>
-        <input id="streetName" placeholder="Улица/массив">
-        <button id="addStreet" class="btn">Добавить улицу</button>
-      </div>
-      <div id="streets" class="list"></div>
-
-      <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
-
-      <div class="row">
-        <input id="catName" placeholder="Категория (например: Квартира)">
-        <button id="addCat" class="btn">Добавить категорию</button>
-      </div>
-      <div id="cats" class="list"></div>
-
-      <div class="row" style="margin-top:8px">
-        <button id="resetDirs" class="danger">Сбросить справочники</button>
-        <span class="muted">Сохраняется в directories</span>
-      </div>
+<div class="app">
+  <header>
+    <div class="tabs">
+      <div class="tab active" data-tab="builder">Конструктор</div>
+      <div class="tab" data-tab="preview">Предпросмотр</div>
     </div>
+    <div class="actions">
+      <label class="btn ghost" for="importInput">Импорт JSON</label>
+      <input id="importInput" type="file" accept="application/json" hidden>
+      <button class="btn secondary" id="exportBtn">Экспорт JSON</button>
+      <button id="resetBtn" class="btn" title="Сбросить к дефолту">Сброс</button>
+      <span class="muted">Сохраняется в localStorage автоматически</span>
+    </div>
+  </header>
 
-    <!-- Фильтры -->
-    <div class="card">
-      <h3>Фильтры (диапазоны, селекты, чекбоксы)</h3>
-      <div class="row">
-        <select id="fType">
-          <option value="range">Диапазон</option>
-          <option value="select">Селект</option>
-          <option value="checkbox">Чекбоксы</option>
+  <main class="grid">
+    <!-- LEFT BUILDER -->
+    <section class="panel" id="builderPanel">
+      <h3 class="title">Фильтры поиска</h3>
+      <div class="tip">Перетаскивай строки за «⋮⋮». Клик по селекту «Ширина» меняет ширину в предпросмотре.</div>
+      <div class="list" id="filtersList"></div>
+      <div class="divider"></div>
+      <div class="two">
+        <select id="newFilterType">
+          <option value="select">select</option>
+          <option value="range">range</option>
+          <option value="checkbox">checkbox</option>
         </select>
-        <input id="fField" placeholder="поле: price, area, rooms, cityId, status">
-        <input id="fLabel" placeholder="Название фильтра">
-        <input id="fMin" placeholder="min (для диапазона)">
-        <input id="fMax" placeholder="max (для диапазона)">
-        <input id="fStep" placeholder="шаг (для диапазона)">
-        <input id="fOptions" placeholder="опции через запятую (для select/checkbox)">
-        <button id="addFilter" class="btn">Добавить фильтр</button>
+        <input id="newFilterField" type="text" placeholder="field (англ.): price, cityId, rooms..." />
       </div>
-      <div id="filtersList" class="list" style="margin-top:8px"></div>
-      <div class="row" style="margin-top:8px">
-        <button id="resetFilters" class="danger">Сбросить фильтры</button>
-        <span class="muted">Сохраняется в filtersConfig</span>
-      </div>
-    </div>
-
-    <!-- Сортировки -->
-    <div class="card">
-      <h3>Сортировки</h3>
-      <div class="row">
-        <input id="sField" placeholder="поле: price, area, createdAt">
-        <select id="sDir">
-          <option value="asc">возрастание</option>
-          <option value="desc">убывание</option>
+      <div class="two" style="margin-top:8px">
+        <input id="newFilterLabel" type="text" placeholder="Название (для людей): Цена, Город..." />
+        <select id="newFilterWidth">
+          <option value="25">Ширина 25%</option>
+          <option value="50">Ширина 50%</option>
+          <option value="100" selected>Ширина 100%</option>
         </select>
-        <input id="sLabel" placeholder="Название (например: Цена ↑)">
-        <button id="addSort" class="btn">Добавить сортировку</button>
       </div>
-      <div id="sortsList" class="list" style="margin-top:8px"></div>
+      <div class="three" style="margin-top:8px">
+        <input id="newFilterMin" type="number" placeholder="min (для range)" />
+        <input id="newFilterMax" type="number" placeholder="max (для range)" />
+        <input id="newFilterStep" type="number" placeholder="шаг (для range)" />
+      </div>
       <div class="row" style="margin-top:8px">
-        <button id="resetSorts" class="danger">Сбросить сортировки</button>
-        <span class="muted">Сохраняется в sortsConfig</span>
+        <input id="newFilterOptions" type="text" placeholder="опции (для select/checkbox), через запятую" />
+        <button id="addFilterBtn">Добавить фильтр</button>
       </div>
-    </div>
 
-    <!-- Поля формы -->
-    <div class="card">
-      <h3>Поля формы</h3>
-      <div id="fieldsList"></div>
+      <div class="divider"></div>
+      <h3 class="title">Поля формы (объявление)</h3>
+      <div class="list" id="fieldsList"></div>
+      <div class="divider"></div>
+      <div class="two">
+        <select id="newFieldType">
+          <option value="text">text</option>
+          <option value="number">number</option>
+          <option value="select">select</option>
+          <option value="textarea">textarea</option>
+        </select>
+        <input id="newFieldId" type="text" placeholder="id (англ.): title, price, area..." />
+      </div>
+      <div class="two" style="margin-top:8px">
+        <input id="newFieldLabel" type="text" placeholder="Метка: Заголовок, Цена..." />
+        <select id="newFieldWidth">
+          <option value="25">Ширина 25%</option>
+          <option value="50">Ширина 50%</option>
+          <option value="100" selected>Ширина 100%</option>
+        </select>
+      </div>
       <div class="row" style="margin-top:8px">
-        <button id="resetFields" class="danger">Сбросить поля</button>
-        <span class="muted">Сохраняется в formFields</span>
+        <input id="newFieldOptions" type="text" placeholder="Опции (для select), через запятую" />
+        <button id="addFieldBtn">Добавить поле</button>
       </div>
-    </div>
+    </section>
 
-    <!-- Шаблоны раскладок -->
-    <div class="card">
-      <h3>Шаблоны раскладок</h3>
-      <div class="row">
-        <input id="layoutName" placeholder="Имя шаблона (OLX-стиль)">
-        <button id="saveLayoutBtn" class="btn">Сохранить</button>
+    <!-- RIGHT PREVIEW -->
+    <section class="panel" id="previewPanel" style="display:none">
+      <div class="preview-wrap">
+        <div class="preview-bar">
+          <div class="row">
+            <strong>Предпросмотр сайта</strong>
+            <span class="tip">Клик по бейджу ширины на поле — переключает 25/50/100</span>
+          </div>
+          <div class="row">
+            <button class="btn secondary" id="reloadPreview">Обновить</button>
+          </div>
+        </div>
+
+        <div class="preview-surface">
+          <h4 style="margin:0 0 8px">Фильтры</h4>
+          <div id="filtersPreview" class="filters-grid"></div>
+        </div>
+
+        <div class="preview-surface">
+          <h4 style="margin:0 0 8px">Форма добавления</h4>
+          <div id="formPreview" class="form-grid"></div>
+        </div>
+
+        <div class="preview-surface">
+          <h4 style="margin:0 0 8px">Результаты</h4>
+          <div class="cards" id="cardsPreview"></div>
+        </div>
       </div>
-      <div id="layoutsList" style="margin-top:10px"></div>
-    </div>
-
-    <!-- Предпросмотр с drag&drop по сетке -->
-    <div class="card">
-      <h3>Живой предпросмотр (тяни блоки мышкой, растягивай ширину)</h3>
-      <div id="preview" class="preview"></div>
-    </div>
-
-  </div>
+    </section>
+  </main>
 </div>
 
 <script>
-/* ===== helpers + storage ===== */
-const $=id=>document.getElementById(id);
-const badge=document.createElement("div");
-badge.className="save-badge"; badge.textContent="Сохранено ✓"; document.body.appendChild(badge);
-const showSaved=()=>{badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"),900);};
-const lsGet=(k,fb)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??fb;}catch{return fb;}};
-const lsSet=(k,v)=>{localStorage.setItem(k,JSON.stringify(v));showSaved();};
-const idgen=()=>Math.floor(Math.random()*1e9);
-const fmt=(n)=>isFinite(n)?Number(n).toLocaleString():"";
-
-/* ===== defaults ===== */
-const DEFAULT_LAYOUT=[
-  {id:"filters", title:"Фильтры", enabled:true,  colSpan:4, height:0},
-  {id:"map",     title:"Карта",   enabled:true,  colSpan:8, height:380},
-  {id:"results", title:"Результаты", enabled:true, colSpan:8, height:0},
-  {id:"form",    title:"Форма",   enabled:true,  colSpan:4, height:0},
-  {id:"ad",      title:"Реклама", enabled:false, colSpan:12, height:120}
-];
-const DEFAULT_FIELDS=[
-  {id:"title", label:"Заголовок", type:"text", required:true,  placeholder:"Введите заголовок", enabled:true,  showInCard:true},
-  {id:"price", label:"Цена",      type:"number", required:true, placeholder:"в сумах",          enabled:true,  showInCard:true},
-  {id:"area",  label:"Площадь",   type:"number", required:false,placeholder:"м²",               enabled:true,  showInCard:true},
-  {id:"rooms", label:"Комнат",    type:"number", required:false,placeholder:"",                 enabled:true,  showInCard:true},
-  {id:"floor", label:"Этаж",      type:"number", required:false,placeholder:"",                 enabled:true,  showInCard:false},
-  {id:"address",label:"Адрес",    type:"text",   required:false,placeholder:"",                 enabled:true,  showInCard:true},
-  {id:"desc",  label:"Описание",  type:"textarea",required:false,placeholder:"",                enabled:false, showInCard:false}
-];
-const DEFAULT_DIRS={cities:[], districts:[], streets:[], cats:[]};
-const DEFAULT_FILTERS=[
-  {type:"range", field:"price", label:"Цена", min:100, max:1000000, step:100},
-  {type:"range", field:"area",  label:"Площадь", min:10, max:500, step:5},
-  {type:"range", field:"rooms", label:"Комнаты", min:1, max:10, step:1},
-  {type:"select",field:"status",label:"Статус", options:["Все","sale","rent"]},
-  {type:"select",field:"cityId",label:"Город", options:[]} // подхватим из справочников
-];
-const DEFAULT_SORTS=[
-  {field:"price", dir:"asc",  label:"Цена ↑"},
-  {field:"price", dir:"desc", label:"Цена ↓"},
-  {field:"createdAt", dir:"desc", label:"Новее сначала"},
-  {field:"createdAt", dir:"asc",  label:"Старее сначала"}
-];
-
-/* ===== state ===== */
-let pageLayout = lsGet("pageLayout", DEFAULT_LAYOUT);
-let formFields = lsGet("formFields", DEFAULT_FIELDS);
-let directories = lsGet("directories", DEFAULT_DIRS);
-let filtersConfig = lsGet("filtersConfig", DEFAULT_FILTERS);
-let sortsConfig = lsGet("sortsConfig", DEFAULT_SORTS);
-let savedLayouts = lsGet("layouts", []);
-
-/* ===== seed test objects for preview ===== */
-let seedObjects = lsGet("seedObjects", null);
-if(!seedObjects){
-  const now=Date.now();
-  seedObjects = Array.from({length:16}).map((_,i)=>({
-    id: now - i*1000,
-    title: `Объект #${i+1}`,
-    status: i%3===0?"rent":"sale",
-    price: 5000 + i*7500,
-    area: 40 + (i%7)*10,
-    rooms: 1 + (i%4),
-    floor: 1 + (i%9),
-    address: `ул. Пример ${i+1}`,
-    cityId: null,
-    createdAt: now - i*86400000
-  }));
-  lsSet("seedObjects", seedObjects);
-}
-
-/* ===== Directories UI ===== */
-function refreshCitySelects(){
-  const citySel=$("districtCity"); citySel.innerHTML="";
-  directories.cities.forEach(c=>{const o=document.createElement("option");o.value=c.id;o.textContent=c.name; citySel.appendChild(o);});
-  const distSel=$("streetDistrict"); distSel.innerHTML="";
-  directories.districts.forEach(d=>{
-    const city=directories.cities.find(c=>c.id===d.cityId);
-    const o=document.createElement("option");o.value=d.id;o.textContent=(city?city.name:"—")+" / "+d.name; distSel.appendChild(o);
-  });
-}
-function renderDirs(){
-  // cities
-  const cbox=$("cities"); cbox.innerHTML="";
-  directories.cities.forEach((c,idx)=>{
-    const div=document.createElement("div"); div.className="item";
-    const inp=document.createElement("input"); inp.value=c.name;
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
-    del.onclick=()=>{ directories.districts = directories.districts.filter(d=>d.cityId!==c.id);
-                      directories.streets  = directories.streets.filter(s=> directories.districts.find(d=>d.id===s.districtId));
-                      directories.cities.splice(idx,1); saveDirs(); };
-    inp.onchange=()=>{ c.name=inp.value; saveDirs(); };
-    div.append("Город:", inp, del);
-    cbox.appendChild(div);
-  });
-  // districts
-  const dbox=$("districts"); dbox.innerHTML="";
-  directories.districts.forEach((d,idx)=>{
-    const div=document.createElement("div"); div.className="item";
-    const lab=document.createElement("span"); lab.textContent=(directories.cities.find(c=>c.id===d.cityId)?.name||"—")+" /";
-    const inp=document.createElement("input"); inp.value=d.name;
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
-    del.onclick=()=>{ directories.streets = directories.streets.filter(s=>s.districtId!==d.id);
-                      directories.districts.splice(idx,1); saveDirs(); };
-    inp.onchange=()=>{ d.name=inp.value; saveDirs(); };
-    div.append(lab, inp, del);
-    dbox.appendChild(div);
-  });
-  // streets
-  const sbox=$("streets"); sbox.innerHTML="";
-  directories.streets.forEach((s,idx)=>{
-    const div=document.createElement("div"); div.className="item";
-    const dist=directories.districts.find(x=>x.id===s.districtId);
-    const city=dist?directories.cities.find(c=>c.id===dist.cityId):null;
-    const lab=document.createElement("span"); lab.textContent=(city?.name||"—")+" / "+(dist?.name||"—")+" /";
-    const inp=document.createElement("input"); inp.value=s.name;
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
-    del.onclick=()=>{ directories.streets.splice(idx,1); saveDirs(); };
-    inp.onchange=()=>{ s.name=inp.value; saveDirs(); };
-    div.append(lab, inp, del);
-    sbox.appendChild(div);
-  });
-  // cats
-  const cts=$("cats"); cts.innerHTML="";
-  directories.cats.forEach((c,idx)=>{
-    const div=document.createElement("div"); div.className="item";
-    const inp=document.createElement("input"); inp.value=c.name;
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
-    del.onclick=()=>{ directories.cats.splice(idx,1); saveDirs(); };
-    inp.onchange=()=>{ c.name=inp.value; saveDirs(); };
-    div.append("Категория:", inp, del);
-    cts.appendChild(div);
-  });
-
-  refreshCitySelects();
-  refreshFilterCityOptions();
-  renderPreview();
-}
-function saveDirs(){ lsSet("directories", directories); renderDirs(); }
-
-$("addCity").onclick=()=>{const name=$("cityName").value.trim(); if(!name) return; directories.cities.push({id:idgen(), name}); $("cityName").value=""; saveDirs();};
-$("addDistrict").onclick=()=>{const name=$("districtName").value.trim(); const cityId=+$("districtCity").value; if(!name||!cityId) return; directories.districts.push({id:idgen(), name, cityId}); $("districtName").value=""; saveDirs();};
-$("addStreet").onclick=()=>{const name=$("streetName").value.trim(); const distId=+$("streetDistrict").value; if(!name||!distId) return; directories.streets.push({id:idgen(), name, districtId:distId}); $("streetName").value=""; saveDirs();};
-$("addCat").onclick=()=>{const name=$("catName").value.trim(); if(!name) return; directories.cats.push({id:idgen(), name}); $("catName").value=""; saveDirs();};
-$("resetDirs").onclick=()=>{ if(confirm("Сбросить справочники?")){ directories={cities:[],districts:[],streets:[],cats:[]}; saveDirs(); } };
-
-/* ===== Filters ===== */
-const filtersList=$("filtersList");
-function renderFilters(){
-  filtersList.innerHTML="";
-  filtersConfig.forEach((f,i)=>{
-    const row=document.createElement("div"); row.className="filter-item";
-    const type=document.createElement("select"); ["range","select","checkbox"].forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;if(f.type===t)o.selected=true;type.appendChild(o);});
-    const field=document.createElement("input"); field.value=f.field||""; field.placeholder="поле";
-    const label=document.createElement("input"); label.value=f.label||""; label.placeholder="название";
-    const min=document.createElement("input"); min.placeholder="min"; min.value=f.min??"";
-    const max=document.createElement("input"); max.placeholder="max"; max.value=f.max??"";
-    const step=document.createElement("input"); step.placeholder="шаг"; step.value=f.step??"";
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
-    [type,field,label,min,max,step,del].forEach(el=>row.appendChild(el));
-    filtersList.appendChild(row);
-
-    type.onchange=()=>{ f.type=type.value; saveFilters(); renderFilters(); };
-    field.onchange=()=>{ f.field=field.value.trim(); saveFilters(); };
-    label.onchange=()=>{ f.label=label.value.trim(); saveFilters(); };
-    min.onchange=()=>{ f.min=+min.value||0; saveFilters(); };
-    max.onchange=()=>{ f.max=+max.value||0; saveFilters(); };
-    step.onchange=()=>{ f.step=+step.value||1; saveFilters(); };
-    del.onclick=()=>{ filtersConfig.splice(i,1); saveFilters(); };
-
-    if(f.type!=="range"){
-      const row2=document.createElement("div"); row2.style.marginTop="6px"; row2.className="row";
-      const opts=document.createElement("input"); opts.placeholder="опции через запятую"; opts.value=(Array.isArray(f.options)?f.options.join(", "):(f.options||""));
-      row2.append("Опции:", opts); filtersList.appendChild(row2);
-      opts.onchange=()=>{ f.options = opts.value.split(",").map(s=>s.trim()).filter(Boolean); saveFilters(); };
-    }
-  });
-}
-function saveFilters(){ lsSet("filtersConfig", filtersConfig); renderFilters(); renderPreview(); }
-$("addFilter").onclick=()=>{
-  const type=$("fType").value, field=$("fField").value.trim(), label=$("fLabel").value.trim();
-  if(!field||!label) return alert("Поле и название");
-  const min=+$("fMin").value||0, max=+$("fMax").value||0, step=+$("fStep").value||1;
-  const options=$("fOptions").value.split(",").map(s=>s.trim()).filter(Boolean);
-  const item = type==="range"?{type,field,label,min,max,step}:{type,field,label,options};
-  filtersConfig.push(item); ["fField","fLabel","fMin","fMax","fStep","fOptions"].forEach(id=>$(id).value="");
-  saveFilters();
-};
-$("resetFilters").onclick=()=>{ if(confirm("Сбросить фильтры?")){ filtersConfig=JSON.parse(JSON.stringify(DEFAULT_FILTERS)); saveFilters(); } };
-function refreshFilterCityOptions(){
-  const cityFilter = filtersConfig.find(f=>f.field==="cityId" && f.type==="select");
-  if(cityFilter){
-    cityFilter.options = ["Все", ...directories.cities.map(c=>`${c.id}:${c.name}`)];
-    saveFilters();
-  }
-}
-
-/* ===== Sorts ===== */
-const sortsList=$("sortsList");
-function renderSorts(){
-  sortsList.innerHTML="";
-  sortsConfig.forEach((s,i)=>{
-    const row=document.createElement("div"); row.className="sort-item";
-    const lab=document.createElement("input"); lab.value=s.label||""; lab.placeholder="Название";
-    const field=document.createElement("input"); field.value=s.field||""; field.placeholder="поле";
-    const dir=document.createElement("select"); ["asc","desc"].forEach(d=>{const o=document.createElement("option");o.value=d;o.textContent=d;if(s.dir===d)o.selected=true;dir.appendChild(o);});
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
-    row.append(lab, field, dir, del); sortsList.appendChild(row);
-    lab.onchange=()=>{ s.label=lab.value; saveSorts(); };
-    field.onchange=()=>{ s.field=field.value; saveSorts(); };
-    dir.onchange=()=>{ s.dir=dir.value; saveSorts(); };
-    del.onclick=()=>{ sortsConfig.splice(i,1); saveSorts(); };
-  });
-}
-function saveSorts(){ lsSet("sortsConfig", sortsConfig); renderSorts(); renderPreview(); }
-$("addSort").onclick=()=>{
-  const field=$("sField").value.trim(), dir=$("sDir").value, label=$("sLabel").value.trim()||(`${field} ${dir}`);
-  if(!field) return;
-  sortsConfig.push({field,dir,label}); $("sField").value=""; $("sLabel").value="";
-  saveSorts();
-};
-$("resetSorts").onclick=()=>{ if(confirm("Сбросить сортировки?")){ sortsConfig=JSON.parse(JSON.stringify(DEFAULT_SORTS)); saveSorts(); } };
-
-/* ===== Fields ===== */
-const fieldsList=$("fieldsList");
-function renderFields(){
-  fieldsList.innerHTML="";
-  formFields.forEach((f,i)=>{
-    const row=document.createElement("div"); row.className="field-item"; row.draggable=true; row.dataset.index=i;
-    const en=document.createElement("input"); en.type="checkbox"; en.checked=f.enabled;
-    const label=document.createElement("input"); label.value=f.label; label.placeholder="Название";
-    const type=document.createElement("select"); ["text","number","date","select","textarea"].forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;if(f.type===t)o.selected=true;type.appendChild(o);});
-    const req=document.createElement("input"); req.type="checkbox"; req.checked=f.required; req.title="Обязательное";
-    const ph=document.createElement("input"); ph.placeholder="placeholder"; ph.value=f.placeholder||"";
-    const show=document.createElement("select"); [["true","в карточке"],["false","скрыть в карточке"]].forEach(([v,t])=>{const o=document.createElement("option");o.value=v;o.textContent=t;if(String(!!f.showInCard)===v)o.selected=true;show.appendChild(o);});
-    const opts=document.createElement("input"); opts.placeholder="опции (для select): A,B,C"; opts.value=Array.isArray(f.options)?f.options.join(", "): (f.options||""); opts.style.display=(f.type==="select")?"block":"none";
-    row.append(en,label,type,req,ph,show,opts); fieldsList.appendChild(row);
-    en.onchange=()=>{ f.enabled=en.checked; saveFields(); };
-    label.onchange=()=>{ f.label=label.value; saveFields(); };
-    type.onchange=()=>{ f.type=type.value; saveFields(); renderFields(); };
-    req.onchange=()=>{ f.required=req.checked; saveFields(); };
-    ph.onchange=()=>{ f.placeholder=ph.value; saveFields(); };
-    show.onchange=()=>{ f.showInCard=(show.value==="true"); saveFields(); };
-    opts.oninput=()=>{ if(f.type==="select"){ f.options=opts.value.split(",").map(s=>s.trim()).filter(Boolean); saveFields(); } };
-    row.addEventListener("dragstart",()=>row.classList.add("dragging"));
-    row.addEventListener("dragend",()=>{row.classList.remove("dragging"); updateOrder(fieldsList,formFields,saveFields);});
-  });
-  fieldsList.addEventListener("dragover", e=>{
-    e.preventDefault();
-    const d=fieldsList.querySelector(".field-item.dragging");
-    if(!d)return;
-    const after = getAfter(fieldsList, e.clientY);
-    if(!after) fieldsList.appendChild(d); else fieldsList.insertBefore(d, after);
-  });
-}
-function saveFields(){ lsSet("formFields", formFields); renderFields(); renderPreview(); }
-$("resetFields").onclick=()=>{ if(confirm("Сбросить поля?")){ formFields=JSON.parse(JSON.stringify(DEFAULT_FIELDS)); saveFields(); } };
-
-/* ===== Templates ===== */
-function renderLayouts(){
-  const box=$("layoutsList"); box.innerHTML="";
-  if(!savedLayouts.length){ box.innerHTML='<div class="muted">Нет сохранённых шаблонов</div>'; return; }
-  savedLayouts.forEach((l,i)=>{
-    const row=document.createElement("div"); row.className="row"; row.style.marginBottom="6px";
-    row.innerHTML=`<b>${l.name}</b>`;
-    const load=document.createElement("button"); load.textContent="Загрузить"; load.onclick=()=>{ pageLayout=l.pageLayout; formFields=l.formFields; filtersConfig=l.filtersConfig; sortsConfig=l.sortsConfig; saveAll(); };
-    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger"; del.onclick=()=>{ savedLayouts.splice(i,1); lsSet("layouts",savedLayouts); renderLayouts(); };
-    row.append(load,del); box.appendChild(row);
-  });
-}
-$("saveLayoutBtn").onclick=()=>{
-  const name=$("layoutName").value.trim(); if(!name) return;
-  savedLayouts.push({name, pageLayout, formFields, filtersConfig, sortsConfig});
-  lsSet("layouts", savedLayouts); renderLayouts(); $("layoutName").value="";
+/* ==========
+   ДАННЫЕ
+========== */
+const DEFAULT_DATA = {
+  filtersConfig: [
+    {type:'select', field:'cityId', label:'Город', width:50, options:['1:Ташкент','2:Самарканд']},
+    {type:'select', field:'districtId', label:'Район', width:50, options:['11:Мирзо-Улугбек','12:Юнусабад']},
+    {type:'range', field:'price', label:'Цена', width:100, min:100, max:1000000, step:100},
+    {type:'range', field:'rooms', label:'Комнаты', width:50, min:1, max:10, step:1},
+    {type:'range', field:'floor', label:'Этаж', width:50, min:1, max:25, step:1}
+  ],
+  formFields: [
+    {id:'title', label:'Заголовок', type:'text', width:100},
+    {id:'price', label:'Цена', type:'number', width:50},
+    {id:'area', label:'Площадь (м²)', type:'number', width:50},
+    {id:'rooms', label:'Комнат', type:'number', width:50},
+    {id:'floor', label:'Этаж', type:'number', width:50},
+    {id:'cityId', label:'Город', type:'select', width:50, options:['1:Ташкент','2:Самарканд']},
+    {id:'districtId', label:'Район', type:'select', width:50, options:['11:Мирзо-Улугбек','12:Юнусабад']},
+    {id:'desc', label:'Описание', type:'textarea', width:100}
+  ],
+  demoCards: [
+    {title:'2-комн в Юнусабаде', price:'78 000 у.е.', tag:'Квартира', img:true},
+    {title:'Дача в Чарваке', price:'2 500 000 сум/сутки', tag:'Дача', img:true},
+    {title:'3-комн Мирзо-Улугбек', price:'115 000 у.е.', tag:'Квартира', img:true},
+    {title:'Дом Самарканд', price:'250 000 у.е.', tag:'Дом', img:true},
+    {title:'Участок 6 соток', price:'45 000 у.е.', tag:'Земля', img:true},
+    {title:'Лофт в центре', price:'900 у.е./мес', tag:'Аренда', img:true}
+  ]
 };
 
-/* ===== Export / Import ===== */
-$("exportBtn").onclick=()=>{
-  const data = {pageLayout, formFields, directories, filtersConfig, sortsConfig};
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="layout-config.json"; a.click();
-};
-$("importInput").addEventListener("change", async (e)=>{
-  const file=e.target.files?.[0]; if(!file) return;
-  const text = await file.text();
-  try{
-    const obj = JSON.parse(text);
-    pageLayout = obj.pageLayout ?? pageLayout;
-    formFields = obj.formFields ?? formFields;
-    directories = obj.directories ?? directories;
-    filtersConfig= obj.filtersConfig ?? filtersConfig;
-    sortsConfig  = obj.sortsConfig ?? sortsConfig;
-    saveAll();
-  }catch{ alert("Неверный JSON"); }
+const KEY = 'builder-data-v1';
+let app = load() || structuredClone(DEFAULT_DATA);
+
+/* ==========
+   УТИЛИТЫ
+========== */
+function save(){ localStorage.setItem(KEY, JSON.stringify(app)); }
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||''); }catch(e){ return null; } }
+function reset(){ app = structuredClone(DEFAULT_DATA); save(); renderAll(); }
+function widthClass(w){ return w==25?'w-25':(w==50?'w-50':'w-100'); }
+function cycleWidth(w){ return w==25?50:(w==50?100:25); }
+
+/* ==========
+   UI ПЕРЕКЛЮЧЕНИЕ ТАБОВ
+========== */
+const tabs = document.querySelectorAll('.tab');
+const builderPanel = document.getElementById('builderPanel');
+const previewPanel = document.getElementById('previewPanel');
+tabs.forEach(t=>{
+  t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const id = t.dataset.tab;
+    builderPanel.style.display = (id==='builder')?'block':'none';
+    previewPanel.style.display = (id==='preview')?'block':'none';
+    if(id==='preview'){ renderPreview(); }
+  });
 });
 
-/* ===== Preview + interactive grid ===== */
-const preview=$("preview");
-function buildFilterControls(){
-  const wrap=document.createElement("div"); wrap.className="filters";
-  const row=document.createElement("div"); row.className="row";
-  filtersConfig.forEach(f=>{
-    if(f.type==="range"){
-      const g=document.createElement("div");
-      g.innerHTML=`<div class="mini">${f.label} от/до</div>`;
-      const i1=document.createElement("input"); i1.type="number"; i1.placeholder="от"; i1.id=`f_${f.field}_min`;
-      const i2=document.createElement("input"); i2.type="number"; i2.placeholder="до"; i2.id=`f_${f.field}_max`;
-      i1.oninput=i2.oninput=()=>renderPreview(); g.append(i1,i2); row.appendChild(g);
-    } else if(f.type==="select"){
-      const s=document.createElement("select"); s.id=`f_${f.field}`;
-      const opts=(f.field==="cityId" && (!f.options||!f.options.length))
-        ? ["Все", ...directories.cities.map(c=>`${c.id}:${c.name}`)]
-        : (f.options||[]);
-      opts.forEach(v=>{const [val,txt]=v.includes(":")?v.split(":"):[v,v]; const o=document.createElement("option"); o.value=v; o.textContent=txt; s.appendChild(o);});
-      s.onchange=()=>renderPreview();
-      const box=document.createElement("div"); box.innerHTML=`<div class="mini">${f.label}</div>`; box.appendChild(s); row.appendChild(box);
-    } else if(f.type==="checkbox"){
-      const box=document.createElement("div"); box.innerHTML=`<div class="mini">${f.label}</div>`;
-      const opts=(f.options||[]); opts.forEach(v=>{const lb=document.createElement("label"); const cb=document.createElement("input"); cb.type="checkbox"; cb.value=v; cb.onchange=()=>renderPreview(); lb.append(cb, document.createTextNode(" "+v)); box.appendChild(lb);});
-      row.appendChild(box);
+/* ==========
+   РЕНДЕР ЛЕВОЙ КОЛОНКИ (СПИСКИ)
+========== */
+const filtersList = document.getElementById('filtersList');
+const fieldsList = document.getElementById('fieldsList');
+
+function renderFiltersList(){
+  filtersList.innerHTML = '';
+  if(!app.filtersConfig.length){
+    filtersList.innerHTML = `<div class="empty-note">Фильтров нет. Добавь ниже.</div>`;
+    return;
+  }
+  app.filtersConfig.forEach((f,idx)=>{
+    const el = document.createElement('div');
+    el.className='item draggable';
+    el.draggable=true;
+    el.dataset.index=idx;
+    el.innerHTML = `
+      <div class="handle" title="Тяни для перестановки">⋮⋮</div>
+      <div class="grow">
+        <div class="row">
+          <strong>${f.label||f.field}</strong>
+          <span class="pill">${f.type}</span>
+        </div>
+        <div class="row">
+          <input type="text" data-k="field" value="${f.field||''}" placeholder="field (англ.)" />
+          <input type="text" data-k="label" value="${f.label||''}" placeholder="Название (рус.)" />
+          <select data-k="width">
+            <option value="25" ${f.width==25?'selected':''}>25%</option>
+            <option value="50" ${f.width==50?'selected':''}>50%</option>
+            <option value="100" ${f.width==100?'selected':''}>100%</option>
+          </select>
+        </div>
+        ${f.type==='range' ? `
+          <div class="three" style="margin-top:6px">
+            <input type="number" data-k="min" value="${f.min??''}" placeholder="min" />
+            <input type="number" data-k="max" value="${f.max??''}" placeholder="max" />
+            <input type="number" data-k="step" value="${f.step??''}" placeholder="шаг" />
+          </div>
+        `:``}
+        ${(f.type==='select'||f.type==='checkbox') ? `
+          <div class="row" style="margin-top:6px">
+            <input type="text" data-k="options" value="${(f.options||[]).join(', ')}" placeholder="опции через запятую" />
+          </div>
+        `:``}
+      </div>
+      <button class="btn ghost" data-del>×</button>
+    `;
+    // inputs binding
+    el.querySelectorAll('input,select').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        const k = inp.dataset.k;
+        let v = inp.value;
+        if(['min','max','step','width'].includes(k)) v = Number(v||0);
+        if(k==='options') v = v.split(',').map(s=>s.trim()).filter(Boolean);
+        f[k]=v; save(); // live save
+      });
+    });
+    el.querySelector('[data-del]').addEventListener('click',()=>{
+      app.filtersConfig.splice(idx,1); save(); renderAll();
+    });
+    enableDrag(el, app.filtersConfig, renderFiltersList);
+    filtersList.appendChild(el);
+  });
+}
+
+function renderFieldsList(){
+  fieldsList.innerHTML = '';
+  if(!app.formFields.length){
+    fieldsList.innerHTML = `<div class="empty-note">Полей нет. Добавь ниже.</div>`;
+    return;
+  }
+  app.formFields.forEach((ff,idx)=>{
+    const el = document.createElement('div');
+    el.className='item draggable';
+    el.draggable=true;
+    el.dataset.index=idx;
+    el.innerHTML = `
+      <div class="handle" title="Тяни">⋮⋮</div>
+      <div class="grow">
+        <div class="row">
+          <strong>${ff.label||ff.id}</strong>
+          <span class="pill">${ff.type}</span>
+        </div>
+        <div class="row">
+          <input type="text" data-k="id" value="${ff.id||''}" placeholder="id (англ.)" />
+          <input type="text" data-k="label" value="${ff.label||''}" placeholder="Метка (рус.)" />
+          <select data-k="width">
+            <option value="25" ${ff.width==25?'selected':''}>25%</option>
+            <option value="50" ${ff.width==50?'selected':''}>50%</option>
+            <option value="100" ${ff.width==100?'selected':''}>100%</option>
+          </select>
+        </div>
+        ${ff.type==='select' ? `
+          <div class="row" style="margin-top:6px">
+            <input type="text" data-k="options" value="${(ff.options||[]).join(', ')}" placeholder="опции через запятую" />
+          </div>
+        `:``}
+      </div>
+      <button class="btn ghost" data-del>×</button>
+    `;
+    el.querySelectorAll('input,select').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        const k = inp.dataset.k;
+        let v = inp.value;
+        if(k==='width') v = Number(v||0);
+        if(k==='options') v = v.split(',').map(s=>s.trim()).filter(Boolean);
+        ff[k]=v; save();
+      });
+    });
+    el.querySelector('[data-del]').addEventListener('click',()=>{
+      app.formFields.splice(idx,1); save(); renderAll();
+    });
+    enableDrag(el, app.formFields, renderFieldsList);
+    fieldsList.appendChild(el);
+  });
+}
+
+/* ==========
+   DRAG & DROP
+========== */
+function enableDrag(el, arr, rerender){
+  el.addEventListener('dragstart', e=>{
+    el.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', el.dataset.index);
+  });
+  el.addEventListener('dragend', ()=>{
+    el.classList.remove('dragging');
+    rerender(); save();
+  });
+  el.addEventListener('dragover', e=>{
+    e.preventDefault();
+    const dragging = document.querySelector('.dragging');
+    if(!dragging || dragging===el) return;
+    const list = el.parentElement;
+    const nodes = [...list.children];
+    const currIndex = nodes.indexOf(el);
+    const dragIndex = nodes.indexOf(dragging);
+    if(currIndex > dragIndex){
+      list.insertBefore(dragging, el.nextSibling);
+    }else{
+      list.insertBefore(dragging, el);
     }
   });
-  // сортировка
-  if(sortsConfig.length){
-    const s=document.createElement("select"); s.id="sortSel";
-    sortsConfig.forEach(o=>{const opt=document.createElement("option"); opt.value=o.label; opt.textContent=o.label; s.appendChild(opt);});
-    s.onchange=()=>renderPreview();
-    const box=document.createElement("div"); box.innerHTML=`<div class="mini">Сортировка</div>`; box.appendChild(s); row.appendChild(box);
+  el.addEventListener('drop', e=>{
+    e.preventDefault();
+    const list = el.parentElement;
+    const nodes = [...list.children];
+    const newOrder = nodes.map(n=>arr[Number(n.dataset.index)]);
+    arr.length = 0; newOrder.forEach(x=>arr.push(x));
+    save(); // rerender вызывается в dragend
+  });
+}
+
+/* ==========
+   КНОПКИ ДОБАВИТЬ
+========== */
+document.getElementById('addFilterBtn').addEventListener('click', ()=>{
+  const type = document.getElementById('newFilterType').value.trim();
+  const field = document.getElementById('newFilterField').value.trim();
+  const label = document.getElementById('newFilterLabel').value.trim();
+  const width = Number(document.getElementById('newFilterWidth').value);
+  const min = Number(document.getElementById('newFilterMin').value||0);
+  const max = Number(document.getElementById('newFilterMax').value||0);
+  const step = Number(document.getElementById('newFilterStep').value||0);
+  const optsStr = document.getElementById('newFilterOptions').value.trim();
+  if(!field){ alert('Укажи field (англ.)'); return; }
+  const item = {type, field, label: label||field, width: width||100};
+  if(type==='range'){ item.min=min; item.max=max; item.step=step||1; }
+  if(type==='select'||type==='checkbox'){ item.options = optsStr? optsStr.split(',').map(s=>s.trim()).filter(Boolean):[]; }
+  app.filtersConfig.push(item); save(); renderFiltersList();
+});
+
+document.getElementById('addFieldBtn').addEventListener('click', ()=>{
+  const type = document.getElementById('newFieldType').value.trim();
+  const id = document.getElementById('newFieldId').value.trim();
+  const label = document.getElementById('newFieldLabel').value.trim();
+  const width = Number(document.getElementById('newFieldWidth').value);
+  const optsStr = document.getElementById('newFieldOptions').value.trim();
+  if(!id){ alert('Укажи id (англ.)'); return; }
+  const item = {id, label: label||id, type, width: width||100};
+  if(type==='select'){ item.options = optsStr? optsStr.split(',').map(s=>s.trim()).filter(Boolean):[]; }
+  app.formFields.push(item); save(); renderFieldsList();
+});
+
+/* ==========
+   ИМПОРТ / ЭКСПОРТ / СБРОС
+========== */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(app,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='layout-config.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('importInput').addEventListener('change', async (e)=>{
+  const f = e.target.files?.[0]; if(!f) return;
+  const txt = await f.text();
+  try{
+    const obj = JSON.parse(txt);
+    if(obj.filtersConfig) app.filtersConfig = obj.filtersConfig;
+    if(obj.formFields) app.formFields = obj.formFields;
+    if(obj.demoCards) app.demoCards = obj.demoCards;
+    save(); renderAll();
+    // переключим на предпросмотр, чтобы сразу увидеть
+    document.querySelector('.tab[data-tab="preview"]').click();
+  }catch(err){
+    alert('Ошибка JSON: '+err.message);
   }
-  wrap.appendChild(row);
-  return wrap;
-}
-function applyFilters(list){
-  let res=list.slice();
-  const getNum=id=>+($(id)?.value||"");
-  const getSel=id=>$(id)?.value||"";
-  const priceMin=getNum("f_price_min"), priceMax=getNum("f_price_max");
-  const areaMin=getNum("f_area_min"), areaMax=getNum("f_area_max");
-  const roomsMin=getNum("f_rooms_min"), roomsMax=getNum("f_rooms_max");
-  const status=getSel("f_status");
-  const citySel=getSel("f_cityId");
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Сбросить к дефолту?')) reset();
+});
 
-  if(priceMin) res=res.filter(o=>o.price>=priceMin);
-  if(priceMax) res=res.filter(o=>o.price<=priceMax);
-  if(areaMin)  res=res.filter(o=>o.area>=areaMin);
-  if(areaMax)  res=res.filter(o=>o.area<=areaMax);
-  if(roomsMin) res=res.filter(o=>o.rooms>=roomsMin);
-  if(roomsMax) res=res.filter(o=>o.rooms<=roomsMax);
-  if(status && status!=="Все") res=res.filter(o=>o.status===status);
-  if(citySel && citySel!=="Все"){ const cid=+citySel.split(":")[0]; res=res.filter(o=>o.cityId===cid); }
-  return res;
-}
-function applySort(list){
-  const s = $("#sortSel")?.value || (sortsConfig[0]?.label||"");
-  const opt = sortsConfig.find(x=>x.label===s) || sortsConfig[0];
-  if(!opt) return list;
-  const {field,dir}=opt, asc=(dir==="asc");
-  return list.slice().sort((a,b)=>{const av=a[field]??0, bv=b[field]??0; return asc ? av-bv : bv-av;});
-}
-function buildResults(list){
-  const box=document.createElement("div"); box.className="results";
-  list.forEach(o=>{
-    const card=document.createElement("div"); card.className="card-r";
-    const pic=document.createElement("div"); pic.className="pic";
-    const text=document.createElement("div");
-    const cityName = directories.cities.find(c=>c.id===o.cityId)?.name || "—";
-    text.innerHTML = `<div><b>${fmt(o.price)} сум</b> <span class="mini">/ ${o.area||0} м² • ${o.rooms||0}к</span></div>
-                      <div class="meta">${o.address}, ${cityName}</div>`;
-    card.append(pic,text); box.appendChild(card);
-  });
-  return box;
-}
-function buildForm(){
-  const box=document.createElement("div"); box.className="form";
-  const col=document.createElement("div"); col.className="row"; col.style.flexDirection="column";
-  formFields.filter(f=>f.enabled).forEach(f=>{
-    const label=document.createElement("label"); label.textContent=f.label;
-    let el;
-    if(f.type==="textarea"){ el=document.createElement("textarea"); el.placeholder=f.placeholder||""; }
-    else if(f.type==="select"){ el=document.createElement("select"); (Array.isArray(f.options)?f.options:[]).forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);}); }
-    else { el=document.createElement("input"); el.type=f.type; el.placeholder=f.placeholder||""; }
-    el.required=!!f.required;
-    const wrap=document.createElement("div"); wrap.className="row"; wrap.append(el);
-    const block=document.createElement("div"); block.append(label, wrap);
-    col.appendChild(block);
-  });
-  box.appendChild(col);
-  return box;
-}
+/* ==========
+   ПРЕДПРОСМОТР
+========== */
+const filtersPreview = document.getElementById('filtersPreview');
+const formPreview = document.getElementById('formPreview');
+const cardsPreview = document.getElementById('cardsPreview');
+document.getElementById('reloadPreview').addEventListener('click', renderPreview);
 
-/* drag&drop в предпросмотре */
-let dragState=null, resizeState=null, heightState=null;
 function renderPreview(){
-  // привязка городов к тестовым объектам
-  if(directories.cities.length){
-    seedObjects = seedObjects.map((o,i)=> ({...o, cityId: directories.cities[i % directories.cities.length].id}));
-    lsSet("seedObjects", seedObjects);
+  // Фильтры
+  filtersPreview.innerHTML = '';
+  for(const f of app.filtersConfig){
+    const el = document.createElement('div');
+    el.className = `field ${widthClass(f.width||100)}`;
+    el.innerHTML = `
+      <div class="width-badge" title="Клик — смена ширины">${f.width||100}%</div>
+      <div class="lbl">${f.label||f.field}</div>
+      ${f.type==='range' ? `
+        <div class="two">
+          <input type="number" placeholder="от ${f.min??''}" />
+          <input type="number" placeholder="до ${f.max??''}" />
+        </div>
+      `: f.type==='select' ? `
+        <select>${(f.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>
+      `: f.type==='checkbox' ? `
+        <div class="row" style="flex-wrap:wrap;gap:6px">${(f.options||[]).map(o=>`<label style="display:flex;gap:6px;align-items:center;background:#0a0e15;border:1px solid #233049;padding:4px 8px;border-radius:8px"><input type="checkbox"> ${o}</label>`).join('')}</div>
+      `: `
+        <input type="text" placeholder="введите значение" />
+      `}
+    `;
+    const badge = el.querySelector('.width-badge');
+    badge.addEventListener('click', ()=>{
+      f.width = cycleWidth(f.width||100);
+      save(); renderPreview(); renderFiltersList();
+    });
+    filtersPreview.appendChild(el);
   }
 
-  preview.innerHTML="";
-  const layout=document.createElement("div"); layout.className="layout";
+  // Форма
+  formPreview.innerHTML = '';
+  for(const ff of app.formFields){
+    const el = document.createElement('div');
+    el.className = `field ${widthClass(ff.width||100)}`;
+    el.innerHTML = `
+      <div class="width-badge" title="Клик — смена ширины">${ff.width||100}%</div>
+      <div class="lbl">${ff.label||ff.id}</div>
+      ${ff.type==='textarea' ? `<textarea rows="3" placeholder="Введите ${ff.label||ff.id}"></textarea>` :
+        ff.type==='select' ? `<select>${(ff.options||[]).map(o=>`<option>${o}</option>`).join('')}</select>` :
+        `<input type="${ff.type==='number'?'number':'text'}" placeholder="Введите ${ff.label||ff.id}"/>`
+      }
+    `;
+    el.querySelector('.width-badge').addEventListener('click', ()=>{
+      ff.width = cycleWidth(ff.width||100);
+      save(); renderPreview(); renderFieldsList();
+    });
+    formPreview.appendChild(el);
+  }
 
-  pageLayout.filter(b=>b.enabled).forEach((b,idx)=>{
-    const span = Math.min(Math.max(b.colSpan||4,1),12);
-    const cell=document.createElement("div"); cell.className="cell"; cell.style.gridColumn=`span ${span}`; cell.dataset.id=b.id; cell.dataset.index=idx;
-
-    // заголовок (редактирование inline)
-    const h=document.createElement("h4"); h.contentEditable=true; h.spellcheck=false; h.textContent=b.title || b.id;
-    h.oninput=()=>{ b.title=h.textContent.trim(); saveLayoutOnly(); };
-    cell.appendChild(h);
-
-    // ручки
-    const handle=document.createElement("div"); handle.className="handle";
-    const dragBtn=document.createElement("button"); dragBtn.className="drag-btn"; dragBtn.textContent="Тащить";
-    const resizeBtn=document.createElement("button"); resizeBtn.className="resize-btn"; resizeBtn.textContent="Ширина";
-    const heightBtn=document.createElement("button"); heightBtn.className="height-btn"; heightBtn.textContent="Высота";
-    handle.append(dragBtn,resizeBtn,heightBtn);
-    cell.appendChild(handle);
-
-    // контент блока
-    if(b.id==="filters"){ cell.appendChild(buildFilterControls()); }
-    if(b.id==="map"){ const m=document.createElement("div"); m.className="fake-map"; m.style.height=(b.height||320)+"px"; m.textContent="MAP"; cell.appendChild(m); }
-    if(b.id==="results"){
-      let list = applyFilters(seedObjects);
-      list = applySort(list);
-      cell.appendChild(buildResults(list));
-    }
-    if(b.id==="form"){ cell.appendChild(buildForm()); }
-    if(b.id==="ad"){ const ad=document.createElement("div"); ad.className="ad"; ad.textContent="Рекламный блок"; cell.appendChild(ad); }
-
-    /* drag move */
-    dragBtn.onmousedown=(e)=>{
-      dragState={ startY:e.clientY, cell, idx:idx };
-      cell.classList.add("dragging");
-      document.onmousemove=(ev)=>{
-        const dy=ev.clientY - dragState.startY;
-        // визуальная подсветка — реальный перенос при mouseup
-        if(Math.abs(dy)>6){ /* визуально можно менять opacity */ }
-      };
-      document.onmouseup=(ev)=>{
-        cell.classList.remove("dragging");
-        document.onmousemove=document.onmouseup=null;
-        // вычислить позицию вставки
-        const all=[...layout.children];
-        const under = all.find(el=>{
-          const r=el.getBoundingClientRect();
-          return ev.clientY>r.top && ev.clientY<r.bottom;
-        });
-        if(under && under!==cell){
-          const from=+cell.dataset.index;
-          const to = +under.dataset.index;
-          const item=pageLayout.splice(from,1)[0];
-          pageLayout.splice(to,0,item);
-          saveAll();
-        }
-      };
-    };
-
-    /* resize width (colSpan) */
-    resizeBtn.onmousedown=(e)=>{
-      e.preventDefault();
-      resizeState={ startX:e.clientX, startSpan:span, guide:null, cell, b };
-      cell.classList.add("resizing");
-      resizeState.guide=document.createElement("div"); resizeState.guide.className="res-guide"; resizeState.guide.textContent=`${span}/12`;
-      cell.appendChild(resizeState.guide);
-      document.onmousemove=(ev)=>{
-        const dx=ev.clientX - resizeState.startX;
-        const cols = Math.round(dx / 40); // грубая сетка 40px на колонку
-        let newSpan = Math.min(Math.max(resizeState.startSpan + cols,1),12);
-        cell.style.gridColumn=`span ${newSpan}`;
-        resizeState.guide.textContent=`${newSpan}/12`;
-      };
-      document.onmouseup=()=>{
-        const txt=resizeState.guide.textContent;
-        const newSpan=+txt.split("/")[0];
-        resizeState.b.colSpan=newSpan;
-        cell.classList.remove("resizing");
-        resizeState.guide.remove();
-        resizeState=null;
-        document.onmousemove=document.onmouseup=null;
-        saveLayoutOnly();
-      };
-    };
-
-    /* resize height (map height) */
-    heightBtn.onmousedown=(e)=>{
-      e.preventDefault();
-      if(b.id!=="map" && b.id!=="ad"){ alert("Высота настраивается для карты/рекламы"); return; }
-      const target = cell.querySelector(".fake-map") || cell.querySelector(".ad");
-      const startH = b.height || target?.offsetHeight || 320;
-      heightState={ startY:e.clientY, b, target, startH };
-      document.onmousemove=(ev)=>{
-        const dh=ev.clientY - heightState.startY;
-        const nh=Math.max(80, startH + dh);
-        if(heightState.target) heightState.target.style.height=nh+"px";
-      };
-      document.onmouseup=()=>{
-        const h=parseInt(heightState.target.style.height)||startH;
-        heightState.b.height=h;
-        heightState=null;
-        document.onmousemove=document.onmouseup=null;
-        saveLayoutOnly();
-      };
-    };
-
-    layout.appendChild(cell);
-  });
-
-  preview.appendChild(layout);
+  // Карточки
+  cardsPreview.innerHTML = '';
+  for(const c of (app.demoCards||[])){
+    const el = document.createElement('div');
+    el.className='card';
+    el.innerHTML = `
+      <div class="ph"></div>
+      <div class="cnt">
+        <div class="row" style="justify-content:space-between">
+          <strong>${c.title}</strong>
+          <span class="pill">${c.tag||'Объявление'}</span>
+        </div>
+        <div class="row"><span>${c.price||''}</span></div>
+        <div class="row"><button class="btn secondary">Открыть</button></div>
+      </div>
+    `;
+    cardsPreview.appendChild(el);
+  }
 }
 
-/* ===== drag helpers (lists) ===== */
-function getAfter(container,y){
-  const els=[...container.querySelectorAll("[draggable]:not(.dragging)")];
-  return els.reduce((closest,child)=>{
-    const box=child.getBoundingClientRect();
-    const offset=y-box.top-box.height/2;
-    if(offset<0 && offset>closest.offset) return {offset,element:child};
-    else return closest;
-  },{offset:Number.NEGATIVE_INFINITY}).element;
-}
-function updateOrder(list,arr,save){
-  const items=[...list.querySelectorAll("[draggable]")];
-  const mapped = items.map(it=>arr[+it.dataset.index]);
-  return mapped;
+/* ==========
+   РЕНДЕР ВСЁ
+========== */
+function renderAll(){
+  renderFiltersList();
+  renderFieldsList();
+  if(document.querySelector('.tab.active')?.dataset.tab==='preview'){
+    renderPreview();
+  }
 }
 
-/* ===== Filters/Sorts effect on config ===== */
-function saveLayoutOnly(){ lsSet("pageLayout", pageLayout); renderPreview(); }
-function saveAll(){ lsSet("pageLayout", pageLayout); lsSet("formFields", formFields); lsSet("filtersConfig", filtersConfig); lsSet("sortsConfig", sortsConfig); renderEverything(); }
-
-/* ===== Controls: add/reset, etc. ===== */
-$("addFilter").disabled=false; $("addSort").disabled=false; // чтоб было видно
-
-/* ===== Init + refreshers ===== */
-function renderBlocksEditorDummy(){ /* редактор структуры теперь через предпросмотр, отдельный список не нужен */ }
-function renderFiltersWrapper(){ renderFilters(); }
-function renderSortsWrapper(){ renderSorts(); }
-function renderFieldsWrapper(){ renderFields(); }
-function renderLayoutsWrapper(){ renderLayouts(); }
-function renderEverything(){
-  renderDirs();
-  renderFiltersWrapper();
-  renderSortsWrapper();
-  renderFieldsWrapper();
-  renderLayoutsWrapper();
-  renderPreview();
-}
-
-/* старт */
-renderEverything();
+/* init */
+renderAll();
 </script>
 </body>
 </html>
