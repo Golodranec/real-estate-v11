@@ -1,9 +1,9 @@
-// ======= v13.9 =======
-console.log("✅ script.js v13.9 loaded");
+// ======= v13.9.2 =======
+console.log("✅ script.js v13.9.2 loaded");
 
 // keys
 const LS_OBJECTS = "objects";
-const LS_FAVS    = "favorites_v13_9";
+const LS_FAVS    = "favorites_v13_9_2";
 
 // state
 let objects   = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
@@ -11,24 +11,24 @@ let favorites = new Set(JSON.parse(localStorage.getItem(LS_FAVS) || "[]"));
 let selectedImages = []; // {name,size,dataUrl}
 let tempCoords = null;   // {lat,lng}
 let pickMode = false;
+let tempMarker = null;   // временный маркер
 
-// storage getters (always fresh)
+// storage getters
 const getTreeNodes   = () => JSON.parse(localStorage.getItem("treeNodes")   || "[]");
 const getNodeTypes   = () => JSON.parse(localStorage.getItem("nodeTypes")   || "[]");
 const getExtraParams = () => JSON.parse(localStorage.getItem("extraParams") || "[]");
 
 // helpers
 const $ = id => document.getElementById(id);
-const nodesByType = (t) => getTreeNodes().filter(n => n.type === t);
 const nameById = (id) => (getTreeNodes().find(n => n.id === id)?.name) || "";
 const detectCategoryType = () => {
   const types = getNodeTypes();
-  // ищем «Категория» / «Тип» / «Category»
   const exact = types.find(t => t.trim().toLowerCase() === "категория");
   if (exact) return exact;
   const byWord = types.find(t => /кат|тип|category/i.test(t));
   return byWord || types[0] || null;
 };
+const fmtNum = (n) => (isFinite(n) && n>0) ? Number(n).toLocaleString() : "";
 
 // map
 const map = L.map("map").setView([41.3111, 69.2797], 12);
@@ -36,7 +36,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19, at
 const cluster = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:45 });
 map.addLayer(cluster);
 
-// build Filters (fully dynamic)
+// =============== BUILD FILTERS =================
 function buildFilters() {
   const box = $("filtersBox");
   if (!box) return;
@@ -45,20 +45,22 @@ function buildFilters() {
   const types = getNodeTypes();
   const nodes = getTreeNodes();
 
-  // dynamic selects for each type
+  // селекты по каждому типу
   types.forEach(typeName => {
     const sel = document.createElement("select");
     sel.id = `filter_${typeName}`;
     sel.innerHTML = `<option value="">${typeName}</option>`;
     nodes.filter(n => n.type === typeName).forEach(n => {
       const o = document.createElement("option");
-      o.value = n.id; o.textContent = n.name; sel.appendChild(o);
+      o.value = n.id;
+      o.textContent = n.name;
+      sel.appendChild(o);
     });
-    sel.onchange = renderAll;
+    sel.onchange = () => { buildParamsFilters(); renderAll(); };
     box.appendChild(sel);
   });
 
-  // status filter
+  // статус
   const status = document.createElement("select");
   status.id = "filter_status";
   status.innerHTML = `
@@ -69,14 +71,14 @@ function buildFilters() {
   status.onchange = renderAll;
   box.appendChild(status);
 
-  // reset
+  // сброс
   const resetBtn = document.createElement("button");
   resetBtn.textContent = "Сбросить";
   resetBtn.className = "btn ghost";
   resetBtn.onclick = () => { buildFilters(); renderAll(); };
   box.appendChild(resetBtn);
 
-  // info + dynamic params placeholder + status
+  // служебные блоки
   const sync = document.createElement("div");
   sync.id = "adminSyncInfo"; sync.className = "hint"; sync.style.gridColumn = "1/-1";
   box.appendChild(sync);
@@ -91,11 +93,11 @@ function buildFilters() {
   statusText.textContent = "✔ Скрипт загружен";
   box.appendChild(statusText);
 
-  // build param filters tied to selected category
+  // параметры по выбранной категории
   buildParamsFilters();
 }
 
-// build Form selects for each type
+// =============== BUILD FORM ====================
 function buildForm() {
   const box = $("dynamicLocationForm"); if (!box) return;
   box.innerHTML = "";
@@ -109,17 +111,18 @@ function buildForm() {
     sel.innerHTML = `<option value="">${typeName}</option>`;
     nodes.filter(n => n.type === typeName).forEach(n => {
       const o = document.createElement("option");
-      o.value = n.id; o.textContent = n.name; sel.appendChild(o);
+      o.value = n.id;
+      o.textContent = n.name;
+      sel.appendChild(o);
     });
     sel.onchange = () => {
-      // если это категория — перестроим параметры формы
       if (typeName === detectCategoryType()) renderParamsForm();
     };
     box.appendChild(sel);
   });
 }
 
-// dynamic params in form (by selected category node)
+// ============ DYNAMIC PARAMS ===================
 function paramsForCategoryNode(catNodeId) {
   return getExtraParams().filter(p => p.categoryId === catNodeId);
 }
@@ -177,16 +180,9 @@ function buildParamsFilters() {
     group.appendChild(vals);
     box.appendChild(group);
   });
-
-  // перестраиваем при смене категории
-  const catType = detectCategoryType();
-  if (catType) {
-    const catSel = $(`filter_${catType}`);
-    if (catSel) catSel.onchange = () => { buildParamsFilters(); renderAll(); };
-  }
 }
 
-// sync indicator
+// ============= SYNC INDICATOR ==================
 function updateAdminSyncInfo() {
   const types = getNodeTypes().length;
   const nodes = getTreeNodes().length;
@@ -201,7 +197,7 @@ function updateAdminSyncInfo() {
   }
 }
 
-// images handling (add one-by-one or many)
+// =============== IMAGES ========================
 function dedupImages(arr){
   const seen=new Set();
   return arr.filter(f=>{
@@ -220,8 +216,7 @@ function attachImagesHandler() {
     }
     selectedImages = dedupImages(selectedImages);
     renderImagePreview(preview);
-    // чтобы можно было выбирать те же файлы снова — чистим value
-    input.value = "";
+    input.value = ""; // чтобы можно было добавить те же файлы
   };
 }
 function fileToDataUrl(file){
@@ -240,7 +235,7 @@ function renderImagePreview(previewEl){
   });
 }
 
-// pick point on map
+// ============ MAP: PICK POINT ==================
 function attachPickOnMap() {
   const btn = $("pickOnMap"); const badge = $("coordsBadge");
   btn.onclick = () => {
@@ -254,11 +249,14 @@ function attachPickOnMap() {
     badge.textContent = `Выбрано: ${tempCoords.lat.toFixed(5)}, ${tempCoords.lng.toFixed(5)}`;
     badge.style.background = "#242938";
     pickMode = false;
-    renderMarkers(); // показать маркер будущего объекта отдельно не храним — отобразим после сохранения
+
+    if (tempMarker) map.removeLayer(tempMarker);
+    tempMarker = L.marker([tempCoords.lat, tempCoords.lng], { opacity: 0.6 });
+    tempMarker.addTo(map);
   });
 }
 
-// save object
+// =============== SAVE OBJECT ===================
 function attachFormSubmit() {
   const form = $("objectForm");
   $("clearForm").onclick = () => { resetForm(); };
@@ -266,14 +264,12 @@ function attachFormSubmit() {
   form.onsubmit = (ev) => {
     ev.preventDefault();
 
-    // собрать локации по типам (id узлов)
     const loc = {};
     getNodeTypes().forEach(t=>{
       const sel = $(`form_${t}`);
       if (sel && sel.value) loc[t] = +sel.value;
     });
 
-    // собрать параметры
     const extra = {};
     document.querySelectorAll('#dynamicParamsForm input[type="checkbox"]').forEach(cb=>{
       const pname = cb.dataset.param;
@@ -292,42 +288,34 @@ function attachFormSubmit() {
       floor: +($("floor").value || 0),
       floors: +($("floors").value || 0),
       year: +($("year").value || 0),
-      loc,            // {Тип: nodeId}
-      extra,          // {Параметр: [значения]}
-      images: selectedImages.slice(0), // копия
+      loc,
+      extra,
+      images: selectedImages.slice(0),
       coords: tempCoords ? { ...tempCoords } : null,
       createdAt: Date.now()
     };
 
-    // сохранить
     objects.push(obj);
     localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
-    // уведомим другие вкладки
     localStorage.setItem("objects_last_change", String(Date.now()));
 
-    // сброс формы
     resetForm();
     renderAll();
   };
 }
 function resetForm(){
-  // чистим тексты/числа
   ["title","address","price","area","rooms","floor","floors","year"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
-  // чистим селекты типов
   getNodeTypes().forEach(t=>{ const el=$(`form_${t}`); if(el) el.value=""; });
-  // чистим статус
   const st = $("form_status"); if (st) st.value = "sale";
-  // чистим параметры
   $("dynamicParamsForm").innerHTML = "";
-  // чистим фото
   selectedImages = [];
   $("imagePreview").innerHTML = "";
-  // координаты
   tempCoords = null;
+  if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
   const badge = $("coordsBadge"); if (badge) { badge.textContent = "Координаты не выбраны"; }
 }
 
-// filters -> apply
+// =============== FILTER APPLY ==================
 function gatherActiveFilters() {
   const filters = { byType:{}, status:null, params:{} };
   getNodeTypes().forEach(t=>{
@@ -337,7 +325,6 @@ function gatherActiveFilters() {
   const st = $("filter_status");
   if (st && st.value) filters.status = st.value;
 
-  // параметры
   document.querySelectorAll('#dynamicParamsFilters input[type="checkbox"]').forEach(cb=>{
     if (!cb.checked) return;
     const pname = cb.dataset.param;
@@ -350,15 +337,15 @@ function applyFilters(list){
   const f = gatherActiveFilters();
   let res = list.slice();
 
-  // по типам (узлам)
+  // узлы по типам
   Object.entries(f.byType).forEach(([typeName,nodeId])=>{
     res = res.filter(o => (o.loc && o.loc[typeName] === nodeId));
   });
 
-  // по статусу
+  // статус
   if (f.status) res = res.filter(o => o.status === f.status);
 
-  // по параметрам (OR внутри одного параметра, AND между параметрами)
+  // параметры (OR внутри одного параметра, AND между параметрами)
   Object.entries(f.params).forEach(([pname, set])=>{
     res = res.filter(o => {
       const got = new Set(o.extra?.[pname] || []);
@@ -370,21 +357,40 @@ function applyFilters(list){
   return res;
 }
 
-// markers + results
+// ============ MARKERS & RESULTS ================
+function popLine(label, value){
+  if (!value && value !== 0) return "";
+  return `<div class="meta"><b>${label}:</b> ${value}</div>`;
+}
 function renderMarkers(list = objects) {
   cluster.clearLayers();
   list.forEach(o=>{
     if (!o.coords) return;
-    const m = L.marker([o.coords.lat, o.coords.lng]);
+
     const catType = detectCategoryType();
     const catName = catType && o.loc?.[catType] ? nameById(o.loc[catType]) : "";
+
+    // параметры
+    const pRooms = o.rooms ? `${o.rooms}` : "";
+    const pArea  = o.area ? `${fmtNum(o.area)} м²` : "";
+    const pFloor = (o.floor || o.floors) ? [o.floor?`этаж ${o.floor}`:"", o.floors?`из ${o.floors}`:""].filter(Boolean).join(" ") : "";
+    const pYear  = o.year ? `${o.year}` : "";
+
+    // фото: максимум 2 миниатюры
+    const thumbs = (o.images||[]).slice(0,2).map(im=>`<img src="${im.dataUrl}" alt="" style="width:56px;height:42px;object-fit:cover;border-radius:4px;margin-right:4px">`).join("");
+
     const html = `
-      <div style="min-width:180px">
-        <b>${o.title || "(без названия)"}</b><br/>
-        ${catName ? `<span class="badge">${catName}</span><br/>` : ""}
-        ${o.price ? `<div class="price">${o.price.toLocaleString()} сум</div>` : ""}
+      <div style="min-width:210px">
+        <b>${o.title || "(без названия)"}</b> ${catName ? `<span class="badge">${catName}</span>`:""}<br/>
+        ${o.price ? `<div class="price" style="margin:6px 0">${fmtNum(o.price)} сум</div>` : ""}
+        ${pRooms ? `<div class="meta">Комнаты: ${pRooms}</div>` : ""}
+        ${pArea  ? `<div class="meta">Площадь: ${pArea}</div>` : ""}
+        ${pFloor ? `<div class="meta">Этажность: ${pFloor}</div>` : ""}
+        ${pYear  ? `<div class="meta">Год: ${pYear}</div>` : ""}
         ${o.address ? `<div class="meta">${o.address}</div>` : ""}
+        ${thumbs ? `<div style="margin-top:6px;display:flex;align-items:center">${thumbs}${o.images.length>2?`<span class="badge">+${o.images.length-2}</span>`:""}</div>`:""}
       </div>`;
+    const m = L.marker([o.coords.lat, o.coords.lng]);
     m.bindPopup(html);
     cluster.addLayer(m);
   });
@@ -392,25 +398,43 @@ function renderMarkers(list = objects) {
 function renderResults(list = objects) {
   const wrap = $("resultsList"); wrap.innerHTML = "";
   if (!list.length) { wrap.innerHTML = `<div class="muted">Нет объектов</div>`; return; }
+
   list.forEach(o=>{
     const card = document.createElement("div");
     card.className = "item";
     const catType = detectCategoryType();
     const catName = catType && o.loc?.[catType] ? nameById(o.loc[catType]) : "";
 
-    const imgs = (o.images||[]).slice(0,4).map(im=>`<img src="${im.dataUrl}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:4px;margin-right:4px">`).join("");
+    const pRooms = o.rooms ? `${o.rooms}` : "";
+    const pArea  = o.area ? `${fmtNum(o.area)} м²` : "";
+    const pFloor = (o.floor || o.floors) ? [o.floor?`этаж ${o.floor}`:"", o.floors?`из ${o.floors}`:""].filter(Boolean).join(" ") : "";
+    const pYear  = o.year ? `${o.year}` : "";
+
+    // все фото-миниатюры (покажем до 8 для компактности)
+    const maxThumbs = 8;
+    const thumbs = (o.images||[]).slice(0,maxThumbs).map(im=>`<img src="${im.dataUrl}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:4px;margin-right:4px;margin-top:4px">`).join("");
 
     card.innerHTML = `
       <h3>${o.title || "(без названия)"} ${catName ? `<span class="badge">${catName}</span>`:""}</h3>
-      <div class="price">${o.price ? `${o.price.toLocaleString()} сум` : ""}</div>
+      <div class="price">${o.price ? `${fmtNum(o.price)} сум` : ""}</div>
       <div class="meta">${o.address || ""}</div>
-      <div style="margin-top:6px;display:flex;align-items:center">${imgs}${o.images?.length>4?`<span class="badge">+${o.images.length-4}</span>`:""}</div>
+
+      <div class="meta" style="margin-top:6px">
+        ${pRooms ? `<span class="badge" style="margin-right:6px">Комнаты: ${pRooms}</span>`:""}
+        ${pArea  ? `<span class="badge" style="margin-right:6px">Площадь: ${pArea}</span>`:""}
+        ${pFloor ? `<span class="badge" style="margin-right:6px">Этажность: ${pFloor}</span>`:""}
+        ${pYear  ? `<span class="badge" style="margin-right:6px">Год: ${pYear}</span>`:""}
+      </div>
+
+      <div style="margin-top:6px;display:flex;flex-wrap:wrap;align-items:center">
+        ${thumbs}${(o.images?.length||0)>maxThumbs?`<span class="badge" style="margin-top:4px">+${o.images.length-maxThumbs}</span>`:""}
+      </div>
     `;
     wrap.appendChild(card);
   });
 }
 
-// render All
+// ============== RENDER ALL =====================
 function renderAll(){
   buildFilters();
   buildForm();
@@ -422,23 +446,19 @@ function renderAll(){
   renderResults(filtered);
 }
 
-// storage sync across tabs (admin <-> index)
+// ============== STORAGE SYNC ===================
 window.addEventListener("storage", (e)=>{
   if (["treeNodes","nodeTypes","extraParams","objects","objects_last_change"].includes(e.key)) {
-    // перечитаем
     objects = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
     renderAll();
   }
 });
 
-// init
+// ================= INIT ========================
 function init(){
-  // handlers
   attachImagesHandler();
   attachPickOnMap();
   attachFormSubmit();
-
-  // first render
   renderAll();
   const ss = $("scriptStatus"); if (ss) ss.textContent = "✔ Скрипт загружен и работает";
 }
