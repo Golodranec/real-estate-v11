@@ -187,6 +187,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
     document.getElementById("layoutPanel").style.display=id==="layout"?"block":"none";
     document.getElementById("previewPanel").style.display=id==="preview"?"block":"none";
     renderAll();
+    toast('Импорт выполнен');
   }
 });
 
@@ -194,11 +195,13 @@ document.querySelectorAll(".tab").forEach(tab=>{
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download="admin-config.json"; a.click(); URL.revokeObjectURL(url);
+  a.href=url; a.download="admin-config.json"; a.click();
+  toast('Экспорт выполнен'); URL.revokeObjectURL(url);
 };
 document.getElementById("importInput").addEventListener("change",async e=>{
   const f=e.target.files?.[0]; if(!f) return;
   const txt=await f.text(); data=JSON.parse(txt); save(); renderAll();
+    toast('Импорт выполнен');
 });
 document.getElementById("resetBtn").onclick=resetAll;
 
@@ -298,7 +301,7 @@ function deleteGroup(gi){
 
 function onFilterChange(field,key,val){
   const f=byField(field); if(!f) return;
-  f[key]=val; save(); // fixed: no full rerender on each input
+  f[key]=val; save(); renderGroups(); renderFiltersTable(); renderPreview();
 }
 function onFilterRenameField(oldField,newField){
   if(!newField || oldField===newField) return;
@@ -588,6 +591,7 @@ function renderAll(){ renderGroups(); renderFiltersTable(); renderFields(); rend
 
 /* старт */
 renderAll();
+    toast('Импорт выполнен');
 
 function toast(msg){
   const t=document.getElementById("toast");
@@ -599,4 +603,12 @@ function toast(msg){
 }
 </script>
 </body>
+<!-- build: admin-fixed-v1 -->
 </html>
+
+function removeBlock(i){
+  data.layout.splice(i,1);
+  save();
+  renderLayout();
+  renderPreview();
+}
