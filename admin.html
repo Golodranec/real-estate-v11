@@ -10,8 +10,8 @@ function toast(msg){
   if(!t) return;
   t.textContent=msg;
   t.classList.add("show");
-  clearTimeout(window.__tt);
-  window.__tt=setTimeout(()=>t.classList.remove("show"),2000);
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>t.classList.remove("show"),2000);
 }
 </script>
 <style>
@@ -298,7 +298,7 @@ function deleteGroup(gi){
 
 function onFilterChange(field,key,val){
   const f=byField(field); if(!f) return;
-  f[key]=val; save(); renderGroups(); renderFiltersTable(); renderPreview();
+  f[key]=val; save(); // fixed: no full rerender on each input
 }
 function onFilterRenameField(oldField,newField){
   if(!newField || oldField===newField) return;
@@ -410,8 +410,8 @@ function renderFields(){
   data.fields.forEach((f,i)=>{
     const row=document.createElement("div"); row.className="item";
     row.innerHTML=`
-      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();">
-      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();">
+      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();renderPreview()">
+      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();renderPreview()">
       <select onchange="data.fields[${i}].type=this.value;save();renderPreview()">
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
         <option value="number" ${f.type==='number'?'selected':''}>number</option>
@@ -439,7 +439,7 @@ function renderLayout(){
   data.layout.forEach(b=>{
     const el=document.createElement("div"); el.className="block";
     el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
-    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div><button class=\"close\" onclick=\"removeBlock(i)\">×</button>`;
+    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div>`;
     // drag
     el.addEventListener("mousedown",e=>{
       if(e.target.classList.contains("resize"))return;
@@ -594,8 +594,8 @@ function toast(msg){
   if(!t) return;
   t.textContent=msg;
   t.classList.add("show");
-  clearTimeout(window.__tt);
-  window.__tt=setTimeout(()=>t.classList.remove("show"),2000);
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>t.classList.remove("show"),2000);
 }
 </script>
 </body>
