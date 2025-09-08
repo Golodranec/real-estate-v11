@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin — fresh skeleton</title>
+  <style>
+    :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui}
+    header{padding:10px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .tabs{display:flex;gap:8px}
+    .tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
+    .tab.active{background:var(--accent);color:#fff}
+    .btn{padding:6px 10px;border-radius:6px;border:1px solid #2a3140;background:#2a3140;color:#fff;cursor:pointer}
+    .btn.ghost{background:transparent}
+    main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
+    .panel{padding:12px;overflow:auto}
+    .toast{position:fixed;right:18px;bottom:18px;background:#1f2530;border:1px solid #2a3140;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:50}
+    .toast.show{opacity:1;transform:translateY(0)}
+  </style>
+</head>
+<body>
+<header>
+  <div class="tabs">
+    <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
+    <div class="tab" data-tab="fields">📝 Поля</div>
+    <div class="tab" data-tab="layout">🖼️ Макет</div>
+    <div class="tab" data-tab="preview">👀 Предпросмотр</div>
+  </div>
+  <button class="btn" id="exportBtn">Экспорт</button>
+  <label class="btn">Импорт<input id="importInput" type="file" hidden></label>
+</header>
+
+<main>
+  <section class="panel" id="filtersPanel">Секция фильтров (скелет)</section>
+  <section class="panel" id="fieldsPanel" style="display:none">Секция полей (скелет)</section>
+  <section class="panel" id="layoutPanel" style="display:none">Секция макета (скелет)</section>
+  <section class="panel" id="previewPanel" style="display:none">Секция предпросмотра (скелет)</section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY="admin_fresh_cfg";
+let data = { groups:[], filters:[], fields:[], layout:[] };
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const id=t.dataset.tab;
+  document.getElementById('filtersPanel').style.display = id==='filters' ? 'block':'none';
+  document.getElementById('fieldsPanel').style.display  = id==='fields'  ? 'block':'none';
+  document.getElementById('layoutPanel').style.display  = id==='layout'  ? 'block':'none';
+  document.getElementById('previewPanel').style.display = id==='preview' ? 'block':'none';
+});
+
+document.getElementById('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'config.json'; a.click();
+  toast('Экспорт выполнен');
+};
+
+document.getElementById('importInput').addEventListener('change', async e => {
+  const f=e.target.files?.[0]; if(!f) return;
+  try{
+    const txt=await f.text();
+    data=JSON.parse(txt);
+    toast('Импорт выполнен');
+  }catch(err){
+    toast('Ошибка импорта');
+  }
+});
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(window.__to);
+  window.__to=setTimeout(()=>t.classList.remove('show'),1500);
+}
+</script>
+<!-- build: admin-fresh-v1 -->
+</body>
+</html>
