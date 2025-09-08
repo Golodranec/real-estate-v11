@@ -15,13 +15,13 @@
     .btn{padding:6px 10px;border-radius:6px;border:1px solid #2a3140;background:#2a3140;color:#fff;cursor:pointer}
     .btn.ghost{background:transparent}
     .badge{margin-left:8px;font-size:12px;opacity:.75;padding:2px 6px;border:1px solid #2a3140;border-radius:6px}
-    main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
+    main{display:grid;grid-template-columns:1fr;min-height:90vh}
     .panel{padding:12px;overflow:auto}
     input,select,textarea{padding:8px;border-radius:8px;border:1px solid #333;background:#111722;color:#fff}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .group{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
     .group-sep{height:1px;background:var(--line);margin:16px 0;opacity:.7}
-    .chip{display:flex;gap:8px;align-items:center;background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:8px}
+    .chip{display:flex;gap:8px;align-items:center;background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:8px} .chip.dragover{outline:2px dashed #5b9cff}
     .chip .ar{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #2a3140;border-radius:6px;background:#0f141d;cursor:pointer}
     .chip .ar:hover{background:#17202c}
     .list{display:flex;gap:8px;flex-wrap:wrap}
@@ -56,7 +56,7 @@
 </head>
 <body>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v9</span>
+  <div class="tabs"><span class="badge" id="verBadge">v10</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -107,11 +107,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v9</footer>
+<footer>build: admin-full-v10</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v9";
+const KEY="admin_full_cfg_v10";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
@@ -211,10 +211,14 @@ function renderGroups(){
     const del=document.createElement('button'); del.className='btn ghost'; del.textContent='Удалить ряд'; del.onclick=()=>deleteGroup(gi);
     head.append(nameInp,del); box.append(head);
 
-    const list=document.createElement('div'); list.className='list';
+    const list=document.createElement('div'); list.className='list'; list.ondragover=(e)=>{chipDragOver(e)}; list.ondragleave=(e)=>{chipDragLeave(e)}; list.ondrop=(e)=>{chipDropOnList(e,gi)};
     g.filters.forEach(field=>{
       const f=byField(field); if(!f) return;
-      const chip=document.createElement('div'); chip.className='chip';
+      const chip=document.createElement('div'); chip.className='chip'; chip.draggable=true;
+      chip.ondragstart=(e)=>chipDragStart(e,gi,f.field);
+      chip.ondragover=chipDragOver;
+      chip.ondragleave=chipDragLeave;
+      chip.ondrop=(e)=>chipDrop(e,gi,f.field);
       const l1=document.createElement('input'); l1.value=f.label; l1.placeholder='Название';
       l1.oninput=()=>{ f.label=l1.value; save(); /* без ререндера */ };
       const l2=document.createElement('input'); l2.value=f.field; l2.placeholder='field';
@@ -240,6 +244,46 @@ function renderGroups(){
     wrap.append(box);
   });
   renderFiltersTable();
+}
+
+
+// ==== Drag & Drop for filters
+let dragSrc = null; // {gi, idx, field}
+function chipDragStart(e, gi, field){
+  const idx = data.groups[gi].filters.indexOf(field);
+  dragSrc = {gi, idx, field};
+  e.dataTransfer.effectAllowed = 'move';
+  try{ e.dataTransfer.setData('text/plain', field); }catch(_){}
+}
+function chipDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('dragover'); }
+function chipDragLeave(e){ e.currentTarget.classList.remove('dragover'); }
+function chipDrop(e, gi, field){
+  e.preventDefault(); e.currentTarget.classList.remove('dragover');
+  if(!dragSrc) return;
+  const srcArr = data.groups[dragSrc.gi].filters;
+  const srcIdx = srcArr.indexOf(dragSrc.field);
+  if(srcIdx<0) return;
+  // remove from source
+  srcArr.splice(srcIdx,1);
+  const dstArr = data.groups[gi].filters;
+  let dstIdx = dstArr.indexOf(field);
+  if(dstIdx<0) dstIdx = dstArr.length;
+  // insert before target
+  dstArr.splice(dstIdx,0,dragSrc.field);
+  dragSrc = null;
+  save(); renderGroups(); renderPreview();
+}
+function chipDropOnList(e, gi){
+  e.preventDefault(); e.currentTarget.classList.remove('dragover');
+  if(!dragSrc) return;
+  const srcArr = data.groups[dragSrc.gi].filters;
+  const srcIdx = srcArr.indexOf(dragSrc.field);
+  if(srcIdx<0) return;
+  srcArr.splice(srcIdx,1);
+  const dstArr = data.groups[gi].filters;
+  dstArr.push(dragSrc.field);
+  dragSrc = null;
+  save(); renderGroups(); renderPreview();
 }
 
 function openOptions(field){
