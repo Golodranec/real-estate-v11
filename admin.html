@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin — fresh skeleton</title>
+  <title>Admin — fresh layout v2</title>
   <style>
     :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
     *{box-sizing:border-box}
@@ -16,6 +16,13 @@
     .btn.ghost{background:transparent}
     main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
     .panel{padding:12px;overflow:auto}
+    /* Layout */
+    .toolbar{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+    .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;background:#0b0d12;border:1px dashed #333;padding:6px;min-height:60vh;border-radius:12px}
+    .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
+    .block .close{position:absolute;top:6px;right:6px;background:#e53e3e;border:none;border-radius:50%;width:22px;height:22px;color:#fff;cursor:pointer;font-size:14px;line-height:20px;z-index:5}
+    .label{opacity:.9}
+    /* Toast */
     .toast{position:fixed;right:18px;bottom:18px;background:#1f2530;border:1px solid #2a3140;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:50}
     .toast.show{opacity:1;transform:translateY(0)}
   </style>
@@ -23,9 +30,9 @@
 <body>
 <header>
   <div class="tabs">
-    <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
+    <div class="tab" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
-    <div class="tab" data-tab="layout">🖼️ Макет</div>
+    <div class="tab active" data-tab="layout">🖼️ Макет</div>
     <div class="tab" data-tab="preview">👀 Предпросмотр</div>
   </div>
   <button class="btn" id="exportBtn">Экспорт</button>
@@ -33,18 +40,34 @@
 </header>
 
 <main>
-  <section class="panel" id="filtersPanel">Секция фильтров (скелет)</section>
+  <section class="panel" id="filtersPanel" style="display:none">Секция фильтров (скелет)</section>
   <section class="panel" id="fieldsPanel" style="display:none">Секция полей (скелет)</section>
-  <section class="panel" id="layoutPanel" style="display:none">Секция макета (скелет)</section>
-  <section class="panel" id="previewPanel" style="display:none">Секция предпросмотра (скелет)</section>
+
+  <section class="panel" id="layoutPanel">
+    <div class="toolbar">
+      <button class="btn" onclick="addBlock('filters')">+ Фильтры</button>
+      <button class="btn" onclick="addBlock('map')">+ Карта</button>
+      <button class="btn" onclick="addBlock('form')">+ Форма</button>
+      <button class="btn" onclick="addBlock('cards')">+ Список</button>
+      <button class="btn" onclick="addBlock('table')">+ Таблица</button>
+      <button class="btn ghost" onclick="clearLayout()">Очистить макет</button>
+    </div>
+    <div class="canvas" id="canvas"></div>
+  </section>
+
+  <section class="panel" id="previewPanel" style="display:none">
+    <div id="previewEmpty" class="label">Предпросмотр появится после добавления блоков</div>
+  </section>
 </main>
 
 <div class="toast" id="toast"></div>
 
 <script>
 const KEY="admin_fresh_cfg";
-let data = { groups:[], filters:[], fields:[], layout:[] };
+let data = JSON.parse(localStorage.getItem(KEY) || '{"groups":[],"filters":[],"fields":[],"layout":[]}');
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
 
+// Tabs
 document.querySelectorAll('.tab').forEach(t=>t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -53,13 +76,15 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick = () => {
   document.getElementById('fieldsPanel').style.display  = id==='fields'  ? 'block':'none';
   document.getElementById('layoutPanel').style.display  = id==='layout'  ? 'block':'none';
   document.getElementById('previewPanel').style.display = id==='preview' ? 'block':'none';
+  if(id==='layout') renderLayout();
+  if(id==='preview') renderPreview();
 });
 
+// Export / Import with toasts
 document.getElementById('exportBtn').onclick = () => {
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'config.json'; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = 'config.json'; a.click();
   toast('Экспорт выполнен');
 };
 
@@ -68,20 +93,55 @@ document.getElementById('importInput').addEventListener('change', async e => {
   try{
     const txt=await f.text();
     data=JSON.parse(txt);
+    save();
+    renderLayout(); renderPreview();
     toast('Импорт выполнен');
-  }catch(err){
-    toast('Ошибка импорта');
-  }
+  }catch(err){ toast('Ошибка импорта'); }
 });
 
 function toast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.classList.add('show');
-  clearTimeout(window.__to);
-  window.__to=setTimeout(()=>t.classList.remove('show'),1500);
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(window.__to); window.__to=setTimeout(()=>t.classList.remove('show'),1500);
 }
+
+// Layout
+function addBlock(type){
+  const nextY = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1))+1 : 1;
+  data.layout.push({id:Date.now(), type, x:1, y:nextY, w:6, h:2});
+  save(); renderLayout();
+}
+function removeBlock(i){
+  data.layout.splice(i,1); save(); renderLayout(); renderPreview();
+}
+function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
+
+function renderLayout(){
+  const c=document.getElementById('canvas'); c.innerHTML='';
+  if(!data.layout.length){
+    const p=document.createElement('div'); p.className='label'; p.style.gridColumn='1 / span 12'; p.style.gridRow='1 / span 1';
+    p.textContent='Добавьте блоки с панели выше'; c.appendChild(p);
+  }
+  data.layout.forEach((b,i)=>{
+    const el=document.createElement('div'); el.className='block';
+    el.style.gridColumn = `${b.x} / span ${b.w}`;
+    el.style.gridRow    = `${b.y} / span ${b.h}`;
+    el.innerHTML = `${label(b.type)}<button class='close' title='Удалить' onclick='removeBlock(${i})'>×</button>`;
+    c.appendChild(el);
+  });
+}
+
+function label(t){ return ({filters:'Фильтры', map:'Карта', form:'Форма', cards:'Список', table:'Таблица'})[t] || t; }
+
+// Preview (пока простая заглушка)
+function renderPreview(){
+  const box=document.getElementById('previewPanel');
+  box.innerHTML = '<div id="previewEmpty" class="label">Предпросмотр пока простой. Макет: '+ data.layout.length +' блок(ов)</div>';
+}
+
+// Initial render
+renderLayout();
 </script>
-<!-- build: admin-fresh-v1 -->
+<!-- build: admin-fresh-layout-v2 -->
 </body>
 </html>
