@@ -38,7 +38,7 @@
     .block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:3px;background:#5b9cff;cursor:nwse-resize}
     /* Preview */
     .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px}
-    .preview-card{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:10px;height:100%;overflow:auto}
+    .preview-card{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:12px;height:100%;overflow:auto}
     .filters-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px}
     .field{min-width:160px}
     .field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
@@ -46,11 +46,17 @@
     .toast{position:fixed;right:18px;bottom:18px;background:#1f2530;border:1px solid #2a3140;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:50}
     .toast.show{opacity:1;transform:translateY(0)}
     footer{padding:8px 12px;color:#a9b4c7;font-size:12px;border-top:1px solid #2a3140;background:#0d1119;grid-column:1 / -1}
+    .p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c}
+    .p-title{font-size:13px;font-weight:600;opacity:.85;margin-bottom:8px}
+    .p-row{display:flex;flex-wrap:wrap;gap:12px}
+    .p-field{flex:1 1 220px;max-width:320px;min-width:200px}
+    .p-field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
+
   </style>
 </head>
 <body>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v8</span>
+  <div class="tabs"><span class="badge" id="verBadge">v9</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -101,11 +107,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v8</footer>
+<footer>build: admin-full-v9</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v8";
+const KEY="admin_full_cfg_v9";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
@@ -447,14 +453,20 @@ function resetDependents(changedField){
     });
   }
 }
+
 function previewFilters(){
   const wrap=document.createElement('div');
-  data.groups.forEach(g=>{
-    const row=document.createElement('div'); row.className='filters-row';
-    g.filters.forEach(field=>{
+  data.groups.forEach((g,gi)=>{
+    const group=document.createElement('div'); group.className='p-group';
+    const title=document.createElement('div'); title.className='p-title'; title.textContent=g.name || ('Ряд '+(gi+1));
+    group.appendChild(title);
+
+    const row=document.createElement('div'); row.className='p-row';
+    (g.filters||[]).forEach(field=>{
       const f=byField(field); if(!f) return;
-      const box=document.createElement('div'); box.className='field';
-      box.innerHTML=`<label>${f.label}</label>`;
+      const box=document.createElement('div'); box.className='p-field';
+      const lab=document.createElement('label'); lab.textContent=f.label || f.field; box.appendChild(lab);
+
       if(f.type==='select'){
         const sel=document.createElement('select');
         const opts=computeOptions(f,previewState,data.filters);
@@ -462,15 +474,20 @@ function previewFilters(){
         sel.onchange=()=>{ previewState[f.field]=sel.value; resetDependents(f.field); renderPreview(); };
         box.appendChild(sel);
       }else if(f.type==='range'){
-        box.innerHTML+=`<div class="row"><input placeholder="от"><input placeholder="до"></div>`;
+        const rwrap=document.createElement('div'); rwrap.className='row';
+        const i1=document.createElement('input'); i1.placeholder='от';
+        const i2=document.createElement('input'); i2.placeholder='до';
+        rwrap.append(i1,i2); box.appendChild(rwrap);
       }else if(f.type==='number'){
-        box.innerHTML+=`<input type="number">`;
+        const num=document.createElement('input'); num.type='number'; box.appendChild(num);
       }else{
-        box.innerHTML+=`<input type="text">`;
+        const txt=document.createElement('input'); txt.type='text'; box.appendChild(txt);
       }
-      row.append(box);
+      row.appendChild(box);
     });
-    wrap.append(row);
+
+    group.appendChild(row);
+    wrap.appendChild(group);
   });
   return wrap;
 }
