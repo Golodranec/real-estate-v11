@@ -3,28 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin — fresh layout v2</title>
+  <title>Admin — fresh layout v3 (drag+resize)</title>
   <style>
     :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui}
     header{padding:10px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .tabs{display:flex;gap:8px}
+    .tabs{display:flex;gap:8px;margin-right:auto}
     .tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
     .tab.active{background:var(--accent);color:#fff}
     .btn{padding:6px 10px;border-radius:6px;border:1px solid #2a3140;background:#2a3140;color:#fff;cursor:pointer}
     .btn.ghost{background:transparent}
-    main{display:grid;grid-template-columns:1fr 1fr;min-height:90vh}
+    main{display:grid;grid-template-columns:1fr;min-height:90vh}
     .panel{padding:12px;overflow:auto}
     /* Layout */
     .toolbar{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-    .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;background:#0b0d12;border:1px dashed #333;padding:6px;min-height:60vh;border-radius:12px}
-    .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;user-select:none}
+    .canvas-wrap{border:1px solid #2a3140;border-radius:12px;background:#0b0d12;padding:6px}
+    .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;min-height:60vh}
+    .grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px),linear-gradient(to bottom, rgba(255,255,255,.04) 1px, transparent 1px);background-size:calc((100% - 11*6px)/12) 90px}
+    .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:absolute;user-select:none;box-shadow:0 0 0 1px rgba(0,0,0,.2) inset}
+    .block.dragging{opacity:.85;outline:2px dashed #5b9cff}
+    .block .title{position:absolute;left:10px;top:6px;font-size:12px;opacity:.85;cursor:move}
     .block .close{position:absolute;top:6px;right:6px;background:#e53e3e;border:none;border-radius:50%;width:22px;height:22px;color:#fff;cursor:pointer;font-size:14px;line-height:20px;z-index:5}
+    .block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:3px;background:#5b9cff;cursor:nwse-resize}
     .label{opacity:.9}
     /* Toast */
     .toast{position:fixed;right:18px;bottom:18px;background:#1f2530;border:1px solid #2a3140;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:50}
     .toast.show{opacity:1;transform:translateY(0)}
+    footer{padding:8px 12px;color:#a9b4c7;font-size:12px;border-top:1px solid #2a3140;background:#0d1119}
   </style>
 </head>
 <body>
@@ -40,8 +46,8 @@
 </header>
 
 <main>
-  <section class="panel" id="filtersPanel" style="display:none">Секция фильтров (скелет)</section>
-  <section class="panel" id="fieldsPanel" style="display:none">Секция полей (скелет)</section>
+  <section class="panel" id="filtersPanel" style="display:none">Секция фильтров (в следующем шаге)</section>
+  <section class="panel" id="fieldsPanel" style="display:none">Секция полей (в следующем шаге)</section>
 
   <section class="panel" id="layoutPanel">
     <div class="toolbar">
@@ -50,9 +56,12 @@
       <button class="btn" onclick="addBlock('form')">+ Форма</button>
       <button class="btn" onclick="addBlock('cards')">+ Список</button>
       <button class="btn" onclick="addBlock('table')">+ Таблица</button>
-      <button class="btn ghost" onclick="clearLayout()">Очистить макет</button>
+      <button class="btn ghost" onclick="clearLayout()">Очистить</button>
     </div>
-    <div class="canvas" id="canvas"></div>
+    <div class="canvas-wrap">
+      <div id="canvas" class="canvas"></div>
+      <div class="grid-bg"></div>
+    </div>
   </section>
 
   <section class="panel" id="previewPanel" style="display:none">
@@ -61,13 +70,17 @@
 </main>
 
 <div class="toast" id="toast"></div>
+<footer>build: admin-fresh-layout-v3 (drag+resize)</footer>
 
 <script>
+// ====== state
 const KEY="admin_fresh_cfg";
 let data = JSON.parse(localStorage.getItem(KEY) || '{"groups":[],"filters":[],"fields":[],"layout":[]}');
-function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
 
-// Tabs
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window.__to); window.__to=setTimeout(()=>t.classList.remove('show'),1500); }
+
+// ====== tabs
 document.querySelectorAll('.tab').forEach(t=>t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -80,68 +93,130 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick = () => {
   if(id==='preview') renderPreview();
 });
 
-// Export / Import with toasts
+// ====== export/import
 document.getElementById('exportBtn').onclick = () => {
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = 'config.json'; a.click();
   toast('Экспорт выполнен');
 };
-
 document.getElementById('importInput').addEventListener('change', async e => {
   const f=e.target.files?.[0]; if(!f) return;
-  try{
-    const txt=await f.text();
-    data=JSON.parse(txt);
-    save();
-    renderLayout(); renderPreview();
-    toast('Импорт выполнен');
-  }catch(err){ toast('Ошибка импорта'); }
+  try{ const txt=await f.text(); data=JSON.parse(txt); save(); renderLayout(); renderPreview(); toast('Импорт выполнен'); }
+  catch(err){ toast('Ошибка импорта'); }
 });
 
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(window.__to); window.__to=setTimeout(()=>t.classList.remove('show'),1500);
-}
-
-// Layout
+// ====== layout CRUD
+function label(t){ return ({filters:'Фильтры', map:'Карта', form:'Форма', cards:'Список', table:'Таблица'})[t] || t; }
 function addBlock(type){
   const nextY = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1))+1 : 1;
   data.layout.push({id:Date.now(), type, x:1, y:nextY, w:6, h:2});
   save(); renderLayout();
 }
-function removeBlock(i){
-  data.layout.splice(i,1); save(); renderLayout(); renderPreview();
-}
+function removeBlock(i){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); }
 function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
 
+// ====== drag + resize helpers
+let dragInfo=null, resizeInfo=null;
+function pxPerCol(canvas){ const style=getComputedStyle(canvas); const gap=parseFloat(style.gap)||6; const total=canvas.clientWidth; const colW=(total-11*gap)/12; return {colW,gap}; }
+function pxPerRow(canvas){ const style=getComputedStyle(canvas); const rowH=parseFloat(style.gridAutoRows)||90; const gap=parseFloat(style.gap)||6; return {rowH,gap}; }
+
+function snapToGrid(canvas, left, top, wpx, hpx){
+  const {colW,gap} = pxPerCol(canvas);
+  const {rowH} = pxPerRow(canvas);
+  let col = Math.round(left / (colW+gap)) + 1;
+  let row = Math.round(top  / (rowH+gap)) + 1;
+  let w   = Math.max(1, Math.round((wpx + gap) / (colW+gap)));
+  let h   = Math.max(1, Math.round((hpx + gap) / (rowH+gap)));
+  col = Math.max(1, Math.min(12, col));
+  if(col + w - 1 > 12) w = 12 - col + 1;
+  row = Math.max(1, row);
+  return {x:col,y:row,w,h};
+}
+
+// ====== render
 function renderLayout(){
-  const c=document.getElementById('canvas'); c.innerHTML='';
+  const canvas=document.getElementById('canvas');
+  canvas.innerHTML='';
+  const rect=canvas.getBoundingClientRect();
+  const {colW,gap}=pxPerCol(canvas);
+  const {rowH}=pxPerRow(canvas);
+
   if(!data.layout.length){
-    const p=document.createElement('div'); p.className='label'; p.style.gridColumn='1 / span 12'; p.style.gridRow='1 / span 1';
-    p.textContent='Добавьте блоки с панели выше'; c.appendChild(p);
+    const p=document.createElement('div'); p.className='label';
+    p.style.position='absolute'; p.style.left='12px'; p.style.top='12px';
+    p.textContent='Добавьте блоки с панели выше';
+    canvas.appendChild(p);
   }
+
   data.layout.forEach((b,i)=>{
     const el=document.createElement('div'); el.className='block';
-    el.style.gridColumn = `${b.x} / span ${b.w}`;
-    el.style.gridRow    = `${b.y} / span ${b.h}`;
-    el.innerHTML = `${label(b.type)}<button class='close' title='Удалить' onclick='removeBlock(${i})'>×</button>`;
-    c.appendChild(el);
+    const left = (b.x-1)*(colW+gap);
+    const top  = (b.y-1)*(rowH+gap);
+    const wpx  = b.w*colW + (b.w-1)*gap;
+    const hpx  = b.h*rowH + (b.h-1)*gap;
+    el.style.left = left+'px'; el.style.top = top+'px';
+    el.style.width = wpx+'px'; el.style.height = hpx+'px';
+
+    el.innerHTML = `<div class="title">${label(b.type)}</div>
+                    <button class="close" title="Удалить" onclick="removeBlock(${i})">×</button>
+                    <div class="resize" title="Изменить размер"></div>`;
+
+    // Drag by title area
+    const title=el.querySelector('.title');
+    title.onmousedown = (ev)=>{
+      ev.preventDefault();
+      dragInfo={i,startX:ev.clientX,startY:ev.clientY,origLeft:left,origTop:top,rect};
+      el.classList.add('dragging');
+    };
+
+    // Resize by handle
+    const handle=el.querySelector('.resize');
+    handle.onmousedown = (ev)=>{
+      ev.preventDefault();
+      resizeInfo={i,startX:ev.clientX,startY:ev.clientY,origW:wpx,origH:hpx,rect};
+      el.classList.add('dragging');
+    };
+
+    canvas.appendChild(el);
   });
+
+  // Global mouse listeners
+  document.onmousemove = (ev)=>{
+    if(dragInfo){
+      const canvas=document.getElementById('canvas');
+      const dx=ev.clientX - dragInfo.startX;
+      const dy=ev.clientY - dragInfo.startY;
+      const left = Math.max(0, dragInfo.origLeft + dx);
+      const top  = Math.max(0, dragInfo.origTop  + dy);
+      const snap = snapToGrid(canvas,left,top, data.layout[dragInfo.i].w* (pxPerCol(canvas).colW) , data.layout[dragInfo.i].h*(pxPerRow(canvas).rowH));
+      data.layout[dragInfo.i].x=snap.x; data.layout[dragInfo.i].y=snap.y;
+      renderLayout(); // lightweight rerender for visual feedback
+    }else if(resizeInfo){
+      const canvas=document.getElementById('canvas');
+      const dx=ev.clientX - resizeInfo.startX;
+      const dy=ev.clientY - resizeInfo.startY;
+      const wpx = Math.max(30, resizeInfo.origW + dx);
+      const hpx = Math.max(30, resizeInfo.origH + dy);
+      const snap = snapToGrid(canvas,0,0,wpx,hpx);
+      data.layout[resizeInfo.i].w=snap.w; data.layout[resizeInfo.i].h=snap.h;
+      renderLayout();
+    }
+  };
+  document.onmouseup = ()=>{
+    if(dragInfo||resizeInfo){ save(); }
+    dragInfo=null; resizeInfo=null;
+    document.querySelectorAll('.block.dragging').forEach(b=>b.classList.remove('dragging'));
+  };
 }
 
-function label(t){ return ({filters:'Фильтры', map:'Карта', form:'Форма', cards:'Список', table:'Таблица'})[t] || t; }
-
-// Preview (пока простая заглушка)
 function renderPreview(){
   const box=document.getElementById('previewPanel');
-  box.innerHTML = '<div id="previewEmpty" class="label">Предпросмотр пока простой. Макет: '+ data.layout.length +' блок(ов)</div>';
+  box.innerHTML = '<div class="label">Предпросмотр (макет: '+ data.layout.length +' блок(ов))</div>';
 }
 
-// Initial render
+// initial
 renderLayout();
 </script>
-<!-- build: admin-fresh-layout-v2 -->
 </body>
 </html>
