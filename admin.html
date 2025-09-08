@@ -37,7 +37,7 @@
     .block .close{position:absolute;top:6px;right:6px;background:#e53e3e;border:none;border-radius:50%;width:22px;height:22px;color:#fff;cursor:pointer;font-size:14px;line-height:20px;z-index:5}
     .block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:3px;background:#5b9cff;cursor:nwse-resize}
     /* Preview */
-    .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px}
+    .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;width:100%;min-width:100%;}
     .preview-card{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:12px;height:100%;overflow:auto}
     .filters-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px}
     .field{min-width:160px}
@@ -46,9 +46,9 @@
     .toast{position:fixed;right:18px;bottom:18px;background:#1f2530;border:1px solid #2a3140;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:50}
     .toast.show{opacity:1;transform:translateY(0)}
     footer{padding:8px 12px;color:#a9b4c7;font-size:12px;border-top:1px solid #2a3140;background:#0d1119;grid-column:1 / -1}
-    .p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c}
+    .p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%}
     .p-title{font-size:13px;font-weight:600;opacity:.85;margin-bottom:8px}
-    .p-row{display:flex;flex-wrap:wrap;gap:12px}
+    .p-row{display:flex;flex-wrap:wrap;gap:12px;width:100%}
     .p-field{flex:1 1 220px;max-width:320px;min-width:200px}
     .p-field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
 
@@ -56,7 +56,7 @@
 </head>
 <body>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v10</span>
+  <div class="tabs"><span class="badge" id="verBadge">v11</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -101,17 +101,17 @@
   </section>
 
   <!-- Preview -->
-  <section class="panel" id="previewPanel" style="display:none">
+  <section class="panel" id="previewPanel" style="display:none;width:100%;max-width:100%;">
     <div id="preview" class="preview-grid" style="min-height:200px"></div>
   </section>
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v10</footer>
+<footer>build: admin-full-v11</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v10";
+const KEY="admin_full_cfg_v11";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
