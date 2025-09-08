@@ -92,7 +92,7 @@
 
   <!-- Preview -->
   <section class="panel" id="previewPanel" style="display:none">
-    <div id="preview" class="preview-grid"></div>
+    <div id="preview" class="preview-grid" style="min-height:200px"></div>
   </section>
 </main>
 
@@ -103,6 +103,20 @@
 // ====== State & utils
 const KEY="admin_full_cfg_v4";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
+
+function sanitizeLayout(){
+  if(!Array.isArray(data.layout)) { data.layout=[]; return; }
+  data.layout = data.layout.map(b=>{
+    const x=Math.max(1, Math.min(12, +b.x||1));
+    const w=Math.max(1, Math.min(12, +b.w||1));
+    const maxW = 12 - x + 1;
+    const w2 = Math.min(w, maxW);
+    const y=Math.max(1, +b.y||1);
+    const h=Math.max(1, +b.h||1);
+    return {id:b.id||Date.now()+Math.random(), type:b.type||'filters', x, y, w:w2, h};
+  });
+}
+
 if(!Object.keys(data).length){
   data = {
     groups:[{id:1,name:"Верхняя линия",filters:["country","city","category"]}],
@@ -124,6 +138,7 @@ if(!Object.keys(data).length){
   };
   save();
 }
+sanitizeLayout();
 function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window.__to); window.__to=setTimeout(()=>t.classList.remove('show'),1500); }
 function byField(field){ return data.filters.find(f=>f.field===field); }
@@ -150,7 +165,7 @@ document.getElementById('exportBtn').onclick = () => {
 };
 document.getElementById('importInput').addEventListener('change', async e => {
   const f=e.target.files?.[0]; if(!f) return;
-  try{ const txt=await f.text(); data=JSON.parse(txt); save(); renderAll(); toast('Импорт выполнен'); }
+  try{ const txt=await f.text(); data=JSON.parse(txt); sanitizeLayout(); save(); renderAll(); toast('Импорт выполнен'); }
   catch(err){ toast('Ошибка импорта'); }
 });
 
@@ -305,10 +320,14 @@ function snapToGrid(canvas, left, top, wpx, hpx){
 }
 
 function renderLayout(){
+  sanitizeLayout();
+
   const canvas=document.getElementById('canvas');
   canvas.innerHTML='';
   const {colW,gap}=pxPerCol(canvas);
   const {rowH}=pxPerRow(canvas);
+  const rows = Math.max(1, ...data.layout.map(b=>b.y+b.h-1));
+  canvas.style.height = (rows*rowH + (rows-1)*gap) + 'px';
 
   if(!data.layout.length){
     const p=document.createElement('div'); p.style.position='absolute'; p.style.left='12px'; p.style.top='12px'; p.style.opacity='.85'; p.textContent='Добавьте блоки с панели выше';
