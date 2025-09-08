@@ -20,6 +20,7 @@
     input,select,textarea{padding:8px;border-radius:8px;border:1px solid #333;background:#111722;color:#fff}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .group{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
+    .group-sep{height:1px;background:var(--line);margin:16px 0;opacity:.7}
     .chip{display:flex;gap:8px;align-items:center;background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:8px}
     .list{display:flex;gap:8px;flex-wrap:wrap}
     .item{display:flex;gap:8px;align-items:center;background:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0}
@@ -47,7 +48,7 @@
 </head>
 <body>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v6</span>
+  <div class="tabs"><span class="badge" id="verBadge">v7</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -98,11 +99,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v6</footer>
+<footer>build: admin-full-v7</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v6";
+const KEY="admin_full_cfg_v7";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
@@ -194,6 +195,7 @@ function removeFilter(field){
 function renderGroups(){
   const wrap=document.getElementById('groupsWrap'); wrap.innerHTML='';
   data.groups.forEach((g,gi)=>{
+    if(gi>0){ const sep=document.createElement('div'); sep.className='group-sep'; wrap.append(sep); }
     const box=document.createElement('div'); box.className='group';
     const head=document.createElement('div'); head.className='row';
     const nameInp=document.createElement('input'); nameInp.value=g.name;
