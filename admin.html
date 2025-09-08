@@ -6,562 +6,37 @@
   <title>Admin — ряды фильтров + бесконечные связи</title>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
-    /* filler line 1 to maintain verbose formatting */
-    /* filler line 2 to maintain verbose formatting */
-    /* filler line 3 to maintain verbose formatting */
-    /* filler line 4 to maintain verbose formatting */
-    /* filler line 5 to maintain verbose formatting */
-    /* filler line 6 to maintain verbose formatting */
-    /* filler line 7 to maintain verbose formatting */
-    /* filler line 8 to maintain verbose formatting */
-    /* filler line 9 to maintain verbose formatting */
-    /* filler line 10 to maintain verbose formatting */
-    /* filler line 11 to maintain verbose formatting */
-    /* filler line 12 to maintain verbose formatting */
-    /* filler line 13 to maintain verbose formatting */
-    /* filler line 14 to maintain verbose formatting */
-    /* filler line 15 to maintain verbose formatting */
-    /* filler line 16 to maintain verbose formatting */
-    /* filler line 17 to maintain verbose formatting */
-    /* filler line 18 to maintain verbose formatting */
-    /* filler line 19 to maintain verbose formatting */
-    /* filler line 20 to maintain verbose formatting */
-    /* filler line 21 to maintain verbose formatting */
-    /* filler line 22 to maintain verbose formatting */
-    /* filler line 23 to maintain verbose formatting */
-    /* filler line 24 to maintain verbose formatting */
-    /* filler line 25 to maintain verbose formatting */
-    /* filler line 26 to maintain verbose formatting */
-    /* filler line 27 to maintain verbose formatting */
-    /* filler line 28 to maintain verbose formatting */
-    /* filler line 29 to maintain verbose formatting */
-    /* filler line 30 to maintain verbose formatting */
-    /* filler line 31 to maintain verbose formatting */
-    /* filler line 32 to maintain verbose formatting */
-    /* filler line 33 to maintain verbose formatting */
-    /* filler line 34 to maintain verbose formatting */
-    /* filler line 35 to maintain verbose formatting */
-    /* filler line 36 to maintain verbose formatting */
-    /* filler line 37 to maintain verbose formatting */
-    /* filler line 38 to maintain verbose formatting */
-    /* filler line 39 to maintain verbose formatting */
-    /* filler line 40 to maintain verbose formatting */
-    /* filler line 41 to maintain verbose formatting */
-    /* filler line 42 to maintain verbose formatting */
-    /* filler line 43 to maintain verbose formatting */
-    /* filler line 44 to maintain verbose formatting */
-    /* filler line 45 to maintain verbose formatting */
-    /* filler line 46 to maintain verbose formatting */
-    /* filler line 47 to maintain verbose formatting */
-    /* filler line 48 to maintain verbose formatting */
-    /* filler line 49 to maintain verbose formatting */
-    /* filler line 50 to maintain verbose formatting */
-    /* filler line 51 to maintain verbose formatting */
-    /* filler line 52 to maintain verbose formatting */
-    /* filler line 53 to maintain verbose formatting */
-    /* filler line 54 to maintain verbose formatting */
-    /* filler line 55 to maintain verbose formatting */
-    /* filler line 56 to maintain verbose formatting */
-    /* filler line 57 to maintain verbose formatting */
-    /* filler line 58 to maintain verbose formatting */
-    /* filler line 59 to maintain verbose formatting */
-    /* filler line 60 to maintain verbose formatting */
-    /* filler line 61 to maintain verbose formatting */
-    /* filler line 62 to maintain verbose formatting */
-    /* filler line 63 to maintain verbose formatting */
-    /* filler line 64 to maintain verbose formatting */
-    /* filler line 65 to maintain verbose formatting */
-    /* filler line 66 to maintain verbose formatting */
-    /* filler line 67 to maintain verbose formatting */
-    /* filler line 68 to maintain verbose formatting */
-    /* filler line 69 to maintain verbose formatting */
-    /* filler line 70 to maintain verbose formatting */
-    /* filler line 71 to maintain verbose formatting */
-    /* filler line 72 to maintain verbose formatting */
-    /* filler line 73 to maintain verbose formatting */
-    /* filler line 74 to maintain verbose formatting */
-    /* filler line 75 to maintain verbose formatting */
-    /* filler line 76 to maintain verbose formatting */
-    /* filler line 77 to maintain verbose formatting */
-    /* filler line 78 to maintain verbose formatting */
-    /* filler line 79 to maintain verbose formatting */
-    /* filler line 80 to maintain verbose formatting */
-    /* filler line 81 to maintain verbose formatting */
-    /* filler line 82 to maintain verbose formatting */
-    /* filler line 83 to maintain verbose formatting */
-    /* filler line 84 to maintain verbose formatting */
-    /* filler line 85 to maintain verbose formatting */
-    /* filler line 86 to maintain verbose formatting */
-    /* filler line 87 to maintain verbose formatting */
-    /* filler line 88 to maintain verbose formatting */
-    /* filler line 89 to maintain verbose formatting */
-    /* filler line 90 to maintain verbose formatting */
-    /* filler line 91 to maintain verbose formatting */
-    /* filler line 92 to maintain verbose formatting */
-    /* filler line 93 to maintain verbose formatting */
-    /* filler line 94 to maintain verbose formatting */
-    /* filler line 95 to maintain verbose formatting */
-    /* filler line 96 to maintain verbose formatting */
-    /* filler line 97 to maintain verbose formatting */
-    /* filler line 98 to maintain verbose formatting */
-    /* filler line 99 to maintain verbose formatting */
-    /* filler line 100 to maintain verbose formatting */
-    /* filler line 101 to maintain verbose formatting */
-    /* filler line 102 to maintain verbose formatting */
-    /* filler line 103 to maintain verbose formatting */
-    /* filler line 104 to maintain verbose formatting */
-    /* filler line 105 to maintain verbose formatting */
-    /* filler line 106 to maintain verbose formatting */
-    /* filler line 107 to maintain verbose formatting */
-    /* filler line 108 to maintain verbose formatting */
-    /* filler line 109 to maintain verbose formatting */
-    /* filler line 110 to maintain verbose formatting */
-    /* filler line 111 to maintain verbose formatting */
-    /* filler line 112 to maintain verbose formatting */
-    /* filler line 113 to maintain verbose formatting */
-    /* filler line 114 to maintain verbose formatting */
-    /* filler line 115 to maintain verbose formatting */
-    /* filler line 116 to maintain verbose formatting */
-    /* filler line 117 to maintain verbose formatting */
-    /* filler line 118 to maintain verbose formatting */
-    /* filler line 119 to maintain verbose formatting */
-    /* filler line 120 to maintain verbose formatting */
-    /* filler line 121 to maintain verbose formatting */
-    /* filler line 122 to maintain verbose formatting */
-    /* filler line 123 to maintain verbose formatting */
-    /* filler line 124 to maintain verbose formatting */
-    /* filler line 125 to maintain verbose formatting */
-    /* filler line 126 to maintain verbose formatting */
-    /* filler line 127 to maintain verbose formatting */
-    /* filler line 128 to maintain verbose formatting */
-    /* filler line 129 to maintain verbose formatting */
-    /* filler line 130 to maintain verbose formatting */
-    /* filler line 131 to maintain verbose formatting */
-    /* filler line 132 to maintain verbose formatting */
-    /* filler line 133 to maintain verbose formatting */
-    /* filler line 134 to maintain verbose formatting */
-    /* filler line 135 to maintain verbose formatting */
-    /* filler line 136 to maintain verbose formatting */
-    /* filler line 137 to maintain verbose formatting */
-    /* filler line 138 to maintain verbose formatting */
-    /* filler line 139 to maintain verbose formatting */
-    /* filler line 140 to maintain verbose formatting */
-    /* filler line 141 to maintain verbose formatting */
-    /* filler line 142 to maintain verbose formatting */
-    /* filler line 143 to maintain verbose formatting */
-    /* filler line 144 to maintain verbose formatting */
-    /* filler line 145 to maintain verbose formatting */
-    /* filler line 146 to maintain verbose formatting */
-    /* filler line 147 to maintain verbose formatting */
-    /* filler line 148 to maintain verbose formatting */
-    /* filler line 149 to maintain verbose formatting */
-    /* filler line 150 to maintain verbose formatting */
-    /* filler line 151 to maintain verbose formatting */
-    /* filler line 152 to maintain verbose formatting */
-    /* filler line 153 to maintain verbose formatting */
-    /* filler line 154 to maintain verbose formatting */
-    /* filler line 155 to maintain verbose formatting */
-    /* filler line 156 to maintain verbose formatting */
-    /* filler line 157 to maintain verbose formatting */
-    /* filler line 158 to maintain verbose formatting */
-    /* filler line 159 to maintain verbose formatting */
-    /* filler line 160 to maintain verbose formatting */
-    /* filler line 161 to maintain verbose formatting */
-    /* filler line 162 to maintain verbose formatting */
-    /* filler line 163 to maintain verbose formatting */
-    /* filler line 164 to maintain verbose formatting */
-    /* filler line 165 to maintain verbose formatting */
-    /* filler line 166 to maintain verbose formatting */
-    /* filler line 167 to maintain verbose formatting */
-    /* filler line 168 to maintain verbose formatting */
-    /* filler line 169 to maintain verbose formatting */
-    /* filler line 170 to maintain verbose formatting */
-    /* filler line 171 to maintain verbose formatting */
-    /* filler line 172 to maintain verbose formatting */
-    /* filler line 173 to maintain verbose formatting */
-    /* filler line 174 to maintain verbose formatting */
-    /* filler line 175 to maintain verbose formatting */
-    /* filler line 176 to maintain verbose formatting */
-    /* filler line 177 to maintain verbose formatting */
-    /* filler line 178 to maintain verbose formatting */
-    /* filler line 179 to maintain verbose formatting */
-    /* filler line 180 to maintain verbose formatting */
-    /* filler line 181 to maintain verbose formatting */
-    /* filler line 182 to maintain verbose formatting */
-    /* filler line 183 to maintain verbose formatting */
-    /* filler line 184 to maintain verbose formatting */
-    /* filler line 185 to maintain verbose formatting */
-    /* filler line 186 to maintain verbose formatting */
-    /* filler line 187 to maintain verbose formatting */
-    /* filler line 188 to maintain verbose formatting */
-    /* filler line 189 to maintain verbose formatting */
-    /* filler line 190 to maintain verbose formatting */
-    /* filler line 191 to maintain verbose formatting */
-    /* filler line 192 to maintain verbose formatting */
-    /* filler line 193 to maintain verbose formatting */
-    /* filler line 194 to maintain verbose formatting */
-    /* filler line 195 to maintain verbose formatting */
-    /* filler line 196 to maintain verbose formatting */
-    /* filler line 197 to maintain verbose formatting */
-    /* filler line 198 to maintain verbose formatting */
-    /* filler line 199 to maintain verbose formatting */
-    /* filler line 200 to maintain verbose formatting */
-    /* filler line 201 to maintain verbose formatting */
-    /* filler line 202 to maintain verbose formatting */
-    /* filler line 203 to maintain verbose formatting */
-    /* filler line 204 to maintain verbose formatting */
-    /* filler line 205 to maintain verbose formatting */
-    /* filler line 206 to maintain verbose formatting */
-    /* filler line 207 to maintain verbose formatting */
-    /* filler line 208 to maintain verbose formatting */
-    /* filler line 209 to maintain verbose formatting */
-    /* filler line 210 to maintain verbose formatting */
-    /* filler line 211 to maintain verbose formatting */
-    /* filler line 212 to maintain verbose formatting */
-    /* filler line 213 to maintain verbose formatting */
-    /* filler line 214 to maintain verbose formatting */
-    /* filler line 215 to maintain verbose formatting */
-    /* filler line 216 to maintain verbose formatting */
-    /* filler line 217 to maintain verbose formatting */
-    /* filler line 218 to maintain verbose formatting */
-    /* filler line 219 to maintain verbose formatting */
-    /* filler line 220 to maintain verbose formatting */
-    /* filler line 221 to maintain verbose formatting */
-    /* filler line 222 to maintain verbose formatting */
-    /* filler line 223 to maintain verbose formatting */
-    /* filler line 224 to maintain verbose formatting */
-    /* filler line 225 to maintain verbose formatting */
-    /* filler line 226 to maintain verbose formatting */
-    /* filler line 227 to maintain verbose formatting */
-    /* filler line 228 to maintain verbose formatting */
-    /* filler line 229 to maintain verbose formatting */
-    /* filler line 230 to maintain verbose formatting */
-    /* filler line 231 to maintain verbose formatting */
-    /* filler line 232 to maintain verbose formatting */
-    /* filler line 233 to maintain verbose formatting */
-    /* filler line 234 to maintain verbose formatting */
-    /* filler line 235 to maintain verbose formatting */
-    /* filler line 236 to maintain verbose formatting */
-    /* filler line 237 to maintain verbose formatting */
-    /* filler line 238 to maintain verbose formatting */
-    /* filler line 239 to maintain verbose formatting */
-    /* filler line 240 to maintain verbose formatting */
-    /* filler line 241 to maintain verbose formatting */
-    /* filler line 242 to maintain verbose formatting */
-    /* filler line 243 to maintain verbose formatting */
-    /* filler line 244 to maintain verbose formatting */
-    /* filler line 245 to maintain verbose formatting */
-    /* filler line 246 to maintain verbose formatting */
-    /* filler line 247 to maintain verbose formatting */
-    /* filler line 248 to maintain verbose formatting */
-    /* filler line 249 to maintain verbose formatting */
-    /* filler line 250 to maintain verbose formatting */
-    /* filler line 251 to maintain verbose formatting */
-    /* filler line 252 to maintain verbose formatting */
-    /* filler line 253 to maintain verbose formatting */
-    /* filler line 254 to maintain verbose formatting */
-    /* filler line 255 to maintain verbose formatting */
-    /* filler line 256 to maintain verbose formatting */
-    /* filler line 257 to maintain verbose formatting */
-    /* filler line 258 to maintain verbose formatting */
-    /* filler line 259 to maintain verbose formatting */
-    /* filler line 260 to maintain verbose formatting */
-    /* filler line 261 to maintain verbose formatting */
-    /* filler line 262 to maintain verbose formatting */
-    /* filler line 263 to maintain verbose formatting */
-    /* filler line 264 to maintain verbose formatting */
-    /* filler line 265 to maintain verbose formatting */
-    /* filler line 266 to maintain verbose formatting */
-    /* filler line 267 to maintain verbose formatting */
-    /* filler line 268 to maintain verbose formatting */
-    /* filler line 269 to maintain verbose formatting */
-    /* filler line 270 to maintain verbose formatting */
-    /* filler line 271 to maintain verbose formatting */
-    /* filler line 272 to maintain verbose formatting */
-    /* filler line 273 to maintain verbose formatting */
-    /* filler line 274 to maintain verbose formatting */
-    /* filler line 275 to maintain verbose formatting */
-    /* filler line 276 to maintain verbose formatting */
-    /* filler line 277 to maintain verbose formatting */
-    /* filler line 278 to maintain verbose formatting */
-    /* filler line 279 to maintain verbose formatting */
-    /* filler line 280 to maintain verbose formatting */
-    /* filler line 281 to maintain verbose formatting */
-    /* filler line 282 to maintain verbose formatting */
-    /* filler line 283 to maintain verbose formatting */
-    /* filler line 284 to maintain verbose formatting */
-    /* filler line 285 to maintain verbose formatting */
-    /* filler line 286 to maintain verbose formatting */
-    /* filler line 287 to maintain verbose formatting */
-    /* filler line 288 to maintain verbose formatting */
-    /* filler line 289 to maintain verbose formatting */
-    /* filler line 290 to maintain verbose formatting */
-    /* filler line 291 to maintain verbose formatting */
-    /* filler line 292 to maintain verbose formatting */
-    /* filler line 293 to maintain verbose formatting */
-    /* filler line 294 to maintain verbose formatting */
-    /* filler line 295 to maintain verbose formatting */
-    /* filler line 296 to maintain verbose formatting */
-    /* filler line 297 to maintain verbose formatting */
-    /* filler line 298 to maintain verbose formatting */
-    /* filler line 299 to maintain verbose formatting */
-    /* filler line 300 to maintain verbose formatting */
-    /* filler line 301 to maintain verbose formatting */
-    /* filler line 302 to maintain verbose formatting */
-    /* filler line 303 to maintain verbose formatting */
-    /* filler line 304 to maintain verbose formatting */
-    /* filler line 305 to maintain verbose formatting */
-    /* filler line 306 to maintain verbose formatting */
-    /* filler line 307 to maintain verbose formatting */
-    /* filler line 308 to maintain verbose formatting */
-    /* filler line 309 to maintain verbose formatting */
-    /* filler line 310 to maintain verbose formatting */
-    /* filler line 311 to maintain verbose formatting */
-    /* filler line 312 to maintain verbose formatting */
-    /* filler line 313 to maintain verbose formatting */
-    /* filler line 314 to maintain verbose formatting */
-    /* filler line 315 to maintain verbose formatting */
-    /* filler line 316 to maintain verbose formatting */
-    /* filler line 317 to maintain verbose formatting */
-    /* filler line 318 to maintain verbose formatting */
-    /* filler line 319 to maintain verbose formatting */
-    /* filler line 320 to maintain verbose formatting */
-    /* filler line 321 to maintain verbose formatting */
-    /* filler line 322 to maintain verbose formatting */
-    /* filler line 323 to maintain verbose formatting */
-    /* filler line 324 to maintain verbose formatting */
-    /* filler line 325 to maintain verbose formatting */
-    /* filler line 326 to maintain verbose formatting */
-    /* filler line 327 to maintain verbose formatting */
-    /* filler line 328 to maintain verbose formatting */
-    /* filler line 329 to maintain verbose formatting */
-    /* filler line 330 to maintain verbose formatting */
-    /* filler line 331 to maintain verbose formatting */
-    /* filler line 332 to maintain verbose formatting */
-    /* filler line 333 to maintain verbose formatting */
-    /* filler line 334 to maintain verbose formatting */
-    /* filler line 335 to maintain verbose formatting */
-    /* filler line 336 to maintain verbose formatting */
-    /* filler line 337 to maintain verbose formatting */
-    /* filler line 338 to maintain verbose formatting */
-    /* filler line 339 to maintain verbose formatting */
-    /* filler line 340 to maintain verbose formatting */
-    /* filler line 341 to maintain verbose formatting */
-    /* filler line 342 to maintain verbose formatting */
-    /* filler line 343 to maintain verbose formatting */
-    /* filler line 344 to maintain verbose formatting */
-    /* filler line 345 to maintain verbose formatting */
-    /* filler line 346 to maintain verbose formatting */
-    /* filler line 347 to maintain verbose formatting */
-    /* filler line 348 to maintain verbose formatting */
-    /* filler line 349 to maintain verbose formatting */
-    /* filler line 350 to maintain verbose formatting */
-    /* filler line 351 to maintain verbose formatting */
-    /* filler line 352 to maintain verbose formatting */
-    /* filler line 353 to maintain verbose formatting */
-    /* filler line 354 to maintain verbose formatting */
-    /* filler line 355 to maintain verbose formatting */
-    /* filler line 356 to maintain verbose formatting */
-    /* filler line 357 to maintain verbose formatting */
-    /* filler line 358 to maintain verbose formatting */
-    /* filler line 359 to maintain verbose formatting */
-    /* filler line 360 to maintain verbose formatting */
-    /* filler line 361 to maintain verbose formatting */
-    /* filler line 362 to maintain verbose formatting */
-    /* filler line 363 to maintain verbose formatting */
-    /* filler line 364 to maintain verbose formatting */
-    /* filler line 365 to maintain verbose formatting */
-    /* filler line 366 to maintain verbose formatting */
-    /* filler line 367 to maintain verbose formatting */
-    /* filler line 368 to maintain verbose formatting */
-    /* filler line 369 to maintain verbose formatting */
-    /* filler line 370 to maintain verbose formatting */
-    /* filler line 371 to maintain verbose formatting */
-    /* filler line 372 to maintain verbose formatting */
-    /* filler line 373 to maintain verbose formatting */
-    /* filler line 374 to maintain verbose formatting */
-    /* filler line 375 to maintain verbose formatting */
-    /* filler line 376 to maintain verbose formatting */
-    /* filler line 377 to maintain verbose formatting */
-    /* filler line 378 to maintain verbose formatting */
-    /* filler line 379 to maintain verbose formatting */
-    /* filler line 380 to maintain verbose formatting */
-    /* filler line 381 to maintain verbose formatting */
-    /* filler line 382 to maintain verbose formatting */
-    /* filler line 383 to maintain verbose formatting */
-    /* filler line 384 to maintain verbose formatting */
-    /* filler line 385 to maintain verbose formatting */
-    /* filler line 386 to maintain verbose formatting */
-    /* filler line 387 to maintain verbose formatting */
-    /* filler line 388 to maintain verbose formatting */
-    /* filler line 389 to maintain verbose formatting */
-    /* filler line 390 to maintain verbose formatting */
-    /* filler line 391 to maintain verbose formatting */
-    /* filler line 392 to maintain verbose formatting */
-    /* filler line 393 to maintain verbose formatting */
-    /* filler line 394 to maintain verbose formatting */
-    /* filler line 395 to maintain verbose formatting */
-    /* filler line 396 to maintain verbose formatting */
-    /* filler line 397 to maintain verbose formatting */
-    /* filler line 398 to maintain verbose formatting */
-    /* filler line 399 to maintain verbose formatting */
-    /* filler line 400 to maintain verbose formatting */
-    /* filler line 401 to maintain verbose formatting */
-    /* filler line 402 to maintain verbose formatting */
-    /* filler line 403 to maintain verbose formatting */
-    /* filler line 404 to maintain verbose formatting */
-    /* filler line 405 to maintain verbose formatting */
-    /* filler line 406 to maintain verbose formatting */
-    /* filler line 407 to maintain verbose formatting */
-    /* filler line 408 to maintain verbose formatting */
-    /* filler line 409 to maintain verbose formatting */
-    /* filler line 410 to maintain verbose formatting */
-    /* filler line 411 to maintain verbose formatting */
-    /* filler line 412 to maintain verbose formatting */
-    /* filler line 413 to maintain verbose formatting */
-    /* filler line 414 to maintain verbose formatting */
-    /* filler line 415 to maintain verbose formatting */
-    /* filler line 416 to maintain verbose formatting */
-    /* filler line 417 to maintain verbose formatting */
-    /* filler line 418 to maintain verbose formatting */
-    /* filler line 419 to maintain verbose formatting */
-    /* filler line 420 to maintain verbose formatting */
-    /* filler line 421 to maintain verbose formatting */
-    /* filler line 422 to maintain verbose formatting */
-    /* filler line 423 to maintain verbose formatting */
-    /* filler line 424 to maintain verbose formatting */
-    /* filler line 425 to maintain verbose formatting */
-    /* filler line 426 to maintain verbose formatting */
-    /* filler line 427 to maintain verbose formatting */
-    /* filler line 428 to maintain verbose formatting */
-    /* filler line 429 to maintain verbose formatting */
-    /* filler line 430 to maintain verbose formatting */
-    /* filler line 431 to maintain verbose formatting */
-    /* filler line 432 to maintain verbose formatting */
-    /* filler line 433 to maintain verbose formatting */
-    /* filler line 434 to maintain verbose formatting */
-    /* filler line 435 to maintain verbose formatting */
-    /* filler line 436 to maintain verbose formatting */
-    /* filler line 437 to maintain verbose formatting */
-    /* filler line 438 to maintain verbose formatting */
-    /* filler line 439 to maintain verbose formatting */
-    /* filler line 440 to maintain verbose formatting */
-    /* filler line 441 to maintain verbose formatting */
-    /* filler line 442 to maintain verbose formatting */
-    /* filler line 443 to maintain verbose formatting */
-    /* filler line 444 to maintain verbose formatting */
-    /* filler line 445 to maintain verbose formatting */
-    /* filler line 446 to maintain verbose formatting */
-    /* filler line 447 to maintain verbose formatting */
-    /* filler line 448 to maintain verbose formatting */
-    /* filler line 449 to maintain verbose formatting */
-    /* filler line 450 to maintain verbose formatting */
-    /* filler line 451 to maintain verbose formatting */
-    /* filler line 452 to maintain verbose formatting */
-    /* filler line 453 to maintain verbose formatting */
-    /* filler line 454 to maintain verbose formatting */
-    /* filler line 455 to maintain verbose formatting */
-    /* filler line 456 to maintain verbose formatting */
-    /* filler line 457 to maintain verbose formatting */
-    /* filler line 458 to maintain verbose formatting */
-    /* filler line 459 to maintain verbose formatting */
-    /* filler line 460 to maintain verbose formatting */
-    /* filler line 461 to maintain verbose formatting */
-    /* filler line 462 to maintain verbose formatting */
-    /* filler line 463 to maintain verbose formatting */
-    /* filler line 464 to maintain verbose formatting */
-    /* filler line 465 to maintain verbose formatting */
-    /* filler line 466 to maintain verbose formatting */
-    /* filler line 467 to maintain verbose formatting */
-    /* filler line 468 to maintain verbose formatting */
-    /* filler line 469 to maintain verbose formatting */
-    /* filler line 470 to maintain verbose formatting */
-    /* filler line 471 to maintain verbose formatting */
-    /* filler line 472 to maintain verbose formatting */
-    /* filler line 473 to maintain verbose formatting */
-    /* filler line 474 to maintain verbose formatting */
-    /* filler line 475 to maintain verbose formatting */
-    /* filler line 476 to maintain verbose formatting */
-    /* filler line 477 to maintain verbose formatting */
-    /* filler line 478 to maintain verbose formatting */
-    /* filler line 479 to maintain verbose formatting */
-    /* filler line 480 to maintain verbose formatting */
-    /* filler line 481 to maintain verbose formatting */
-    /* filler line 482 to maintain verbose formatting */
-    /* filler line 483 to maintain verbose formatting */
-    /* filler line 484 to maintain verbose formatting */
-    /* filler line 485 to maintain verbose formatting */
-    /* filler line 486 to maintain verbose formatting */
-    /* filler line 487 to maintain verbose formatting */
-    /* filler line 488 to maintain verbose formatting */
-    /* filler line 489 to maintain verbose formatting */
-    /* filler line 490 to maintain verbose formatting */
-    /* filler line 491 to maintain verbose formatting */
-    /* filler line 492 to maintain verbose formatting */
-    /* filler line 493 to maintain verbose formatting */
-    /* filler line 494 to maintain verbose formatting */
-    /* filler line 495 to maintain verbose formatting */
-    /* filler line 496 to maintain verbose formatting */
-    /* filler line 497 to maintain verbose formatting */
-    /* filler line 498 to maintain verbose formatting */
-    /* filler line 499 to maintain verbose formatting */
-    /* filler line 500 to maintain verbose formatting */
-    /* filler line 501 to maintain verbose formatting */
-    /* filler line 502 to maintain verbose formatting */
-    /* filler line 503 to maintain verbose formatting */
-    /* filler line 504 to maintain verbose formatting */
-    /* filler line 505 to maintain verbose formatting */
-    /* filler line 506 to maintain verbose formatting */
-    /* filler line 507 to maintain verbose formatting */
-    /* filler line 508 to maintain verbose formatting */
-    /* filler line 509 to maintain verbose formatting */
-    /* filler line 510 to maintain verbose formatting */
-    /* filler line 511 to maintain verbose formatting */
-    /* filler line 512 to maintain verbose formatting */
-    /* filler line 513 to maintain verbose formatting */
-    /* filler line 514 to maintain verbose formatting */
-    /* filler line 515 to maintain verbose formatting */
-    /* filler line 516 to maintain verbose formatting */
-    /* filler line 517 to maintain verbose formatting */
-    /* filler line 518 to maintain verbose formatting */
-    /* filler line 519 to maintain verbose formatting */
-    /* filler line 520 to maintain verbose formatting */
-    /* filler line 521 to maintain verbose formatting */
-    /* filler line 522 to maintain verbose formatting */
-    /* filler line 523 to maintain verbose formatting */
-    /* filler line 524 to maintain verbose formatting */
-    /* filler line 525 to maintain verbose formatting */
-    /* filler line 526 to maintain verbose formatting */
-    /* filler line 527 to maintain verbose formatting */
-    /* filler line 528 to maintain verbose formatting */
-    /* filler line 529 to maintain verbose formatting */
-    /* filler line 530 to maintain verbose formatting */
-    /* filler line 531 to maintain verbose formatting */
-    /* filler line 532 to maintain verbose formatting */
-    /* filler line 533 to maintain verbose formatting */
-    /* filler line 534 to maintain verbose formatting */
-    /* filler line 535 to maintain verbose formatting */
-    /* filler line 536 to maintain verbose formatting */
-    /* filler line 537 to maintain verbose formatting */
-    /* filler line 538 to maintain verbose formatting */
-    /* filler line 539 to maintain verbose formatting */
-    /* filler line 540 to maintain verbose formatting */
-    /* filler line 541 to maintain verbose formatting */
-    /* filler line 542 to maintain verbose formatting */
-    /* filler line 543 to maintain verbose formatting */
-    /* filler line 544 to maintain verbose formatting */
-    /* filler line 545 to maintain verbose formatting */
-    /* filler line 546 to maintain verbose formatting */
-    /* filler line 547 to maintain verbose formatting */
-    /* filler line 548 to maintain verbose formatting */
-    /* filler line 549 to maintain verbose formatting */
+    body { margin:0; background:#0f1115; color:#e6e6e6; font:14px system-ui; }
+    header { padding:10px; background:#161a22; display:flex; gap:10px; flex-wrap:wrap; }
+    .tab { padding:6px 12px; background:#2a3140; border-radius:6px; cursor:pointer; }
+    .tab.active { background:#5b9cff; color:#fff; }
+    .btn { padding:6px 10px; border-radius:6px; cursor:pointer; border:none; }
+    .btn.secondary { background:#2a3140; color:#fff; }
+    .btn.ghost { background:transparent; border:1px solid #2a3140; color:#e6e6e6; }
+    main { display:grid; grid-template-columns:1fr 1fr; min-height:90vh; }
+    .panel { padding:12px; overflow:auto; }
+    .group { border:1px solid #2a3140; border-radius:10px; padding:10px; margin:10px 0; }
+    .list { display:flex; flex-wrap:wrap; gap:8px; }
+    .filter-chip { display:flex; gap:6px; align-items:center; background:#1a202c; padding:8px; border-radius:8px; }
+    .canvas { display:grid; grid-template-columns:repeat(12,1fr); grid-auto-rows:80px; gap:6px; background:#0b0d12; border:1px dashed #333; padding:6px; min-height:60vh; }
+    .block { background:#1f2530; border:1px solid #2a3140; border-radius:10px; display:flex; align-items:center; justify-content:center; position:relative; }
+    .resize { position:absolute; right:0; bottom:0; width:12px; height:12px; background:#5b9cff; cursor:se-resize; }
+    .block .close { position:absolute; top:4px; right:4px; background:#e53e3e; border:none; border-radius:50%; width:20px; height:20px; color:#fff; cursor:pointer; }
+    .preview-grid { display:grid; grid-template-columns:repeat(12,1fr); grid-auto-rows:80px; gap:6px; background:#0b0d12; border:1px solid #2a3140; padding:6px; }
+    .preview-block { background:#1a202c; border-radius:8px; padding:8px; }
+    .filters-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+    .field { min-width:140px; }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; }
+    .card { background:#0b0f17; padding:14px; border-radius:10px; max-height:90vh; overflow:auto; }
+    .toast { position:fixed; bottom:20px; right:20px; background:#1f2530; padding:10px 14px; border-radius:6px; color:#fff; opacity:0; transition:.3s; }
+    .toast.show { opacity:1; }
   </style>
 </head>
 <body>
   <header>
     <div class="tabs">
-      <div class="tab active" data-tab="filters">⚙️ Фильтры и ряды</div>
-      <div class="tab" data-tab="fields">📝 Поля формы</div>
+      <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
+      <div class="tab" data-tab="fields">📝 Поля</div>
       <div class="tab" data-tab="layout">🖼️ Макет</div>
       <div class="tab" data-tab="preview">👀 Предпросмотр</div>
     </div>
@@ -569,24 +44,46 @@
     <label class="btn secondary">Импорт<input id="importInput" type="file" hidden></label>
     <button class="btn ghost" id="resetBtn">Сброс</button>
   </header>
+
   <main>
     <section class="panel" id="filtersPanel"></section>
     <section class="panel" id="fieldsPanel" style="display:none"></section>
     <section class="panel" id="layoutPanel" style="display:none"></section>
     <section class="panel" id="previewPanel" style="display:none"></section>
   </main>
-  <div class="modal" id="modal">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong id="modalTitle">Редактор</strong>
-        <button class="btn ghost" onclick="closeModal()">Закрыть</button>
-      </div>
-      <div id="modalBody"></div>
-    </div>
-  </div>
+
+  <div class="modal" id="modal"><div class="card"><h3 id="modalTitle"></h3><div id="modalBody"></div><button onclick="closeModal()">Закрыть</button></div></div>
   <div class="toast" id="toast"></div>
+
   <script>
-    // полный JS код здесь (renderPreview, renderLayout, showToast и т.д.)
+    const KEY="admin_config";
+    let data=load()||demoData(), previewState={};
+
+    function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+    function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+    function demoData(){return{groups:[{id:1,name:"Верхняя",filters:["country","city"]}],filters:[{label:"Страна",field:"country",type:"select",options:["Узбекистан"]},{label:"Город",field:"city",type:"select",options:["Ташкент","Самарканд"]}],fields:[{label:"Заголовок",id:"title",type:"text"}],layout:[{id:1,type:"filters",x:1,y:1,w:12,h:2}]};}
+
+    document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");["filters","fields","layout","preview"].forEach(id=>document.getElementById(id+"Panel").style.display=t.dataset.tab===id?"block":"none");renderAll()});
+
+    document.getElementById("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="config.json";a.click();showToast("Экспорт выполнен");};
+    document.getElementById("importInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;const txt=await f.text();data=JSON.parse(txt);save();renderAll();showToast("Импорт выполнен");};
+    document.getElementById("resetBtn").onclick=()=>{localStorage.removeItem(KEY);location.reload()};
+
+    function showToast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2000);}
+
+    function renderAll(){renderGroups();renderFields();renderLayout();renderPreview();}
+    function renderGroups(){document.getElementById("filtersPanel").innerHTML="";}
+    function renderFields(){document.getElementById("fieldsPanel").innerHTML="";}
+    function renderLayout(){const c=document.getElementById("layoutPanel");c.innerHTML="<div class='canvas' id='canvas'></div>";const canvas=document.getElementById("canvas");data.layout.forEach((b,i)=>{const el=document.createElement("div");el.className="block";el.style.gridColumn=`${b.x}/span ${b.w}`;el.style.gridRow=`${b.y}/span ${b.h}`;el.innerHTML=`${b.type}<div class='resize'></div><button class='close' onclick='removeBlock(${i})'>×</button>`;canvas.appendChild(el)});}
+    function removeBlock(i){data.layout.splice(i,1);save();renderLayout();renderPreview();}
+
+    function renderPreview(){const p=document.getElementById("previewPanel");p.innerHTML="<div class='preview-grid' id='prev'></div>";const box=document.getElementById("prev");data.layout.forEach(b=>{const el=document.createElement("div");el.className="preview-block";el.style.gridColumn=`${b.x}/span ${b.w}`;el.style.gridRow=`${b.y}/span ${b.h}`;if(b.type==="filters"){el.appendChild(renderPreviewFilters())}else{el.textContent=b.type;}box.appendChild(el)});}
+    function renderPreviewFilters(){const wrap=document.createElement("div");data.groups.forEach(g=>{const row=document.createElement("div");row.className="filters-row";g.filters.forEach(fld=>{const f=data.filters.find(x=>x.field===fld);if(!f)return;const box=document.createElement("div");box.className="field";box.innerHTML=`<label>${f.label}</label>`;if(f.type==="select"){const sel=document.createElement("select");sel.innerHTML=f.options.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join("");sel.onchange=()=>{previewState[f.field]=sel.value;renderPreview()};box.appendChild(sel);}else{box.innerHTML+=`<input>`;}row.appendChild(box)});wrap.appendChild(row)});return wrap;}
+
+    function openModal(t,html){document.getElementById("modalTitle").textContent=t;document.getElementById("modalBody").innerHTML=html;document.getElementById("modal").style.display="flex";}
+    function closeModal(){document.getElementById("modal").style.display="none";}
+
+    renderAll();
   </script>
 </body>
 </html>
