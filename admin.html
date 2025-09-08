@@ -4,7 +4,16 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Admin — ряды фильтров + бесконечные связи</title>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js">
+function toast(msg){
+  const t=document.getElementById("toast");
+  if(!t) return;
+  t.textContent=msg;
+  t.classList.add("show");
+  clearTimeout(window.__tt);
+  window.__tt=setTimeout(()=>t.classList.remove("show"),2000);
+}
+</script>
 <style>
   :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
   *{box-sizing:border-box}
@@ -401,8 +410,8 @@ function renderFields(){
   data.fields.forEach((f,i)=>{
     const row=document.createElement("div"); row.className="item";
     row.innerHTML=`
-      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();renderPreview()">
-      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();renderPreview()">
+      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();">
+      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();">
       <select onchange="data.fields[${i}].type=this.value;save();renderPreview()">
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
         <option value="number" ${f.type==='number'?'selected':''}>number</option>
@@ -430,7 +439,7 @@ function renderLayout(){
   data.layout.forEach(b=>{
     const el=document.createElement("div"); el.className="block";
     el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
-    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div>`;
+    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div><button class=\"close\" onclick=\"removeBlock(i)\">×</button>`;
     // drag
     el.addEventListener("mousedown",e=>{
       if(e.target.classList.contains("resize"))return;
@@ -580,11 +589,13 @@ function renderAll(){ renderGroups(); renderFiltersTable(); renderFields(); rend
 /* старт */
 renderAll();
 
-function removeBlock(i){
-  data.layout.splice(i,1);
-  save();
-  renderLayout();
-  renderPreview();
+function toast(msg){
+  const t=document.getElementById("toast");
+  if(!t) return;
+  t.textContent=msg;
+  t.classList.add("show");
+  clearTimeout(window.__tt);
+  window.__tt=setTimeout(()=>t.classList.remove("show"),2000);
 }
 </script>
 </body>
