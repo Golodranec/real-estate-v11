@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Admin — ряды фильтров + бесконечные связи</title>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js">
-function showToast(msg){
+function toast(msg){
   const t=document.getElementById("toast");
   t.textContent=msg;
   t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>t.classList.remove("show"),2000);
 }
 </script>
 <style>
@@ -52,9 +53,6 @@ function showToast(msg){
   .card{width:min(1000px,96vw);max-height:90vh;overflow:auto;background:#0b0f17;border:1px solid #263042;border-radius:12px;padding:14px}
   textarea{width:100%;min-height:220px;padding:10px;border-radius:8px;border:1px solid #333;background:#0f1522;color:#fff;resize:vertical}
   .hint{color:#9fb3d6;font-size:12px;margin-top:6px}
-
-.toast {position:fixed;bottom:20px;right:20px;background:#1f2530;color:#fff;padding:10px 14px;border-radius:6px;opacity:0;transition:.3s;z-index:100;}
-.toast.show {opacity:1;}
 </style>
 </head>
 <body>
@@ -187,7 +185,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
     document.getElementById("fieldsPanel").style.display=id==="fields"?"block":"none";
     document.getElementById("layoutPanel").style.display=id==="layout"?"block":"none";
     document.getElementById("previewPanel").style.display=id==="preview"?"block":"none";
-    renderAll(); showToast('Импорт выполнен');
+    renderAll();
   }
 });
 
@@ -195,11 +193,11 @@ document.querySelectorAll(".tab").forEach(tab=>{
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download="admin-config.json"; a.click(); showToast('Экспорт выполнен'); URL.revokeObjectURL(url);
+  a.href=url; a.download="admin-config.json"; a.click(); URL.revokeObjectURL(url);
 };
 document.getElementById("importInput").addEventListener("change",async e=>{
   const f=e.target.files?.[0]; if(!f) return;
-  const txt=await f.text(); data=JSON.parse(txt); save(); renderAll(); showToast('Импорт выполнен');
+  const txt=await f.text(); data=JSON.parse(txt); save(); renderAll();
 });
 document.getElementById("resetBtn").onclick=resetAll;
 
@@ -299,7 +297,7 @@ function deleteGroup(gi){
 
 function onFilterChange(field,key,val){
   const f=byField(field); if(!f) return;
-  f[key]=val; save(); if(key==='type') renderGroups(); renderGroups(); renderFiltersTable(); renderPreview();
+  f[key]=val; save(); renderGroups(); renderFiltersTable(); renderPreview();
 }
 function onFilterRenameField(oldField,newField){
   if(!newField || oldField===newField) return;
@@ -411,8 +409,8 @@ function renderFields(){
   data.fields.forEach((f,i)=>{
     const row=document.createElement("div"); row.className="item";
     row.innerHTML=`
-      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();renderPreview()">
-      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();renderPreview()">
+      <input class="grow" placeholder="Метка" value="${escapeHtml(f.label||"")}" oninput="data.fields[${i}].label=this.value;save();">
+      <input placeholder="id (англ.)" value="${escapeHtml(f.id||"")}" oninput="data.fields[${i}].id=this.value;save();">
       <select onchange="data.fields[${i}].type=this.value;save();renderPreview()">
         <option value="text" ${f.type==='text'?'selected':''}>text</option>
         <option value="number" ${f.type==='number'?'selected':''}>number</option>
@@ -440,7 +438,7 @@ function renderLayout(){
   data.layout.forEach(b=>{
     const el=document.createElement("div"); el.className="block";
     el.style.gridColumn=`${b.x}/span ${b.w}`; el.style.gridRow=`${b.y}/span ${b.h}`;
-    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div>`;
+    el.innerHTML=`${labelByType(b.type)}<div class="resize"></div><button class='close' onclick='removeBlock(i)'>×</button>`;
     // drag
     el.addEventListener("mousedown",e=>{
       if(e.target.classList.contains("resize"))return;
@@ -588,15 +586,15 @@ function closeModal(){ modal.style.display="none"; }
 function renderAll(){ renderGroups(); renderFiltersTable(); renderFields(); renderLayout(); renderPreview(); }
 
 /* старт */
-renderAll(); showToast('Импорт выполнен');
+renderAll();
 
-function showToast(msg){
+function toast(msg){
   const t=document.getElementById("toast");
   t.textContent=msg;
   t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>t.classList.remove("show"),2000);
 }
 </script>
-<div class="toast" id="toast"></div>
 </body>
 </html>
