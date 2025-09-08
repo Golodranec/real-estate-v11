@@ -223,7 +223,7 @@ function addFilter(){
   data.filters.push(f);
   if(!data.groups.length) data.groups.push({id:Date.now(),name:"Линия",filters:[]});
   data.groups[0].filters.push(f.field);
-  save(); renderGroups(); renderFiltersTable(); renderPreview();
+  save(); // убрал лишний ререндер
 }
 
 function renderGroups(){
@@ -298,7 +298,7 @@ function deleteGroup(gi){
 
 function onFilterChange(field,key,val){
   const f=byField(field); if(!f) return;
-  f[key]=val; save(); // fixed: no full rerender on each input
+  f[key]=val; save(); // убрал лишний ререндер
 }
 function onFilterRenameField(oldField,newField){
   if(!newField || oldField===newField) return;
@@ -307,7 +307,7 @@ function onFilterRenameField(oldField,newField){
   const f=byField(oldField); f.field=newField;
   data.groups.forEach(g=>g.filters=g.filters.map(x=>x===oldField?newField:x));
   // также заменим в правилах путей метку, если совпадает с предыдущим label (необязательно)
-  save(); renderGroups(); renderFiltersTable(); renderPreview();
+  save(); // убрал лишний ререндер
 }
 function moveFilterToGroup(field, groupId){
   groupId=+groupId;
@@ -323,7 +323,7 @@ function removeFilter(field){
   data.filters = data.filters.filter(f=>f.field!==field);
   // убрать выбранные значения в предпросмотре
   delete previewState[field];
-  save(); renderGroups(); renderFiltersTable(); renderPreview();
+  save(); // убрал лишний ререндер
 }
 
 /* ===== таблица фильтров (ниже) ===== */
