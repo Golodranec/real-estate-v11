@@ -22,6 +22,8 @@
     .group{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
     .group-sep{height:1px;background:var(--line);margin:16px 0;opacity:.7}
     .chip{display:flex;gap:8px;align-items:center;background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:8px}
+    .chip .ar{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #2a3140;border-radius:6px;background:#0f141d;cursor:pointer}
+    .chip .ar:hover{background:#17202c}
     .list{display:flex;gap:8px;flex-wrap:wrap}
     .item{display:flex;gap:8px;align-items:center;background:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0}
     /* Layout */
@@ -48,7 +50,7 @@
 </head>
 <body>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v7</span>
+  <div class="tabs"><span class="badge" id="verBadge">v8</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -99,11 +101,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v7</footer>
+<footer>build: admin-full-v8</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v7";
+const KEY="admin_full_cfg_v8";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
@@ -217,9 +219,13 @@ function renderGroups(){
 
       const toVals=document.createElement('button'); toVals.className='btn'; toVals.textContent='Значения'; toVals.onclick=()=>openOptions(f.field);
       const toRules=document.createElement('button'); toRules.className='btn'; toRules.textContent='Связи'; toRules.onclick=()=>openRules(f.field);
+      const arL=document.createElement('button'); arL.className='ar'; arL.textContent='◀'; arL.title='Влево'; arL.onclick=()=>moveFilterWithinGroup(gi,f.field,-1);
+      const arR=document.createElement('button'); arR.className='ar'; arR.textContent='▶'; arR.title='Вправо'; arR.onclick=()=>moveFilterWithinGroup(gi,f.field,1);
+      const arU=document.createElement('button'); arU.className='ar'; arU.textContent='▲'; arU.title='Вверх (в другой ряд)'; arU.onclick=()=>moveFilterBetweenGroups(gi,f.field,-1);
+      const arD=document.createElement('button'); arD.className='ar'; arD.textContent='▼'; arD.title='Вниз (в другой ряд)'; arD.onclick=()=>moveFilterBetweenGroups(gi,f.field,1);
       const delF=document.createElement('button'); delF.className='btn ghost'; delF.textContent='✖'; delF.onclick=()=>removeFilter(f.field);
 
-      chip.append(l1,l2,sel);
+      chip.append(arL,arR,arU,arD,l1,l2,sel);
       if(f.type==='select'){ chip.append(toVals,toRules); }
       chip.append(delF);
       list.append(chip);
@@ -264,6 +270,26 @@ function saveRules(field){
     if(path.length && options.length) f.rules.push({path,options});
   });
   save(); closeModal(); renderPreview();
+}
+
+
+function moveFilterWithinGroup(gi, field, dir){
+  const arr = data.groups[gi].filters;
+  const idx = arr.indexOf(field);
+  if(idx<0) return;
+  const j = idx + dir;
+  if(j<0 || j>=arr.length) return;
+  [arr[idx], arr[j]] = [arr[j], arr[idx]];
+  save(); renderGroups(); renderPreview();
+}
+function moveFilterBetweenGroups(gi, field, step){
+  const to = gi + step;
+  if(to<0 || to>=data.groups.length) return;
+  const fromArr = data.groups[gi].filters;
+  const idx = fromArr.indexOf(field); if(idx<0) return;
+  fromArr.splice(idx,1);
+  data.groups[to].filters.push(field);
+  save(); renderGroups(); renderPreview();
 }
 
 function renderFiltersTable(){
