@@ -1,648 +1,362 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Admin — full v4</title>
-  <style>
-    :root{--bg:#0f1115;--panel:#161a22;--muted:#1f2530;--line:#2a3140;--text:#e6e6e6;--accent:#5b9cff}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui;overflow-x:hidden}
-    header{padding:10px;background:var(--panel);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .tabs{display:flex;gap:8px;margin-right:auto}
-    .tab{padding:6px 12px;background:#2a3140;border-radius:6px;cursor:pointer}
-    .tab.active{background:var(--accent);color:#fff}
-    .btn{padding:6px 10px;border-radius:6px;border:1px solid #2a3140;background:#2a3140;color:#fff;cursor:pointer}
-    .btn.ghost{background:transparent}
-    .badge{margin-left:8px;font-size:12px;opacity:.75;padding:2px 6px;border:1px solid #2a3140;border-radius:6px}
-    main{display:block;min-height:90vh}
-    .panel{padding:12px;overflow:auto}
-    input,select,textarea{padding:8px;border-radius:8px;border:1px solid #333;background:#111722;color:#fff;width:100%}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .group{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
-    .group-sep{height:1px;background:var(--line);margin:16px 0;opacity:.7}
-    .chip{display:flex;gap:8px;align-items:center;background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:8px} .chip.dragover{outline:2px dashed #5b9cff}
-    .chip .ar{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #2a3140;border-radius:6px;background:#0f141d;cursor:pointer}
-    .chip .ar:hover{background:#17202c}
-    .list{display:flex;gap:8px;flex-wrap:wrap}
-    .item{display:flex;gap:8px;align-items:center;background:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0}
-    /* Layout */
-    .toolbar{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-    .canvas-wrap{border:1px solid #2a3140;border-radius:12px;background:#0b0d12;padding:6px;overflow:auto;height:70vh;max-height:70vh}
-    .canvas{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;height:100%}
-    .grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px),linear-gradient(to bottom, rgba(255,255,255,.04) 1px, transparent 1px);background-size:calc((100% - 11*6px)/12) 90px}
-    .block{background:#1f2530;border:1px solid #2a3140;border-radius:10px;display:flex;align-items:center;justify-content:center;position:absolute;user-select:none;box-shadow:0 0 0 1px rgba(0,0,0,.2) inset}
-    .block.dragging{opacity:.85;outline:2px dashed #5b9cff}
-    .block .title{position:absolute;left:10px;top:6px;font-size:12px;opacity:.85;cursor:move}
-    .block .close{position:absolute;top:6px;right:6px;background:#e53e3e;border:none;border-radius:50%;width:22px;height:22px;color:#fff;cursor:pointer;font-size:14px;line-height:20px;z-index:5}
-    .block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:3px;background:#5b9cff;cursor:nwse-resize}
-    /* Preview */
-    .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;width:100%;max-width:100%;align-items:stretch;justify-items:stretch;outline:2px dashed #22d3ee;outline-offset:4px;padding:8px;border-radius:12px}
-    .preview-card{background:#111827;border:2px solid #10b981;border-radius:12px;padding:14px;width:100%;height:100%;overflow:auto;display:flex;flex-direction:column;align-self:stretch;justify-self:stretch}
-    .filters-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px}
-    .field{min-width:160px}
-    .field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
-    /* Toast + footer */
-    .toast{position:fixed;right:18px;bottom:18px;background:#1f2530;border:1px solid #2a3140;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;z-index:50}
-    .toast.show{opacity:1;transform:translateY(0)}
-    footer{padding:8px 12px;color:#a9b4c7;font-size:12px;border-top:1px solid #2a3140;background:#0d1119;grid-column:1 / -1}
-    .p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%} .preview-card{width:100%}
-    .p-title{font-size:13px;font-weight:600;opacity:.85;margin-bottom:12px}
-    .p-row{display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;width:100%}
-    .p-field{min-width:0;width:100%}
-    .p-field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin Builder v26</title>
+<style>
+:root{
+  --bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;
+  --border:#273248;--accent:#4aa8ff;--danger:#ef4444;--ok:#22c55e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;position:sticky;top:0;z-index:10}
+.badge{padding:3px 8px;border-radius:8px;background:#6d28d9;font-weight:700}
+.tabs{display:flex;gap:8px;margin-left:8px}
+.tab{background:#1a2234;border:1px solid var(--border);padding:6px 10px;border-radius:8px;color:#cfe0ff;cursor:pointer}
+.tab.active{background:#2160ff;color:#fff}
+main{padding:12px;display:grid;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+h3{margin:0 0 10px 0;color:#cfe0ff}
+.btn{background:#1e293b;border:1px solid var(--border);color:#dbe8ff;padding:6px 10px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:#3a4c6b}
+.btn.ok{background:#0f3a1f;border-color:#14532d;color:#c7f9cf}
+.btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input,select,textarea{padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff;width:100%}
+label{display:block;opacity:.9;margin-bottom:6px}
 
-  </style>
+.list{display:grid;gap:10px}
+.card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px}
+small.muted{color:var(--muted)}
+
+.canvas-wrap{border:1px solid var(--border);border-radius:12px;background:#0d121e;padding:6px;overflow:auto;height:60vh}
+.canvas,.preview-grid{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px}
+.block,.preview-card{background:#111827;border:1px solid #2b3a5a;border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.block header{display:flex;align-items:center;justify-content:space-between;background:#0f172a;color:#dbe8ff;padding:8px 10px;border-bottom:1px solid #2b3a5a}
+.block header .x{background:var(--danger);border:none;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;text-align:center;cursor:pointer}
+.block .body{padding:10px;flex:1}
+
+.preview-card{border-color:#3a4c6b}
+.p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%}
+.p-title{font-size:13px;font-weight:600;margin-bottom:10px;color:#cfe0ff}
+.p-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%}
+.p-field{min-width:0;width:100%}
+.p-field>div{display:flex;gap:8px}
+.toast{position:fixed;right:12px;bottom:12px;background:#0b1322;border:1px solid #33507a;color:#d7ecff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(8px);transition:all .25s;z-index:99}
+.toast.show{opacity:1;transform:none}
+footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--border)}
+hr.sep{border:0;border-top:1px dashed #2a3650;margin:10px 0}
+</style>
 </head>
 <body>
-<div id="dbgBanner" style="position:sticky;top:0;z-index:1000;background:#7c3aed;color:#fff;text-align:center;padding:6px 10px;font-weight:700;letter-spacing:.5px">admin v25</div>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v25</span>
-    <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
-    <div class="tab" data-tab="fields">📝 Поля</div>
-    <div class="tab" data-tab="layout">🖼️ Макет</div>
-    <div class="tab" data-tab="preview">👀 Предпросмотр</div>
+  <span id="ver" class="badge">v26</span>
+  <div class="tabs">
+    <button class="tab active" data-tab="filters">Фильтры</button>
+    <button class="tab" data-tab="fields">Поля</button>
+    <button class="tab" data-tab="layout">Макет</button>
+    <button class="tab" data-tab="preview">Предпросмотр</button>
   </div>
-  <button class="btn" id="exportBtn">Экспорт</button>
-  <label class="btn">Импорт<input id="importInput" type="file" hidden></label>
+  <div style="margin-left:auto" class="row">
+    <button id="btnExport" class="btn">Экспорт</button>
+    <label class="btn"><input id="fileImport" type="file" accept=".json,.txt" style="display:none">Импорт</label>
+  </div>
 </header>
 
 <main>
-  <!-- Filters -->
-  <section class="panel" id="filtersPanel">
-    <div class="row" style="margin-bottom:8px">
+  <section id="tab-filters" class="panel">
+    <div class="row" style="margin-bottom:10px">
       <button class="btn" onclick="addGroup()">+ Ряд</button>
       <button class="btn" onclick="addFilter()">+ Фильтр</button>
     </div>
-    <div id="groupsWrap"></div>
-    <h3 style="margin-top:16px">Все фильтры</h3>
-    <div id="filtersList"></div>
+    <div id="groups" class="list"></div>
   </section>
 
-  <!-- Fields -->
-  <section class="panel" id="fieldsPanel" style="display:none">
-    <div id="fieldsList"></div>
-    <button class="btn" onclick="addField()">Добавить поле</button>
+  <section id="tab-fields" class="panel" style="display:none">
+    <h3>Все поля</h3>
+    <div id="fields" class="list"></div>
   </section>
 
-  <!-- Layout -->
-  <section class="panel" id="layoutPanel" style="display:none">
-    <div class="toolbar">
+  <section id="tab-layout" class="panel" style="display:none">
+    <div class="row" style="margin-bottom:10px">
       <button class="btn" onclick="addBlock('filters')">+ Фильтры</button>
-      <button class="btn" onclick="addBlock('map')">+ Карта</button>
       <button class="btn" onclick="addBlock('form')">+ Форма</button>
+      <button class="btn" onclick="addBlock('map')">+ Карта</button>
       <button class="btn" onclick="addBlock('cards')">+ Список</button>
       <button class="btn" onclick="addBlock('table')">+ Таблица</button>
-      <button class="btn ghost" onclick="clearLayout()">Очистить</button>
+      <button class="btn danger" onclick="clearLayout()">Очистить</button>
     </div>
-    <div class="canvas-wrap">
-      <div id="canvas" class="canvas"></div>
-      <div class="grid-bg"></div>
-    </div>
+    <div class="canvas-wrap"><div id="canvas" class="canvas"></div></div>
   </section>
 
-  <!-- Preview -->
-  <section class="panel" id="previewPanel" style="display:none;width:100%;max-width:100%;padding-left:0;padding-right:0;border:3px solid #22d3ee;border-radius:12px">
-    <div id="preview" class="preview-grid" style="min-height:200px"></div>
+  <section id="tab-preview" class="panel" style="display:none">
+    <div class="canvas-wrap"><div id="preview" class="preview-grid"></div></div>
   </section>
+
+  <div id="toast" class="toast"></div>
 </main>
 
-<div class="toast" id="toast"></div>
-<footer>build: admin-full-v25</footer>
+<footer>
+  build: admin-full-v26
+</footer>
 
 <script>
-// ====== State & utils
-const KEY="admin_full_cfg_v23f";
-let data = JSON.parse(localStorage.getItem(KEY) || '{}');
-
-function sanitizeLayout(){
-  if(!Array.isArray(data.layout)) { data.layout=[]; return; }
-  data.layout = data.layout.map(b=>{
-    const x=Math.max(1, Math.min(12, +b.x||1));
-    const w=Math.max(1, Math.min(12, +b.w||1));
-    const maxW = 12 - x + 1;
-    const w2 = Math.min(w, maxW);
-    const y=Math.max(1, +b.y||1);
-    const h=Math.max(1, +b.h||1);
-    return {id:b.id||Date.now()+Math.random(), type:b.type||'filters', x, y, w:w2, h};
-  });
-}
-
-if(!Object.keys(data).length){
-  data = {
-    groups:[{id:1,name:"Верхняя линия",filters:["country","city","category"]}],
-    filters:[
-      {label:"Страна",field:"country",type:"select",options:["Узбекистан"],rules:[]},
-      {label:"Город",field:"city",type:"select",options:["Ташкент","Самарканд"],rules:[]},
-      {label:"Категория",field:"category",type:"select",options:["Квартира","Коммерция"],rules:[]},
-      {label:"Цена",field:"price",type:"range"}
-    ],
-    fields:[
-      {label:"Заголовок",id:"title",type:"text"},
-      {label:"Описание",id:"desc",type:"textarea"},
-      {label:"Контакт",id:"contact",type:"text"}
-    ],
-    layout:[
-      {id:1,type:"filters",x:1,y:1,w:12,h:2},
-      {id:2,type:"form",x:1,y:3,w:12,h:3}
-    ]
-  };
-  save();
-}
-sanitizeLayout();
-function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
-function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window.__to); window.__to=setTimeout(()=>t.classList.remove('show'),1500); }
-function byField(field){ return data.filters.find(f=>f.field===field); }
-
-// ====== Tabs
-document.querySelectorAll('.tab').forEach(t=>t.onclick = () => {
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  t.classList.add('active');
-  const id=t.dataset.tab;
-  document.getElementById('filtersPanel').style.display = id==='filters' ? 'block':'none';
-  document.getElementById('fieldsPanel').style.display  = id==='fields'  ? 'block':'none';
-  document.getElementById('layoutPanel').style.display  = id==='layout'  ? 'block':'none';
-  document.getElementById('previewPanel').style.display = id==='preview' ? 'block':'none';
-  if(id==='layout') renderLayout();
-  if(id==='preview') renderPreview();
-});
-
-// ====== Export / Import
-document.getElementById('exportBtn').onclick = () => {
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'config.json'; a.click();
-  toast('Экспорт выполнен');
-};
-document.getElementById('importInput').addEventListener('change', async e => {
-  const f=e.target.files?.[0]; if(!f) return;
-  try{ const txt=await f.text(); data=JSON.parse(txt); sanitizeLayout(); save(); renderAll(); toast('Импорт выполнен'); }
-  catch(err){ toast('Ошибка импорта'); }
-});
-
-// ====== Filters editor (no focus loss)
-function addGroup(){ data.groups.push({id:Date.now(),name:"Новый ряд",filters:[]}); save(); renderGroups(); }
-function deleteGroup(i){
-  const moved=data.groups[i].filters;
-  if(data.groups.length>1){ const dst=(i===0?1:0); data.groups[dst].filters.push(...moved); data.groups.splice(i,1); }
-  else{ data.groups[i].filters=[]; }
-  save(); renderGroups(); renderPreview();
-}
-function addFilter(){
-  const f={label:"Фильтр",field:"field_"+Date.now(),type:"text",options:[],rules:[]};
-  data.filters.push(f);
-  if(!data.groups.length) data.groups.push({id:Date.now(),name:"Линия",filters:[]});
-  data.groups[0].filters.push(f.field);
-  save(); renderGroups(); renderFiltersTable(); renderPreview();
-}
-function removeFilter(field){
-  data.groups.forEach(g=>g.filters=g.filters.filter(x=>x!==field));
-  data.filters=data.filters.filter(f=>f.field!==field);
-  save(); renderGroups(); renderFiltersTable(); renderPreview();
-}
-
-function renderGroups(){
-  const wrap=document.getElementById('groupsWrap'); wrap.innerHTML='';
-  data.groups.forEach((g,gi)=>{
-    if(gi>0){ const sep=document.createElement('div'); sep.className='group-sep'; wrap.append(sep); }
-    const box=document.createElement('div'); box.className='group';
-    const head=document.createElement('div'); head.className='row';
-    const nameInp=document.createElement('input'); nameInp.value=g.name;
-    nameInp.oninput=()=>{ data.groups[gi].name=nameInp.value; save(); };
-    const del=document.createElement('button'); del.className='btn ghost'; del.textContent='Удалить ряд'; del.onclick=()=>deleteGroup(gi);
-    head.append(nameInp,del); box.append(head);
-
-    const list=document.createElement('div'); list.className='list'; list.ondragover=(e)=>{chipDragOver(e)}; list.ondragleave=(e)=>{chipDragLeave(e)}; list.ondrop=(e)=>{chipDropOnList(e,gi)};
-    g.filters.forEach(field=>{
-      const f=byField(field); if(!f) return;
-      const chip=document.createElement('div'); chip.className='chip'; chip.draggable=true;
-      chip.ondragstart=(e)=>chipDragStart(e,gi,f.field);
-      chip.ondragover=chipDragOver;
-      chip.ondragleave=chipDragLeave;
-      chip.ondrop=(e)=>chipDrop(e,gi,f.field);
-      const l1=document.createElement('input'); l1.value=f.label; l1.placeholder='Название';
-      l1.oninput=()=>{ f.label=l1.value; save(); /* без ререндера */ };
-      const l2=document.createElement('input'); l2.value=f.field; l2.placeholder='field';
-      l2.oninput=()=>{ f.field=l2.value; save(); };
-      const sel=document.createElement('select');
-      ['select','text','number','range'].forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; if(f.type===t)o.selected=true; sel.appendChild(o); });
-      sel.onchange=()=>{ f.type=sel.value; save(); renderPreview(); };
-
-      const toVals=document.createElement('button'); toVals.className='btn'; toVals.textContent='Значения'; toVals.onclick=()=>openOptions(f.field);
-      const toRules=document.createElement('button'); toRules.className='btn'; toRules.textContent='Связи'; toRules.onclick=()=>openRules(f.field);
-      const arL=document.createElement('button'); arL.className='ar'; arL.textContent='◀'; arL.title='Влево'; arL.onclick=()=>moveFilterWithinGroup(gi,f.field,-1);
-      const arR=document.createElement('button'); arR.className='ar'; arR.textContent='▶'; arR.title='Вправо'; arR.onclick=()=>moveFilterWithinGroup(gi,f.field,1);
-      const arU=document.createElement('button'); arU.className='ar'; arU.textContent='▲'; arU.title='Вверх (в другой ряд)'; arU.onclick=()=>moveFilterBetweenGroups(gi,f.field,-1);
-      const arD=document.createElement('button'); arD.className='ar'; arD.textContent='▼'; arD.title='Вниз (в другой ряд)'; arD.onclick=()=>moveFilterBetweenGroups(gi,f.field,1);
-      const delF=document.createElement('button'); delF.className='btn ghost'; delF.textContent='✖'; delF.onclick=()=>removeFilter(f.field);
-
-      chip.append(arL,arR,arU,arD,l1,l2,sel);
-      if(f.type==='select'){ chip.append(toVals,toRules); }
-      chip.append(delF);
-      list.append(chip);
-    });
-    box.append(list);
-    wrap.append(box);
-  });
-  renderFiltersTable();
-}
-
-
-// ==== Drag & Drop for filters
-let dragSrc = null; // {gi, idx, field}
-function chipDragStart(e, gi, field){
-  const idx = data.groups[gi].filters.indexOf(field);
-  dragSrc = {gi, idx, field};
-  e.dataTransfer.effectAllowed = 'move';
-  try{ e.dataTransfer.setData('text/plain', field); }catch(_){}
-}
-function chipDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('dragover'); }
-function chipDragLeave(e){ e.currentTarget.classList.remove('dragover'); }
-function chipDrop(e, gi, field){
-  e.preventDefault(); e.currentTarget.classList.remove('dragover');
-  if(!dragSrc) return;
-  const srcArr = data.groups[dragSrc.gi].filters;
-  const srcIdx = srcArr.indexOf(dragSrc.field);
-  if(srcIdx<0) return;
-  // remove from source
-  srcArr.splice(srcIdx,1);
-  const dstArr = data.groups[gi].filters;
-  let dstIdx = dstArr.indexOf(field);
-  if(dstIdx<0) dstIdx = dstArr.length;
-  // insert before target
-  dstArr.splice(dstIdx,0,dragSrc.field);
-  dragSrc = null;
-  save(); renderGroups(); renderPreview();
-}
-function chipDropOnList(e, gi){
-  e.preventDefault(); e.currentTarget.classList.remove('dragover');
-  if(!dragSrc) return;
-  const srcArr = data.groups[dragSrc.gi].filters;
-  const srcIdx = srcArr.indexOf(dragSrc.field);
-  if(srcIdx<0) return;
-  srcArr.splice(srcIdx,1);
-  const dstArr = data.groups[gi].filters;
-  dstArr.push(dragSrc.field);
-  dragSrc = null;
-  save(); renderGroups(); renderPreview();
-}
-
-function openOptions(field){
-  const f=byField(field);
-  const html=`<p>Значения через запятую:</p>
-  <textarea id="optArea" style="width:100%;min-height:120px">${(f.options||[]).join(', ')}</textarea>
-  <div class="row" style="margin-top:8px"><button class="btn" onclick="saveOptions('${field}')">Сохранить</button></div>`;
-  openModal('Значения: '+f.label, html);
-}
-function saveOptions(field){
-  const f=byField(field);
-  const txt=document.getElementById('optArea').value;
-  f.options=txt.split(',').map(s=>s.trim()).filter(Boolean);
-  save(); closeModal(); renderPreview(); renderFiltersTable();
-}
-function openRules(field){
-  const f=byField(field);
-  const lines=(f.rules||[]).map(r=>`${r.path.join(' > ')} = ${(r.options||[]).join(', ')}`).join('\n');
-  const html=`<p>Каждая строка: Путь = значения</p>
-  <textarea id="rulesArea" style="width:100%;min-height:160px">${lines}</textarea>
-  <div class="row" style="margin-top:8px"><button class="btn" onclick="saveRules('${field}')">Сохранить</button></div>`;
-  openModal('Связи: '+f.label, html);
-}
-function saveRules(field){
-  const f=byField(field);
-  const txt=document.getElementById('rulesArea').value;
-  f.rules=[];
-  txt.split('\n').forEach(line=>{
-    if(!line.trim()) return;
-    const [left,right]=line.split('=');
-    if(!right) return;
-    const path=left.split('>').map(s=>s.trim()).filter(Boolean);
-    const options=right.split(',').map(s=>s.trim()).filter(Boolean);
-    if(path.length && options.length) f.rules.push({path,options});
-  });
-  save(); closeModal(); renderPreview();
-}
-
-
-function moveFilterWithinGroup(gi, field, dir){
-  const arr = data.groups[gi].filters;
-  const idx = arr.indexOf(field);
-  if(idx<0) return;
-  const j = idx + dir;
-  if(j<0 || j>=arr.length) return;
-  [arr[idx], arr[j]] = [arr[j], arr[idx]];
-  save(); renderGroups(); renderPreview();
-}
-function moveFilterBetweenGroups(gi, field, step){
-  const to = gi + step;
-  if(to<0 || to>=data.groups.length) return;
-  const fromArr = data.groups[gi].filters;
-  const idx = fromArr.indexOf(field); if(idx<0) return;
-  fromArr.splice(idx,1);
-  data.groups[to].filters.push(field);
-  save(); renderGroups(); renderPreview();
-}
-
-function renderFiltersTable(){
-  const box=document.getElementById('filtersList'); box.innerHTML='';
-  data.filters.forEach(f=>{
-    const row=document.createElement('div'); row.className='item';
-    row.innerHTML=`<b style="min-width:180px">${f.label}</b><span>(${f.field})</span><span style="opacity:.8">тип: ${f.type}</span>`;
-    if(f.type==='select'){
-      const b1=document.createElement('button'); b1.className='btn'; b1.textContent='Значения'; b1.onclick=()=>openOptions(f.field);
-      const b2=document.createElement('button'); b2.className='btn'; b2.textContent='Связи'; b2.onclick=()=>openRules(f.field);
-      row.append(b1,b2);
-    }
-    box.append(row);
-  });
-}
-
-// ====== Fields editor
-function addField(){ data.fields.push({label:'Поле',id:'id_'+Date.now(),type:'text'}); save(); renderFields(); renderPreview(); }
-function renderFields(){
-  const list=document.getElementById('fieldsList'); list.innerHTML='';
-  data.fields.forEach((f,i)=>{
-    const row=document.createElement('div'); row.className='item';
-    const l=document.createElement('input'); l.value=f.label; l.placeholder='Метка'; l.oninput=()=>{ data.fields[i].label=l.value; save(); };
-    const id=document.createElement('input'); id.value=f.id; id.placeholder='id'; id.oninput=()=>{ data.fields[i].id=id.value; save(); };
-    const sel=document.createElement('select');
-    ['text','number','select','textarea'].forEach(t=>{ const o=document.createElement('option'); o.value=t;o.textContent=t;if(f.type===t)o.selected=true; sel.appendChild(o); });
-    sel.onchange=()=>{ data.fields[i].type=sel.value; save(); renderPreview(); };
-    const del=document.createElement('button'); del.className='btn ghost'; del.textContent='✖'; del.onclick=()=>{ data.fields.splice(i,1); save(); renderFields(); renderPreview(); };
-    row.append(l,id,sel,del); list.append(row);
-  });
-}
-
-// ====== Layout (drag + resize + delete)
-function label(t){ return ({filters:'Фильтры', map:'Карта', form:'Форма', cards:'Список', table:'Таблица'})[t] || t; }
-function addBlock(type){
-  const nextY = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1))+1 : 1;
-  data.layout.push({id:Date.now(), type, x:1, y:nextY, w:6, h:2});
-  save(); renderLayout();
-}
-function removeBlock(i){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); }
-function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
-
-let dragInfo=null, resizeInfo=null;
-function pxPerCol(canvas){ const style=getComputedStyle(canvas); const gap=parseFloat(style.gap)||6; const total=canvas.clientWidth; const colW=(total-11*gap)/12; return {colW,gap}; }
-function pxPerRow(canvas){ const style=getComputedStyle(canvas); const rowH=parseFloat(style.gridAutoRows)||90; const gap=parseFloat(style.gap)||6; return {rowH,gap}; }
-function snapToGrid(canvas, left, top, wpx, hpx){
-  const {colW,gap} = pxPerCol(canvas);
-  const {rowH} = pxPerRow(canvas);
-  let col = Math.round(left / (colW+gap)) + 1;
-  let row = Math.round(top  / (rowH+gap)) + 1;
-  let w   = Math.max(1, Math.round((wpx + gap) / (colW+gap)));
-  let h   = Math.max(1, Math.round((hpx + gap) / (rowH+gap)));
-  col = Math.max(1, Math.min(12, col));
-  if(col + w - 1 > 12) w = 12 - col + 1;
-  row = Math.max(1, row);
-  return {x:col,y:row,w,h};
-}
-
-function renderLayout(){
-  sanitizeLayout();
-
-  const canvas=document.getElementById('canvas');
-  canvas.innerHTML='';
-  const {colW,gap}=pxPerCol(canvas);
-  const {rowH}=pxPerRow(canvas);
-
-  if(!data.layout.length){
-    const p=document.createElement('div'); p.style.position='absolute'; p.style.left='12px'; p.style.top='12px'; p.style.opacity='.85'; p.textContent='Добавьте блоки с панели выше';
-    canvas.appendChild(p);
-  }
-
-  data.layout.forEach((b,i)=>{
-    const el=document.createElement('div'); el.className='block';
-    const left = (b.x-1)*(colW+gap);
-    const top  = (b.y-1)*(rowH+gap);
-    const wpx  = b.w*colW + (b.w-1)*gap;
-    const hpx  = b.h*rowH + (b.h-1)*gap;
-    el.style.left = left+'px'; el.style.top = top+'px';
-    el.style.width = wpx+'px'; el.style.height = hpx+'px';
-
-    el.innerHTML = `<div class="title">${label(b.type)}</div>
-                    <button class="close" title="Удалить" onclick="removeBlock(${i})">×</button>
-                    <div class="resize" title="Изменить размер"></div>`;
-
-    const title=el.querySelector('.title');
-    title.onmousedown = (ev)=>{
-      ev.preventDefault();
-      dragInfo={i,startX:ev.clientX,startY:ev.clientY,origLeft:left,origTop:top};
-      el.classList.add('dragging');
-    };
-    const handle=el.querySelector('.resize');
-    handle.onmousedown = (ev)=>{
-      ev.preventDefault();
-      resizeInfo={i,startX:ev.clientX,startY:ev.clientY,origW:wpx,origH:hpx};
-      el.classList.add('dragging');
-    };
-
-    canvas.appendChild(el);
-  });
-
-  document.onmousemove = (ev)=>{
-    if(dragInfo){
-      const canvas=document.getElementById('canvas');
-      const dx=ev.clientX - dragInfo.startX;
-      const dy=ev.clientY - dragInfo.startY;
-      const left = Math.max(0, dragInfo.origLeft + dx);
-      const top  = Math.max(0, dragInfo.origTop  + dy);
-      const snap = snapToGrid(canvas,left,top, data.layout[dragInfo.i].w* (pxPerCol(canvas).colW) , data.layout[dragInfo.i].h*(pxPerRow(canvas).rowH));
-      data.layout[dragInfo.i].x=snap.x; data.layout[dragInfo.i].y=snap.y;
-      renderLayout();
-    }else if(resizeInfo){
-      const canvas=document.getElementById('canvas');
-      const dx=ev.clientX - resizeInfo.startX;
-      const dy=ev.clientY - resizeInfo.startY;
-      const wpx = Math.max(30, resizeInfo.origW + dx);
-      const hpx = Math.max(30, resizeInfo.origH + dy);
-      const snap = snapToGrid(canvas,0,0,wpx,hpx);
-      data.layout[resizeInfo.i].w=snap.w; data.layout[resizeInfo.i].h=snap.h;
-      renderLayout();
-    }
-  };
-  document.onmouseup = ()=>{
-    if(dragInfo||resizeInfo){ save(); }
-    dragInfo=null; resizeInfo=null;
-    document.querySelectorAll('.block.dragging').forEach(b=>b.classList.remove('dragging'));
-  };
-}
-
-// ====== Preview (renders by layout)
-let previewState={};
-function computeOptions(filter,state,all){
-  let base=filter.options||[]; let best=null, depth=-1;
-  (filter.rules||[]).forEach(r=>{
-    let ok=true, d=0;
-    for(let i=0;i<r.path.length;i+=2){
-      const label=r.path[i], val=r.path[i+1];
-      const pf=all.find(ff=>ff.label===label); if(!pf){ok=false;break;}
-      if((state[pf.field]||'')!==val){ok=false;break;}
-      d++;
-    }
-    if(ok && d>depth){best=r; depth=d;}
-  });
-  return best?best.options:base;
-}
-function resetDependents(changedField){
-  const changed=byField(changedField); if(!changed) return;
-  const q=[changed.label], seen=new Set();
-  while(q.length){
-    const lab=q.shift(); seen.add(lab);
-    data.filters.forEach(f=>{
-      const uses=(f.rules||[]).some(r=>{for(let i=0;i<r.path.length;i+=2){if(r.path[i]===lab) return true;} return false;});
-      if(uses){ delete previewState[f.field]; if(!seen.has(f.label)) q.push(f.label); }
-    });
-  }
-}
-
-
-function previewFilters(){
-  const wrap = document.createElement('div');
-  const groups = Array.isArray(data.groups) ? data.groups : [];
-  groups.forEach((g, gi)=>{
-    const group = document.createElement('div');
-    group.className = 'p-group';
-
-    const title = document.createElement('div');
-    title.className = 'p-title';
-    title.textContent = g.name || (gi===0 ? 'Верхняя линия' : 'Нижняя линия');
-    group.appendChild(title);
-
-    const row = document.createElement('div');
-    row.className = 'p-row'; // 4 columns via CSS
-
-    const fields = Array.isArray(g.filters) ? g.filters : [];
-    fields.forEach((field)=>{
-      const f = byField(field);
-      if(!f) return;
-
-      const box = document.createElement('div');
-      box.className = 'p-field';
-
-      const lab = document.createElement('label');
-      lab.textContent = f.label || f.field;
-      box.appendChild(lab);
-
-      if(f.type === 'select'){
-        const sel = document.createElement('select');
-        const opts = computeOptions(f, previewState, data.filters);
-        sel.innerHTML = "<option value=''>—</option>" + opts.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join('');
-        sel.onchange = ()=>{ previewState[f.field] = sel.value; resetDependents(f.field); renderPreview(); };
-        box.appendChild(sel);
-      } else if(f.type === 'range'){
-        const rwrap = document.createElement('div');
-        rwrap.className = 'row';
-        const i1 = document.createElement('input'); i1.placeholder = 'от';
-        const i2 = document.createElement('input'); i2.placeholder = 'до';
-        rwrap.append(i1, i2);
-        box.appendChild(rwrap);
-      } else if(f.type === 'number'){
-        const num = document.createElement('input');
-        num.type = 'number';
-        box.appendChild(num);
-      } else {
-        const txt = document.createElement('input');
-        txt.type = 'text';
-        box.appendChild(txt);
+// ===== Config storage with migration =====
+const KEY = "admin_full_cfg_v26";
+(function migrate(){
+  try{
+    if(!localStorage.getItem(KEY)){
+      const any = Object.keys(localStorage).filter(k=>k.startsWith("admin_full_cfg_")).sort().reverse();
+      for(const k of any){
+        const val = localStorage.getItem(k);
+        if(val && val.length>10){ localStorage.setItem(KEY,val); break; }
       }
-
-      row.appendChild(box);
-    });
-
-    group.appendChild(row);
-    wrap.appendChild(group);
-  });
-  return wrap;
-}
-}
-function previewForm(){
-  const c=document.createElement('div');
-  data.fields.forEach(ff=>{
-    const box=document.createElement('div'); box.className='field';
-    box.innerHTML=`<label>${ff.label}</label>`;
-    if(ff.type==='textarea') box.innerHTML+=`<textarea rows="3"></textarea>`;
-    else if(ff.type==='select') box.innerHTML+=`<select><option>—</option></select>`;
-    else if(ff.type==='number') box.innerHTML+=`<input type="number">`;
-    else box.innerHTML+=`<input type="text">`;
-    c.appendChild(box);
-  });
-  return c;
-}
-
-function renderPreview(){
-  const box=document.getElementById('preview'); 
-  box.innerHTML='';
-  const grid=document.createElement('div'); 
-  grid.className='preview-grid'; 
-  box.append(grid);
-
-  // rows like in layout
-  const rows = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1)) : 1;
-  grid.style.minHeight = (rows*90 + (rows-1)*6) + 'px'; grid.style.width='100%'; grid.style.maxWidth='100%';
-
-  // render each block at its coordinates
-  data.layout.forEach(b=>{
-    const card=document.createElement('div'); 
-    card.className='preview-card';
-    // mirror x,y,w,h
-    card.style.gridColumn = `${b.x} / span ${b.w}`;
-    card.style.gridRow    = `${b.y} / span ${b.h}`;
-
-    if(b.type==='filters'){
-      card.append(previewFilters());
-    }else if(b.type==='form'){
-      card.append(previewForm());
-    }else if(b.type==='map'){
-      card.textContent='🗺️ Карта';
-    }else if(b.type==='cards'){
-      card.textContent='📋 Список';
-    }else if(b.type==='table'){
-      card.textContent='📊 Таблица';
-    }else{
-      card.textContent = b.type;
     }
-    grid.append(card);
-  });
+  }catch(e){console.warn(e)}
+})();
+
+// ===== Data model =====
+let data = {
+  fields: [
+    {label:"Страна", field:"country", type:"select", options:["—","Узбекистан","Казахстан"]},
+    {label:"Город", field:"city", type:"select", options:["—","Ташкент","Алматы"]},
+    {label:"Категория", field:"category", type:"select", options:["—","Квартира","Дом"]},
+    {label:"Цена", field:"price", type:"range"}
+  ],
+  groups: [
+    {name:"Верхняя линия", filters:["country","city","category"]},
+    {name:"Нижняя линия", filters:["price"]}
+  ],
+  layout: [
+    {id:1, type:"filters", title:"Фильтры", x:1, y:1, w:12, h:5},
+    {id:2, type:"cards", title:"Список", x:7, y:6, w:6, h:6},
+    {id:3, type:"map", title:"Карта", x:1, y:6, w:6, h:6}
+  ]
+};
+
+// Load saved
+try{
+  const saved = localStorage.getItem(KEY);
+  if(saved){
+    const obj = JSON.parse(saved);
+    if(obj && (obj.fields||obj.groups||obj.layout)) data = Object.assign(data, obj);
+  }
+}catch(e){console.warn("load fail",e)}
+
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+
+// ===== Tabs =====
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    ["filters","fields","layout","preview"].forEach(id=>{
+      document.getElementById('tab-'+id).style.display = (id===tab)?"block":"none";
+    });
+    if(tab==="filters"){ renderGroups(); }
+    if(tab==="fields"){ renderFields(); }
+    if(tab==="layout"){ renderLayout(); }
+    if(tab==="preview"){ renderPreview(); }
+  };
+});
+
+// ===== Toast =====
+function showToast(msg,type="info"){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.borderColor= type==="ok" ? "#22c55e" : (type==="err" ? "#ef4444" : "#33507a");
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
 }
 
-// === Minimal working controls for +Ряд и +Фильтр
+// ===== Filters UI =====
+function byField(name){ return data.fields.find(f=>f.field===name); }
+
 function addGroup(){
-  if(!Array.isArray(data.groups)) data.groups = [];
-  const n = data.groups.length;
-  data.groups.push({ name: n===0 ? 'Верхняя линия' : 'Нижняя линия', filters: [] });
+  const idx = data.groups.length;
+  data.groups.push({name: idx===0?"Верхняя линия":"Нижняя линия", filters:[]});
   save(); renderGroups(); renderPreview();
 }
+function removeGroup(i){
+  data.groups.splice(i,1);
+  save(); renderGroups(); renderPreview();
+}
+
 function addFilter(){
-  // добавляем в текущую (или первую) линию простой текстовый фильтр
-  if(!Array.isArray(data.groups) || data.groups.length===0){
-    data.groups = [{ name:'Верхняя линия', filters: [] }];
-  }
-  if(!Array.isArray(data.fields)) data.fields = [];
-  // уникальное имя
-  const idx = data.fields.length+1;
-  const fieldName = 'field_' + idx;
-  const newField = { label: 'Новый фильтр', field: fieldName, type: 'text' };
-  data.fields.push(newField);
-  // добавим в первую группу по умолчанию
+  if(!data.groups.length) addGroup();
+  const n = data.fields.length+1;
+  const fieldName = "field_"+n;
+  data.fields.push({label:"Новый фильтр "+n, field:fieldName, type:"text"});
   data.groups[0].filters.push(fieldName);
   save(); renderGroups(); renderPreview();
 }
-
-// ====== Simple modals
-function openModal(title,html){
-  const w=document.createElement('div');
-  w.style.position='fixed';w.style.inset='0';w.style.background='rgba(0,0,0,.55)';w.style.display='flex';w.style.alignItems='center';w.style.justifyContent='center';w.style.zIndex='99';
-  const card=document.createElement('div');card.style.background='#0b0f17';card.style.padding='14px';card.style.border='1px solid #263042';card.style.borderRadius='10px';card.style.maxWidth='min(1000px,96vw)';card.style.maxHeight='90vh';card.style.overflow='auto';
-  card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>${title}</b><button class="btn ghost" id="x">Закрыть</button></div><div>${html}</div>`;
-  w.append(card); document.body.append(w); w.querySelector('#x').onclick=()=>w.remove();
+function removeFilter(gIndex, fIndex){
+  const name = data.groups[gIndex].filters[fIndex];
+  // только из группы убираем (само поле оставляем в каталоге)
+  data.groups[gIndex].filters.splice(fIndex,1);
+  save(); renderGroups(); renderPreview();
 }
-function closeModal(){ const m=document.querySelector('body>div[style*="position: fixed"][style*="inset: 0"]'); if(m) m.remove(); }
 
-// ====== Initial render
-function renderAll(){ renderGroups(); renderFields(); renderLayout(); renderPreview(); }
-renderAll();
+function renderGroups(){
+  const box=document.getElementById('groups'); box.innerHTML="";
+  data.groups.forEach((g,gi)=>{
+    const card=document.createElement('div'); card.className="card";
+    const t=document.createElement('div');
+    t.className="row"; t.innerHTML=`<h3 style="margin:0">${g.name||("Линия "+(gi+1))}</h3>`;
+    const rm=document.createElement('button'); rm.className="btn danger"; rm.textContent="Удалить ряд";
+    rm.onclick=()=>removeGroup(gi);
+    t.appendChild(rm);
+    card.appendChild(t);
+    const row=document.createElement('div'); row.className="row"; row.style.flexWrap="wrap";
+    g.filters.forEach((fname,fi)=>{
+      const f=byField(fname);
+      const chip=document.createElement('div');
+      chip.style.cssText="display:flex;align-items:center;gap:8px;border:1px solid var(--border);padding:6px 8px;border-radius:8px;background:#0f1624;margin:4px";
+      chip.innerHTML=`<small>${f?f.label:fname}</small>`;
+      const x=document.createElement('button'); x.className="btn danger"; x.textContent="x";
+      x.onclick=()=>removeFilter(gi,fi);
+      chip.appendChild(x);
+      row.appendChild(chip);
+    });
+    card.appendChild(row);
+    box.appendChild(card);
+  });
+}
+
+// ===== Fields UI =====
+function renderFields(){
+  const box=document.getElementById('fields'); box.innerHTML="";
+  data.fields.forEach((f,i)=>{
+    const el=document.createElement('div'); el.className="card";
+    el.innerHTML=`<div class="row"><h3 style="margin:0">${f.label}</h3><small class="muted">(${f.field})</small></div>
+    <div class="row"><label>Тип</label>
+    <select data-i="${i}">
+      <option value="text"${f.type==='text'?' selected':''}>text</option>
+      <option value="number"${f.type==='number'?' selected':''}>number</option>
+      <option value="select"${f.type==='select'?' selected':''}>select</option>
+      <option value="range"${f.type==='range'?' selected':''}>range</option>
+    </select></div>`;
+    el.querySelector('select').onchange=(e)=>{ data.fields[i].type=e.target.value; save(); renderPreview(); };
+    box.appendChild(el);
+  });
+}
+
+// ===== Layout UI =====
+let nextId = 100;
+function addBlock(type){
+  const id=++nextId;
+  data.layout.push({id, type, title: type==='filters'?'Фильтры':type.toUpperCase(), x:1, y:1, w:6, h:4});
+  save(); renderLayout(); renderPreview();
+}
+function removeBlock(id){
+  const i=data.layout.findIndex(b=>b.id===id);
+  if(i>-1){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); }
+}
+function clearLayout(){
+  data.layout=[]; save(); renderLayout(); renderPreview();
+}
+
+function renderLayout(){
+  const grid=document.getElementById('canvas'); grid.innerHTML="";
+  const rows = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1)) : 1;
+  grid.style.minHeight = (rows*90 + (rows-1)*6) + "px";
+  data.layout.forEach(b=>{
+    const card=document.createElement('div'); card.className="block";
+    card.style.gridColumn=`${b.x} / span ${b.w}`;
+    card.style.gridRow=`${b.y} / span ${b.h}`;
+    const head=document.createElement('header'); head.innerHTML=`<span>${b.title||b.type}</span>`;
+    const x=document.createElement('button'); x.className="x"; x.textContent="x"; x.title="Удалить";
+    x.onclick=()=>removeBlock(b.id);
+    head.appendChild(x); card.appendChild(head);
+    const body=document.createElement('div'); body.className="body"; body.textContent="Секция макета";
+    card.appendChild(body);
+    grid.appendChild(card);
+  });
+}
+
+// ===== Preview =====
+const previewState = {};
+function computeOptions(f){ return Array.isArray(f.options)?f.options:[]; }
+function resetDependents(){}
+
+function previewFilters(){
+  const wrap=document.createElement('div');
+  data.groups.forEach((g,gi)=>{
+    const group=document.createElement('div'); group.className='p-group';
+    const title=document.createElement('div'); title.className='p-title';
+    title.textContent = g.name || (gi===0?'Верхняя линия':'Нижняя линия'); group.appendChild(title);
+    const row=document.createElement('div'); row.className='p-row';
+    (g.filters||[]).forEach(name=>{
+      const f=byField(name); if(!f) return;
+      const box=document.createElement('div'); box.className='p-field';
+      const lab=document.createElement('label'); lab.textContent=f.label || f.field; box.appendChild(lab);
+      if(f.type==='select'){
+        const sel=document.createElement('select');
+        const opts=computeOptions(f);
+        sel.innerHTML = "<option value=''>—</option>"+opts.map(o=>`<option>${o}</option>`).join('');
+        box.appendChild(sel);
+      }else if(f.type==='range'){
+        const div=document.createElement('div'); div.className='row';
+        const a=document.createElement('input'); a.placeholder='от';
+        const b=document.createElement('input'); b.placeholder='до';
+        div.append(a,b); box.appendChild(div);
+      }else if(f.type==='number'){
+        const num=document.createElement('input'); num.type='number'; box.appendChild(num);
+      }else{
+        const t=document.createElement('input'); t.type='text'; box.appendChild(t);
+      }
+      row.appendChild(box);
+    });
+    group.appendChild(row); wrap.appendChild(group);
+  });
+  return wrap;
+}
+
+function renderPreview(){
+  const grid=document.getElementById('preview'); grid.innerHTML="";
+  const rows = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1)) : 1;
+  grid.style.minHeight = (rows*90 + (rows-1)*6) + "px";
+  data.layout.forEach(b=>{
+    const card=document.createElement('div'); card.className='preview-card';
+    card.style.gridColumn=`${b.x} / span ${b.w}`;
+    card.style.gridRow=`${b.y} / span ${b.h}`;
+    if(b.type==='filters') card.appendChild(previewFilters());
+    else {
+      const ph=document.createElement('div'); ph.style.padding='10px'; ph.textContent = (b.title||b.type).toUpperCase();
+      card.appendChild(ph);
+    }
+    grid.appendChild(card);
+  });
+}
+
+// ===== Export / Import =====
+document.getElementById('btnExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="admin-config.json"; a.click();
+  showToast("Экспорт сохранен", "ok");
+};
+document.getElementById('fileImport').onchange=(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const obj=JSON.parse(r.result);
+      if(obj.fields) data.fields=obj.fields;
+      if(obj.groups) data.groups=obj.groups;
+      if(obj.layout) data.layout=obj.layout;
+      save(); renderGroups(); renderFields(); renderLayout(); renderPreview();
+      showToast("Импорт выполнен", "ok");
+    }catch(err){ console.error(err); showToast("Ошибка импорта","err"); }
+  };
+  r.readAsText(f);
+};
+
+// Init
+renderGroups(); renderFields(); renderLayout();
+
 </script>
 </body>
 </html>
