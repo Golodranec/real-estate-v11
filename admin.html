@@ -48,16 +48,16 @@
     footer{padding:8px 12px;color:#a9b4c7;font-size:12px;border-top:1px solid #2a3140;background:#0d1119;grid-column:1 / -1}
     .p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%} .preview-card{width:100%}
     .p-title{font-size:13px;font-weight:600;opacity:.85;margin-bottom:12px}
-    .p-row{display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;width:100%}
+    .p-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;width:100%}
     .p-field{min-width:0;width:100%}
     .p-field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
 
   </style>
 </head>
 <body>
-<div id="dbgBanner" style="position:sticky;top:0;z-index:1000;background:#7c3aed;color:#fff;text-align:center;padding:6px 10px;font-weight:700;letter-spacing:.5px">DEBUG BUILD v23-fixed — если вы это видите, файл точно обновился</div>
+<div id="dbgBanner" style="position:sticky;top:0;z-index:1000;background:#7c3aed;color:#fff;text-align:center;padding:6px 10px;font-weight:700;letter-spacing:.5px">DEBUG BUILD v24 — если вы это видите, файл точно обновился</div>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v23-fixed</span>
+  <div class="tabs"><span class="badge" id="verBadge">v24</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -108,11 +108,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v23-fixed</footer>
+<footer>build: admin-full-v24</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v23f";
+const KEY="admin_full_cfg_v24";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
@@ -606,6 +606,32 @@ function renderPreview(){
     grid.append(card);
   });
 }
+
+// --- Compatibility loader: migrate old keys if present
+(function(){
+  try{
+    const KEYS = [
+      "admin_full_cfg_v24","admin_full_cfg_v23f","admin_full_cfg_v23","admin_full_cfg_v22",
+      "admin_full_cfg_v21","admin_full_cfg_v20","admin_full_cfg_v19","admin_full_cfg_v18",
+      "admin_full_cfg_v17","admin_full_cfg_v16","admin_full_cfg_v15","admin_full_cfg_v14",
+      "admin_full_cfg_v13","admin_full_cfg_v12","admin_full_cfg_v11","admin_full_cfg_v10",
+      "admin_full_cfg_v9","admin_full_cfg_v8","admin_full_cfg_v7","admin_full_cfg"
+    ];
+    // if current is empty, try to find any existing one and clone into current
+    const cur = localStorage.getItem("admin_full_cfg_v24");
+    if(!cur){
+      for(const k of KEYS){
+        const val = localStorage.getItem(k);
+        if(val){
+          localStorage.setItem("admin_full_cfg_v24", val);
+          console.info("[admin] migrated config from", k, "-> admin_full_cfg_v24");
+          break;
+        }
+      }
+    }
+  }catch(e){ console.warn("compat loader failed", e); }
+})();
+
 // ====== Simple modals
 function openModal(title,html){
   const w=document.createElement('div');
