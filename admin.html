@@ -38,7 +38,7 @@
     .block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:3px;background:#5b9cff;cursor:nwse-resize}
     /* Preview */
     .preview-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px;width:100%;max-width:100%;}
-    .preview-card{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:12px;height:100%;overflow:auto}
+    .preview-card{background:#1a202c;border:1px solid #2a3140;border-radius:10px;padding:12px;height:100%;overflow:auto;display:flex;flex-direction:column}
     .filters-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px}
     .field{min-width:160px}
     .field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
@@ -47,16 +47,16 @@
     .toast.show{opacity:1;transform:translateY(0)}
     footer{padding:8px 12px;color:#a9b4c7;font-size:12px;border-top:1px solid #2a3140;background:#0d1119;grid-column:1 / -1}
     .p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%} .preview-card{width:100%}
-    .p-title{font-size:13px;font-weight:600;opacity:.85;margin-bottom:8px}
-    .p-row{display:flex;flex-wrap:wrap;gap:12px;width:100%}
-    .p-field{flex:1 1 220px;max-width:320px;min-width:200px}
+    .p-title{font-size:13px;font-weight:600;opacity:.85;margin-bottom:12px}
+    .p-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;width:100%}
+    .p-field{min-width:0}
     .p-field label{display:block;margin-bottom:4px;font-size:12px;color:#cfd8e3}
 
   </style>
 </head>
 <body>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v16</span>
+  <div class="tabs"><span class="badge" id="verBadge">v17</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -107,11 +107,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v16</footer>
+<footer>build: admin-full-v17</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v16";
+const KEY="admin_full_cfg_v17";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
