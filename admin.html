@@ -55,9 +55,9 @@
   </style>
 </head>
 <body>
-<div id="dbgBanner" style="position:sticky;top:0;z-index:1000;background:#7c3aed;color:#fff;text-align:center;padding:6px 10px;font-weight:700;letter-spacing:.5px">DEBUG BUILD v22 — если вы это видите, файл точно обновился</div>
+<div id="dbgBanner" style="position:sticky;top:0;z-index:1000;background:#7c3aed;color:#fff;text-align:center;padding:6px 10px;font-weight:700;letter-spacing:.5px">DEBUG BUILD v23-fixed — если вы это видите, файл точно обновился</div>
 <header>
-  <div class="tabs"><span class="badge" id="verBadge">v22</span>
+  <div class="tabs"><span class="badge" id="verBadge">v23-fixed</span>
     <div class="tab active" data-tab="filters">⚙️ Фильтры</div>
     <div class="tab" data-tab="fields">📝 Поля</div>
     <div class="tab" data-tab="layout">🖼️ Макет</div>
@@ -108,11 +108,11 @@
 </main>
 
 <div class="toast" id="toast"></div>
-<footer>build: admin-full-v22</footer>
+<footer>build: admin-full-v23-fixed</footer>
 
 <script>
 // ====== State & utils
-const KEY="admin_full_cfg_v22";
+const KEY="admin_full_cfg_v23f";
 let data = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function sanitizeLayout(){
@@ -499,38 +499,53 @@ function resetDependents(changedField){
 
 
 function previewFilters(){
-  const wrap=document.createElement('div');
-  // Render each group (row) as its own section
-  (data.groups||[]).forEach((g,gi)=>{
-    const group=document.createElement('div'); group.className='p-group';
-    const title=document.createElement('div'); title.className='p-title';
+  const wrap = document.createElement('div');
+  const groups = Array.isArray(data.groups) ? data.groups : [];
+  groups.forEach((g, gi)=>{
+    const group = document.createElement('div');
+    group.className = 'p-group';
+
+    const title = document.createElement('div');
+    title.className = 'p-title';
     title.textContent = g.name || (gi===0 ? 'Верхняя линия' : 'Нижняя линия');
     group.appendChild(title);
 
-    const row=document.createElement('div'); row.className='p-row'; // CSS: grid-template-columns: repeat(4,1fr)
-    (g.filters||[]).forEach(field=>{
-      const f=byField(field); if(!f) return;
-      const box=document.createElement('div'); box.className='p-field';
-      // label
-      const lab=document.createElement('label'); lab.textContent = f.label || f.field;
+    const row = document.createElement('div');
+    row.className = 'p-row'; // 4 columns via CSS
+
+    const fields = Array.isArray(g.filters) ? g.filters : [];
+    fields.forEach((field)=>{
+      const f = byField(field);
+      if(!f) return;
+
+      const box = document.createElement('div');
+      box.className = 'p-field';
+
+      const lab = document.createElement('label');
+      lab.textContent = f.label || f.field;
       box.appendChild(lab);
 
-      // control
-      if(f.type==='select'){
-        const sel=document.createElement('select');
-        const opts=computeOptions(f, previewState, data.filters);
+      if(f.type === 'select'){
+        const sel = document.createElement('select');
+        const opts = computeOptions(f, previewState, data.filters);
         sel.innerHTML = "<option value=''>—</option>" + opts.map(o=>`<option ${previewState[f.field]===o?'selected':''}>${o}</option>`).join('');
-        sel.onchange=()=>{ previewState[f.field]=sel.value; resetDependents(f.field); renderPreview(); };
+        sel.onchange = ()=>{ previewState[f.field] = sel.value; resetDependents(f.field); renderPreview(); };
         box.appendChild(sel);
-      }else if(f.type==='range'){
-        const rwrap=document.createElement('div'); rwrap.className='row';
-        const i1=document.createElement('input'); i1.placeholder='от';
-        const i2=document.createElement('input'); i2.placeholder='до';
-        rwrap.append(i1,i2); box.appendChild(rwrap);
-      }else if(f.type==='number'){
-        const num=document.createElement('input'); num.type='number'; box.appendChild(num);
-      }else{
-        const txt=document.createElement('input'); txt.type='text'; box.appendChild(txt);
+      } else if(f.type === 'range'){
+        const rwrap = document.createElement('div');
+        rwrap.className = 'row';
+        const i1 = document.createElement('input'); i1.placeholder = 'от';
+        const i2 = document.createElement('input'); i2.placeholder = 'до';
+        rwrap.append(i1, i2);
+        box.appendChild(rwrap);
+      } else if(f.type === 'number'){
+        const num = document.createElement('input');
+        num.type = 'number';
+        box.appendChild(num);
+      } else {
+        const txt = document.createElement('input');
+        txt.type = 'text';
+        box.appendChild(txt);
       }
 
       row.appendChild(box);
