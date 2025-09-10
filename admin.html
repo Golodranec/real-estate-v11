@@ -1,602 +1,483 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Admin Builder — Cascade Filters v5 FULL WORK + Preview FIX (FULL)</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin v13.9.5 — Конструктор формы объектов</title>
 <style>
-:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--accent:#4aa8ff;--danger:#ef4444;--warn:#f59e0b;}
-*{box-sizing:border-box}
-body{margin:0;background:#0b0f16;color:#d7e2f2;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;position:sticky;top:0;z-index:10}
-.badge{padding:3px 8px;border-radius:8px;background:#6d28d9;font-weight:700}
-.tabs{display:flex;gap:8px;margin-left:8px}
-.tab{background:#1a2234;border:1px solid var(--border);padding:6px 10px;border-radius:8px;color:#cfe0ff;cursor:pointer}
-.tab.active{background:#2160ff;color:#fff}
-main{padding:12px;display:grid;gap:12px}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
-h3{margin:0 0 10px 0;color:#cfe0ff}
-.btn{background:#1e293b;border:1px solid var(--border);color:#dbe8ff;padding:6px 10px;border-radius:8px;cursor:pointer}
-.btn:hover{border-color:#3a4c6b}
-.btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-.btn.warn{background:#3a2a0f;border-color:#7c5a10;color:#fde68a}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.grid{display:grid;gap:10px}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff;width:100%}
-label{display:block;opacity:.9;margin-bottom:6px}
-small.muted{color:#9fb0c8}
-.list{display:grid;gap:10px}
-.card{background:#172133;border:1px solid var(--border);border-radius:10px;padding:10px}
-.card .title-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
-.card h3{margin:0}
-footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--border)}
-.canvas-wrap{border:1px solid var(--border);border-radius:12px;background:#0d121e;padding:6px;overflow:auto;height:62vh}
-.canvas,.preview-grid{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px}
-.block,.preview-card{background:#111827;border:1px solid #2b3a5a;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;position:relative}
-.block header{display:flex;align-items:center;justify-content:space-between;background:#0f172a;color:#dbe8ff;padding:8px 10px;border-bottom:1px solid #2b3a5a;cursor:grab}
-.block header:active{cursor:grabbing}
-.block .body{padding:10px;flex:1}
-.block .x{background:var(--danger);border:none;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;text-align:center;cursor:pointer}
-.block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-right:3px solid #446;border-bottom:3px solid #446;cursor:nwse-resize;opacity:.8}
-.block .title{font-weight:600}
-.preview-card{border-color:#3a4c6b}
-.p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%}
-.p-title{font-size:13px;font-weight:600;margin-bottom:10px;color:#cfe0ff}
-.p-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%}
-.p-field{min-width:0;width:100%}
-.p-field>div{display:flex;gap:8px}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--border);padding:6px 8px;border-radius:8px;background:#0f1624;margin:4px}
-.chip .grab{cursor:grab;font-size:12px;opacity:.7}
-.chip.dragging{opacity:.5;border-style:dashed}
-.dropzone{min-height:38px;border:1px dashed #334;border-radius:8px;padding:8px;background:#0c1220}
-.inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:900px){.p-row{grid-template-columns:repeat(2,1fr)}.inline{grid-template-columns:1fr}}
-.errorBox{background:#3a0f15;border:1px solid #7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin:10px 0}
-.preview-section{padding:10px}
-.preview-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.preview-card-item{background:#0f1624;border:1px solid #31405a;border-radius:10px;overflow:hidden}
-.preview-card-item img{width:100%;height:120px;object-fit:cover;display:block;background:#223}
-.preview-card-item .pc-body{padding:10px}
-.preview-card-item .pc-title{font-weight:700;margin-bottom:6px}
-.preview-table{width:100%;border-collapse:collapse}
-.preview-table th,.preview-table td{border:1px solid #31405a;padding:8px;text-align:left}
-.preview-map{display:flex;align-items:center;justify-content:center;background:#0f1624;border:1px dashed #3a4c6b;border-radius:10px;height:100%}
-.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  :root{
+    --bg:#0f1115; --card:#161a22; --line:#242938; --text:#e8eaf0;
+    --blue:#4da3ff; --chip:#242938; --green:#4dff91; --red:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{display:flex;align-items:center;gap:12px;justify-content:space-between;background:var(--card);padding:12px 16px;border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:18px}
+  .version-badge{position:fixed;right:10px;top:10px;background:var(--chip);border:1px solid var(--line);padding:4px 8px;border-radius:8px;font-size:12px;opacity:.9}
+  a,button{cursor:pointer}
+  .tabs{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:linear-gradient(0deg,transparent,rgba(255,255,255,.02))}
+  .tab{padding:8px 10px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:var(--card);opacity:.75}
+  .tab.active{opacity:1;border-color:var(--blue)}
+  .container{padding:16px;display:grid;gap:16px;grid-template-columns:1fr}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h2{margin:0 0 10px;font-size:16px}
+  input,select,button,textarea{padding:8px;border-radius:8px;border:1px solid var(--line);background:#0d1016;color:var(--text)}
+  .btn{background:var(--blue);border:1px solid var(--blue);color:#001428;font-weight:600}
+  .ghost{background:transparent;border:1px solid var(--blue);color:var(--blue)}
+  .danger{background:transparent;border:1px solid var(--red);color:var(--red)}
+  .grid{display:grid;gap:10px}
+  .grid.cols-2{grid-template-columns:1fr 1fr}
+  .grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+  .row{display:flex;align-items:center;gap:8px}
+  .hint{font-size:12px;opacity:.8}
+  .ok{color:var(--green)} .bad{color:var(--red)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  .th,.td{padding:8px;border:1px solid var(--line);background:#0d1016}
+  .th{background:#0f141d;font-weight:600}
+  .td:first-child,.th:first-child{border-radius:8px 0 0 8px}
+  .td:last-child,.th:last-child{border-radius:0 8px 8px 0}
+  .drag-handle{cursor:grab;user-select:none}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:var(--chip);font-size:12px}
+  .preview-box{display:flex;flex-wrap:wrap;gap:10px}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:200px}
+  .field label{font-size:13px;opacity:.85}
+  .field .inline{display:flex;gap:8px}
+  .divider{height:1px;background:var(--line);margin:10px 0}
+  .sticky-footer{position:sticky;bottom:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+  .muted{opacity:.7}
 </style>
 </head>
 <body>
-<header>
-  <span id="ver" class="badge">cascade-v5-full-work-preview-fix-full</span>
-  <div class="tabs">
-    <button class="tab active" data-tab="filters">Фильтры</button>
-    <button class="tab" data-tab="fields">Поля</button>
-    <button class="tab" data-tab="layout">Макет</button>
+  <header>
+    <h1>Админка — конструктор формы объектов</h1>
+    <div class="row">
+      <span id="syncInfo" class="pill">Синхронизация: <span id="syncState" class="ok">OK</span></span>
+    </div>
+  </header>
+  <div class="version-badge">admin v13.9.5</div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="form">Форма объектов</button>
+    <button class="tab" data-tab="filters">Фильтры</button>
     <button class="tab" data-tab="preview">Предпросмотр</button>
-  </div>
-  <div style="margin-left:auto" class="row">
-    <button id="btnExport" class="btn">Экспорт</button>
-    <label class="btn"><input id="fileImport" type="file" accept=".json,.txt" style="display:none">Импорт</label>
-    <button id="btnReset" class="btn danger" title="Очистить сохранённые настройки и перезапустить">Сброс</button>
-  </div>
-</header>
+    <button class="tab" data-tab="data">Экспорт/импорт</button>
+    <span class="pill">Хранилище: localStorage</span>
+  </nav>
 
-<main>
-  <section id="tab-filters" class="panel"></section>
-  <section id="tab-fields" class="panel" style="display:none"></section>
-  <section id="tab-layout" class="panel" style="display:none"></section>
-  <section id="tab-preview" class="panel" style="display:none">
-    <div class="canvas-wrap"><div id="preview" class="preview-grid"></div></div>
-  </section>
-</main>
+  <main class="container">
+    <!-- ФОРМА ОБЪЕКТОВ -->
+    <section id="tab-form" class="card">
+      <h2>Форма объектов — включение, порядок и подписи</h2>
+      <div class="toolbar">
+        <button class="btn" id="addField">Добавить поле</button>
+        <button class="ghost" id="resetToDefaults">Сбросить к стандартным</button>
+      </div>
+      <div class="divider"></div>
 
-<footer>build: admin_cascade_v5_full_work_preview_fix_full</footer>
+      <table class="table" id="fieldsTable">
+        <thead>
+          <tr>
+            <th class="th" style="width:34px;">⇅</th>
+            <th class="th" style="width:90px;">Вкл</th>
+            <th class="th">Ключ</th>
+            <th class="th">Метка</th>
+            <th class="th" style="width:150px;">Тип</th>
+            <th class="th" style="width:110px;">Обяз.</th>
+            <th class="th">Значения (для select/range)</th>
+            <th class="th" style="width:120px;">Действия</th>
+          </tr>
+        </thead>
+        <tbody id="fieldsTbody"></tbody>
+      </table>
+
+      <div class="sticky-footer">
+        <span class="hint">Настройки формы сохраняются автоматически в <b>objectFormConfig</b>.</span>
+        <div class="row">
+          <button class="ghost" id="exportConfig">Экспорт JSON</button>
+          <label class="pill" style="cursor:pointer;">
+            Импорт JSON
+            <input type="file" id="importConfig" accept=".json" style="display:none">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ФИЛЬТРЫ (заглушка для контекста проекта, чтобы не терять привычную структуру) -->
+    <section id="tab-filters" class="card" hidden>
+      <h2>Фильтры (контекст)</h2>
+      <p class="muted">Этот раздел оставлен для совместимости. Основные фильтры настраиваются в твоей текущей админке. Здесь мы ничего не ломаем.</p>
+      <ul class="hint">
+        <li>nodeTypes — типы узлов</li>
+        <li>treeNodes — дерево локаций и категорий</li>
+        <li>extraParams — дополнительные параметры для фильтров</li>
+      </ul>
+    </section>
+
+    <!-- ПРЕДПРОСМОТР ФОРМЫ -->
+    <section id="tab-preview" class="card" hidden>
+      <h2>Предпросмотр формы «Добавить объект»</h2>
+      <div id="preview" class="preview-box"></div>
+      <div class="divider"></div>
+      <p class="hint">Это только предпросмотр рендера формы по конфигу. На боевой странице (index.html) она будет строиться так же.</p>
+    </section>
+
+    <!-- ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ -->
+    <section id="tab-data" class="card" hidden>
+      <h2>Экспорт/импорт всех данных админки</h2>
+      <div class="row" style="flex-wrap:wrap;gap:10px">
+        <button class="btn" id="exportAll">Экспорт всего (ZIP не нужен, один JSON)</button>
+        <label class="pill" style="cursor:pointer;">
+          Импорт всего (JSON)
+          <input type="file" id="importAll" accept=".json" style="display:none">
+        </label>
+      </div>
+      <p class="hint">Включает: objectFormConfig, а также (если есть) nodeTypes, treeNodes, extraParams из localStorage.</p>
+    </section>
+  </main>
 
 <script>
-/* Глобальная ловушка ошибок */
-window.addEventListener('error', function(e){
-  var box=document.createElement('div');
-  box.className='errorBox';
-  box.textContent='Ошибка JS: '+e.message;
-  var host=document.getElementById('tab-filters');
-  if(host) host.prepend(box);
-});
+/* ==============================
+   Admin v13.9.5 — Form Builder
+   ============================== */
 
-/* ================= DATA ================ */
-const KEY="admin_cascade_v5_full_work_preview_full";
-let data={
-  fields:[
-    {label:"Страна",field:"country",type:"select",options:["Узбекистан"]},
-    {label:"Город",field:"city",type:"select",parent:"country",dict:{"Узбекистан":["Ташкент","Самарканд"]}},
-    {label:"Район",field:"district",type:"select",parent:"city",dict:{"Ташкент":["Мирзо-Улугбек","Юнусабад"],"Самарканд":["Центр","Сиаб"]}},
-    {label:"Улица/Массив",field:"street",type:"select",parent:"district",dict:{
-      "Мирзо-Улугбек":["Амира Темура","Буюк Ипак"],"Юнусабад":["Юнус-1","Юнус-9"],"Центр":["Регистан","Навои"],"Сиаб":["Газар","Саховат"]
-    }},
-    {label:"Категория",field:"category",type:"select",options:["Квартира","Дом","Коммерция","Земля"]},
-    {label:"Подкатегория",field:"subcategory",type:"select",parent:"category",dict:{"Квартира":["Аренда","Продажа"],"Дом":["Аренда","Продажа"],"Коммерция":["Аренда","Продажа"],"Земля":["Продажа"]}},
-    {label:"Количество комнат",field:"rooms",type:"number",visibleWhen:{category:["Квартира","Дом","Коммерция"]}},
-    {label:"Тип жилья",field:"apartment_type",type:"select",parent:"subcategory",
-      dict:{"Аренда":["Вторичка","Новостройка"],"Продажа":["Вторичка","Новостройка"]},
-      visibleWhen:{category:"Квартира"}},
-    {label:"Тип недвижимости",field:"commercial_type",type:"select",parent:"subcategory",
-      dict:{"Аренда":["Офис","Склад"],"Продажа":["Магазин","Офис"]},
-      visibleWhen:{category:"Коммерция"}},
-    {label:"Цена",field:"price",type:"range",rangeLabels:["от","до"]},
-    {label:"Площадь",field:"area",type:"range",rangeLabels:["от м²","до м²"]}
-  ],
-  groups:[
-    {name:"Локация",desc:"Страна → Город → Район → Улица",filters:["country","city","district","street"]},
-    {name:"Фильтры объекта",desc:"Категория, параметры",filters:["category","subcategory","rooms","apartment_type","commercial_type","price","area"]}
-  ],
-  layout:[
-    {id:1,type:"filters",title:"Фильтры",x:1,y:1,w:12,h:5},
-    {id:2,type:"form",title:"Форма",x:1,y:6,w:6,h:5},
-    {id:3,type:"cards",title:"Карточки",x:7,y:6,w:6,h:5},
-    {id:4,type:"table",title:"Таблица",x:1,y:11,w:12,h:5},
-    {id:5,type:"map",title:"Карта",x:1,y:16,w:12,h:6}
-  ]
-};
+const LS_FORM = "objectFormConfig";
+const LS_NODE_TYPES = "nodeTypes";
+const LS_TREE_NODES = "treeNodes";
+const LS_EXTRA_PARAMS = "extraParams";
 
-/* Тестовые данные для CARDS/TABLE */
-var demoItems=[
-  {category:"Квартира", rooms:3, district:"Юнусабад", price:"$120 000", area:"85 м²", title:"Квартира, Юнусабад", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23223'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
-  {category:"Дом", rooms:5, district:"Чиланзар", price:"$250 000", area:"210 м²", title:"Дом, Чиланзар", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23333'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
-  {category:"Коммерция", rooms:"офис", district:"Мирзо-Улугбек", price:"$1 200/мес", area:"120 м²", title:"Офис, М.Улугбек", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%232a2a55'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"}
+// Стандартный набор полей формы
+const DEFAULT_FIELDS = [
+  { key:"title",   label:"Заголовок",     type:"text",    required:true,  enabled:true },
+  { key:"address", label:"Адрес",         type:"text",    required:false, enabled:true },
+  { key:"price",   label:"Цена",          type:"number",  required:false, enabled:true },
+  { key:"area",    label:"Площадь, м²",   type:"number",  required:false, enabled:true },
+  { key:"rooms",   label:"Комнат",        type:"number",  required:false, enabled:true },
+  { key:"floor",   label:"Этаж",          type:"number",  required:false, enabled:true },
+  { key:"floors",  label:"Этажность",     type:"number",  required:false, enabled:true },
+  { key:"year",    label:"Год постройки", type:"number",  required:false, enabled:false },
+  { key:"status",  label:"Статус",        type:"select",  required:false, enabled:true, values:["sale:Продается","rent:Сдается","exchange:Обмен"] },
+  { key:"images",  label:"Фотографии",    type:"images",  required:false, enabled:true },
+  { key:"coords",  label:"Координаты",    type:"coords",  required:false, enabled:true },
+  // Дополнительно можно хранить каскады локации и параметры:
+  { key:"location",label:"Локация (каскад)", type:"cascade", required:false, enabled:true },
+  { key:"params",  label:"Параметры (чекбоксы)", type:"params", required:false, enabled:true }
 ];
 
-/* Состояние предпросмотра */
-let previewState = {};
-try{
-  var saved=localStorage.getItem(KEY);
-  if(saved){
-    try{ var obj=JSON.parse(saved); if(obj && typeof obj==='object') data=Object.assign(data, obj); }catch(e){}
-  }
-}catch(e){}
+// Состояние
+let fields = loadFields();
+renderFieldsTable();
+renderPreview();
+updateSyncPill();
 
-/* ================= HELPERS ================ */
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
-function byField(name){ return data.fields.find(function(f){ return f.field===name; }); }
-function normalize(){
-  data.fields.forEach(function(f){
-    if(!f.options) f.options=[];
-    if(f.type==="range" && !f.rangeLabels) f.rangeLabels=["от","до"];
-    if(f.type==="select"){ if(!f.dict) f.dict={}; if(!f.parent) f.parent=""; }
-    if(!("desc" in f)) f.desc="";
+/* ---------- Навигация вкладок ---------- */
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    btn.classList.add("active");
+    const id = btn.dataset.tab;
+    document.querySelectorAll("main section").forEach(s=>s.hidden = true);
+    document.getElementById("tab-"+id).hidden = false;
+    if (id === "preview") renderPreview();
   });
-  data.groups.forEach(function(g){ if(!g.desc) g.desc=""; if(!g.filters) g.filters=[]; });
-}
-function buildChildrenMap(){
-  var children={};
-  data.fields.forEach(function(f){
-    if(f.parent){
-      if(!children[f.parent]) children[f.parent]=[];
-      children[f.parent].push(f.field);
-    }
-  });
-  return children;
-}
-function computeOptionsFor(f){
-  if(f.type!=='select') return [];
-  if(f.parent){
-    var pv=previewState[f.parent]||'';
-    return (f.dict && f.dict[pv]) ? f.dict[pv] : [];
-  }
-  return Array.isArray(f.options)?f.options:[];
-}
-function visibleFor(f){
-  if(!f.visibleWhen) return true;
-  var entries=[]; for(var k in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,k)){ entries.push([k, f.visibleWhen[k]]); break; } }
-  if(!entries.length) return true;
-  var pair=entries[0]; var key=pair[0], val=pair[1];
-  if(!(key in previewState) || !previewState[key]) return false; // пусто — скрываем
-  if(Array.isArray(val)) return val.indexOf(previewState[key])>-1;
-  return previewState[key]===val;
-}
-function clearDescendants(parentField, childrenMap){
-  if(!childrenMap[parentField]) return;
-  childrenMap[parentField].forEach(function(ch){
-    if(previewState[ch]) delete previewState[ch];
-    clearDescendants(ch, childrenMap);
-  });
-}
-
-/* ================= TABS ================ */
-Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(btn){
-  btn.onclick=function(){
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-    var tab=btn.getAttribute('data-tab');
-    ['filters','fields','layout','preview'].forEach(function(id){
-      document.getElementById('tab-'+id).style.display = (id===tab)?'block':'none';
-    });
-    if(tab==='filters') renderGroups();
-    if(tab==='fields')  renderFields();
-    if(tab==='layout')  renderLayout();
-    if(tab==='preview') renderPreview();
-  };
 });
-/* ================= FILTER GROUPS ================ */
-function addGroup(){ data.groups.push({name:'Новая линия',desc:'',filters:[]}); save(); renderGroups(); renderPreview(); }
-function removeGroup(i){ data.groups.splice(i,1); save(); renderGroups(); renderPreview(); }
-function addFieldToGroup(gi, fieldName){
-  if(data.groups[gi].filters.indexOf(fieldName)===-1){
-    data.groups[gi].filters.push(fieldName); save(); renderGroups(); renderPreview();
-  }
-}
-function removeFilter(gIndex, fIndex){ data.groups[gIndex].filters.splice(fIndex,1); save(); renderGroups(); renderPreview(); }
 
-var dragChip=null;
-function renderGroups(){
-  var box=document.getElementById('tab-filters'); box.innerHTML='';
-  var top=document.createElement('div'); top.className='row'; top.style.marginBottom='10px';
-  var bAdd=document.createElement('button'); bAdd.className='btn'; bAdd.textContent='+ Ряд'; bAdd.onclick=addGroup; top.appendChild(bAdd);
-  box.appendChild(top);
-
-  var list=document.createElement('div'); list.className='list';
-  data.groups.forEach(function(g,gi){
-    var card=document.createElement('div'); card.className='card';
-
-    var head=document.createElement('div'); head.className='title-row';
-    var left=document.createElement('div'); left.className='row';
-    var h=document.createElement('h3'); h.textContent=g.name||( 'Линия '+(gi+1) ); left.appendChild(h);
-    var meta=document.createElement('small'); meta.className='muted'; meta.textContent=g.desc||''; left.appendChild(meta);
-    head.appendChild(left);
-
-    var right=document.createElement('div'); right.className='row';
-    var sel=document.createElement('select'); var o0=document.createElement('option'); o0.value=''; o0.textContent='Добавить поле…'; sel.appendChild(o0);
-    data.fields.forEach(function(ff){ var o=document.createElement('option'); o.value=ff.field; o.textContent=ff.label+' ('+ff.field+')'; sel.appendChild(o); });
-    sel.onchange=function(e){ if(e.target.value){ addFieldToGroup(gi, e.target.value); e.target.value=''; } };
-    var del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить ряд'; del.onclick=function(){ removeGroup(gi); };
-    right.appendChild(sel); right.appendChild(del);
-    head.appendChild(right);
-    card.appendChild(head);
-
-    var editors=document.createElement('div'); editors.className='inline'; editors.style.margin='8px 0';
-    var w1=document.createElement('div'); w1.innerHTML='<label>Заголовок</label>'; var i1=document.createElement('input'); i1.value=g.name||''; i1.oninput=function(e){ data.groups[gi].name=e.target.value; save(); renderPreview(); }; w1.appendChild(i1);
-    var w2=document.createElement('div'); w2.innerHTML='<label>Описание</label>'; var i2=document.createElement('input'); i2.value=g.desc||''; i2.oninput=function(e){ data.groups[gi].desc=e.target.value; save(); renderPreview(); }; w2.appendChild(i2);
-    editors.appendChild(w1); editors.appendChild(w2); card.appendChild(editors);
-
-    var row=document.createElement('div'); row.className='chips dropzone'; row.setAttribute('data-group', gi);
-    (g.filters||[]).forEach(function(fname,fi){
-      var f=byField(fname); var chip=document.createElement('div'); chip.className='chip'; chip.draggable=true; chip.setAttribute('data-name', fname);
-      chip.innerHTML='<span class="grab">↕</span><small>'+(f ? (f.label||fname) : fname)+'</small>';
-      var x=document.createElement('button'); x.className='btn danger'; x.textContent='x'; x.style.padding='2px 6px'; x.onclick=function(){ removeFilter(gi,fi); };
-      chip.appendChild(x);
-      chip.addEventListener('dragstart', function(){ dragChip={name:fname, fromG:gi, fromIndex:fi}; chip.classList.add('dragging'); });
-      chip.addEventListener('dragend', function(){ chip.classList.remove('dragging'); dragChip=null; });
-      row.appendChild(chip);
-    });
-    row.addEventListener('dragover', function(e){ e.preventDefault(); });
-    row.addEventListener('drop', function(e){
-      e.preventDefault(); var toG=parseInt(row.getAttribute('data-group'),10); if(!dragChip) return;
-      var arr=data.groups[dragChip.fromG].filters; var idx=arr.indexOf(dragChip.name); if(idx>-1) arr.splice(idx,1);
-      data.groups[toG].filters.push(dragChip.name); save(); renderGroups(); renderPreview();
-    });
-    card.appendChild(row);
-    list.appendChild(card);
-  });
-  box.appendChild(list);
-}
-
-/* ================= FIELDS ================ */
-function addField(){
-  var n=data.fields.length+1; data.fields.push({label:'Поле '+n, field:'field_'+n, type:'text', desc:''});
-  save(); renderFields(); renderPreview();
-}
-function removeField(i){
-  var name=data.fields[i].field;
-  data.groups.forEach(function(g){ g.filters = (g.filters||[]).filter(function(n){ return n!==name; }); });
-  data.fields.splice(i,1); save(); renderFields(); renderGroups(); renderPreview();
-}
-function renderFields(){
-  var box=document.getElementById('tab-fields'); box.innerHTML='';
-  var top=document.createElement('div'); top.className='row'; top.style.justifyContent='space-between'; top.style.marginBottom='8px';
-  var h=document.createElement('h3'); h.textContent='Все поля'; top.appendChild(h);
-  var add=document.createElement('button'); add.className='btn'; add.textContent='+ Поле'; add.onclick=addField; top.appendChild(add);
-  box.appendChild(top);
-
-  var list=document.createElement('div'); list.className='list';
-  var fieldNames=data.fields.map(function(f){ return f.field; });
-
-  data.fields.forEach(function(f,i){
-    var card=document.createElement('div'); card.className='card';
-    var head=document.createElement('div'); head.className='title-row';
-    var left=document.createElement('div'); left.className='row';
-    var t=document.createElement('h3'); t.textContent=f.label||f.field; left.appendChild(t);
-    var meta=document.createElement('small'); meta.className='muted'; meta.textContent=' ('+f.field+')'; left.appendChild(meta);
-    head.appendChild(left);
-    var r=document.createElement('div'); r.className='row';
-    var del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить'; del.onclick=function(){ removeField(i); };
-    r.appendChild(del); head.appendChild(r); card.appendChild(head);
-
-    var grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns='repeat(2,1fr)'; grid.style.gap='10px';
-
-    var w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
-    var inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=function(e){ data.fields[i].label=e.target.value; save(); renderGroups(); renderPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Имя</label>';
-    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=function(e){ data.fields[i].field=e.target.value; save(); renderGroups(); renderPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
-    var selType=document.createElement('select');
-    ['text','number','select','range'].forEach(function(tt){ var o=document.createElement('option'); o.value=tt; o.textContent=tt; if(f.type===tt) o.selected=true; selType.appendChild(o); });
-    selType.onchange=function(e){ data.fields[i].type=e.target.value; if(e.target.value!=='select'){ data.fields[i].parent=''; data.fields[i].dict={}; } save(); renderPreview(); renderFields(); };
-    w.appendChild(selType); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Описание</label>';
-    inp=document.createElement('input'); inp.placeholder='подпись/подсказка'; inp.value=f.desc||''; inp.oninput=function(e){ data.fields[i].desc=e.target.value; save(); renderPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    var wp=document.createElement('div'); wp.innerHTML='<label>Родитель (для каскада)</label>';
-    var selP=document.createElement('select');
-    var parOpts=[''].concat( fieldNames.filter(function(n){ return n!==f.field && (byField(n)&&byField(n).type==='select'); }) );
-    parOpts.forEach(function(nm){ var o=document.createElement('option'); o.value=nm; o.textContent=nm===''?'(нет)':nm; if((f.parent||'')===nm) o.selected=true; selP.appendChild(o); });
-    selP.onchange=function(e){ data.fields[i].parent=e.target.value||''; save(); renderPreview(); renderFields(); };
-    wp.appendChild(selP); grid.appendChild(wp);
-
-    var wOD=document.createElement('div');
-    if(f.type==='select'){
-      if(f.parent){
-        wOD.innerHTML='<label>Карта опций (parent=опция1, опция2)</label>';
-        var ta=document.createElement('textarea'); ta.rows=5;
-        var lines=Object.keys(f.dict||{}).map(function(pk){ return pk+'='+(f.dict[pk]||[]).join(', '); });
-        ta.value=lines.join('\n');
-        ta.oninput=function(e){
-          var map={};
-          e.target.value.split('\n').forEach(function(line){
-            var t=line.trim(); if(!t) return;
-            var parts=t.split('='); var k=parts[0]; var rest=parts.slice(1).join('=');
-            map[k.trim()]=(rest||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-          });
-          data.fields[i].dict=map; save(); renderPreview();
-        };
-        wOD.appendChild(ta);
-      }else{
-        wOD.innerHTML='<label>Опции (через запятую)</label>';
-        var ta2=document.createElement('textarea'); ta2.rows=3; ta2.value=Array.isArray(f.options)?f.options.join(', '):'';
-        ta2.oninput=function(e){ data.fields[i].options=e.target.value.split(',').map(function(s){return s.trim();}).filter(Boolean); save(); renderPreview(); };
-        wOD.appendChild(ta2);
-      }
-    }else if(f.type==='range'){
-      wOD.innerHTML='<label>Подписи диапазона (левая, правая)</label>';
-      var rlab=document.createElement('input'); var L=(f.rangeLabels&&f.rangeLabels[0])||'от'; var R=(f.rangeLabels&&f.rangeLabels[1])||'до';
-      rlab.value=L+', '+R; rlab.oninput=function(e){ var p=e.target.value.split(',').map(function(s){return s.trim();}); data.fields[i].rangeLabels=[p[0]||'от', p[1]||'до']; save(); renderPreview(); };
-      wOD.appendChild(rlab);
-    }else{
-      wOD.innerHTML='<label>&nbsp;</label><div class="muted">Для этого типа настроек нет</div>';
-    }
-    grid.appendChild(wOD);
-
-    var wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение или ключ=знач1|знач2)</label>';
-    var vin=document.createElement('input'); vin.placeholder='например: category=Квартира|Дом|Коммерция';
-    if(f.visibleWhen){
-      var k0=null,v0=null; for(var kk in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,kk)){ k0=kk; v0=f.visibleWhen[kk]; break; } }
-      if(k0){ vin.value=Array.isArray(v0)? (k0+'='+v0.join('|')) : (k0+'='+v0); }
-    }
-    vin.oninput=function(e){
-      var v=e.target.value.trim();
-      if(!v){ data.fields[i].visibleWhen=null; save(); renderPreview(); return; }
-      var parts=v.split('='); var k=parts[0]; var rest=parts.slice(1).join('=');
-      if(rest.indexOf('|')>-1){
-        data.fields[i].visibleWhen=(function(){ var o={}; o[k.trim()]=rest.split('|').map(function(s){return s.trim();}).filter(Boolean); return o; })();
-      }else{
-        data.fields[i].visibleWhen=(function(){ var o={}; o[k.trim()]=(rest||'').trim(); return o; })();
-      }
-      save(); renderPreview();
-    };
-    wVW.appendChild(vin); grid.appendChild(wVW);
-
-    card.appendChild(grid); list.appendChild(card);
-  });
-  box.appendChild(list);
-}
-/* ================= LAYOUT ================ */
-var nextId=100, dragState=null, resizeState=null;
-function addBlock(type){
-  var id=++nextId; data.layout.push({id:id,type:type,title:(type==='filters'?'Фильтры':type.toUpperCase()),x:1,y:1,w:6,h:4});
-  save(); renderLayout(); renderPreview();
-}
-function removeBlock(id){ var i=data.layout.findIndex(function(b){return b.id===id;}); if(i>-1){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); } }
-function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
-function autoLayout(){ var col=1,row=1; data.layout.forEach(function(b){ b.w=6;b.h=4;b.x=col;b.y=row; col=(col===1)?7:1; if(col===1) row+=4; }); save(); renderLayout(); renderPreview(); }
-function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
-
-function renderLayout(){
-  var box=document.getElementById('tab-layout'); box.innerHTML='';
-  var bar=document.createElement('div'); bar.className='row'; bar.style.marginBottom='10px';
-  ['filters','form','cards','table','map'].forEach(function(t){ var b=document.createElement('button'); b.className='btn'; b.textContent='+ '+(t==='filters'?'Фильтры':t.toUpperCase()); b.onclick=function(){ addBlock(t); }; bar.appendChild(b); });
-  var bAuto=document.createElement('button'); bAuto.className='btn warn'; bAuto.textContent='Авторасстановка'; bAuto.onclick=autoLayout; bar.appendChild(bAuto);
-  var bClr=document.createElement('button'); bClr.className='btn danger'; bClr.textContent='Очистить'; bClr.onclick=clearLayout; bar.appendChild(bClr);
-  box.appendChild(bar);
-
-  var wrap=document.createElement('div'); wrap.className='canvas-wrap';
-  var grid=document.createElement('div'); grid.className='canvas'; wrap.appendChild(grid); box.appendChild(wrap);
-
-  var rows = data.layout.length ? Math.max.apply(null, data.layout.map(function(b){return b.y+b.h-1;})) : 1;
-  grid.style.minHeight=(rows*90 + (rows-1)*6) + 'px';
-
-  data.layout.forEach(function(b){
-    var card=document.createElement('div'); card.className='block'; card.setAttribute('data-id', b.id);
-    card.style.gridColumn=b.x+'/span '+b.w; card.style.gridRow=b.y+'/span '+b.h;
-    var head=document.createElement('header');
-    var title=document.createElement('span'); title.className='title'; title.textContent=b.title||b.type;
-    title.ondblclick=function(){ var t=prompt('Название блока:', b.title||b.type); if(t!=null){ b.title=t; save(); renderLayout(); renderPreview(); } };
-    var rm=document.createElement('button'); rm.className='x'; rm.textContent='x'; rm.onclick=function(){ removeBlock(b.id); };
-    head.appendChild(title); head.appendChild(rm);
-    head.addEventListener('mousedown', function(e){
-      var rect=grid.getBoundingClientRect(); var colW=rect.width/12; var rowH=96;
-      dragState={id:b.id, startX:e.clientX, startY:e.clientY, baseX:b.x, baseY:b.y, colW:colW, rowH:rowH};
-      document.addEventListener('mousemove', onDragMove); document.addEventListener('mouseup', onDragEnd, {once:true});
-    });
-    var body=document.createElement('div'); body.className='body'; body.textContent='Секция макета';
-    var res=document.createElement('div'); res.className='resize';
-    res.addEventListener('mousedown', function(e){
-      e.stopPropagation(); var rect=grid.getBoundingClientRect(); var colW=rect.width/12; var rowH=96;
-      resizeState={id:b.id, startX:e.clientX, startY:e.clientY, baseW:b.w, baseH:b.h, colW:colW, rowH:rowH};
-      document.addEventListener('mousemove', onResizeMove); document.addEventListener('mouseup', onResizeEnd, {once:true});
-    });
-    card.appendChild(head); card.appendChild(body); card.appendChild(res); grid.appendChild(card);
-  });
-
-  function onDragMove(e){
-    if(!dragState) return; var b=data.layout.find(function(x){return x.id===dragState.id;}); if(!b) return;
-    var dx=e.clientX-dragState.startX; var dy=e.clientY-dragState.startY;
-    var gx=Math.round(dragState.baseX + dx/dragState.colW);
-    var gy=Math.round(dragState.baseY + dy/dragState.rowH);
-    gx=clamp(gx,1,12-(b.w-1)); gy=clamp(gy,1,Math.max(1,gy)); b.x=gx; b.y=gy; renderLayout();
-  }
-  function onDragEnd(){ if(dragState){ save(); dragState=null; } document.removeEventListener('mousemove', onDragMove); }
-  function onResizeMove(e){
-    if(!resizeState) return; var b=data.layout.find(function(x){return x.id===resizeState.id;}); if(!b) return;
-    var dx=e.clientX-resizeState.startX; var dy=e.clientY-resizeState.startY;
-    var gw=Math.round(resizeState.baseW + dx/resizeState.colW);
-    var gh=Math.round(resizeState.baseH + dy/resizeState.rowH);
-    gw=clamp(gw,1,12-(b.x-1)); gh=clamp(gh,1,24); b.w=gw; b.h=gh; renderLayout();
-  }
-  function onResizeEnd(){ if(resizeState){ save(); resizeState=null; } document.removeEventListener('mousemove', onResizeMove); }
-}
-/* ================= PREVIEW ================ */
-function renderPreview(){
-  var grid=document.getElementById('preview'); grid.innerHTML='';
-  var rows = data.layout.length ? Math.max.apply(null, data.layout.map(function(b){return b.y+b.h-1;})) : 1;
-  grid.style.minHeight = (rows*90 + (rows-1)*6) + 'px';
-
-  var children=buildChildrenMap();
-
-  data.layout.forEach(function(b){
-    var card=document.createElement('div'); card.className='preview-card';
-    card.style.gridColumn=b.x+' / span '+b.w; card.style.gridRow=b.y+' / span '+b.h;
-
-    var section=document.createElement('div'); section.className='preview-section';
-
-    if(b.type==='filters'){
-      data.groups.forEach(function(g,gi){
-        var group=document.createElement('div'); group.className='p-group';
-        var title=document.createElement('div'); title.className='p-title';
-        title.textContent = g.name || (gi===0?'Верхняя линия':'Линия '+(gi+1));
-        group.appendChild(title);
-        if(g.desc){ var d=document.createElement('div'); d.className='muted'; d.style.marginBottom='8px'; d.textContent=g.desc; group.appendChild(d); }
-        var row=document.createElement('div'); row.className='p-row';
-
-        (g.filters||[]).forEach(function(name){
-          var f=byField(name); if(!f) return;
-          var box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?'':'none';
-          var lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || 'Без названия'; box.appendChild(lab);
-
-          if(f.type==='select'){
-            var sel=document.createElement('select');
-            var opts = computeOptionsFor(f);
-            var optionsHtml = '<option value=\"\">—</option>' + opts.map(function(o){ return '<option>'+o+'</option>'; }).join('');
-            sel.innerHTML = optionsHtml;
-            if(previewState[f.field] && opts.indexOf(previewState[f.field])>-1) sel.value=previewState[f.field];
-            sel.addEventListener('change', function(){
-              previewState[f.field]=sel.value;
-              clearDescendants(f.field, children);
-              renderPreview();
-            });
-            box.appendChild(sel);
-          }else if(f.type==='range'){
-            var div=document.createElement('div'); div.className='row';
-            var a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+'_min']||'';
-            var bb=document.createElement('input'); bb.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; bb.value = previewState[f.field+'_max']||'';
-            a.addEventListener('input', function(){ previewState[f.field+'_min']=a.value; });
-            bb.addEventListener('input', function(){ previewState[f.field+'_max']=bb.value; });
-            div.appendChild(a); div.appendChild(bb); box.appendChild(div);
-          }else if(f.type==='number'){
-            var num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||'';
-            num.addEventListener('input', function(){ previewState[f.field]=num.value; });
-            box.appendChild(num);
-          }else{
-            var t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||'';
-            t.addEventListener('input', function(){ previewState[f.field]=t.value; });
-            box.appendChild(t);
-          }
-          row.appendChild(box);
-        });
-
-        group.appendChild(row); section.appendChild(group);
-      });
-    } else if(b.type==='form'){
-      var fg=document.createElement('div'); fg.className='form-grid';
-      ['Имя','Телефон','Email','Комментарий'].forEach(function(lbl,idx){
-        var wrap=document.createElement('div');
-        var lab=document.createElement('label'); lab.textContent=lbl; wrap.appendChild(lab);
-        var input = (idx===3)? document.createElement('textarea') : document.createElement('input');
-        if(idx===1) input.type='tel';
-        if(idx===2) input.type='email';
-        input.placeholder = lbl;
-        wrap.appendChild(input);
-        fg.appendChild(wrap);
-      });
-      section.appendChild(fg);
-    } else if(b.type==='cards'){
-      var gridCards=document.createElement('div'); gridCards.className='preview-cards';
-      demoItems.forEach(function(it){
-        var ci=document.createElement('div'); ci.className='preview-card-item';
-        var img=document.createElement('img'); img.src=it.img; ci.appendChild(img);
-        var body=document.createElement('div'); body.className='pc-body';
-        var ttl=document.createElement('div'); ttl.className='pc-title'; ttl.textContent=it.title; body.appendChild(ttl);
-        var adr=document.createElement('div'); adr.textContent='Район: '+it.district; body.appendChild(adr);
-        var r=document.createElement('div'); r.textContent='Комнат: '+it.rooms; body.appendChild(r);
-        var pr=document.createElement('div'); pr.textContent='Цена: '+it.price+' ('+it.area+')'; body.appendChild(pr);
-        ci.appendChild(body); gridCards.appendChild(ci);
-      });
-      section.appendChild(gridCards);
-    } else if(b.type==='table'){
-      var table=document.createElement('table'); table.className='preview-table';
-      var thead=document.createElement('thead'); thead.innerHTML='<tr><th>Категория</th><th>Район</th><th>Комнат</th><th>Площадь</th><th>Цена</th></tr>'; table.appendChild(thead);
-      var tbody=document.createElement('tbody');
-      demoItems.forEach(function(it){
-        var tr=document.createElement('tr');
-        tr.innerHTML='<td>'+it.category+'</td><td>'+it.district+'</td><td>'+it.rooms+'</td><td>'+it.area+'</td><td>'+it.price+'</td>';
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody); section.appendChild(table);
-    } else if(b.type==='map'){
-      var m=document.createElement('div'); m.className='preview-map'; m.textContent='MAP (placeholder)';
-      section.appendChild(m);
-    }
-
-    card.appendChild(section);
-    grid.appendChild(card);
-  });
-}
-
-/* ================= EXPORT / IMPORT / RESET ================ */
-document.getElementById('btnExport').onclick=function(){
-  normalize();
-  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admin-cascade-v5-preview.json'; a.click();
+/* ---------- Кнопки тулбара ---------- */
+document.getElementById("addField").onclick = () => {
+  const k = prompt("Ключ поля (латиницей, без пробелов):", "custom_" + Math.random().toString(36).slice(2,6));
+  if (!k) return;
+  if (fields.some(f=>f.key===k)) { alert("Поле с таким ключом уже есть"); return; }
+  fields.push({ key:k, label:k, type:"text", required:false, enabled:true });
+  saveFields(); renderFieldsTable();
 };
-document.getElementById('fileImport').onchange=function(e){
-  var f=e.target.files[0]; if(!f) return; var r=new FileReader();
-  r.onload=function(){ try{
-      var obj=JSON.parse(r.result);
-      if(obj.fields) data.fields=obj.fields;
-      if(obj.groups) data.groups=obj.groups;
-      if(obj.layout) data.layout=obj.layout;
-      normalize(); save();
-      previewState={};
-      renderGroups(); renderFields(); renderLayout(); renderPreview();
-      alert('Импорт выполнен');
-    }catch(err){ console.error(err); alert('Ошибка импорта'); }
+
+document.getElementById("resetToDefaults").onclick = () => {
+  if (!confirm("Сбросить конфигурацию формы к стандартной?")) return;
+  fields = DEFAULT_FIELDS.map(f => ({...f}));
+  saveFields(); renderFieldsTable(); renderPreview();
+};
+
+document.getElementById("exportConfig").onclick = () => {
+  const blob = new Blob([JSON.stringify({objectFormConfig:fields}, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, "objectFormConfig.json");
+};
+
+document.getElementById("importConfig").addEventListener("change", (e)=>{
+  const file = e.target.files?.[0]; if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const json = JSON.parse(fr.result);
+      if (!Array.isArray(json) && !Array.isArray(json?.objectFormConfig)) throw new Error("Неверный формат");
+      fields = Array.isArray(json) ? json : json.objectFormConfig;
+      saveFields(); renderFieldsTable(); renderPreview();
+      alert("Импортирован objectFormConfig");
+    } catch(err){
+      alert("Ошибка импорта: " + err.message);
+    }
   };
-  r.readAsText(f);
-};
-document.getElementById('btnReset').onclick=function(){
-  try{ localStorage.removeItem(KEY); }catch(e){}
-  location.reload();
+  fr.readAsText(file);
+  e.target.value = "";
+});
+
+/* ---------- Экспорт/импорт ВСЕГО ---------- */
+document.getElementById("exportAll").onclick = () => {
+  const dump = {
+    objectFormConfig: fields,
+    nodeTypes: JSON.parse(localStorage.getItem(LS_NODE_TYPES) || "[]"),
+    treeNodes: JSON.parse(localStorage.getItem(LS_TREE_NODES) || "[]"),
+    extraParams: JSON.parse(localStorage.getItem(LS_EXTRA_PARAMS) || "[]"),
+  };
+  const blob = new Blob([JSON.stringify(dump, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  triggerDownload(url, "admin_dump_v13_9_5.json");
 };
 
-/* ================= INIT ================ */
-try{
-  normalize();
-  renderGroups(); renderFields(); renderLayout(); renderPreview();
-}catch(e){
-  var box=document.createElement('div'); box.className='errorBox'; box.textContent='Ошибка инициализации: '+e.message;
-  document.getElementById('tab-filters').appendChild(box);
+document.getElementById("importAll").addEventListener("change", (e)=>{
+  const file = e.target.files?.[0]; if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const j = JSON.parse(fr.result);
+      if (j.objectFormConfig) { fields = j.objectFormConfig; saveFields(); }
+      if (j.nodeTypes)   localStorage.setItem(LS_NODE_TYPES, JSON.stringify(j.nodeTypes));
+      if (j.treeNodes)   localStorage.setItem(LS_TREE_NODES, JSON.stringify(j.treeNodes));
+      if (j.extraParams) localStorage.setItem(LS_EXTRA_PARAMS, JSON.stringify(j.extraParams));
+      renderFieldsTable(); renderPreview(); updateSyncPill();
+      alert("Импортирован полный дамп");
+    } catch(err){
+      alert("Ошибка импорта: " + err.message);
+    }
+  };
+  fr.readAsText(file);
+  e.target.value = "";
+});
+
+/* ---------- Таблица полей ---------- */
+function renderFieldsTable(){
+  const tb = document.getElementById("fieldsTbody");
+  tb.innerHTML = "";
+  fields.forEach((f, idx)=>{
+    const tr = document.createElement("tr");
+    tr.draggable = true;
+    tr.dataset.index = idx;
+
+    tr.innerHTML = `
+      <td class="td" style="text-align:center"><span class="drag-handle">⠿</span></td>
+      <td class="td" style="text-align:center"><input type="checkbox" ${f.enabled?"checked":""} data-action="toggleEnabled"></td>
+      <td class="td"><code>${f.key}</code></td>
+      <td class="td"><input type="text" value="${escapeHtml(f.label||"")}" data-action="label" style="width:100%"></td>
+      <td class="td">
+        <select data-action="type" style="width:100%">
+          ${["text","number","textarea","select","range","images","coords","cascade","params","status"].map(t=>`<option value="${t}" ${f.type===t?"selected":""}>${t}</option>`).join("")}
+        </select>
+      </td>
+      <td class="td" style="text-align:center"><input type="checkbox" ${f.required?"checked":""} data-action="required"></td>
+      <td class="td">
+        <input type="text" placeholder="для select: value:Label;value2:Label2 | для range: min,max,step" value="${escapeHtml(valuesToText(f))}" data-action="values" style="width:100%">
+      </td>
+      <td class="td" style="text-align:center">
+        <button class="danger" data-action="remove">Удалить</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+
+  // перетаскивание строк
+  tb.querySelectorAll("tr").forEach(tr=>{
+    tr.addEventListener("dragstart", onDragStart);
+    tr.addEventListener("dragover", onDragOver);
+    tr.addEventListener("drop", onDrop);
+  });
+
+  // обработчики полей
+  tb.querySelectorAll("input,select,button").forEach(el=>{
+    el.addEventListener("change", onFieldChange);
+    el.addEventListener("click", onFieldChange);
+  });
+}
+
+/* ---------- DnD ---------- */
+let dragIndex = null;
+function onDragStart(e){ dragIndex = +e.currentTarget.dataset.index; e.dataTransfer.effectAllowed = "move"; }
+function onDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
+function onDrop(e){
+  e.preventDefault();
+  const toIndex = +e.currentTarget.dataset.index;
+  if (dragIndex===null || dragIndex===toIndex) return;
+  const item = fields.splice(dragIndex,1)[0];
+  fields.splice(toIndex,0,item);
+  dragIndex = null;
+  saveFields(); renderFieldsTable(); renderPreview();
+}
+
+/* ---------- Обработчик изменений в строке ---------- */
+function onFieldChange(e){
+  const tr = e.target.closest("tr"); if (!tr) return;
+  const idx = +tr.dataset.index;
+  const act = e.target.dataset.action;
+  if (act==="toggleEnabled"){ fields[idx].enabled = e.target.checked; }
+  else if (act==="label"){ fields[idx].label = e.target.value; }
+  else if (act==="type"){ fields[idx].type = e.target.value; }
+  else if (act==="required"){ fields[idx].required = e.target.checked; }
+  else if (act==="values"){ fields[idx] = {...fields[idx], ...textToValues(fields[idx].type, e.target.value)}; }
+  else if (act==="remove"){ if (confirm("Удалить поле?")) { fields.splice(idx,1); } }
+  saveFields(); renderFieldsTable(); renderPreview();
+}
+
+/* ---------- Предпросмотр ---------- */
+function renderPreview(){
+  const box = document.getElementById("preview");
+  box.innerHTML = "";
+  const active = fields.filter(f=>f.enabled);
+  const wrap = document.createElement("div");
+  wrap.className = "grid cols-3";
+
+  active.forEach(f=>{
+    const cell = document.createElement("div");
+    cell.className = "field";
+    const label = document.createElement("label");
+    label.textContent = f.label || f.key;
+
+    let control = document.createElement("input");
+    control.style.width = "100%";
+
+    switch(f.type){
+      case "textarea":
+        control = document.createElement("textarea");
+        control.rows = 3;
+        break;
+      case "number":
+      case "text":
+        control.type = f.type;
+        break;
+      case "select":
+      case "status":{
+        control = document.createElement("select");
+        const vals = f.values || [];
+        vals.forEach(v=>{
+          const [value, name] = splitValueLabel(v);
+          const opt = document.createElement("option");
+          opt.value = value; opt.textContent = name || value;
+          control.appendChild(opt);
+        });
+        break;
+      }
+      case "range":{
+        control = document.createElement("div");
+        control.className = "inline";
+        const from = document.createElement("input"); from.type="number"; from.placeholder="min";
+        const to   = document.createElement("input"); to.type="number";   to.placeholder="max";
+        control.appendChild(from); control.appendChild(to);
+        break;
+      }
+      case "images":{
+        const btn = document.createElement("button"); btn.textContent = "Загрузить фото"; btn.className="ghost";
+        control = btn;
+        break;
+      }
+      case "coords":{
+        const btn = document.createElement("button"); btn.textContent = "Выбрать на карте"; btn.className="ghost";
+        control = btn;
+        break;
+      }
+      case "cascade":{
+        control = document.createElement("div");
+        control.className = "inline";
+        ["Страна","Город","Район","Улица/Массив","Категория","Подкатегория"].forEach(ph=>{
+          const s = document.createElement("select");
+          s.innerHTML = `<option>${ph}</option>`;
+          control.appendChild(s);
+        });
+        break;
+      }
+      case "params":{
+        control = document.createElement("div");
+        control.className = "inline";
+        ["Опция 1","Опция 2","Опция 3"].forEach(t=>{
+          const lbl = document.createElement("label");
+          lbl.className="pill";
+          lbl.innerHTML = `<input type="checkbox" style="margin-right:6px">${t}`;
+          control.appendChild(lbl);
+        });
+        break;
+      }
+    }
+
+    cell.appendChild(label);
+    cell.appendChild(control);
+    if (f.required){
+      const req = document.createElement("span");
+      req.className="hint"; req.textContent = "обязательное";
+      cell.appendChild(req);
+    }
+    wrap.appendChild(cell);
+  });
+
+  box.appendChild(wrap);
+}
+
+/* ---------- Хранилище ---------- */
+function loadFields(){
+  const raw = localStorage.getItem(LS_FORM);
+  if (!raw) return DEFAULT_FIELDS.map(f=>({...f}));
+  try{
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) throw new Error("bad");
+    // миграции на будущее: гарантия свойств
+    return arr.map(f=>({ enabled:false, required:false, type:"text", label:f.key, ...f }));
+  }catch{
+    return DEFAULT_FIELDS.map(f=>({...f}));
+  }
+}
+function saveFields(){
+  localStorage.setItem(LS_FORM, JSON.stringify(fields));
+}
+
+/* ---------- Утилиты ---------- */
+function valuesToText(f){
+  if (!f || !f.type) return "";
+  if (f.type==="select" || f.type==="status"){
+    return (f.values||[]).join(";");
+  }
+  if (f.type==="range"){
+    const min = f.min ?? ""; const max = f.max ?? ""; const step = f.step ?? "";
+    return [min,max,step].join(",");
+  }
+  return "";
+}
+function textToValues(type, text){
+  if (type==="select" || type==="status"){
+    const arr = (text||"").split(";").map(s=>s.trim()).filter(Boolean);
+    return { values: arr };
+  }
+  if (type==="range"){
+    const [min,max,step] = (text||"").split(",").map(s=>s.trim());
+    return { min:isFinite(+min)?+min:undefined, max:isFinite(+max)?+max:undefined, step:isFinite(+step)?+step:undefined };
+  }
+  return {};
+}
+function splitValueLabel(s){
+  const i = s.indexOf(":");
+  if (i===-1) return [s,s];
+  return [s.slice(0,i), s.slice(i+1)];
+}
+function triggerDownload(url, filename){
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function escapeHtml(str=""){
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function updateSyncPill(){
+  const nodeTypes = JSON.parse(localStorage.getItem(LS_NODE_TYPES) || "[]");
+  const treeNodes = JSON.parse(localStorage.getItem(LS_TREE_NODES) || "[]");
+  const extra     = JSON.parse(localStorage.getItem(LS_EXTRA_PARAMS) || "[]");
+  const has = (nodeTypes.length || treeNodes.length || extra.length);
+  document.getElementById("syncState").textContent = has ? "OK" : "пусто";
+  document.getElementById("syncState").className = has ? "ok" : "bad";
 }
 </script>
 </body>
