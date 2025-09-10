@@ -1,522 +1,170 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Admin Builder — Cascade Filters v5 FULL WORK</title>
-<style>
-:root{
-  --bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;
-  --border:#273248;--accent:#4aa8ff;--danger:#ef4444;--warn:#f59e0b;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;position:sticky;top:0;z-index:10}
-.badge{padding:3px 8px;border-radius:8px;background:#6d28d9;font-weight:700}
-.tabs{display:flex;gap:8px;margin-left:8px}
-.tab{background:#1a2234;border:1px solid var(--border);padding:6px 10px;border-radius:8px;color:#cfe0ff;cursor:pointer}
-.tab.active{background:#2160ff;color:#fff}
-main{padding:12px;display:grid;gap:12px}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
-h3{margin:0 0 10px 0;color:#cfe0ff}
-.btn{background:#1e293b;border:1px solid var(--border);color:#dbe8ff;padding:6px 10px;border-radius:8px;cursor:pointer}
-.btn:hover{border-color:#3a4c6b}
-.btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-.btn.warn{background:#3a2a0f;border-color:#7c5a10;color:#fde68a}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.grid{display:grid;gap:10px}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff;width:100%}
-label{display:block;opacity:.9;margin-bottom:6px}
-small.muted{color:#9fb0c8}
-.list{display:grid;gap:10px}
-.card{background:#172133;border:1px solid var(--border);border-radius:10px;padding:10px}
-.card .title-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
-.card h3{margin:0}
-footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--border)}
-/* Canvas + Preview */
-.canvas-wrap{border:1px solid var(--border);border-radius:12px;background:#0d121e;padding:6px;overflow:auto;height:62vh}
-.canvas,.preview-grid{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px}
-.block,.preview-card{background:#111827;border:1px solid #2b3a5a;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;position:relative}
-.block header{display:flex;align-items:center;justify-content:space-between;background:#0f172a;color:#dbe8ff;padding:8px 10px;border-bottom:1px solid #2b3a5a;cursor:grab}
-.block header:active{cursor:grabbing}
-.block .body{padding:10px;flex:1}
-.block .x{background:var(--danger);border:none;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;text-align:center;cursor:pointer}
-.block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-right:3px solid #446; border-bottom:3px solid #446; cursor:nwse-resize;opacity:.8}
-.block .title{font-weight:600}
-.preview-card{border-color:#3a4c6b}
-.p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%}
-.p-title{font-size:13px;font-weight:600;margin-bottom:10px;color:#cfe0ff}
-.p-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%}
-.p-field{min-width:0;width:100%}
-.p-field>div{display:flex;gap:8px}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--border);padding:6px 8px;border-radius:8px;background:#0f1624;margin:4px}
-.chip .grab{cursor:grab;font-size:12px;opacity:.7}
-.chip.dragging{opacity:.5;border-style:dashed}
-.dropzone{min-height:38px;border:1px dashed #334; border-radius:8px; padding:8px; background:#0c1220}
-.inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width: 900px){
-  .p-row{grid-template-columns:repeat(2,1fr)}
-  .inline{grid-template-columns:1fr}
-}
-</style>
+  <meta charset="UTF-8" />
+  <title>Админка — v13.9.3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f1115;color:#e8eaf0;padding:20px}
+    .card{background:#161a22;border:1px solid #242938;border-radius:12px;padding:16px;margin:16px 0}
+    input,select,button,textarea{padding:10px;border-radius:8px;border:1px solid #242938;background:#0d1016;color:#e8eaf0}
+    button{cursor:pointer}
+    .btn{background:#4da3ff;color:#001428;border-color:#4da3ff}
+    .danger{background:#ff6b6b;color:#fff;border-color:#ff6b6b}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    ul.tree{list-style:none;padding-left:20px}
+    ul.tree li{margin:4px 0}
+    .node{display:flex;gap:8px;align-items:center}
+    .node-type{opacity:.7;font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
+    .param-item{border:1px solid #242938;border-radius:10px;padding:10px}
+    .param-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .muted{opacity:.8;font-size:13px}
+    textarea{width:100%;min-height:80px;resize:vertical}
+    .save-badge{position:fixed;top:12px;right:12px;background:#4da3ff;color:#001428;padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s}
+    .save-badge.show{opacity:1}
+    a{color:#4da3ff}
+  </style>
 </head>
 <body>
-<header>
-  <span id="ver" class="badge">cascade-v5-full-work</span>
-  <div class="tabs">
-    <button class="tab active" data-tab="filters">Фильтры</button>
-    <button class="tab" data-tab="fields">Поля</button>
-    <button class="tab" data-tab="layout">Макет</button>
-    <button class="tab" data-tab="preview">Предпросмотр</button>
+<h1>Админка: узлы и параметры <small style="opacity:.7">v13.9.3</small></h1>
+<p><a href="index.html">← к каталогу</a></p>
+<div id="saveBadge" class="save-badge">Сохранено ✓</div>
+
+<!-- Типы узлов -->
+<div class="card">
+  <h3>Типы узлов</h3>
+  <div class="row">
+    <input id="typeName" placeholder="Новый тип узла (например: Категория / Город)" />
+    <button id="addTypeBtn" class="btn">Добавить</button>
+    <button id="clearTypes" class="danger">Сбросить всё</button>
   </div>
-  <div style="margin-left:auto" class="row">
-    <button id="btnExport" class="btn">Экспорт</button>
-    <label class="btn"><input id="fileImport" type="file" accept=".json,.txt" style="display:none">Импорт</label>
+  <div id="typesList" style="margin-top:12px"></div>
+</div>
+
+<!-- Дерево -->
+<div class="card">
+  <h3>Дерево</h3>
+  <div class="row">
+    <input id="nodeName" placeholder="Название узла" />
+    <select id="nodeType"></select>
+    <select id="nodeParent"></select>
+    <button id="addNode" class="btn">Добавить</button>
+    <button id="clearTree" class="danger">Очистить дерево</button>
   </div>
-</header>
+  <ul id="tree" class="tree" style="margin-top:12px"></ul>
+</div>
 
-<main>
-  <!-- ФИЛЬТРЫ -->
-  <section id="tab-filters" class="panel"></section>
-
-  <!-- ПОЛЯ -->
-  <section id="tab-fields" class="panel" style="display:none"></section>
-
-  <!-- МАКЕТ -->
-  <section id="tab-layout" class="panel" style="display:none"></section>
-
-  <!-- ПРЕДПРОСМОТР -->
-  <section id="tab-preview" class="panel" style="display:none">
-    <div class="canvas-wrap"><div id="preview" class="preview-grid"></div></div>
-  </section>
-</main>
-
-<footer>
-  build: admin_cascade_v5_full_work
-</footer>
+<!-- Параметры -->
+<div class="card">
+  <h3>Параметры (привязаны к узлу — чаще к категории)</h3>
+  <div class="row">
+    <input id="paramName" placeholder="Название параметра (например: Тип недвижимости)" />
+    <select id="paramCategory"></select>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <textarea id="paramValues" placeholder="Значения, по одному на строку"></textarea>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="addParam" class="btn">Добавить параметр</button>
+    <button id="clearParams" class="danger">Удалить все</button>
+  </div>
+  <div id="paramsList" class="grid" style="margin-top:12px"></div>
+</div>
 
 <script>
-/* ================= DATA ================ */
-const KEY="admin_cascade_v5_full_work";
-let data={
-  fields:[
-    {label:"Страна",field:"country",type:"select",options:["Узбекистан"]},
-    {label:"Город",field:"city",type:"select",parent:"country",dict:{"Узбекистан":["Ташкент","Самарканд"]}},
-    {label:"Район",field:"district",type:"select",parent:"city",dict:{
-      "Ташкент":["Мирзо-Улугбек","Юнусабад"],"Самарканд":["Центр","Сиаб"]
-    }},
-    {label:"Улица/Массив",field:"street",type:"select",parent:"district",dict:{
-      "Мирзо-Улугбек":["Амира Темура","Буюк Ипак"],"Юнусабад":["Юнус-1","Юнус-9"],
-      "Центр":["Регистан","Навои"],"Сиаб":["Газар","Саховат"]
-    }},
-    {label:"Категория",field:"category",type:"select",options:["Квартира","Коммерция","Земля"]},
-    {label:"Подкатегория",field:"subcategory",type:"select",parent:"category",dict:{
-      "Квартира":["Аренда","Продажа"],"Коммерция":["Аренда","Продажа"],"Земля":["Продажа"]
-    }},
-    {label:"Тип жилья",field:"apartment_type",type:"select",parent:"subcategory",
-      dict:{"Аренда":["Вторичка","Новостройка"],"Продажа":["Вторичка","Новостройка"]},
-      visibleWhen:{category:"Квартира"}},
-    {label:"Тип недвижимости",field:"commercial_type",type:"select",parent:"subcategory",
-      dict:{"Аренда":["Офис","Склад"],"Продажа":["Магазин","Офис"]},
-      visibleWhen:{category:"Коммерция"}},
-    {label:"Цена",field:"price",type:"range",rangeLabels:["от","до"]},
-    {label:"Площадь",field:"area",type:"range",rangeLabels:["от м²","до м²"]},
-    {label:"Этаж",field:"floor",type:"range",rangeLabels:["от","до"]},
-    {label:"Этажность дома",field:"floors",type:"range",rangeLabels:["от","до"]}
-  ],
-  groups:[
-    {name:"Верхняя линия",desc:"Основные фильтры",filters:["country","city","district","street","category","subcategory","apartment_type","commercial_type","price","area","floor","floors"]}
-  ],
-  layout:[
-    {id:1,type:"filters",title:"Фильтры",x:1,y:1,w:12,h:6}
-  ]
-};
+let nodes = JSON.parse(localStorage.getItem("treeNodes") || "[]");
+let types = JSON.parse(localStorage.getItem("nodeTypes") || "[]");
+let extraParams = JSON.parse(localStorage.getItem("extraParams") || "[]");
 
-let previewState = {};
+const $=id=>document.getElementById(id), badge=$("saveBadge");
+const showSaved=()=>{ badge.classList.add("show"); setTimeout(()=>badge.classList.remove("show"),1100); };
 
-try{
-  const saved=localStorage.getItem(KEY);
-  if(saved){ const obj=JSON.parse(saved); if(obj) data=Object.assign(data, obj); }
-}catch(e){}
+function saveNodes(){ localStorage.setItem("treeNodes", JSON.stringify(nodes)); localStorage.setItem("treeNodes_last_change", String(Date.now())); renderTree(); fillParent(); fillCategoriesSelect(); showSaved(); }
+function saveTypes(){ localStorage.setItem("nodeTypes", JSON.stringify(types)); localStorage.setItem("nodeTypes_last_change", String(Date.now())); renderTypes(); fillTypesSelect(); showSaved(); }
+function saveParams(){ localStorage.setItem("extraParams", JSON.stringify(extraParams)); localStorage.setItem("extraParams_last_change", String(Date.now())); renderParams(); showSaved(); }
 
-/* ================= HELPERS ================ */
-function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
-function byField(name){ return data.fields.find(f=>f.field===name); }
-function normalize(){
-  data.fields.forEach(f=>{
-    if(!f.options) f.options=[];
-    if(f.type==="range" && !f.rangeLabels) f.rangeLabels=["от","до"];
-    if(f.type==="select"){ if(!f.dict) f.dict={}; if(!f.parent) f.parent=""; }
-    if(!("desc" in f)) f.desc="";
+// types
+function renderTypes(){
+  const wrap=$("typesList"); wrap.innerHTML="";
+  if(!types.length){ wrap.innerHTML=`<div class="muted">Пока нет типов. Добавь хотя бы один (например, «Категория»).</div>`; }
+  types.forEach((t,i)=>{
+    const row=document.createElement("div"); row.style.display="flex";row.style.gap="6px";row.style.marginBottom="6px";
+    const inp=document.createElement("input"); inp.value=t;
+    inp.onchange=()=>{ types[i]=inp.value.trim(); saveTypes(); };
+    const del=document.createElement("button"); del.textContent="Удалить"; del.className="danger";
+    del.onclick=()=>{ types.splice(i,1); saveTypes(); };
+    row.appendChild(inp); row.appendChild(del); wrap.appendChild(row);
   });
-  data.groups.forEach(g=>{ if(!g.desc) g.desc=""; if(!g.filters) g.filters=[]; });
 }
+function fillTypesSelect(){ const sel=$("nodeType"); sel.innerHTML=""; types.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);}); }
+function fillParent(){ const sel=$("nodeParent"); sel.innerHTML=`<option value="">(без родителя)</option>`; nodes.forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=`${n.name} (${n.type})`;sel.appendChild(o);}); }
+function fillCategoriesSelect(){ const sel=$("paramCategory"); sel.innerHTML=""; nodes.forEach(n=>{const o=document.createElement("option");o.value=n.id;o.textContent=`${n.name} (${n.type})`; sel.appendChild(o);}); }
 
-/* ================= TABS ================ */
-document.querySelectorAll('.tab').forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab=btn.dataset.tab;
-    ["filters","fields","layout","preview"].forEach(id=>{
-      document.getElementById('tab-'+id).style.display = (id===tab)?"block":"none";
-    });
-    if(tab==="filters") renderGroups();
-    if(tab==="fields") renderFields();
-    if(tab==="layout") renderLayout();
-    if(tab==="preview") renderPreview();
-  };
-});
-
-/* ================= FILTER GROUPS ================ */
-function addGroup(){ data.groups.push({name:"Новая линия",desc:"",filters:[]}); save(); renderGroups(); renderPreview(); }
-function removeGroup(i){ data.groups.splice(i,1); save(); renderGroups(); renderPreview(); }
-function addFieldToGroup(gi, fieldName){
-  if(!data.groups[gi].filters.includes(fieldName)){
-    data.groups[gi].filters.push(fieldName); save(); renderGroups(); renderPreview();
-  }
-}
-function removeFilter(gIndex, fIndex){ data.groups[gIndex].filters.splice(fIndex,1); save(); renderGroups(); renderPreview(); }
-
-let dragChip=null;
-function renderGroups(){
-  const box=document.getElementById('tab-filters'); box.innerHTML="";
-  const top=document.createElement('div'); top.className='row'; top.style.marginBottom="10px";
-  const bAdd=document.createElement('button'); bAdd.className='btn'; bAdd.textContent='+ Ряд'; bAdd.onclick=addGroup; top.appendChild(bAdd);
-  box.appendChild(top);
-
-  const list=document.createElement('div'); list.className='list';
-  data.groups.forEach((g,gi)=>{
-    const card=document.createElement('div'); card.className='card';
-    const head=document.createElement('div'); head.className='title-row';
-    const left=document.createElement('div'); left.className='row';
-    const h=document.createElement('h3'); h.textContent=g.name||('Линия '+(gi+1)); left.appendChild(h);
-    const meta=document.createElement('small'); meta.className='muted'; meta.textContent=g.desc||""; left.appendChild(meta);
-    head.appendChild(left);
-    const right=document.createElement('div'); right.className='row';
-    const sel=document.createElement('select'); const o0=document.createElement('option'); o0.value=""; o0.textContent="Добавить поле…"; sel.appendChild(o0);
-    data.fields.forEach(ff=>{ const o=document.createElement('option'); o.value=ff.field; o.textContent=ff.label+" ("+ff.field+")"; sel.appendChild(o); });
-    sel.onchange=e=>{ if(e.target.value){ addFieldToGroup(gi, e.target.value); e.target.value=""; } };
-    const del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить ряд'; del.onclick=()=>removeGroup(gi);
-    right.appendChild(sel); right.appendChild(del); head.appendChild(right); card.appendChild(head);
-
-    // editors
-    const editors=document.createElement('div'); editors.className='inline'; editors.style.margin="8px 0";
-    const w1=document.createElement('div'); w1.innerHTML='<label>Заголовок</label>'; const i1=document.createElement('input'); i1.value=g.name||""; i1.oninput=e=>{data.groups[gi].name=e.target.value; save(); renderPreview();}; w1.appendChild(i1);
-    const w2=document.createElement('div'); w2.innerHTML='<label>Описание</label>'; const i2=document.createElement('input'); i2.value=g.desc||""; i2.oninput=e=>{data.groups[gi].desc=e.target.value; save(); renderPreview();}; w2.appendChild(i2);
-    editors.append(w1,w2); card.appendChild(editors);
-
-    const row=document.createElement('div'); row.className='chips dropzone'; row.dataset.group=gi;
-    (g.filters||[]).forEach((fname,fi)=>{
-      const f=byField(fname); const chip=document.createElement('div'); chip.className='chip'; chip.draggable=true; chip.dataset.name=fname;
-      chip.innerHTML=`<span class="grab">↕</span><small>${f ? (f.label||fname) : fname}</small>`;
-      const x=document.createElement('button'); x.className='btn danger'; x.textContent='x'; x.style.padding='2px 6px'; x.onclick=()=>removeFilter(gi,fi);
-      chip.appendChild(x);
-      chip.addEventListener('dragstart',()=>{ dragChip={name:fname, fromG:gi, fromIndex:fi}; chip.classList.add('dragging'); });
-      chip.addEventListener('dragend',()=>{ chip.classList.remove('dragging'); dragChip=null; });
-      row.appendChild(chip);
-    });
-    row.addEventListener('dragover', e=>e.preventDefault());
-    row.addEventListener('drop', e=>{
-      e.preventDefault(); const toG=parseInt(row.dataset.group,10); if(!dragChip) return;
-      const arr=data.groups[dragChip.fromG].filters; const idx=arr.indexOf(dragChip.name); if(idx>-1) arr.splice(idx,1);
-      data.groups[toG].filters.push(dragChip.name); save(); renderGroups(); renderPreview();
-    });
-    card.appendChild(row);
-    list.appendChild(card);
-  });
-  box.appendChild(list);
-}
-
-/* ================= FIELDS ================ */
-function addField(){
-  const n=data.fields.length+1; data.fields.push({label:"Поле "+n, field:"field_"+n, type:"text", desc:""});
-  save(); renderFields(); renderPreview();
-}
-function removeField(i){
-  const name=data.fields[i].field;
-  data.groups.forEach(g=> g.filters = (g.filters||[]).filter(n=>n!==name) );
-  data.fields.splice(i,1); save(); renderFields(); renderGroups(); renderPreview();
-}
-function renderFields(){
-  const box=document.getElementById('tab-fields'); box.innerHTML="";
-  const top=document.createElement('div'); top.className='row'; top.style.justifyContent='space-between'; top.style.marginBottom='8px';
-  const h=document.createElement('h3'); h.textContent='Все поля'; top.appendChild(h);
-  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Поле'; add.onclick=addField; top.appendChild(add);
-  box.appendChild(top);
-
-  const list=document.createElement('div'); list.className='list';
-  const fieldNames=data.fields.map(f=>f.field);
-
-  data.fields.forEach((f,i)=>{
-    const card=document.createElement('div'); card.className='card';
-    const head=document.createElement('div'); head.className='title-row';
-    const left=document.createElement('div'); left.className='row';
-    const t=document.createElement('h3'); t.textContent=f.label||f.field; left.appendChild(t);
-    const meta=document.createElement('small'); meta.className='muted'; meta.textContent=' ('+f.field+')'; left.appendChild(meta);
-    head.appendChild(left);
-    const r=document.createElement('div'); r.className='row';
-    const del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить'; del.onclick=()=>removeField(i);
-    r.appendChild(del); head.appendChild(r); card.appendChild(head);
-
-    const grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns='repeat(2,1fr)'; grid.style.gap='10px';
-
-    // label
-    let w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
-    let inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=e=>{data.fields[i].label=e.target.value; save(); renderGroups(); renderPreview();};
-    w.appendChild(inp); grid.appendChild(w);
-
-    // field
-    w=document.createElement('div'); w.innerHTML='<label>Имя</label>';
-    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=e=>{data.fields[i].field=e.target.value; save(); renderGroups(); renderPreview();};
-    w.appendChild(inp); grid.appendChild(w);
-
-    // type
-    w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
-    const selType=document.createElement('select');
-    ["text","number","select","range"].forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; selType.appendChild(o); });
-    selType.onchange=e=>{ data.fields[i].type=e.target.value; if(e.target.value!=="select"){ data.fields[i].parent=""; data.fields[i].dict={}; } save(); renderPreview(); renderFields(); };
-    w.appendChild(selType); grid.appendChild(w);
-
-    // desc
-    w=document.createElement('div'); w.innerHTML='<label>Описание</label>';
-    inp=document.createElement('input'); inp.placeholder='подпись/подсказка'; inp.value=f.desc||''; inp.oninput=e=>{data.fields[i].desc=e.target.value; save(); renderPreview();};
-    w.appendChild(inp); grid.appendChild(w);
-
-    // parent
-    const wp=document.createElement('div'); wp.innerHTML='<label>Родитель (для каскада)</label>';
-    const selP=document.createElement('select');
-    const parOpts=["", ...fieldNames.filter(n=> n!==f.field && (byField(n)&&byField(n).type==="select"))];
-    parOpts.forEach(nm=>{ const o=document.createElement('option'); o.value=nm; o.textContent=nm===""?"(нет)":nm; if((f.parent||"")===nm) o.selected=true; selP.appendChild(o); });
-    selP.onchange=e=>{ data.fields[i].parent=e.target.value||""; save(); renderPreview(); renderFields(); };
-    wp.appendChild(selP); grid.appendChild(wp);
-
-    // options/dict editor
-    const wOD=document.createElement('div');
-    if(f.type==="select"){
-      if(f.parent){
-        wOD.innerHTML='<label>Карта опций (parent=опция1, опция2)</label>';
-        const ta=document.createElement('textarea'); ta.rows=5;
-        const lines=Object.keys(f.dict||{}).map(pk=> pk+"="+(f.dict[pk]||[]).join(", "));
-        ta.value=lines.join("\n");
-        ta.oninput=e=>{
-          const map={};
-          e.target.value.split("\n").forEach(line=>{
-            const t=line.trim(); if(!t) return;
-            const [k,rest]=t.split("="); if(!k) return;
-            map[k.trim()]=(rest||"").split(",").map(s=>s.trim()).filter(Boolean);
-          });
-          data.fields[i].dict=map; save(); renderPreview();
-        };
-        wOD.appendChild(ta);
-      }else{
-        wOD.innerHTML='<label>Опции (через запятую)</label>';
-        const ta=document.createElement('textarea'); ta.rows=3; ta.value=Array.isArray(f.options)?f.options.join(", "):"";
-        ta.oninput=e=>{ data.fields[i].options=e.target.value.split(",").map(s=>s.trim()).filter(Boolean); save(); renderPreview(); };
-        wOD.appendChild(ta);
-      }
-    }else if(f.type==="range"){
-      wOD.innerHTML='<label>Подписи диапазона (левая, правая)</label>';
-      const rlab=document.createElement('input'); const L=(f.rangeLabels&&f.rangeLabels[0])||"от"; const R=(f.rangeLabels&&f.rangeLabels[1])||"до";
-      rlab.value=L+", "+R; rlab.oninput=e=>{ const p=e.target.value.split(",").map(s=>s.trim()); data.fields[i].rangeLabels=[p[0]||"от", p[1]||"до"]; save(); renderPreview(); };
-      wOD.appendChild(rlab);
-    }else{
-      wOD.innerHTML='<label>&nbsp;</label><div class="muted">Для этого типа настроек нет</div>';
-    }
-    grid.appendChild(wOD);
-
-    // visibleWhen
-    const wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение)</label>';
-    const vin=document.createElement('input'); vin.placeholder='например: category=Квартира';
-    vin.value=f.visibleWhen?Object.keys(f.visibleWhen)[0]+'='+Object.values(f.visibleWhen)[0]:"";
-    vin.oninput=e=>{
-      const v=e.target.value.trim();
-      if(!v){ data.fields[i].visibleWhen=null; save(); renderPreview(); return; }
-      const [k,val]=v.split("="); data.fields[i].visibleWhen = k?{[k.trim()]: (val||"").trim()}:null; save(); renderPreview();
+// tree
+function renderTree(parent=null, container=$("tree")){
+  if(parent===null) container.innerHTML="";
+  const ul=document.createElement("ul"); ul.className="tree";
+  nodes.filter(n=>n.parent===parent).forEach(n=>{
+    const li=document.createElement("li");
+    const row=document.createElement("div"); row.className="node";
+    const name=document.createElement("span"); name.textContent=n.name;
+    const type=document.createElement("span"); type.className="node-type"; type.textContent=`(${n.type})`;
+    const del=document.createElement("button"); del.className="danger"; del.textContent="Удалить";
+    del.onclick=()=>{
+      const delIds=new Set([n.id]); let changed=true;
+      while(changed){changed=false; nodes.forEach(x=>{if(delIds.has(x.parent)){delIds.add(x.id);changed=true;}});}
+      nodes=nodes.filter(x=>!delIds.has(x.id));
+      extraParams=extraParams.filter(p=>!delIds.has(p.categoryId));
+      saveNodes(); saveParams();
     };
-    wVW.appendChild(vin); grid.appendChild(wVW);
-
-    card.appendChild(grid); list.appendChild(card);
+    row.appendChild(name); row.appendChild(type); row.appendChild(del); li.appendChild(row);
+    renderTree(n.id, li); ul.appendChild(li);
   });
-  box.appendChild(list);
+  container.appendChild(ul);
 }
 
-/* ================= LAYOUT ================ */
-let nextId=100, dragState=null, resizeState=null;
-function addBlock(type){
-  const id=++nextId; data.layout.push({id,type,title:type==='filters'?'Фильтры':type.toUpperCase(),x:1,y:1,w:6,h:4});
-  save(); renderLayout(); renderPreview();
-}
-function removeBlock(id){ const i=data.layout.findIndex(b=>b.id===id); if(i>-1){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); } }
-function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
-function autoLayout(){ let col=1,row=1; data.layout.forEach(b=>{ b.w=6;b.h=4;b.x=col;b.y=row; col=(col===1)?7:1; if(col===1) row+=4; }); save(); renderLayout(); renderPreview(); }
-function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
+// actions
+$("addTypeBtn").onclick=()=>{ const t=$("typeName").value.trim(); if(!t) return alert("Тип?"); types.push(t); $("typeName").value=""; saveTypes(); };
+$("clearTypes").onclick=()=>{ if(confirm("Сбросить все типы?")){ types=[]; saveTypes(); } };
 
-function renderLayout(){
-  const box=document.getElementById('tab-layout'); box.innerHTML="";
-  const bar=document.createElement('div'); bar.className="row"; bar.style.marginBottom="10px";
-  ["filters","form","cards","table","map"].forEach(t=>{ const b=document.createElement('button'); b.className='btn'; b.textContent='+ '+(t==='filters'?'Фильтры':t.toUpperCase()); b.onclick=()=>addBlock(t); bar.appendChild(b); });
-  const bAuto=document.createElement('button'); bAuto.className='btn warn'; bAuto.textContent='Авторасстановка'; bAuto.onclick=autoLayout; bar.appendChild(bAuto);
-  const bClr=document.createElement('button'); bClr.className='btn danger'; bClr.textContent='Очистить'; bClr.onclick=clearLayout; bar.appendChild(bClr);
-  box.appendChild(bar);
-
-  const wrap=document.createElement('div'); wrap.className='canvas-wrap';
-  const grid=document.createElement('div'); grid.className='canvas'; wrap.appendChild(grid); box.appendChild(wrap);
-
-  const rows = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1)) : 1;
-  grid.style.minHeight=(rows*90 + (rows-1)*6) + 'px';
-
-  data.layout.forEach(b=>{
-    const card=document.createElement('div'); card.className='block'; card.dataset.id=b.id;
-    card.style.gridColumn=`${b.x}/span ${b.w}`; card.style.gridRow=`${b.y}/span ${b.h}`;
-    const head=document.createElement('header');
-    const title=document.createElement('span'); title.className='title'; title.textContent=b.title||b.type;
-    title.ondblclick=()=>{ const t=prompt('Название блока:', b.title||b.type); if(t!=null){ b.title=t; save(); renderLayout(); renderPreview(); } };
-    const rm=document.createElement('button'); rm.className='x'; rm.textContent='x'; rm.onclick=()=>removeBlock(b.id);
-    head.append(title,rm);
-    head.addEventListener('mousedown', (e)=>{
-      const rect=grid.getBoundingClientRect(); const colW=rect.width/12; const rowH=96;
-      dragState={id:b.id, startX:e.clientX, startY:e.clientY, baseX=b.x, baseY=b.y, colW, rowH};
-      document.addEventListener('mousemove', onDragMove); document.addEventListener('mouseup', onDragEnd, {once:true});
-    });
-    const body=document.createElement('div'); body.className='body'; body.textContent='Секция макета';
-    const res=document.createElement('div'); res.className='resize';
-    res.addEventListener('mousedown', (e)=>{
-      e.stopPropagation(); const rect=grid.getBoundingClientRect(); const colW=rect.width/12; const rowH=96;
-      resizeState={id:b.id, startX:e.clientX, startY:e.clientY, baseW=b.w, baseH=b.h, colW, rowH};
-      document.addEventListener('mousemove', onResizeMove); document.addEventListener('mouseup', onResizeEnd, {once:true});
-    });
-    card.append(head,body,res); grid.appendChild(card);
-  });
-
-  function onDragMove(e){
-    if(!dragState) return; const b=data.layout.find(x=>x.id===dragState.id); if(!b) return;
-    const dx=e.clientX-dragState.startX; const dy=e.clientY-dragState.startY;
-    let gx=Math.round(dragState.baseX + dx/dragState.colW);
-    let gy=Math.round(dragState.baseY + dy/dragState.rowH);
-    gx=clamp(gx,1,12-(b.w-1)); gy=clamp(gy,1,Math.max(1,gy)); b.x=gx; b.y=gy; renderLayout();
-  }
-  function onDragEnd(){ if(dragState){ save(); dragState=null; } document.removeEventListener('mousemove', onDragMove); }
-  function onResizeMove(e){
-    if(!resizeState) return; const b=data.layout.find(x=>x.id===resizeState.id); if(!b) return;
-    const dx=e.clientX-resizeState.startX; const dy=e.clientY-resizeState.startY;
-    let gw=Math.round(resizeState.baseW + dx/resizeState.colW);
-    let gh=Math.round(resizeState.baseH + dy/resizeState.rowH);
-    gw=clamp(gw,1,12-(b.x-1)); gh=clamp(gh,1,24); b.w=gw; b.h=gh; renderLayout();
-  }
-  function onResizeEnd(){ if(resizeState){ save(); resizeState=null; } document.removeEventListener('mousemove', onResizeMove); }
-}
-
-/* ================= PREVIEW ================ */
-function buildChildrenMap(){ const children={}; data.fields.forEach(f=>{ if(f.parent){ (children[f.parent] ||= []).push(f.field); } }); return children; }
-function computeOptionsFor(f){
-  if(f.type!=="select") return [];
-  if(f.parent){ const pv=previewState[f.parent]||""; return (f.dict&&f.dict[pv])?f.dict[pv]:[]; }
-  return Array.isArray(f.options)?f.options:[];
-}
-function visibleFor(f){
-  if(!f.visibleWhen) return true;
-  const [k,v]=Object.entries(f.visibleWhen)[0];
-  if(!(k in previewState) || !previewState[k]) return true;
-  return previewState[k]===v;
-}
-function clearDescendants(parentField, childrenMap){
-  if(!childrenMap[parentField]) return;
-  childrenMap[parentField].forEach(ch=>{
-    if(previewState[ch]) delete previewState[ch];
-    clearDescendants(ch, childrenMap);
-  });
-}
-function renderPreview(){
-  const grid=document.getElementById('preview'); grid.innerHTML="";
-  const rows = data.layout.length ? Math.max(...data.layout.map(b=>b.y+b.h-1)) : 1;
-  grid.style.minHeight = (rows*90 + (rows-1)*6) + "px";
-
-  const children=buildChildrenMap();
-
-  data.layout.forEach(b=>{
-    if(b.type!=='filters') return;
-    const card=document.createElement('div'); card.className='preview-card';
-    card.style.gridColumn=`${b.x} / span ${b.w}`; card.style.gridRow=`${b.y} / span ${b.h}`;
-
-    const wrap=document.createElement('div');
-    data.groups.forEach((g,gi)=>{
-      const group=document.createElement('div'); group.className='p-group';
-      const title=document.createElement('div'); title.className='p-title';
-      title.textContent = g.name || (gi===0?'Верхняя линия':'Линия '+(gi+1));
-      group.appendChild(title);
-      if(g.desc){ const d=document.createElement('div'); d.className='muted'; d.style.marginBottom="8px"; d.textContent=g.desc; group.appendChild(d); }
-      const row=document.createElement('div'); row.className='p-row';
-
-      (g.filters||[]).forEach(name=>{
-        const f=byField(name); if(!f) return;
-        const box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?"":"none";
-        const lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || "Без названия"; box.appendChild(lab);
-
-        if(f.type==='select'){
-          const sel=document.createElement('select');
-          const opts = computeOptionsFor(f);
-          sel.innerHTML = "<option value=''>—</option>"+opts.map(o=>`<option>${o}</option>`).join('');
-          if(previewState[f.field] && opts.includes(previewState[f.field])) sel.value=previewState[f.field];
-          sel.addEventListener('change', ()=>{
-            previewState[f.field]=sel.value;
-            clearDescendants(f.field, children);
-            renderPreview();
-          });
-          box.appendChild(sel);
-        }else if(f.type==='range'){
-          const div=document.createElement('div'); div.className='row';
-          const a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+"_min"]||"";
-          const b=document.createElement('input'); b.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; b.value = previewState[f.field+"_max"]||"";
-          a.addEventListener('input', ()=>{ previewState[f.field+"_min"]=a.value; });
-          b.addEventListener('input', ()=>{ previewState[f.field+"_max"]=b.value; });
-          div.append(a,b); box.appendChild(div);
-        }else if(f.type==='number'){
-          const num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||"";
-          num.addEventListener('input', ()=>{ previewState[f.field]=num.value; });
-          box.appendChild(num);
-        }else{
-          const t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||"";
-          t.addEventListener('input', ()=>{ previewState[f.field]=t.value; });
-          box.appendChild(t);
-        }
-        row.appendChild(box);
-      });
-
-      group.appendChild(row); wrap.appendChild(group);
-    });
-
-    card.appendChild(wrap);
-    grid.appendChild(card);
-  });
-}
-
-/* ================= EXPORT / IMPORT ================ */
-document.getElementById('btnExport').onclick=()=>{
-  normalize();
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="admin-cascade-v5.json"; a.click();
+$("addNode").onclick=()=>{
+  const name=$("nodeName").value.trim(); if(!name) return alert("Название?");
+  const type=$("nodeType").value; const parent=$("nodeParent").value?+$("nodeParent").value:null;
+  nodes.push({id:Date.now(),name,type,parent}); $("nodeName").value=""; saveNodes();
 };
-document.getElementById('fileImport').onchange=(e)=>{
-  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
-  r.onload=()=>{ try{
-      const obj=JSON.parse(r.result);
-      if(obj.fields) data.fields=obj.fields;
-      if(obj.groups) data.groups=obj.groups;
-      if(obj.layout) data.layout=obj.layout;
-      normalize(); save();
-      previewState={};
-      renderGroups(); renderFields(); renderLayout(); renderPreview();
-      alert("Импорт выполнен");
-    }catch(err){ console.error(err); alert("Ошибка импорта"); }
-  };
-  r.readAsText(f);
-};
+$("clearTree").onclick=()=>{ if(confirm("Удалить всё дерево?")){ nodes=[]; saveNodes(); } };
 
-/* ================= INIT ================ */
-normalize();
-renderGroups(); renderFields(); renderLayout(); renderPreview();
+// params
+function renderParams(){
+  const wrap=$("paramsList"); wrap.innerHTML="";
+  if(!extraParams.length){ wrap.innerHTML=`<div class="muted">Пока нет параметров.</div>`; return; }
+  extraParams.forEach(p=>{
+    const cat=nodes.find(n=>n.id===p.categoryId);
+    const div=document.createElement("div"); div.className="param-item";
+    div.innerHTML=`
+      <div class="param-header">
+        <div><b>${p.name}</b> <span class="muted">/ ${cat?`${cat.name} (${cat.type})`:"—"}</span></div>
+        <button class="danger">Удалить</button>
+      </div>
+      <div class="muted">Значения:</div>
+      <div style="margin-top:6px">${(p.values||[]).map(v=>`<span style="display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border:1px solid #242938;border-radius:8px;">${v}</span>`).join("")||"—"}</div>`;
+    div.querySelector("button").onclick=()=>{ extraParams=extraParams.filter(x=>x.id!==p.id); saveParams(); };
+    wrap.appendChild(div);
+  });
+}
+$("addParam").onclick=()=>{
+  const name=$("paramName").value.trim(); if(!name) return alert("Название?");
+  const categoryId=$("paramCategory").value?+$("paramCategory").value:null; if(!categoryId) return alert("Привяжи к узлу (обычно к категории)");
+  const raw=$("paramValues").value.trim(); const values=raw?raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean):[];
+  if(!values.length) return alert("Добавь хотя бы одно значение");
+  extraParams.push({id:Date.now(),name,categoryId,values});
+  $("paramName").value=""; $("paramValues").value=""; saveParams();
+};
+$("clearParams").onclick=()=>{ if(confirm("Удалить все параметры?")){ extraParams=[]; saveParams(); } };
+
+// init
+(function init(){ renderTypes(); fillTypesSelect(); fillParent(); fillCategoriesSelect(); renderTree(); renderParams(); })();
 </script>
 </body>
 </html>
