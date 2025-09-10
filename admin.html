@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Admin Builder — Cascade Filters v3 CLEAN</title>
+<title>Admin Builder — Cascade Filters v4 FULL</title>
 <style>
 :root{
   --bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;
@@ -11,7 +11,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui}
-header{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);background:#0e1420}
+header{display:flex;gap:8px;padding:10px;border-bottom:1px solid var(--border);background:#0e1420;align-items:center}
 .badge{padding:3px 8px;border-radius:8px;background:#6d28d9}
 .tab{background:#1a2234;border:1px solid var(--border);padding:6px 10px;border-radius:6px;color:#cfe0ff;cursor:pointer}
 .tab.active{background:#2160ff;color:#fff}
@@ -22,48 +22,64 @@ input,select,textarea{width:100%;padding:6px;border-radius:6px;border:1px solid 
 .p-group{margin-bottom:12px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#17202c}
 .p-title{font-weight:600;margin-bottom:6px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
+button{cursor:pointer}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">cascade-v3-full-clean</span>
+  <span class="badge">cascade-v4-full</span>
   <button class="tab active" data-tab="filters">Фильтры</button>
   <button class="tab" data-tab="fields">Поля</button>
+  <button class="tab" data-tab="layout">Макет</button>
   <button class="tab" data-tab="preview">Предпросмотр</button>
+  <div style="margin-left:auto" class="row">
+    <button id="btnExport">Экспорт</button>
+    <label style="cursor:pointer"><input id="fileImport" type="file" accept=".json,.txt" style="display:none">Импорт</label>
+  </div>
 </header>
 
 <main>
   <section id="tab-filters" class="panel"></section>
   <section id="tab-fields" class="panel" style="display:none"></section>
+  <section id="tab-layout" class="panel" style="display:none"></section>
   <section id="tab-preview" class="panel" style="display:none">
     <div id="preview"></div>
   </section>
 </main>
 
 <footer style="padding:8px;color:#9fb0c8;font-size:12px">
-  build: admin_cascade_v3_full_clean
+  build: admin_cascade_v4_full
 </footer>
 
 <script>
 let data={
   fields:[
-    {label:"Категория", field:"category", type:"select", options:["Квартира","Коммерция","Земля"]},
-    {label:"Подкатегория", field:"subcategory", type:"select", parent:"category",
-      dict:{
-        "Квартира":["Аренда","Продажа"],
-        "Коммерция":["Аренда","Продажа"],
-        "Земля":["Продажа"]
-      }},
-    {label:"Тип жилья", field:"apartment_type", type:"select", parent:"subcategory",
+    {label:"Страна",field:"country",type:"select",options:["Узбекистан"]},
+    {label:"Город",field:"city",type:"select",parent:"country",dict:{"Узбекистан":["Ташкент","Самарканд"]}},
+    {label:"Район",field:"district",type:"select",parent:"city",dict:{
+      "Ташкент":["Мирзо-Улугбек","Юнусабад"],"Самарканд":["Центр","Сиаб"]
+    }},
+    {label:"Улица/Массив",field:"street",type:"select",parent:"district",dict:{
+      "Мирзо-Улугбек":["Амира Темура","Буюк Ипак"],"Юнусабад":["Юнус-1","Юнус-9"],
+      "Центр":["Регистан","Навои"],"Сиаб":["Газар","Саховат"]
+    }},
+    {label:"Категория",field:"category",type:"select",options:["Квартира","Коммерция","Земля"]},
+    {label:"Подкатегория",field:"subcategory",type:"select",parent:"category",dict:{
+      "Квартира":["Аренда","Продажа"],"Коммерция":["Аренда","Продажа"],"Земля":["Продажа"]
+    }},
+    {label:"Тип жилья",field:"apartment_type",type:"select",parent:"subcategory",
       dict:{"Аренда":["Вторичка","Новостройка"],"Продажа":["Вторичка","Новостройка"]},
       visibleWhen:{category:"Квартира"}},
-    {label:"Тип недвижимости", field:"commercial_type", type:"select", parent:"subcategory",
+    {label:"Тип недвижимости",field:"commercial_type",type:"select",parent:"subcategory",
       dict:{"Аренда":["Офис","Склад"],"Продажа":["Магазин","Офис"]},
       visibleWhen:{category:"Коммерция"}},
-    {label:"Цена", field:"price", type:"range", rangeLabels:["от","до"]}
+    {label:"Цена",field:"price",type:"range",rangeLabels:["от","до"]},
+    {label:"Площадь",field:"area",type:"range",rangeLabels:["от м²","до м²"]},
+    {label:"Этаж",field:"floor",type:"range",rangeLabels:["от","до"]},
+    {label:"Этажность дома",field:"floors",type:"range",rangeLabels:["от","до"]}
   ],
   groups:[
-    {name:"Верхняя линия", filters:["category","subcategory","apartment_type","commercial_type","price"]}
+    {name:"Верхняя линия",filters:["country","city","district","street","category","subcategory","apartment_type","commercial_type","price","area","floor","floors"]}
   ]
 };
 let previewState={};
@@ -85,10 +101,9 @@ function clearDescendants(parent){
     if(ch.parent===parent){delete previewState[ch.field];clearDescendants(ch.field);}
   });
 }
-
 function renderGroups(){
   const box=document.getElementById('tab-filters');box.innerHTML="";
-  data.groups.forEach((g,gi)=>{
+  data.groups.forEach(g=>{
     const div=document.createElement('div');div.className="p-group";
     div.innerHTML="<div class='p-title'>"+g.name+"</div>";
     g.filters.forEach(fname=>{
@@ -136,12 +151,11 @@ function renderPreview(){
     box.appendChild(div);
   });
 }
-
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
-    ["filters","fields","preview"].forEach(id=>{
+    ["filters","fields","layout","preview"].forEach(id=>{
       document.getElementById("tab-"+id).style.display=(btn.dataset.tab===id)?"block":"none";
     });
     if(btn.dataset.tab==="filters")renderGroups();
@@ -149,7 +163,15 @@ document.querySelectorAll(".tab").forEach(btn=>{
     if(btn.dataset.tab==="preview")renderPreview();
   };
 });
-
+document.getElementById("btnExport").onclick=()=>{
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="admin-cascade-v4.json";a.click();
+};
+document.getElementById("fileImport").onchange=e=>{
+ const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{data=JSON.parse(r.result);renderPreview();}catch(err){alert("Ошибка импорта");}};
+ r.readAsText(f);
+};
 renderGroups();renderFields();renderPreview();
 </script>
 </body>
