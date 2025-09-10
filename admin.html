@@ -449,7 +449,7 @@ function visibleFor(f){
   var entries=[]; for(var k in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,k)){ entries.push([k, f.visibleWhen[k]]); break; } }
   if(!entries.length) return true;
   var pair=entries[0]; var key=pair[0], val=pair[1];
-  if(!(key in previewState) || !previewState[key]) return true;
+if(!(key in previewState) || !previewState[key]) return false;
   return previewState[key]===val;
 }
 function clearDescendants(parentField, childrenMap){
