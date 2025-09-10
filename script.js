@@ -1,9 +1,9 @@
-// ======= v13.9.4 (dev) =======
-console.log("✅ script.js v13.9.4 loaded");
+// ======= v13.9.5 (dev) =======
+console.log("✅ script.js v13.9.5 loaded");
 
 // keys
 const LS_OBJECTS = "objects";
-const LS_FAVS    = "favorites_v13_9_4";
+const LS_FAVS    = "favorites_v13_9_5";
 
 // state
 let objects   = JSON.parse(localStorage.getItem(LS_OBJECTS) || "[]");
@@ -12,6 +12,7 @@ let selectedImages = []; // {name,size,dataUrl}
 let tempCoords = null;   // {lat,lng}
 let pickMode = false;
 let tempMarker = null;   // временный маркер
+let editId = null;       // режим редактирования
 
 // storage getters
 const getTreeNodes   = () => JSON.parse(localStorage.getItem("treeNodes")   || "[]");
@@ -269,7 +270,8 @@ function attachPickOnMap() {
     tempMarker.addTo(map);
   });
 }
-// =============== SAVE OBJECT ===================
+
+// =============== SAVE / EDIT OBJECT ===================
 function attachFormSubmit() {
   const form = $("objectForm");
   $("clearForm").onclick = () => { resetForm(); };
@@ -291,7 +293,7 @@ function attachFormSubmit() {
     });
 
     const obj = {
-      id: Date.now(),
+      id: editId || Date.now(),
       status: $("form_status").value || "",
       title: $("title").value.trim(),
       address: $("address").value.trim(),
@@ -305,10 +307,18 @@ function attachFormSubmit() {
       extra,
       images: selectedImages.slice(0),
       coords: tempCoords ? { ...tempCoords } : null,
-      createdAt: Date.now()
+      createdAt: editId ? objects.find(o => o.id === editId).createdAt : Date.now()
     };
 
-    objects.push(obj);
+    if (editId) {
+      // обновляем объект
+      const idx = objects.findIndex(o => o.id === editId);
+      if (idx !== -1) objects[idx] = obj;
+    } else {
+      // создаём новый
+      objects.push(obj);
+    }
+
     localStorage.setItem(LS_OBJECTS, JSON.stringify(objects));
     localStorage.setItem("objects_last_change", String(Date.now()));
 
@@ -324,6 +334,7 @@ function resetForm(){
   selectedImages = [];
   $("imagePreview").innerHTML = "";
   tempCoords = null;
+  editId = null;
   if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
   const badge = $("coordsBadge"); if (badge) { badge.textContent = "Координаты не выбраны"; }
 }
@@ -393,6 +404,7 @@ function renderMarkers(list = objects) {
         ${pYear  ? `<div class="meta">Год: ${pYear}</div>` : ""}
         ${o.address ? `<div class="meta">${o.address}</div>` : ""}
         ${thumbs ? `<div style="margin-top:6px;display:flex;align-items:center">${thumbs}${o.images.length>2?`<span class="badge">+${o.images.length-2}</span>`:""}</div>`:""}
+        <div style="margin-top:6px"><button onclick="editObject(${o.id})">✏️ Редактировать</button></div>
       </div>`;
     const m = L.marker([o.coords.lat, o.coords.lng]);
     m.bindPopup(html);
@@ -405,58 +417,4 @@ function renderResults(list = objects) {
 
   list.forEach(o=>{
     const card = document.createElement("div");
-    card.className = "item";
-    const catType = detectCategoryType();
-    const catName = catType && o.loc?.[catType] ? nameById(o.loc[catType]) : "";
-
-    const pRooms = o.rooms ? `${o.rooms}` : "";
-    const pArea  = o.area ? `${fmtNum(o.area)} м²` : "";
-    const pFloor = (o.floor || o.floors) ? [o.floor?`этаж ${o.floor}`:"", o.floors?`из ${o.floors}`:""].filter(Boolean).join(" ") : "";
-    const pYear  = o.year ? `${o.year}` : "";
-
-    const maxThumbs = 8;
-    const thumbs = (o.images||[]).slice(0,maxThumbs).map(im=>`<img src="${im.dataUrl}" alt="" style="width:48px;height:36px;object-fit:cover;border-radius:4px;margin:2px">`).join("");
-
-    card.innerHTML = `
-      <h3>${o.title || "(без названия)"} ${catName ? `<span class="badge">${catName}</span>`:""}</h3>
-      <div class="price">${o.price ? `${fmtNum(o.price)} сум` : ""}</div>
-      ${o.address ? `<div class="meta">${o.address}</div>` : ""}
-      ${pRooms ? `<div class="meta">Комнаты: ${pRooms}</div>` : ""}
-      ${pArea ? `<div class="meta">Площадь: ${pArea}</div>` : ""}
-      ${pFloor ? `<div class="meta">Этажность: ${pFloor}</div>` : ""}
-      ${pYear ? `<div class="meta">Год: ${pYear}</div>` : ""}
-      ${thumbs ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap">${thumbs}${o.images.length>maxThumbs?`<span class="badge">+${o.images.length-maxThumbs}</span>`:""}</div>`:""}
-    `;
-    wrap.appendChild(card);
-  });
-}
-
-// =============== RENDER ALL ====================
-function renderAll() {
-  updateAdminSyncInfo();
-  const filtered = applyFilters(objects);
-  renderMarkers(filtered);
-  renderResults(filtered);
-}
-
-// =============== INIT ==========================
-function init() {
-  buildFilters();
-  buildForm();
-  attachImagesHandler();
-  attachPickOnMap();
-  attachFormSubmit();
-  renderAll();
-}
-init();
-
-// storage events
-window.addEventListener("storage", e=>{
-  if (e.key==="treeNodes" || e.key==="nodeTypes" || e.key==="extraParams") {
-    buildFilters(); buildForm(); renderAll();
-  }
-  if (e.key==="objects") {
-    objects = JSON.parse(localStorage.getItem(LS_OBJECTS)||"[]");
-    renderAll();
-  }
-});
+    card.className =
