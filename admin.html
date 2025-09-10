@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Admin Builder — Cascade Filters v5 FULL WORK (fix)</title>
+<title>Admin Builder — Cascade Filters v5 FULL WORK + Preview</title>
 <style>
 :root{
   --bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;
   --border:#273248;--accent:#4aa8ff;--danger:#ef4444;--warn:#f59e0b;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+body{margin:0;background:#0b0f16;color:#d7e2f2;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
 header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;position:sticky;top:0;z-index:10}
 .badge{padding:3px 8px;border-radius:8px;background:#6d28d9;font-weight:700}
 .tabs{display:flex;gap:8px;margin-left:8px}
@@ -60,11 +60,22 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
   .inline{grid-template-columns:1fr}
 }
 .errorBox{background:#3a0f15;border:1px solid #7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin:10px 0}
+/* Cards/Table/Map/Form preview styles */
+.preview-section{padding:10px}
+.preview-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.preview-card-item{background:#0f1624;border:1px solid #31405a;border-radius:10px;overflow:hidden}
+.preview-card-item img{width:100%;height:120px;object-fit:cover;display:block;background:#223}
+.preview-card-item .pc-body{padding:10px}
+.preview-card-item .pc-title{font-weight:700;margin-bottom:6px}
+.preview-table{width:100%;border-collapse:collapse}
+.preview-table th,.preview-table td{border:1px solid #31405a;padding:8px;text-align:left}
+.preview-map{display:flex;align-items:center;justify-content:center;background:#0f1624;border:1px dashed #3a4c6b;border-radius:10px;height:100%}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 </style>
 </head>
 <body>
 <header>
-  <span id="ver" class="badge">cascade-v5-full-work-fix</span>
+  <span id="ver" class="badge">cascade-v5-full-work-preview</span>
   <div class="tabs">
     <button class="tab active" data-tab="filters">Фильтры</button>
     <button class="tab" data-tab="fields">Поля</button>
@@ -95,7 +106,7 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
 </main>
 
 <footer>
-  build: admin_cascade_v5_full_work_fix
+  build: admin_cascade_v5_full_work_preview
 </footer>
 
 <script>
@@ -104,11 +115,12 @@ window.addEventListener('error', function(e){
   var box=document.createElement('div');
   box.className='errorBox';
   box.textContent='Ошибка JS: '+e.message;
-  document.getElementById('tab-filters').prepend(box);
+  var host=document.getElementById('tab-filters');
+  if(host) host.prepend(box);
 });
 
 /* ================= DATA ================ */
-const KEY="admin_cascade_v5_full_work";
+const KEY="admin_cascade_v5_full_work_preview";
 let data={
   fields:[
     {label:"Страна",field:"country",type:"select",options:["Узбекистан"]},
@@ -120,10 +132,11 @@ let data={
       "Мирзо-Улугбек":["Амира Темура","Буюк Ипак"],"Юнусабад":["Юнус-1","Юнус-9"],
       "Центр":["Регистан","Навои"],"Сиаб":["Газар","Саховат"]
     }},
-    {label:"Категория",field:"category",type:"select",options:["Квартира","Коммерция","Земля"]},
+    {label:"Категория",field:"category",type:"select",options:["Квартира","Дом","Коммерция","Земля"]},
     {label:"Подкатегория",field:"subcategory",type:"select",parent:"category",dict:{
-      "Квартира":["Аренда","Продажа"],"Коммерция":["Аренда","Продажа"],"Земля":["Продажа"]
+      "Квартира":["Аренда","Продажа"],"Дом":["Аренда","Продажа"],"Коммерция":["Аренда","Продажа"],"Земля":["Продажа"]
     }},
+    {label:"Количество комнат",field:"rooms",type:"number",visibleWhen:{category:["Квартира","Дом","Коммерция"]}},
     {label:"Тип жилья",field:"apartment_type",type:"select",parent:"subcategory",
       dict:{"Аренда":["Вторичка","Новостройка"],"Продажа":["Вторичка","Новостройка"]},
       visibleWhen:{category:"Квартира"}},
@@ -131,18 +144,28 @@ let data={
       dict:{"Аренда":["Офис","Склад"],"Продажа":["Магазин","Офис"]},
       visibleWhen:{category:"Коммерция"}},
     {label:"Цена",field:"price",type:"range",rangeLabels:["от","до"]},
-    {label:"Площадь",field:"area",type:"range",rangeLabels:["от м²","до м²"]},
-    {label:"Этаж",field:"floor",type:"range",rangeLabels:["от","до"]},
-    {label:"Этажность дома",field:"floors",type:"range",rangeLabels:["от","до"]}
+    {label:"Площадь",field:"area",type:"range",rangeLabels:["от м²","до м²"]}
   ],
   groups:[
-    {name:"Верхняя линия",desc:"Основные фильтры",filters:["country","city","district","street","category","subcategory","apartment_type","commercial_type","price","area","floor","floors"]}
+    {name:"Верхняя линия",desc:"Фильтры",filters:["country","city","district","street","category","subcategory","rooms","apartment_type","commercial_type","price","area"]}
   ],
   layout:[
-    {id:1,type:"filters",title:"Фильтры",x:1,y:1,w:12,h:6}
+    {id:1,type:"filters",title:"Фильтры",x:1,y:1,w:12,h:5},
+    {id:2,type:"form",title:"Форма",x:1,y:6,w:6,h:5},
+    {id:3,type:"cards",title:"Карточки",x:7,y:6,w:6,h:5},
+    {id:4,type:"table",title:"Таблица",x:1,y:11,w:12,h:5},
+    {id:5,type:"map",title:"Карта",x:1,y:16,w:12,h:6}
   ]
 };
 
+/* Тестовые данные для CARDS/TABLE */
+var demoItems=[
+  {category:"Квартира", rooms:3, district:"Юнусабад", price:"$120 000", area:"85 м²", title:"Квартира, Юнусабад", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23223'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
+  {category:"Дом", rooms:5, district:"Чиланзар", price:"$250 000", area:"210 м²", title:"Дом, Чиланзар", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23333'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
+  {category:"Коммерция", rooms:"офис", district:"Мирзо-Улугбек", price:"$1 200/мес", area:"120 м²", title:"Офис, М.Улугбек", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%232a2a55'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"}
+];
+
+/* Состояние предпросмотра */
 let previewState = {};
 
 try{
@@ -183,8 +206,8 @@ Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(btn){
     if(tab==='preview') renderPreview();
   };
 });
-
-/* ================= FILTER GROUPS ================ */
+<!-- ================= FILTER GROUPS ================ -->
+<script>
 function addGroup(){ data.groups.push({name:'Новая линия',desc:'',filters:[]}); save(); renderGroups(); renderPreview(); }
 function removeGroup(i){ data.groups.splice(i,1); save(); renderGroups(); renderPreview(); }
 function addFieldToGroup(gi, fieldName){
@@ -216,7 +239,6 @@ function renderGroups(){
     var del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить ряд'; del.onclick=function(){ removeGroup(gi); };
     right.appendChild(sel); right.appendChild(del); head.appendChild(right); card.appendChild(head);
 
-    // editors
     var editors=document.createElement('div'); editors.className='inline'; editors.style.margin='8px 0';
     var w1=document.createElement('div'); w1.innerHTML='<label>Заголовок</label>'; var i1=document.createElement('input'); i1.value=g.name||''; i1.oninput=function(e){ data.groups[gi].name=e.target.value; save(); renderPreview(); }; w1.appendChild(i1);
     var w2=document.createElement('div'); w2.innerHTML='<label>Описание</label>'; var i2=document.createElement('input'); i2.value=g.desc||''; i2.oninput=function(e){ data.groups[gi].desc=e.target.value; save(); renderPreview(); }; w2.appendChild(i2);
@@ -277,29 +299,24 @@ function renderFields(){
 
     var grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns='repeat(2,1fr)'; grid.style.gap='10px';
 
-    // label
     var w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
     var inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=function(e){ data.fields[i].label=e.target.value; save(); renderGroups(); renderPreview(); };
     w.appendChild(inp); grid.appendChild(w);
 
-    // field
     w=document.createElement('div'); w.innerHTML='<label>Имя</label>';
     inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=function(e){ data.fields[i].field=e.target.value; save(); renderGroups(); renderPreview(); };
     w.appendChild(inp); grid.appendChild(w);
 
-    // type
     w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
     var selType=document.createElement('select');
     ['text','number','select','range'].forEach(function(tt){ var o=document.createElement('option'); o.value=tt; o.textContent=tt; if(f.type===tt) o.selected=true; selType.appendChild(o); });
     selType.onchange=function(e){ data.fields[i].type=e.target.value; if(e.target.value!=='select'){ data.fields[i].parent=''; data.fields[i].dict={}; } save(); renderPreview(); renderFields(); };
     w.appendChild(selType); grid.appendChild(w);
 
-    // desc
     w=document.createElement('div'); w.innerHTML='<label>Описание</label>';
     inp=document.createElement('input'); inp.placeholder='подпись/подсказка'; inp.value=f.desc||''; inp.oninput=function(e){ data.fields[i].desc=e.target.value; save(); renderPreview(); };
     w.appendChild(inp); grid.appendChild(w);
 
-    // parent
     var wp=document.createElement('div'); wp.innerHTML='<label>Родитель (для каскада)</label>';
     var selP=document.createElement('select');
     var parOpts=[''].concat( fieldNames.filter(function(n){ return n!==f.field && (byField(n)&&byField(n).type==='select'); }) );
@@ -307,7 +324,6 @@ function renderFields(){
     selP.onchange=function(e){ data.fields[i].parent=e.target.value||''; save(); renderPreview(); renderFields(); };
     wp.appendChild(selP); grid.appendChild(wp);
 
-    // options/dict editor
     var wOD=document.createElement('div');
     if(f.type==='select'){
       if(f.parent){
@@ -319,7 +335,7 @@ function renderFields(){
           var map={};
           e.target.value.split('\n').forEach(function(line){
             var t=line.trim(); if(!t) return;
-            var parts=t.split('='); var k=parts[0]; var rest=parts.slice(1).join('='); 
+            var parts=t.split('='); var k=parts[0]; var rest=parts.slice(1).join('=');
             map[k.trim()]=(rest||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
           });
           data.fields[i].dict=map; save(); renderPreview();
@@ -341,15 +357,21 @@ function renderFields(){
     }
     grid.appendChild(wOD);
 
-    // visibleWhen
-    var wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение)</label>';
-    var vin=document.createElement('input'); vin.placeholder='например: category=Квартира';
-    vin.value=f.visibleWhen?(Object.keys(f.visibleWhen)[0]+'='+Object.values(f.visibleWhen)[0]):'';
+    var wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение или ключ=знач1|знач2)</label>';
+    var vin=document.createElement('input'); vin.placeholder='например: category=Квартира|Дом|Коммерция';
+    if(f.visibleWhen){
+      var k0=null,v0=null; for(var kk in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,kk)){ k0=kk; v0=f.visibleWhen[kk]; break; } }
+      if(k0){ vin.value=Array.isArray(v0)? (k0+'='+v0.join('|')) : (k0+'='+v0); }
+    }
     vin.oninput=function(e){
       var v=e.target.value.trim();
       if(!v){ data.fields[i].visibleWhen=null; save(); renderPreview(); return; }
-      var parts=v.split('='); var k=parts[0]; var val=parts.slice(1).join('=');
-      data.fields[i].visibleWhen = k? (function(){ var o={}; o[k.trim()] = (val||'').trim(); return o; })() : null;
+      var parts=v.split('='); var k=parts[0]; var rest=parts.slice(1).join('=');
+      if(rest.indexOf('|')>-1){
+        data.fields[i].visibleWhen=(function(){ var o={}; o[k.trim()]=rest.split('|').map(function(s){return s.trim();}).filter(Boolean); return o; })();
+      }else{
+        data.fields[i].visibleWhen=(function(){ var o={}; o[k.trim()]=(rest||'').trim(); return o; })();
+      }
       save(); renderPreview();
     };
     wVW.appendChild(vin); grid.appendChild(wVW);
@@ -424,7 +446,8 @@ function renderLayout(){
   }
   function onResizeEnd(){ if(resizeState){ save(); resizeState=null; } document.removeEventListener('mousemove', onResizeMove); }
 }
-
+</script>
+<script>
 /* ================= PREVIEW ================ */
 function buildChildrenMap(){
   var children={};
@@ -449,7 +472,8 @@ function visibleFor(f){
   var entries=[]; for(var k in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,k)){ entries.push([k, f.visibleWhen[k]]); break; } }
   if(!entries.length) return true;
   var pair=entries[0]; var key=pair[0], val=pair[1];
-if(!(key in previewState) || !previewState[key]) return false;
+  if(!(key in previewState) || !previewState[key]) return false; // пусто — скрываем
+  if(Array.isArray(val)) return val.indexOf(previewState[key])>-1;
   return previewState[key]===val;
 }
 function clearDescendants(parentField, childrenMap){
@@ -459,6 +483,7 @@ function clearDescendants(parentField, childrenMap){
     clearDescendants(ch, childrenMap);
   });
 }
+
 function renderPreview(){
   var grid=document.getElementById('preview'); grid.innerHTML='';
   var rows = data.layout.length ? Math.max.apply(null, data.layout.map(function(b){return b.y+b.h-1;})) : 1;
@@ -467,59 +492,100 @@ function renderPreview(){
   var children=buildChildrenMap();
 
   data.layout.forEach(function(b){
-    if(b.type!=='filters') return;
     var card=document.createElement('div'); card.className='preview-card';
     card.style.gridColumn=b.x+' / span '+b.w; card.style.gridRow=b.y+' / span '+b.h;
 
-    var wrap=document.createElement('div');
-    data.groups.forEach(function(g,gi){
-      var group=document.createElement('div'); group.className='p-group';
-      var title=document.createElement('div'); title.className='p-title';
-      title.textContent = g.name || (gi===0?'Верхняя линия':'Линия '+(gi+1));
-      group.appendChild(title);
-      if(g.desc){ var d=document.createElement('div'); d.className='muted'; d.style.marginBottom='8px'; d.textContent=g.desc; group.appendChild(d); }
-      var row=document.createElement('div'); row.className='p-row';
+    var section=document.createElement('div'); section.className='preview-section';
 
-      (g.filters||[]).forEach(function(name){
-        var f=byField(name); if(!f) return;
-        var box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?'':'none';
-        var lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || 'Без названия'; box.appendChild(lab);
+    if(b.type==='filters'){
+      data.groups.forEach(function(g,gi){
+        var group=document.createElement('div'); group.className='p-group';
+        var title=document.createElement('div'); title.className='p-title';
+        title.textContent = g.name || (gi===0?'Верхняя линия':'Линия '+(gi+1));
+        group.appendChild(title);
+        if(g.desc){ var d=document.createElement('div'); d.className='muted'; d.style.marginBottom='8px'; d.textContent=g.desc; group.appendChild(d); }
+        var row=document.createElement('div'); row.className='p-row';
 
-        if(f.type==='select'){
-          var sel=document.createElement('select');
-          var opts = computeOptionsFor(f);
-          var optionsHtml = '<option value=\"\">—</option>' + opts.map(function(o){ return '<option>'+o+'</option>'; }).join('');
-          sel.innerHTML = optionsHtml;
-          if(previewState[f.field] && opts.indexOf(previewState[f.field])>-1) sel.value=previewState[f.field];
-          sel.addEventListener('change', function(){
-            previewState[f.field]=sel.value;
-            clearDescendants(f.field, children);
-            renderPreview();
-          });
-          box.appendChild(sel);
-        }else if(f.type==='range'){
-          var div=document.createElement('div'); div.className='row';
-          var a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+'_min']||'';
-          var b=document.createElement('input'); b.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; b.value = previewState[f.field+'_max']||'';
-          a.addEventListener('input', function(){ previewState[f.field+'_min']=a.value; });
-          b.addEventListener('input', function(){ previewState[f.field+'_max']=b.value; });
-          div.appendChild(a); div.appendChild(b); box.appendChild(div);
-        }else if(f.type==='number'){
-          var num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||'';
-          num.addEventListener('input', function(){ previewState[f.field]=num.value; });
-          box.appendChild(num);
-        }else{
-          var t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||'';
-          t.addEventListener('input', function(){ previewState[f.field]=t.value; });
-          box.appendChild(t);
-        }
-        row.appendChild(box);
+        (g.filters||[]).forEach(function(name){
+          var f=byField(name); if(!f) return;
+          var box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?'':'none';
+          var lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || 'Без названия'; box.appendChild(lab);
+
+          if(f.type==='select'){
+            var sel=document.createElement('select');
+            var opts = computeOptionsFor(f);
+            var optionsHtml = '<option value=\"\">—</option>' + opts.map(function(o){ return '<option>'+o+'</option>'; }).join('');
+            sel.innerHTML = optionsHtml;
+            if(previewState[f.field] && opts.indexOf(previewState[f.field])>-1) sel.value=previewState[f.field];
+            sel.addEventListener('change', function(){
+              previewState[f.field]=sel.value;
+              clearDescendants(f.field, children);
+              renderPreview();
+            });
+            box.appendChild(sel);
+          }else if(f.type==='range'){
+            var div=document.createElement('div'); div.className='row';
+            var a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+'_min']||'';
+            var bb=document.createElement('input'); bb.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; bb.value = previewState[f.field+'_max']||'';
+            a.addEventListener('input', function(){ previewState[f.field+'_min']=a.value; });
+            bb.addEventListener('input', function(){ previewState[f.field+'_max']=bb.value; });
+            div.appendChild(a); div.appendChild(bb); box.appendChild(div);
+          }else if(f.type==='number'){
+            var num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||'';
+            num.addEventListener('input', function(){ previewState[f.field]=num.value; });
+            box.appendChild(num);
+          }else{
+            var t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||'';
+            t.addEventListener('input', function(){ previewState[f.field]=t.value; });
+            box.appendChild(t);
+          }
+          row.appendChild(box);
+        });
+
+        group.appendChild(row); section.appendChild(group);
       });
+    } else if(b.type==='form'){
+      var fg=document.createElement('div'); fg.className='form-grid';
+      ['Имя','Телефон','Email','Комментарий'].forEach(function(lbl,idx){
+        var wrap=document.createElement('div');
+        var lab=document.createElement('label'); lab.textContent=lbl; wrap.appendChild(lab);
+        var input = (idx===3)? document.createElement('textarea') : document.createElement('input');
+        if(idx===1) input.type='tel';
+        if(idx===2) input.type='email';
+        input.placeholder = lbl;
+        wrap.appendChild(input);
+        fg.appendChild(wrap);
+      });
+      section.appendChild(fg);
+    } else if(b.type==='cards'){
+      var gridCards=document.createElement('div'); gridCards.className='preview-cards';
+      demoItems.forEach(function(it){
+        var ci=document.createElement('div'); ci.className='preview-card-item';
+        var img=document.createElement('img'); img.src=it.img; ci.appendChild(img);
+        var body=document.createElement('div'); body.className='pc-body';
+        var ttl=document.createElement('div'); ttl.className='pc-title'; ttl.textContent=it.title; body.appendChild(ttl);
+        var adr=document.createElement('div'); adr.textContent='Район: '+it.district; body.appendChild(adr);
+        var r=document.createElement('div'); r.textContent='Комнат: '+it.rooms; body.appendChild(r);
+        var pr=document.createElement('div'); pr.textContent='Цена: '+it.price+' ('+it.area+')'; body.appendChild(pr);
+        ci.appendChild(body); gridCards.appendChild(ci);
+      });
+      section.appendChild(gridCards);
+    } else if(b.type==='table'){
+      var table=document.createElement('table'); table.className='preview-table';
+      var thead=document.createElement('thead'); thead.innerHTML='<tr><th>Категория</th><th>Район</th><th>Комнат</th><th>Площадь</th><th>Цена</th></tr>'; table.appendChild(thead);
+      var tbody=document.createElement('tbody');
+      demoItems.forEach(function(it){
+        var tr=document.createElement('tr');
+        tr.innerHTML='<td>'+it.category+'</td><td>'+it.district+'</td><td>'+it.rooms+'</td><td>'+it.area+'</td><td>'+it.price+'</td>';
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody); section.appendChild(table);
+    } else if(b.type==='map'){
+      var m=document.createElement('div'); m.className='preview-map'; m.textContent='MAP (placeholder)';
+      section.appendChild(m);
+    }
 
-      group.appendChild(row); wrap.appendChild(group);
-    });
-
-    card.appendChild(wrap);
+    card.appendChild(section);
     grid.appendChild(card);
   });
 }
@@ -528,7 +594,7 @@ function renderPreview(){
 document.getElementById('btnExport').onclick=function(){
   normalize();
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admin-cascade-v5.json'; a.click();
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admin-cascade-v5-preview.json'; a.click();
 };
 document.getElementById('fileImport').onchange=function(e){
   var f=e.target.files[0]; if(!f) return; var r=new FileReader();
