@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Dictionary Editor + Preview Cascade + Categories + Search</title>
+<title>Dictionary Editor v2 — Locations Only</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--danger:#ef4444;}
@@ -23,13 +23,12 @@ h3{margin:0 0 10px 0;color:#cfe0ff}
 #mapBox{background:#111;padding:10px;border-radius:8px;width:80%;height:80%;display:flex;flex-direction:column}
 #map{flex:1;border:1px solid var(--border)}
 #previewMap{height:300px;margin-top:10px;border:1px solid var(--border);border-radius:8px}
-.checklist{margin-top:10px}
 input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;background:#0f1624;color:#fff}
 </style>
 </head>
 <body>
 <header>
-  <h2>Справочники</h2>
+  <h2>Справочник локаций</h2>
   <div>
     <button class="btn" onclick="exportDict()">Экспорт JSON</button>
     <label class="btn"><input type="file" id="importFile" style="display:none">Импорт JSON</label>
@@ -44,48 +43,20 @@ input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--bor
     <input class="search" id="locSearch" placeholder="Поиск по локациям..."/>
     <button class="btn" onclick="addNode(null)">+ Добавить страну</button>
     <ul id="tree" class="tree"></ul>
-    <hr>
-    <h4>Опции (галочки)</h4>
-    <div id="optionsEditor"></div>
-    <button class="btn" onclick="addOption()">+ Опция</button>
-    <hr>
-    <h4>Категории</h4>
-    <div id="categoriesEditor"></div>
-    <button class="btn" onclick="addCategory()">+ Категория</button>
   </section>
 
   <!-- предпросмотр -->
   <section class="panel">
     <h3>Предпросмотр</h3>
-    <div>
-      <label>Страна</label>
-      <select id="selCountry"><option value="">—</option></select>
-    </div>
-    <div>
-      <label>Город</label>
-      <select id="selCity"><option value="">—</option></select>
-    </div>
-    <div>
-      <label>Район</label>
-      <select id="selDistrict"><option value="">—</option></select>
-    </div>
-    <div>
-      <label>Массив</label>
-      <select id="selStreet"><option value="">—</option></select>
-    </div>
-    <div class="checklist" id="optionsBox"></div>
-    <div>
-      <label>Категория</label>
-      <select id="selCategory"><option value="">—</option></select>
-    </div>
-    <div>
-      <label>Подкатегория</label>
-      <select id="selSubcategory"><option value="">—</option></select>
-    </div>
+    <div><label>Страна</label><select id="selCountry"><option value="">—</option></select></div>
+    <div><label>Город</label><select id="selCity"><option value="">—</option></select></div>
+    <div><label>Район</label><select id="selDistrict"><option value="">—</option></select></div>
+    <div><label>Массив/Дом/Метро</label><select id="selStreet"><option value="">—</option></select></div>
     <div id="previewMap"></div>
   </section>
 </main>
 
+<!-- модальное окно карты -->
 <div id="mapModal">
   <div id="mapBox">
     <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
@@ -98,13 +69,12 @@ input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--bor
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-const KEY="dictionaryData";
-let dict=JSON.parse(localStorage.getItem(KEY)||'{"countries":{},"options":[{"id":"near_metro","label":"Метро рядом"}],"categories":{}}');
-
+const KEY="dictionaryLocations";
+let dict=JSON.parse(localStorage.getItem(KEY)||'{"countries":{}}');
 function save(){localStorage.setItem(KEY,JSON.stringify(dict));}
 function sortKeys(o){return Object.keys(o).filter(k=>k!=="coords").sort();}
 
-// ====== LOCATIONS + SEARCH ======
+// ===== РЕДАКТОР + ПОИСК =====
 function renderLocations(filter=""){
   let ul=document.getElementById("tree"); ul.innerHTML="";
   function renderLevel(obj,parentUl,path){
@@ -112,7 +82,7 @@ function renderLocations(filter=""){
       let full=path.concat(key).join(" ").toLowerCase();
       if(filter && !full.includes(filter.toLowerCase())) return;
       let li=document.createElement("li");
-      li.innerHTML=`<span>${key}</span> 
+      li.innerHTML=`<span>${key}</span>
         <span class="coords">${obj[key].coords?obj[key].coords.join(", "):""}</span>
         <button class="btn" onclick='addNode(${JSON.stringify(path.concat(key))})'>+ Добавить</button>
         <button class="btn" onclick='renameNode(${JSON.stringify(path.concat(key))})'>✎</button>
@@ -129,9 +99,36 @@ function renderLocations(filter=""){
 document.getElementById("locSearch").addEventListener("input",e=>{
   renderLocations(e.target.value.trim());
 });
+function getNode(path){return path.reduce((acc,k)=>acc[k],dict);}
+function addNode(path){let n=prompt("Название"); if(!n) return; if(path===null) dict.countries[n]={}; else getNode(path)[n]={}; save(); render();}
+function renameNode(path){let last=path[path.length-1]; let parent=path.slice(0,-1).reduce((a,k)=>a[k],dict); let n=prompt("Новое имя",last); if(!n)return; parent[n]=parent[last]; delete parent[last]; save(); render();}
+function deleteNode(path){if(!confirm("Удалить?"))return; let last=path[path.length-1]; let parent=path.slice(0,-1).reduce((a,k)=>a[k],dict); delete parent[last]; save(); render();}
 
-// остальные блоки (options, categories, preview, map, import/export) остаются как в предыдущем коде
-// ...
+// ===== КАРТА ДЛЯ КООРДИНАТ =====
+let map,mapPath,previewMap,previewMarker;
+function setCoords(path){mapPath=path;document.getElementById("mapModal").style.display="flex";setTimeout(()=>{if(!map){map=L.map("map").setView([41.31,69.28],12);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);map.on("click",e=>{if(mapPath){getNode(mapPath).coords=[+e.latlng.lat.toFixed(5),+e.latlng.lng.toFixed(5)]; save(); render(); closeMap();}});} map.invalidateSize();},100);}
+function closeMap(){document.getElementById("mapModal").style.display="none"; mapPath=null;}
+
+// ===== ПРЕДПРОСМОТР =====
+function renderPreview(){
+  let c=document.getElementById("selCountry"),ci=document.getElementById("selCity"),d=document.getElementById("selDistrict"),s=document.getElementById("selStreet");
+  [c,ci,d,s].forEach(sel=>sel.innerHTML="<option value=''>—</option>");
+  sortKeys(dict.countries).forEach(cc=>{let o=document.createElement("option");o.value=cc;o.textContent=cc;c.appendChild(o);});
+  c.onchange=function(){ci.innerHTML="<option value=''>—</option>";d.innerHTML="<option value=''>—</option>";s.innerHTML="<option value=''>—</option>";if(this.value){sortKeys(dict.countries[this.value]).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;ci.appendChild(o);});}updateMap();};
+  ci.onchange=function(){d.innerHTML="<option value=''>—</option>";s.innerHTML="<option value=''>—</option>";if(c.value&&this.value){sortKeys(dict.countries[c.value][this.value]).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;d.appendChild(o);});}updateMap();};
+  d.onchange=function(){s.innerHTML="<option value=''>—</option>";if(c.value&&ci.value&&this.value){sortKeys(dict.countries[c.value][ci.value][this.value]).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;s.appendChild(o);});}updateMap();};
+  s.onchange=updateMap;
+  if(!previewMap){previewMap=L.map("previewMap").setView([41.31,69.28],6);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(previewMap);} updateMap();
+}
+function updateMap(){if(previewMarker){previewMap.removeLayer(previewMarker);} let c=document.getElementById("selCountry").value,ci=document.getElementById("selCity").value,d=document.getElementById("selDistrict").value,s=document.getElementById("selStreet").value; let node=null; try{if(c&&ci&&d&&s) node=dict.countries[c][ci][d][s]; else if(c&&ci&&d) node=dict.countries[c][ci][d]; else if(c&&ci) node=dict.countries[c][ci]; else if(c) node=dict.countries[c];}catch(e){} if(node&&node.coords){previewMarker=L.marker(node.coords).addTo(previewMap).bindPopup((s||d||ci||c)); previewMap.setView(node.coords,12);}}
+
+// ===== IMPORT/EXPORT =====
+function exportDict(){let blob=new Blob([JSON.stringify(dict,null,2)],{type:"application/json"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="locations.json"; a.click();}
+document.getElementById("importFile").onchange=function(e){let f=e.target.files[0]; if(!f)return; let r=new FileReader(); r.onload=function(){try{let obj=JSON.parse(r.result); if(obj&&typeof obj==="object"){dict=obj; save(); render(); alert("Импорт успешен");}}catch(err){alert("Ошибка импорта: "+err.message);}}; r.readAsText(f);};
+
+// ===== INIT =====
+function render(){renderLocations(); renderPreview();}
+render();
 </script>
 </body>
 </html>
