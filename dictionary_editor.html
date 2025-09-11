@@ -3,32 +3,45 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Dictionary Editor v2 — Locations Only</title>
+<title>Dictionary Editor v3 — Infinite Locations</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-:root{--bg:#0b0f16;--panel:#121826;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--danger:#ef4444;}
+:root{--bg:#0b0f16;--panel:#121826;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--danger:#ef4444;--accent:#4aa8ff}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
 header{padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;display:flex;justify-content:space-between;align-items:center}
 main{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;overflow:auto}
 h3{margin:0 0 10px 0;color:#cfe0ff}
+h4{margin:10px 0 8px 0}
 .btn{background:#1e293b;border:1px solid var(--border);color:#dbe8ff;padding:4px 8px;border-radius:8px;cursor:pointer;margin:2px;font-size:12px}
 .btn:hover{border-color:#3a4c6b}
 .btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-.tree{list-style:none;padding-left:20px}
+.btn.accent{background:#123a66;border-color:#1e5391}
+.tree{list-style:none;padding-left:18px}
 .tree li{margin:4px 0}
 .coords{color:var(--muted);font-size:12px;margin-left:6px}
+.tools{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:6px}
+input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);margin:8px 0;background:#0f1624;color:#fff}
 #mapModal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}
-#mapBox{background:#111;padding:10px;border-radius:8px;width:80%;height:80%;display:flex;flex-direction:column}
+#mapBox{background:#111;padding:10px;border-radius:8px;width:82%;height:82%;display:flex;flex-direction:column}
 #map{flex:1;border:1px solid var(--border)}
-#previewMap{height:300px;margin-top:10px;border:1px solid var(--border);border-radius:8px}
-input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;background:#0f1624;color:#fff}
+#previewMap{height:320px;margin-top:10px;border:1px solid var(--border);border-radius:8px}
+.levels{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.levels input{width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
+.levels .btn{height:32px}
+.badge{display:inline-block;background:#23314d;border:1px solid #334567;border-radius:6px;padding:2px 6px;margin-left:6px;color:#cfe0ff}
+.muted{color:var(--muted)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:1000px){ main{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 <header>
-  <h2>Справочник локаций</h2>
+  <div>
+    <strong>Справочник локаций v3</strong>
+    <span class="badge">бесконечные уровни</span>
+  </div>
   <div>
     <button class="btn" onclick="exportDict()">Экспорт JSON</button>
     <label class="btn"><input type="file" id="importFile" style="display:none">Импорт JSON</label>
@@ -36,99 +49,313 @@ input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--bor
 </header>
 
 <main>
-  <!-- редактор -->
+  <!-- РЕДАКТОР -->
   <section class="panel">
     <h3>Редактор</h3>
-    <h4>Локации</h4>
-    <input class="search" id="locSearch" placeholder="Поиск по локациям..."/>
-    <button class="btn" onclick="addNode(null)">+ Добавить страну</button>
+
+    <h4>Названия уровней (кастомные подписи)</h4>
+    <div class="levels" id="levelsBox"></div>
+    <div style="margin:6px 0">
+      <button class="btn" onclick="addLevelLabel()">+ Добавить уровень</button>
+      <span class="muted">Эти подписи используются в предпросмотре. Если глубина превысит список — подставится «Уровень N».</span>
+    </div>
+
+    <h4 style="margin-top:12px">Локации (бесконечное дерево)</h4>
+    <input class="search" id="locSearch" placeholder="Поиск по локациям... (например: юнус, чилан, метро)">
+    <div style="margin-bottom:6px">
+      <button class="btn" onclick="addRoot()">+ Добавить верхний уровень</button>
+      <span class="muted">Например: «Узбекистан», «Казахстан» и т.д.</span>
+    </div>
     <ul id="tree" class="tree"></ul>
   </section>
 
-  <!-- предпросмотр -->
+  <!-- ПРЕДПРОСМОТР -->
   <section class="panel">
     <h3>Предпросмотр</h3>
-    <div><label>Страна</label><select id="selCountry"><option value="">—</option></select></div>
-    <div><label>Город</label><select id="selCity"><option value="">—</option></select></div>
-    <div><label>Район</label><select id="selDistrict"><option value="">—</option></select></div>
-    <div><label>Массив/Дом/Метро</label><select id="selStreet"><option value="">—</option></select></div>
+    <div id="selectsBox"></div>
     <div id="previewMap"></div>
+    <div style="margin-top:8px" class="muted">Показывается только метка выбранного узла. Если у узла нет координат — точки не будет.</div>
   </section>
 </main>
 
-<!-- модальное окно карты -->
+<!-- МОДАЛЬНОЕ ОКНО КАРТЫ -->
 <div id="mapModal">
   <div id="mapBox">
     <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
       <span id="mapTitle" style="color:#fff"></span>
-      <button class="btn danger" onclick="closeMap()">Закрыть</button>
+      <div>
+        <button class="btn" onclick="clearCoords()">Очистить</button>
+        <button class="btn danger" onclick="closeMap()">Закрыть</button>
+      </div>
     </div>
     <div id="map"></div>
+    <div class="muted" style="margin-top:6px">Кликни по карте, чтобы поставить точку. Сохраняется сразу.</div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-const KEY="dictionaryLocations";
-let dict=JSON.parse(localStorage.getItem(KEY)||'{"countries":{}}');
-function save(){localStorage.setItem(KEY,JSON.stringify(dict));}
-function sortKeys(o){return Object.keys(o).filter(k=>k!=="coords").sort();}
+// ====== ДАННЫЕ ======
+const KEY="dictionaryInfiniteLocationsV3";
+let dict = JSON.parse(localStorage.getItem(KEY) || JSON.stringify({
+  levelLabels: ["Страна","Город","Район","Массив"],
+  tree: {} // { "Узбекистан": { coords:[..], children:{ "Ташкент":{ children:{..} } } } }
+}));
 
-// ===== РЕДАКТОР + ПОИСК =====
-function renderLocations(filter=""){
-  let ul=document.getElementById("tree"); ul.innerHTML="";
-  function renderLevel(obj,parentUl,path){
-    sortKeys(obj).forEach(key=>{
-      let full=path.concat(key).join(" ").toLowerCase();
-      if(filter && !full.includes(filter.toLowerCase())) return;
-      let li=document.createElement("li");
-      li.innerHTML=`<span>${key}</span>
-        <span class="coords">${obj[key].coords?obj[key].coords.join(", "):""}</span>
-        <button class="btn" onclick='addNode(${JSON.stringify(path.concat(key))})'>+ Добавить</button>
-        <button class="btn" onclick='renameNode(${JSON.stringify(path.concat(key))})'>✎</button>
-        <button class="btn danger" onclick='deleteNode(${JSON.stringify(path.concat(key))})'>❌</button>
-        <button class="btn" onclick='setCoords(${JSON.stringify(path.concat(key))})'>📍</button>`;
-      let subUl=document.createElement("ul"); subUl.className="tree";
-      renderLevel(obj[key],subUl,path.concat(key));
+function save(){ localStorage.setItem(KEY, JSON.stringify(dict)); }
+function sortKeys(o){ return Object.keys(o||{}).filter(k=>k!=="coords" && k!=="children").sort((a,b)=>a.localeCompare(b,'ru',{sensitivity:'base'})); }
+
+// ====== РЕДАКТОР УРОВНЕЙ ======
+function renderLevelLabels(){
+  const box = document.getElementById('levelsBox');
+  box.innerHTML='';
+  dict.levelLabels.forEach((lbl,i)=>{
+    const row = document.createElement('div'); row.className='levels';
+    const inp = document.createElement('input'); inp.value=lbl; inp.oninput=e=>{ dict.levelLabels[i]=e.target.value; save(); renderPreview(); };
+    const del = document.createElement('button'); del.className='btn danger'; del.textContent='❌'; del.title='Удалить подпись уровня';
+    del.onclick=()=>{ if(!confirm('Удалить подпись уровня?')) return; dict.levelLabels.splice(i,1); save(); renderLevelLabels(); renderPreview(); };
+    row.appendChild(inp); row.appendChild(del); box.appendChild(row);
+  });
+  if(dict.levelLabels.length===0){
+    const z = document.createElement('div'); z.className='muted'; z.textContent='Нет кастомных подписей. Будут использоваться «Уровень 1/2/...».';
+    box.appendChild(z);
+  }
+}
+function addLevelLabel(){ dict.levelLabels.push('Уровень '+(dict.levelLabels.length+1)); save(); renderLevelLabels(); renderPreview(); }
+
+// ====== ПОИСК + ОТОБРАЖЕНИЕ ДЕРЕВА ======
+function renderTree(){
+  const filter = (document.getElementById('locSearch').value||'').trim().toLowerCase();
+  const ul = document.getElementById('tree'); ul.innerHTML='';
+  // рекурсивный рендер с фильтрацией: показываем узел, если совпал он сам или любой из его потомков
+  function matches(name,node){
+    if(!filter) return true;
+    if(name.toLowerCase().includes(filter)) return true;
+    const ch = node.children||{};
+    for(const k of Object.keys(ch)){ if(matches(k, ch[k])) return true; }
+    return false;
+  }
+  function renderLevel(obj, parentUl, path){
+    const keys = sortKeys(obj);
+    keys.forEach(key=>{
+      const node = obj[key];
+      if(!matches(key, node)) return;
+      const li = document.createElement('li');
+
+      const title = document.createElement('span'); title.textContent = key;
+      li.appendChild(title);
+
+      if(node.coords){
+        const c = document.createElement('span'); c.className='coords'; c.textContent = node.coords.join(', ');
+        li.appendChild(c);
+      }
+
+      const tools = document.createElement('span'); tools.className='tools';
+      const addBtn = document.createElement('button'); addBtn.className='btn'; addBtn.textContent='+ Добавить'; addBtn.onclick = ()=> addNode(path.concat(key));
+      const renBtn = document.createElement('button'); renBtn.className='btn'; renBtn.textContent='✎'; renBtn.title='Переименовать'; renBtn.onclick = ()=> renameNode(path.concat(key));
+      const delBtn = document.createElement('button'); delBtn.className='btn danger'; delBtn.textContent='❌'; delBtn.onclick = ()=> deleteNode(path.concat(key));
+      const geoBtn = document.createElement('button'); geoBtn.className='btn accent'; geoBtn.textContent='📍'; geoBtn.title='Координаты'; geoBtn.onclick = ()=> setCoords(path.concat(key));
+      tools.append(addBtn, renBtn, delBtn, geoBtn);
+      li.appendChild(tools);
+
+      const subUl = document.createElement('ul'); subUl.className='tree';
+      renderLevel(node.children||{}, subUl, path.concat(key));
       if(subUl.children.length) li.appendChild(subUl);
+
       parentUl.appendChild(li);
     });
   }
-  renderLevel(dict.countries,ul,["countries"]);
+  renderLevel(dict.tree, ul, []);
 }
-document.getElementById("locSearch").addEventListener("input",e=>{
-  renderLocations(e.target.value.trim());
-});
-function getNode(path){return path.reduce((acc,k)=>acc[k],dict);}
-function addNode(path){let n=prompt("Название"); if(!n) return; if(path===null) dict.countries[n]={}; else getNode(path)[n]={}; save(); render();}
-function renameNode(path){let last=path[path.length-1]; let parent=path.slice(0,-1).reduce((a,k)=>a[k],dict); let n=prompt("Новое имя",last); if(!n)return; parent[n]=parent[last]; delete parent[last]; save(); render();}
-function deleteNode(path){if(!confirm("Удалить?"))return; let last=path[path.length-1]; let parent=path.slice(0,-1).reduce((a,k)=>a[k],dict); delete parent[last]; save(); render();}
 
-// ===== КАРТА ДЛЯ КООРДИНАТ =====
-let map,mapPath,previewMap,previewMarker;
-function setCoords(path){mapPath=path;document.getElementById("mapModal").style.display="flex";setTimeout(()=>{if(!map){map=L.map("map").setView([41.31,69.28],12);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);map.on("click",e=>{if(mapPath){getNode(mapPath).coords=[+e.latlng.lat.toFixed(5),+e.latlng.lng.toFixed(5)]; save(); render(); closeMap();}});} map.invalidateSize();},100);}
-function closeMap(){document.getElementById("mapModal").style.display="none"; mapPath=null;}
+document.getElementById('locSearch').addEventListener('input', ()=> renderTree());
 
-// ===== ПРЕДПРОСМОТР =====
+// ====== ОПЕРАЦИИ С УЗЛАМИ ======
+function getNodeByPath(path){ // path: array of names
+  let cur = dict.tree;
+  let node = null;
+  for(const name of path){
+    if(!cur[name]) return null;
+    node = cur[name];
+    cur = node.children || (node.children = {});
+  }
+  return node;
+}
+function getParentAndKey(path){ // returns {parentObj, key}
+  if(path.length===0) return { parentObj: dict.tree, key: null };
+  const key = path[path.length-1];
+  let cur = dict.tree, parentObj=null;
+  for(let i=0;i<path.length-1;i++){
+    const name = path[i];
+    if(!cur[name]) return null;
+    parentObj = cur[name].children || (cur[name].children = {});
+    cur = parentObj;
+  }
+  return { parentObj: cur, key };
+}
+
+function addRoot(){
+  const name = prompt('Название верхнего уровня (например: Узбекистан)');
+  if(!name) return;
+  dict.tree[name] = dict.tree[name] || { children:{} };
+  save(); renderTree(); renderPreview();
+}
+function addNode(path){
+  const parentNode = path.length ? getNodeByPath(path) : null;
+  const name = prompt('Название элемента (например: Ташкент, Юнусабад, Метро Чиланзар)');
+  if(!name) return;
+  const children = parentNode ? (parentNode.children || (parentNode.children = {})) : dict.tree;
+  if(children[name]){ alert('Такое имя уже есть на этом уровне'); return; }
+  children[name] = { children:{} };
+  save(); renderTree(); renderPreview();
+}
+function renameNode(path){
+  const info = getParentAndKey(path); if(!info) return;
+  const { parentObj, key } = info;
+  const node = parentObj[key];
+  const name = prompt('Новое имя', key);
+  if(!name || name===key) return;
+  if(parentObj[name]){ alert('Такое имя уже есть на этом уровне'); return; }
+  parentObj[name] = node; delete parentObj[key];
+  save(); renderTree(); renderPreview();
+}
+function deleteNode(path){
+  const info = getParentAndKey(path); if(!info) return;
+  const { parentObj, key } = info;
+  if(!confirm('Удалить «'+key+'» и все вложенные элементы?')) return;
+  delete parentObj[key];
+  save(); renderTree(); renderPreview();
+}
+
+// ====== КАРТА ДЛЯ КООРДИНАТ ======
+let map, mapPath=null, previewMap, previewMarker=null;
+function setCoords(path){
+  mapPath = path.slice();
+  document.getElementById('mapModal').style.display='flex';
+  document.getElementById('mapTitle').textContent = 'Выбор координат: ' + path.join(' → ');
+  setTimeout(()=>{
+    if(!map){
+      map = L.map('map').setView([41.31,69.28], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:"© OSM"}).addTo(map);
+      map.on('click', e=>{
+        if(!mapPath) return;
+        const node = getNodeByPath(mapPath);
+        if(!node) return;
+        node.coords = [ +e.latlng.lat.toFixed(6), +e.latlng.lng.toFixed(6) ];
+        save(); renderTree(); updateMap();
+      });
+    }
+    map.invalidateSize();
+  }, 80);
+}
+function closeMap(){ document.getElementById('mapModal').style.display='none'; mapPath=null; }
+function clearCoords(){
+  if(!mapPath) return;
+  const node = getNodeByPath(mapPath);
+  if(node && node.coords){
+    delete node.coords; save(); renderTree(); updateMap();
+  }
+}
+
+// ====== ПРЕДПРОСМОТР (динамические селекты по глубине) ======
 function renderPreview(){
-  let c=document.getElementById("selCountry"),ci=document.getElementById("selCity"),d=document.getElementById("selDistrict"),s=document.getElementById("selStreet");
-  [c,ci,d,s].forEach(sel=>sel.innerHTML="<option value=''>—</option>");
-  sortKeys(dict.countries).forEach(cc=>{let o=document.createElement("option");o.value=cc;o.textContent=cc;c.appendChild(o);});
-  c.onchange=function(){ci.innerHTML="<option value=''>—</option>";d.innerHTML="<option value=''>—</option>";s.innerHTML="<option value=''>—</option>";if(this.value){sortKeys(dict.countries[this.value]).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;ci.appendChild(o);});}updateMap();};
-  ci.onchange=function(){d.innerHTML="<option value=''>—</option>";s.innerHTML="<option value=''>—</option>";if(c.value&&this.value){sortKeys(dict.countries[c.value][this.value]).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;d.appendChild(o);});}updateMap();};
-  d.onchange=function(){s.innerHTML="<option value=''>—</option>";if(c.value&&ci.value&&this.value){sortKeys(dict.countries[c.value][ci.value][this.value]).forEach(x=>{let o=document.createElement("option");o.value=x;o.textContent=x;s.appendChild(o);});}updateMap();};
-  s.onchange=updateMap;
-  if(!previewMap){previewMap=L.map("previewMap").setView([41.31,69.28],6);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(previewMap);} updateMap();
+  const box = document.getElementById('selectsBox');
+  box.innerHTML = '';
+  // строим каскад селектов на лету: пока у выбранного узла есть дети — добавляем следующий селект
+  const chain = []; // массив имён
+  const nodesChain = []; // сами узлы
+  // первый селект всегда от корня
+  addSelectLevel(dict.tree, 0);
+
+  function addSelectLevel(childrenObj, depth){
+    const wrap = document.createElement('div');
+    const label = document.createElement('label');
+    const niceLabel = dict.levelLabels[depth] || ('Уровень ' + (depth+1));
+    label.textContent = niceLabel;
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">—</option>';
+    sortKeys(childrenObj).forEach(name=>{
+      const opt = document.createElement('option'); opt.value=name; opt.textContent=name; sel.appendChild(opt);
+    });
+    sel.onchange = ()=>{
+      // обрезаем цепочку до текущей глубины
+      chain.splice(depth); nodesChain.splice(depth);
+      const val = sel.value;
+      // удаляем ниже расположенные селекты
+      while(wrap.nextSibling){ box.removeChild(wrap.nextSibling); }
+      if(!val){ updateMap(); return; }
+      chain.push(val);
+      // найти узел по цепочке
+      let cur = dict.tree, node=null;
+      for(const nm of chain){ node = cur[nm]; cur = (node&&node.children) ? node.children : {}; }
+      nodesChain.push(node);
+      updateMap(node);
+      // если у узла есть дети — добавляем следующий селект
+      if(node && node.children && Object.keys(node.children).length){
+        addSelectLevel(node.children, depth+1);
+      }
+    };
+
+    wrap.appendChild(label);
+    wrap.appendChild(sel);
+    box.appendChild(wrap);
+  }
+  // карта
+  if(!previewMap){
+    previewMap = L.map('previewMap').setView([41.31,69.28], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:"© OSM"}).addTo(previewMap);
+  }
+  updateMap();
 }
-function updateMap(){if(previewMarker){previewMap.removeLayer(previewMarker);} let c=document.getElementById("selCountry").value,ci=document.getElementById("selCity").value,d=document.getElementById("selDistrict").value,s=document.getElementById("selStreet").value; let node=null; try{if(c&&ci&&d&&s) node=dict.countries[c][ci][d][s]; else if(c&&ci&&d) node=dict.countries[c][ci][d]; else if(c&&ci) node=dict.countries[c][ci]; else if(c) node=dict.countries[c];}catch(e){} if(node&&node.coords){previewMarker=L.marker(node.coords).addTo(previewMap).bindPopup((s||d||ci||c)); previewMap.setView(node.coords,12);}}
 
-// ===== IMPORT/EXPORT =====
-function exportDict(){let blob=new Blob([JSON.stringify(dict,null,2)],{type:"application/json"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="locations.json"; a.click();}
-document.getElementById("importFile").onchange=function(e){let f=e.target.files[0]; if(!f)return; let r=new FileReader(); r.onload=function(){try{let obj=JSON.parse(r.result); if(obj&&typeof obj==="object"){dict=obj; save(); render(); alert("Импорт успешен");}}catch(err){alert("Ошибка импорта: "+err.message);}}; r.readAsText(f);};
+function updateMap(node){
+  if(previewMarker){ previewMap.removeLayer(previewMarker); previewMarker=null; }
+  // если передали конкретный узел и у него есть coords — показываем его
+  if(node && node.coords){
+    previewMarker = L.marker(node.coords).addTo(previewMap).bindPopup('Выбрано: '+(node._name||''));
+    previewMap.setView(node.coords, 12);
+    return;
+  }
+  // иначе пробуем найти самый глубокий выбранный в текущих селектах
+  const selects = Array.from(document.querySelectorAll('#selectsBox select'));
+  let cur = dict.tree, chosenNode=null, path=[];
+  for(const sel of selects){
+    const v = sel.value;
+    if(!v) break;
+    chosenNode = cur[v];
+    path.push(v);
+    cur = (chosenNode && chosenNode.children) ? chosenNode.children : {};
+  }
+  if(chosenNode && chosenNode.coords){
+    chosenNode._name = path[path.length-1];
+    previewMarker = L.marker(chosenNode.coords).addTo(previewMap).bindPopup('Выбрано: '+path.join(' → '));
+    previewMap.setView(chosenNode.coords, 12);
+  }
+}
 
-// ===== INIT =====
-function render(){renderLocations(); renderPreview();}
-render();
+// ====== ИМПОРТ / ЭКСПОРТ ======
+function exportDict(){
+  const blob = new Blob([JSON.stringify(dict,null,2)], {type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='locations_v3.json'; a.click();
+}
+document.getElementById('importFile').onchange = (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const obj=JSON.parse(r.result);
+      if(!obj || typeof obj!=='object') throw new Error('неверный JSON');
+      if(!('tree' in obj)) throw new Error('нет поля "tree"');
+      if(!('levelLabels' in obj)) obj.levelLabels = dict.levelLabels || [];
+      dict = obj; save(); renderAll(); alert('Импорт успешен');
+    }catch(err){ alert('Ошибка импорта: '+err.message); }
+  };
+  r.readAsText(f);
+};
+
+// ====== INIT ======
+function renderAll(){ renderLevelLabels(); renderTree(); renderPreview(); }
+renderAll();
 </script>
 </body>
 </html>
