@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Справочник v8 — селекты + чекбоксы</title>
+<title>location_selector_v9</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -17,26 +17,24 @@ button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
 .tabs{display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--border);background:#121826}
 .tab{padding:6px 12px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer}
 .tab.active{background:#2160ff;color:#fff}
-main{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 94px)}
+main{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 94px)}
 .sidebar{padding:10px;border-right:1px solid var(--border);background:#121826;overflow:auto}
 .panel{background:#172133;border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
 h3{margin:0 0 8px 0}
 input,select{width:100%;padding:6px;border-radius:6px;border:1px solid #31405a;background:#0f1624;color:#fff}
-.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}
 .list{display:grid;gap:6px}
 .item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:#111a2a}
 .item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
 .tools{display:flex;gap:6px}
-small.muted{color:var(--muted)}
 #map{width:100%;height:100%}
-.previewSel{margin:6px 0;width:100%}
-.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
 .checkbox-grid label{display:flex;align-items:center;gap:4px;background:#111a2a;padding:4px 6px;border-radius:6px;cursor:pointer}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v8</span>
+  <span class="badge">dictionary v9</span>
   <button id="btnExport">Экспорт</button>
   <label><input type="file" id="fileImport" style="display:none"><button>Импорт</button></label>
   <button id="btnReset" class="danger">Сброс</button>
@@ -50,7 +48,7 @@ small.muted{color:var(--muted)}
 <main>
   <aside class="sidebar" id="editorTab"></aside>
   <aside class="sidebar" id="previewTab" style="display:none">
-    <div class="panel"><h3>Предпросмотр</h3><div id="cascadeBox"></div></div>
+    <div class="panel"><h3>Предпросмотр каскада</h3><div id="cascadeBox"></div></div>
   </aside>
   <div id="map"></div>
 </main>
@@ -58,20 +56,10 @@ small.muted{color:var(--muted)}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ====== STORAGE ====== */
-const KEY="dict_v8";
+const KEY="dict_v9";
 let db = JSON.parse(localStorage.getItem(KEY) || "null");
 if(!db){
-  db = {
-    categories:[
-      {id:uid(), name:"Страны", type:"select", parentCategoryId:null, items:[{id:uid(), name:"Узбекистан", lat:41.3, lng:69.2, parentId:null}]},
-      {id:uid(), name:"Города", type:"select", parentCategoryId:null, items:[{id:uid(), name:"Ташкент", lat:41.311, lng:69.279, parentId:null}]},
-      {id:uid(), name:"Районы", type:"checkbox", parentCategoryId:null, items:[
-        {id:uid(), name:"Юнусабад", lat:41.367, lng:69.287, parentId:null},
-        {id:uid(), name:"Мирабад", lat:41.315, lng:69.275, parentId:null},
-        {id:uid(), name:"Чиланзар", lat:41.285, lng:69.204, parentId:null}
-      ]}
-    ]
-  };
+  db={categories:[]};
   save();
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -81,7 +69,6 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let markers=[];
-
 function clearMarkers(){ markers.forEach(m=>map.removeLayer(m)); markers=[]; }
 function addMarker(lat,lng,label){ const m=L.marker([lat,lng]).addTo(map).bindPopup(label); markers.push(m); }
 
@@ -89,11 +76,34 @@ function addMarker(lat,lng,label){ const m=L.marker([lat,lng]).addTo(map).bindPo
 const $editor=$("#editorTab");
 function renderEditor(){
   $editor.innerHTML="";
+
+  const addPanel=document.createElement("div"); addPanel.className="panel";
+  addPanel.innerHTML=`<h3>Новая категория</h3>
+    <div class="row"><input id="newCatName" placeholder="Название"/></div>
+    <div class="row"><select id="newCatType"><option value="select">Select</option><option value="checkbox">Checkbox</option></select></div>
+    <div class="row"><select id="newCatParent"><option value="">(нет родителя)</option>${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join("")}</select></div>
+    <div class="row"><button id="btnAddCat">+ Добавить</button></div>`;
+  $editor.appendChild(addPanel);
+
   db.categories.forEach(cat=>{
     const sec=document.createElement("div"); sec.className="panel";
-    const h=document.createElement("h3"); h.textContent=cat.name+" ("+cat.type+")"; sec.appendChild(h);
+    const h=document.createElement("h3"); h.textContent=cat.name+` (${cat.type})`; sec.appendChild(h);
+
+    const optsRow=document.createElement("div"); optsRow.className="row";
+    const editBtn=document.createElement("button"); editBtn.textContent="✎ Ред.";
+    editBtn.onclick=()=>{ 
+      const nn=prompt("Название",cat.name); if(!nn) cat.name=cat.name; else cat.name=nn;
+      const nt=prompt("Тип (select/checkbox)",cat.type); if(nt==="select"||nt==="checkbox") cat.type=nt;
+      const pid=prompt("id родителя или пусто",cat.parentCategoryId||"");
+      cat.parentCategoryId=pid||null;
+      save(); renderAll();
+    };
+    const delBtn=document.createElement("button"); delBtn.textContent="❌"; delBtn.className="danger";
+    delBtn.onclick=()=>{ if(confirm("Удалить категорию?")){ db.categories=db.categories.filter(c=>c.id!==cat.id); save(); renderAll(); } };
+    optsRow.append(editBtn,delBtn); sec.appendChild(optsRow);
+
     const list=document.createElement("div"); list.className="list";
-    cat.items.forEach((it,idx)=>{
+    cat.items?.forEach((it,idx)=>{
       const line=document.createElement("div"); line.className="item";
       const name=document.createElement("div"); name.className="name"; name.textContent=it.name;
       const tools=document.createElement("div"); tools.className="tools";
@@ -103,53 +113,67 @@ function renderEditor(){
       place.onclick=()=>{ alert("Кликни по карте для "+it.name); map.once("click", e=>{it.lat=e.latlng.lat; it.lng=e.latlng.lng; save(); renderAll();}); };
       const del=document.createElement("button"); del.textContent="❌"; del.className="danger";
       del.onclick=()=>{ if(confirm("Удалить?")){ cat.items.splice(idx,1); save(); renderAll(); } };
-      line.onclick=()=>{ if(it.lat&&it.lng) {clearMarkers(); addMarker(it.lat,it.lng,it.name);} };
       tools.append(edit,place,del); line.append(name,tools); list.appendChild(line);
     });
+    sec.appendChild(list);
+
     const row=document.createElement("div"); row.className="row";
     const inp=document.createElement("input"); inp.placeholder="Новый элемент";
-    const btn=document.createElement("button"); btn.textContent="+ Новый";
-    btn.onclick=()=>{ const nm=inp.value.trim()||"Новый"; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:null}); save(); renderAll(); };
-    row.append(inp,btn); sec.appendChild(list); sec.appendChild(row);
+    const parSel=document.createElement("select");
+    parSel.innerHTML=`<option value="">(нет родителя)</option>${(db.categories.find(c=>c.id===cat.parentCategoryId)?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join("")}`;
+    const btn=document.createElement("button"); btn.textContent="+";
+    btn.onclick=()=>{ const nm=inp.value.trim()||"Новый"; cat.items=cat.items||[]; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parSel.value||null}); save(); renderAll(); };
+    row.append(inp,parSel,btn); sec.appendChild(row);
+
     $editor.appendChild(sec);
   });
+
+  $("#btnAddCat").onclick=()=>{ 
+    const nm=$("#newCatName").value.trim(); if(!nm) return;
+    const tp=$("#newCatType").value;
+    const pid=$("#newCatParent").value||null;
+    db.categories.push({id:uid(),name:nm,type:tp,parentCategoryId:pid,items:[]});
+    save(); renderAll();
+  };
 }
 
 /* ====== PREVIEW ====== */
 const $cascade=$("#cascadeBox");
 function renderPreview(){
-  $cascade.innerHTML="";
-  clearMarkers();
-  db.categories.forEach(cat=>{
+  $cascade.innerHTML=""; clearMarkers();
+  let selected={};
+  function renderLevel(cat,parentVal){
     const wrap=document.createElement("div"); wrap.className="panel";
     const title=document.createElement("h4"); title.textContent=cat.name; wrap.appendChild(title);
-
+    let items=(cat.items||[]).filter(it=>(!cat.parentCategoryId)||it.parentId===parentVal);
     if(cat.type==="select"){
-      const sel=document.createElement("select"); sel.className="previewSel";
-      sel.innerHTML="<option value=''>— выберите —</option>";
-      cat.items.forEach(it=>{ sel.innerHTML+=`<option value='${it.id}'>${it.name}</option>`; });
-      sel.onchange=()=>{ const it=cat.items.find(x=>x.id===sel.value); if(it&&it.lat&&it.lng){ clearMarkers(); addMarker(it.lat,it.lng,it.name); map.setView([it.lat,it.lng],13);} };
+      const sel=document.createElement("select");
+      sel.innerHTML="<option value=''>— выберите —</option>"+items.map(it=>`<option value='${it.id}'>${it.name}</option>`).join("");
+      sel.onchange=()=>{ selected[cat.id]=sel.value; renderCascade(); };
       wrap.appendChild(sel);
     }else if(cat.type==="checkbox"){
       const grid=document.createElement("div"); grid.className="checkbox-grid";
-      cat.items.forEach(it=>{
+      items.forEach(it=>{
         const label=document.createElement("label");
         const cb=document.createElement("input"); cb.type="checkbox"; cb.value=it.id;
-        cb.onchange=()=>{
-          clearMarkers();
-          cat.items.filter(x=>grid.querySelectorAll("input:checked")).forEach(xx=>{ if(xx.lat&&xx.lng) addMarker(xx.lat,xx.lng,xx.name); });
-          grid.querySelectorAll("input:checked").forEach(ch=>{
-            const item=cat.items.find(x=>x.id===ch.value);
-            if(item&&item.lat&&item.lng) addMarker(item.lat,item.lng,item.name);
-          });
-        };
-        label.append(cb,document.createTextNode(it.name));
-        grid.appendChild(label);
+        cb.onchange=()=>{ if(cb.checked){ if(it.lat&&it.lng) addMarker(it.lat,it.lng,it.name); }else{ renderCascade(); } };
+        label.append(cb,document.createTextNode(it.name)); grid.appendChild(label);
       });
       wrap.appendChild(grid);
     }
     $cascade.appendChild(wrap);
-  });
+  }
+  function renderCascade(){
+    $cascade.innerHTML=""; clearMarkers();
+    let chain=[...db.categories];
+    let parentVal=null;
+    for(const cat of chain){
+      if(cat.parentCategoryId && !selected[cat.parentCategoryId]) break;
+      parentVal=selected[cat.parentCategoryId]||null;
+      renderLevel(cat,parentVal);
+    }
+  }
+  renderCascade();
 }
 
 /* ====== UTILS ====== */
@@ -157,7 +181,7 @@ function renderAll(){ renderEditor(); renderPreview(); }
 function $(s){ return document.querySelector(s); }
 
 /* ====== EXPORT/IMPORT ====== */
-$("#btnExport").onclick=()=>{ const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="dict_v8.json"; a.click(); };
+$("#btnExport").onclick=()=>{ const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="dict_v9.json"; a.click(); };
 $("#fileImport").onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ db=JSON.parse(r.result); save(); renderAll(); alert("Импортировано!"); }catch(err){ alert("Ошибка импорта"); } }; r.readAsText(f); };
 $("#btnReset").onclick=()=>{ if(confirm("Очистить?")){ localStorage.removeItem(KEY); location.reload(); } };
 
