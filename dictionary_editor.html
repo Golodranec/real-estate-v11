@@ -3,26 +3,36 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Выбор локации — Ташкент</title>
+<title>Редактор локаций — Ташкент</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 body{margin:0;font-family:sans-serif;background:#0b0f16;color:#d7e2f2}
-header{padding:10px;background:#0e1420;border-bottom:1px solid #273248}
+header{padding:10px;background:#0e1420;border-bottom:1px solid #273248;display:flex;gap:8px;align-items:center}
+button{padding:6px 10px;border-radius:6px;border:1px solid #273248;background:#1a2234;color:#d7e2f2;cursor:pointer}
+button:hover{border-color:#4aa8ff}
+button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
 .tabs{display:flex;gap:8px;margin:10px}
 .tab{padding:6px 12px;background:#1a2234;border:1px solid #273248;border-radius:6px;cursor:pointer}
 .tab.active{background:#2160ff;color:#fff}
-main{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 60px)}
+main{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 60px)}
 .sidebar{padding:10px;overflow:auto;background:#121826;border-right:1px solid #273248}
 .list{margin-top:10px}
-.item{padding:6px;border:1px solid #273248;margin-bottom:6px;border-radius:6px;cursor:pointer}
+.item{padding:6px;border:1px solid #273248;margin-bottom:6px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
 .item:hover{border-color:#4aa8ff}
+.tools{display:flex;gap:4px}
 #map{width:100%;height:100%}
 input{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31405a;background:#0f1624;color:#fff}
+.searchResults{background:#172133;border:1px solid #31405a;border-radius:6px;margin-top:4px;max-height:200px;overflow:auto}
+.searchResults div{padding:6px;cursor:pointer}
+.searchResults div:hover{background:#1a2234}
 </style>
 </head>
 <body>
 <header>
-  <h2>Локации — Ташкент</h2>
+  <h2 style="flex:1">Локации — Ташкент</h2>
+  <button onclick="exportData()">Экспорт</button>
+  <label><input type="file" id="importFile" style="display:none" onchange="importData(event)"><button>Импорт</button></label>
+  <button class="danger" onclick="resetData()">Сброс</button>
 </header>
 <div class="tabs">
   <div class="tab active" data-tab="metro">Метро</div>
@@ -34,8 +44,8 @@ input{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31
     <div id="metroTab" class="list"></div>
     <div id="districtsTab" class="list" style="display:none"></div>
     <div id="addressTab" style="display:none">
-      <input id="addressInput" placeholder="Введите адрес вручную"/>
-      <div class="muted">Или кликни на карте для координат</div>
+      <input id="addressInput" placeholder="Введите адрес или название"/>
+      <div id="searchResults" class="searchResults"></div>
     </div>
   </div>
   <div id="map"></div>
@@ -43,78 +53,126 @@ input{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ====== данные ======
-const districts = [
-  "Мирзо-Улугбек","Юнусабад","Чиланзар","Яшнабад","Сергели",
-  "Алмазар","Шайхантахур","Учтепа","Бектемир","Яккасарай","Янгихаёт"
-];
-const metroStations = [
-  // Чиланзарская
-  "Олмазор","Чиланзар","Мирзо Улугбек","Новза","Миллий боғ",
-  "Халқаро боғ'","Буюк ипак йули",
-  // Узбекистанская
-  "Беруний","Тинчлик","Чорсу","Гафур Гулом","Алишер Навои",
-  "Ойбек","Тошкент","Машинасозлар","Чкалов","Минор","Бодомзор",
-  // Юнусабадская
-  "Шахристон","Юнусабад","Абдулла Қодирий","Хабиб Абдуллаев","Юнусобод"
-];
+// ===== данные =====
+const KEY="location_dict_v1";
+let data = JSON.parse(localStorage.getItem(KEY) || "null");
+if(!data){
+  data = {
+    metro: [
+      {name:"Олмазор",lat:41.356,lng:69.203},
+      {name:"Чиланзар",lat:41.307,lng:69.230},
+      {name:"Мирзо Улугбек",lat:41.280,lng:69.260},
+      {name:"Новза",lat:41.281,lng:69.245},
+      {name:"Алишер Навои",lat:41.311,lng:69.278},
+      {name:"Ойбек",lat:41.308,lng:69.295},
+      {name:"Тошкент",lat:41.299,lng:69.320},
+      {name:"Минор",lat:41.327,lng:69.282},
+      {name:"Бодомзор",lat:41.338,lng:69.271},
+      {name:"Юнусабад",lat:41.367,lng:69.334}
+    ],
+    districts: [
+      {name:"Мирзо-Улугбек",lat:41.324,lng:69.345},
+      {name:"Юнусабад",lat:41.367,lng:69.287},
+      {name:"Чиланзар",lat:41.285,lng:69.204},
+      {name:"Яшнабад",lat:41.299,lng:69.332},
+      {name:"Сергели",lat:41.218,lng:69.212},
+      {name:"Алмазар",lat:41.350,lng:69.203},
+      {name:"Шайхантахур",lat:41.327,lng:69.242},
+      {name:"Учтепа",lat:41.302,lng:69.207},
+      {name:"Бектемир",lat:41.230,lng:69.330},
+      {name:"Яккасарай",lat:41.291,lng:69.264},
+      {name:"Янгихаёт",lat:41.200,lng:69.250}
+    ]
+  };
+  save();
+}
 
-// ====== карта ======
-let map = L.map('map').setView([41.3111,69.2797], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  maxZoom:19
-}).addTo(map);
+// ===== карта =====
+let map=L.map('map').setView([41.3111,69.2797], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let marker=null;
 
-function showMarker(lat,lng,label){
+function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
   if(marker) map.removeLayer(marker);
-  marker=L.marker([lat,lng]).addTo(map).bindPopup(label).openPopup();
+  marker=L.marker([lat,lng],{draggable}).addTo(map).bindPopup(label).openPopup();
   map.setView([lat,lng],14);
+  if(draggable && onDragEnd){
+    marker.on("dragend", e=>{
+      let pos=e.target.getLatLng();
+      onDragEnd(pos.lat,pos.lng);
+    });
+  }
 }
 
-// ====== списки ======
-function renderMetro(){
-  let box=document.getElementById("metroTab");
+// ===== рендер списков =====
+function renderList(type){
+  let box=document.getElementById(type+"Tab");
   box.innerHTML="";
-  metroStations.forEach(name=>{
-    let div=document.createElement("div");
-    div.className="item"; div.textContent=name;
-    div.onclick=()=>showMarker(41.31+Math.random()*0.05,69.28+Math.random()*0.05,name);
+  data[type].forEach((item,i)=>{
+    let div=document.createElement("div"); div.className="item";
+    let span=document.createElement("span"); span.textContent=item.name;
+    div.appendChild(span);
+    let tools=document.createElement("div"); tools.className="tools";
+    let bEdit=document.createElement("button"); bEdit.textContent="✎";
+    bEdit.onclick=(e)=>{
+      e.stopPropagation();
+      let newName=prompt("Новое имя",item.name);
+      if(newName){ item.name=newName; save(); renderAll(); }
+      showMarker(item.lat,item.lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
+    };
+    let bDel=document.createElement("button"); bDel.textContent="❌"; bDel.className="danger";
+    bDel.onclick=(e)=>{ e.stopPropagation(); if(confirm("Удалить "+item.name+"?")){ data[type].splice(i,1); save(); renderAll(); } };
+    tools.appendChild(bEdit); tools.appendChild(bDel);
+    div.appendChild(tools);
+    div.onclick=()=>showMarker(item.lat,item.lng,item.name);
     box.appendChild(div);
   });
 }
-function renderDistricts(){
-  let box=document.getElementById("districtsTab");
-  box.innerHTML="";
-  districts.forEach(name=>{
-    let div=document.createElement("div");
-    div.className="item"; div.textContent=name;
-    div.onclick=()=>showMarker(41.3+Math.random()*0.07,69.25+Math.random()*0.07,name);
-    box.appendChild(div);
-  });
-}
-renderMetro(); renderDistricts();
+function renderAll(){ renderList("metro"); renderList("districts"); }
+renderAll();
 
-// ====== вкладки ======
+// ===== вкладки =====
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
     tab.classList.add("active");
-    document.getElementById("metroTab").style.display = tab.dataset.tab==="metro"?"block":"none";
-    document.getElementById("districtsTab").style.display = tab.dataset.tab==="districts"?"block":"none";
-    document.getElementById("addressTab").style.display = tab.dataset.tab==="address"?"block":"none";
+    document.getElementById("metroTab").style.display=tab.dataset.tab==="metro"?"block":"none";
+    document.getElementById("districtsTab").style.display=tab.dataset.tab==="districts"?"block":"none";
+    document.getElementById("addressTab").style.display=tab.dataset.tab==="address"?"block":"none";
   };
 });
 
-// ====== адрес ======
-document.getElementById("addressInput").addEventListener("change",e=>{
-  showMarker(41.31,69.28,"Адрес: "+e.target.value);
+// ===== поиск по адресу =====
+document.getElementById("addressInput").addEventListener("input",e=>{
+  let q=e.target.value.toLowerCase();
+  let box=document.getElementById("searchResults");
+  box.innerHTML="";
+  if(!q) return;
+  let results=[];
+  data.metro.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"метро"}); });
+  data.districts.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"район"}); });
+  results.forEach(r=>{
+    let div=document.createElement("div"); div.textContent=r.name+" ("+r.type+")";
+    div.onclick=()=>showMarker(r.lat,r.lng,r.name);
+    box.appendChild(div);
+  });
 });
-map.on("click",e=>{
-  if(document.querySelector(".tab.active").dataset.tab==="address"){
-    showMarker(e.latlng.lat,e.latlng.lng,`Выбрано: ${e.latlng.lat.toFixed(5)},${e.latlng.lng.toFixed(5)}`);
-  }
-});
+
+// ===== экспорт/импорт =====
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+function exportData(){
+  let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="locations.json"; a.click();
+}
+function importData(e){
+  let f=e.target.files[0]; if(!f) return;
+  let r=new FileReader(); r.onload=()=>{
+    try{ data=JSON.parse(r.result); save(); renderAll(); alert("Импортировано!"); }
+    catch(err){ alert("Ошибка импорта"); }
+  };
+  r.readAsText(f);
+}
+function resetData(){ if(confirm("Очистить справочник?")){ data={metro:[],districts:[]}; save(); renderAll(); } }
 </script>
 </body>
 </html>
