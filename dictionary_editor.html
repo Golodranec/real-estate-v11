@@ -1,144 +1,127 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Dictionary Editor v3 + OSM Import</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<style>
-:root{--bg:#0b0f16;--panel:#121826;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--danger:#ef4444;--accent:#4aa8ff}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-header{padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;display:flex;justify-content:space-between;align-items:center}
-main{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;overflow:auto}
-h3{margin:0 0 10px 0;color:#cfe0ff}
-.btn{background:#1e293b;border:1px solid var(--border);color:#dbe8ff;padding:4px 8px;border-radius:8px;cursor:pointer;margin:2px;font-size:12px}
-.btn:hover{border-color:#3a4c6b}
-.btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-.btn.accent{background:#123a66;border-color:#1e5391}
-.tree{list-style:none;padding-left:18px}
-.tree li{margin:4px 0}
-.coords{color:var(--muted);font-size:12px;margin-left:6px}
-.tools{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:6px}
-input.search{width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);margin:8px 0;background:#0f1624;color:#fff}
-#mapModal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}
-#mapBox{background:#111;padding:10px;border-radius:8px;width:82%;height:82%;display:flex;flex-direction:column}
-#map{flex:1;border:1px solid var(--border)}
-#previewMap{height:320px;margin-top:10px;border:1px solid var(--border);border-radius:8px}
-.levels{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
-.levels input{width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
-.levels .btn{height:32px}
-.badge{display:inline-block;background:#23314d;border:1px solid #334567;border-radius:6px;padding:2px 6px;margin-left:6px;color:#cfe0ff}
-.muted{color:var(--muted)}
-@media (max-width:1000px){ main{grid-template-columns:1fr} }
-</style>
+  <meta charset="UTF-8">
+  <title>Редактор справочника + OSM</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body{margin:0;background:#0b0f16;color:#d7e2f2;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #273248;background:#0e1420;position:sticky;top:0;z-index:10}
+    .badge{padding:3px 8px;border-radius:8px;background:#6d28d9;font-weight:700}
+    main{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .panel{background:#121826;border:1px solid #273248;border-radius:12px;padding:12px;overflow:auto}
+    h3{margin:0 0 10px 0;color:#cfe0ff}
+    .btn{background:#1e293b;border:1px solid #273248;color:#dbe8ff;padding:6px 10px;border-radius:8px;cursor:pointer}
+    .btn:hover{border-color:#3a4c6b}
+    .btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
+    .btn.accent{background:#123a66;border-color:#1e5391}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .list{display:grid;gap:10px}
+    input,select{padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff;width:100%}
+    label{display:block;opacity:.9;margin-bottom:6px}
+    .muted{color:#9fb0c8}
+    #map{height:400px;border:1px solid #31405a;border-radius:12px}
+    @media(max-width:900px){main{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
 <header>
-  <div>
-    <strong>Справочник локаций v3 + OSM</strong>
-    <span class="badge">импорт районов + метро</span>
-  </div>
-  <div>
-    <button class="btn accent" onclick="importOSM()">Импорт из OSM (Ташкент)</button>
-    <button class="btn" onclick="exportDict()">Экспорт JSON</button>
-    <label class="btn"><input type="file" id="importFile" style="display:none">Импорт JSON</label>
-  </div>
+  <span class="badge">dictionary-osm-full v1.0</span>
+  <button class="btn" onclick="exportDict()">Экспорт</button>
+  <label class="btn"><input type="file" id="fileImport" style="display:none">Импорт</label>
+  <button class="btn danger" onclick="resetDict()">Сброс</button>
+  <button class="btn accent" onclick="importOSM()">Импорт OSM (Ташкент)</button>
 </header>
 
 <main>
   <section class="panel">
-    <h3>Редактор</h3>
-    <input class="search" id="locSearch" placeholder="Поиск по локациям...">
-    <div style="margin-bottom:6px">
-      <button class="btn" onclick="addRoot()">+ Добавить верхний уровень</button>
+    <h3>Редактор локаций</h3>
+    <div class="row">
+      <input id="search" placeholder="Поиск по названию...">
+      <button class="btn" onclick="addLocation()">+ Локация</button>
     </div>
-    <ul id="tree" class="tree"></ul>
+    <div id="list" class="list"></div>
   </section>
-
   <section class="panel">
-    <h3>Предпросмотр</h3>
-    <div id="selectsBox"></div>
-    <div id="previewMap"></div>
+    <h3>Карта</h3>
+    <div id="map"></div>
   </section>
 </main>
 
-<div id="mapModal">
-  <div id="mapBox">
-    <div style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-      <span id="mapTitle" style="color:#fff"></span>
-      <div>
-        <button class="btn" onclick="clearCoords()">Очистить</button>
-        <button class="btn danger" onclick="closeMap()">Закрыть</button>
-      </div>
-    </div>
-    <div id="map"></div>
-  </div>
-</div>
+<footer style="padding:10px;color:#9fb0c8;font-size:12px;border-top:1px solid #273248">
+  build: dictionary_editor_osm_full v1.0
+</footer>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-const KEY="dictionaryInfiniteLocationsV3_OSM";
-let dict = JSON.parse(localStorage.getItem(KEY) || JSON.stringify({
-  levelLabels: ["Страна","Город","Район/Метро"],
-  tree: {}
-}));
-function save(){ localStorage.setItem(KEY, JSON.stringify(dict)); }
-function sortKeys(o){ return Object.keys(o||{}).filter(k=>k!=="coords" && k!=="children").sort((a,b)=>a.localeCompare(b,'ru',{sensitivity:'base'})); }
+const KEY="dictionary_data_osm_full_v1";
+let locations=[];
+let map, markers={};
 
-// ====== TREE RENDER ======
-function renderTree(){
-  const filter = (document.getElementById('locSearch').value||'').trim().toLowerCase();
-  const ul = document.getElementById('tree'); ul.innerHTML='';
-  function matches(name,node){
-    if(!filter) return true;
-    if(name.toLowerCase().includes(filter)) return true;
-    for(const k of Object.keys(node.children||{})){ if(matches(k, node.children[k])) return true; }
-    return false;
-  }
-  function renderLevel(obj, parentUl, path){
-    const keys = sortKeys(obj);
-    keys.forEach(key=>{
-      const node = obj[key]; if(!matches(key,node)) return;
-      const li=document.createElement('li');
-      const title=document.createElement('span'); title.textContent=key; li.appendChild(title);
-      if(node.coords){ const c=document.createElement('span'); c.className='coords'; c.textContent=node.coords.join(', '); li.appendChild(c); }
-      const tools=document.createElement('span'); tools.className='tools';
-      const addBtn=document.createElement('button'); addBtn.className='btn'; addBtn.textContent='+ Добавить'; addBtn.onclick=()=>addNode(path.concat(key));
-      const renBtn=document.createElement('button'); renBtn.className='btn'; renBtn.textContent='✎'; renBtn.onclick=()=>renameNode(path.concat(key));
-      const delBtn=document.createElement('button'); delBtn.className='btn danger'; delBtn.textContent='❌'; delBtn.onclick=()=>deleteNode(path.concat(key));
-      const geoBtn=document.createElement('button'); geoBtn.className='btn accent'; geoBtn.textContent='📍'; geoBtn.onclick=()=>setCoords(path.concat(key));
-      tools.append(addBtn,renBtn,delBtn,geoBtn); li.appendChild(tools);
-      const subUl=document.createElement('ul'); subUl.className='tree'; renderLevel(node.children||{}, subUl, path.concat(key)); if(subUl.children.length) li.appendChild(subUl);
-      parentUl.appendChild(li);
-    });
-  }
-  renderLevel(dict.tree, ul, []);
+// ====== SAVE / LOAD ======
+function save(){localStorage.setItem(KEY, JSON.stringify(locations));}
+function load(){
+  let raw=localStorage.getItem(KEY);
+  if(raw){ try{locations=JSON.parse(raw)||[];}catch(e){locations=[];} }
 }
-document.getElementById('locSearch').addEventListener('input', renderTree);
+function resetDict(){ if(confirm("Очистить справочник?")){locations=[]; save(); render();}}
 
-function getNodeByPath(path){ let cur=dict.tree,node=null; for(const name of path){ if(!cur[name]) return null; node=cur[name]; cur=node.children||{}; } return node; }
-function getParentAndKey(path){ if(path.length===0) return {parentObj:dict.tree,key:null}; const key=path[path.length-1]; let cur=dict.tree; for(let i=0;i<path.length-1;i++){ const name=path[i]; if(!cur[name]) return null; cur=cur[name].children||(cur[name].children={}); } return {parentObj:cur,key}; }
-function addRoot(){ const name=prompt('Название'); if(!name) return; dict.tree[name]=dict.tree[name]||{children:{}}; save(); renderTree(); renderPreview(); }
-function addNode(path){ const parentNode=path.length?getNodeByPath(path):null; const name=prompt('Название'); if(!name) return; const children=parentNode?(parentNode.children||(parentNode.children={})):dict.tree; if(children[name]){alert('Уже есть');return;} children[name]={children:{}}; save(); renderTree(); renderPreview(); }
-function renameNode(path){ const {parentObj,key}=getParentAndKey(path); if(!parentObj) return; const node=parentObj[key]; const name=prompt('Новое имя',key); if(!name||name===key) return; if(parentObj[name]){alert('Уже есть');return;} parentObj[name]=node; delete parentObj[key]; save(); renderTree(); renderPreview(); }
-function deleteNode(path){ const {parentObj,key}=getParentAndKey(path); if(!parentObj) return; if(!confirm('Удалить '+key+'?')) return; delete parentObj[key]; save(); renderTree(); renderPreview(); }
+// ====== EXPORT / IMPORT ======
+function exportDict(){
+  let blob=new Blob([JSON.stringify(locations,null,2)],{type:'application/json'});
+  let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download="dictionary_osm.json"; a.click();
+}
+document.getElementById('fileImport').onchange=function(e){
+  let f=e.target.files[0]; if(!f) return; let r=new FileReader();
+  r.onload=function(){
+    try{ locations=JSON.parse(r.result)||[]; save(); render(); alert("Импорт выполнен"); }
+    catch(err){ alert("Ошибка импорта"); }
+  }; r.readAsText(f);
+};
 
-// ====== MAP COORDS ======
-let map,mapPath=null,previewMap,previewMarker=null;
-function setCoords(path){ mapPath=path.slice(); document.getElementById('mapModal').style.display='flex'; document.getElementById('mapTitle').textContent='Координаты: '+path.join(' → '); setTimeout(()=>{ if(!map){ map=L.map('map').setView([41.31,69.28],11); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); map.on('click', e=>{ if(!mapPath) return; const node=getNodeByPath(mapPath); if(!node) return; node.coords=[+e.latlng.lat.toFixed(6),+e.latlng.lng.toFixed(6)]; save(); renderTree(); updateMap(); }); } map.invalidateSize(); },80); }
-function closeMap(){ document.getElementById('mapModal').style.display='none'; mapPath=null; }
-function clearCoords(){ if(!mapPath) return; const node=getNodeByPath(mapPath); if(node&&node.coords){ delete node.coords; save(); renderTree(); updateMap(); } }
+// ====== EDITOR ======
+function addLocation(){
+  locations.push({name:"Новая локация",type:"страна",lat:41.31,lng:69.28});
+  save(); render();
+}
+function removeLocation(i){ locations.splice(i,1); save(); render(); }
 
-// ====== PREVIEW ======
-function renderPreview(){ const box=document.getElementById('selectsBox'); box.innerHTML=''; addSelectLevel(dict.tree,0); if(!previewMap){ previewMap=L.map('previewMap').setView([41.31,69.28],5); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(previewMap);} updateMap(); function addSelectLevel(childrenObj,depth){ const wrap=document.createElement('div'); const label=document.createElement('label'); const niceLabel=dict.levelLabels[depth]||('Уровень '+(depth+1)); label.textContent=niceLabel; const sel=document.createElement('select'); sel.innerHTML='<option value="">—</option>'; sortKeys(childrenObj).forEach(name=>{ const opt=document.createElement('option'); opt.value=name; opt.textContent=name; sel.appendChild(opt); }); sel.onchange=()=>{ while(wrap.nextSibling){ box.removeChild(wrap.nextSibling);} if(!sel.value){ updateMap(); return;} const node=childrenObj[sel.value]; updateMap(node); if(node&&node.children&&Object.keys(node.children).length){ addSelectLevel(node.children,depth+1);} }; wrap.appendChild(label); wrap.appendChild(sel); box.appendChild(wrap);} }
-function updateMap(node){ if(previewMarker){ previewMap.removeLayer(previewMarker); previewMarker=null;} if(node&&node.coords){ previewMarker=L.marker(node.coords).addTo(previewMap).bindPopup('Выбрано: '+node._name||''); previewMap.setView(node.coords,12);} }
+function render(){
+  let box=document.getElementById('list'); box.innerHTML='';
+  let query=document.getElementById('search').value.toLowerCase();
+  locations.filter(l=>!query||l.name.toLowerCase().includes(query)).forEach((loc,i)=>{
+    let row=document.createElement('div'); row.className='row';
+    let name=document.createElement('input'); name.value=loc.name; name.oninput=e=>{loc.name=e.target.value; save(); renderMap();};
+    let type=document.createElement('select');
+    ["страна","город","район","массив","дом","метро","ориентир"].forEach(t=>{
+      let o=document.createElement('option'); o.value=t; o.textContent=t; if(loc.type===t) o.selected=true; type.appendChild(o);
+    });
+    type.onchange=e=>{loc.type=e.target.value; save();};
+    let btn=document.createElement('button'); btn.textContent='Удалить'; btn.className='btn danger'; btn.onclick=()=>removeLocation(i);
+    row.appendChild(name); row.appendChild(type); row.appendChild(btn);
+    box.appendChild(row);
+  });
+  renderMap();
+}
 
-// ====== IMPORT OSM ======
+// ====== MAP ======
+function renderMap(){
+  if(!map){
+    map=L.map('map').setView([41.31,69.28],11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  }
+  for(let id in markers){ map.removeLayer(markers[id]); }
+  markers={};
+  locations.forEach((loc,i)=>{
+    let m=L.marker([loc.lat,loc.lng],{draggable:true}).addTo(map).bindPopup(loc.name);
+    m.on('dragend',e=>{let c=e.target.getLatLng(); loc.lat=c.lat; loc.lng=c.lng; save();});
+    markers[i]=m;
+  });
+}
+
+// ====== OSM IMPORT ======
 async function importOSM(){
-  alert('Начинаю загрузку данных из OSM. Это может занять 5–10 секунд...');
-  const overpass='https://overpass-api.de/api/interpreter';
+  alert("Загружаю районы и метро Ташкента из OSM...");
   const query=`
   [out:json][timeout:25];
   area["name"="Tashkent"]->.a;
@@ -148,31 +131,24 @@ async function importOSM(){
   );
   out center;`;
   try{
-    const res=await fetch(overpass,{method:'POST',body:query});
-    const data=await res.json();
-    if(!dict.tree["Узбекистан"]) dict.tree["Узбекистан"]={children:{}};
-    if(!dict.tree["Узбекистан"].children["Ташкент"]) dict.tree["Узбекистан"].children["Ташкент"]={children:{}};
-    const tash=dict.tree["Узбекистан"].children["Ташкент"];
-    if(!tash.children["Районы"]) tash.children["Районы"]={children:{}};
-    if(!tash.children["Метро"]) tash.children["Метро"]={children:{}};
+    let res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+    let data=await res.json();
     data.elements.forEach(el=>{
-      let name=(el.tags&& (el.tags.name:ru||el.tags.name_ru||el.tags.name))||el.tags.name||("Безымянный");
+      let name=(el.tags && (el.tags["name:ru"]||el.tags.name_ru||el.tags.name))||"Без названия";
       if(el.type==="relation"){ // район
-        tash.children["Районы"].children[name]={coords:[el.center.lat,el.center.lon],children:{}};
+        locations.push({name, type:"район", lat:el.center.lat, lng:el.center.lon});
       }
       if(el.type==="node"){ // метро
-        tash.children["Метро"].children[name]={coords:[el.lat,el.lon],children:{}};
+        locations.push({name, type:"метро", lat:el.lat, lng:el.lon});
       }
     });
-    save(); renderTree(); renderPreview(); alert('Импорт завершён: районы + метро добавлены в «Ташкент».');
-  }catch(err){ alert('Ошибка импорта: '+err.message); }
+    save(); render(); alert("Импорт завершен! Добавлены районы и метро.");
+  }catch(err){ alert("Ошибка импорта: "+err.message); }
 }
 
-// ====== EXPORT / IMPORT FILE ======
-function exportDict(){ const blob=new Blob([JSON.stringify(dict,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='locations_v3_osm.json'; a.click(); }
-document.getElementById('importFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const obj=JSON.parse(r.result); dict=obj; save(); renderTree(); renderPreview(); alert('Импорт успешен'); }catch(err){ alert('Ошибка: '+err.message);} }; r.readAsText(f); };
-
-renderTree(); renderPreview();
+// ====== INIT ======
+load(); render();
+document.getElementById('search').oninput=render;
 </script>
 </body>
 </html>
