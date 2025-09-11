@@ -56,7 +56,7 @@ input,select{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px so
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const KEY="location_dict_v4";
+const KEY="location_dict_v5";
 let data=JSON.parse(localStorage.getItem(KEY) || "null");
 if(!data){
   data={
@@ -70,7 +70,7 @@ if(!data){
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let marker=null;
-let editCallback=null;
+let placeMode=null;
 
 function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
   if(marker) map.removeLayer(marker);
@@ -82,16 +82,23 @@ function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
       onDragEnd(pos.lat,pos.lng);
     });
   }
-  editCallback=onDragEnd;
 }
 
 map.on("click",e=>{
-  if(editCallback){
+  if(placeMode){
     let pos=e.latlng;
-    if(marker){ marker.setLatLng(pos); }
-    editCallback(pos.lat,pos.lng);
+    placeMode(pos.lat,pos.lng);
+    placeMode=null;
   }
 });
+
+function enablePlaceMode(item){
+  alert("Кликни по карте, чтобы поставить метку для: "+item.name);
+  placeMode=(lat,lng)=>{
+    item.lat=lat; item.lng=lng; save();
+    showMarker(lat,lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
+  };
+}
 
 function renderSection(type,label,withParent=false){
   let box=document.getElementById(type+"Tab");
@@ -118,38 +125,14 @@ function renderSection(type,label,withParent=false){
       e.stopPropagation();
       let newName=prompt("Новое имя",item.name);
       if(newName){ item.name=newName; }
-
-      if(withParent){
-        // выпадающий список выбора района
-        let districtList=data.districts.map(d=>d.name);
-        let select=document.createElement("select");
-        districtList.forEach(d=>{
-          let opt=document.createElement("option");
-          opt.value=d; opt.textContent=d;
-          if(item.parentDistrict===d) opt.selected=true;
-          select.appendChild(opt);
-        });
-        let wrapper=document.createElement("div");
-        wrapper.appendChild(select);
-        let saveBtn=document.createElement("button");
-        saveBtn.textContent="Сохранить район";
-        saveBtn.onclick=()=>{
-          item.parentDistrict=select.value;
-          save(); renderAll();
-          document.body.removeChild(wrapper);
-        };
-        wrapper.appendChild(saveBtn);
-        wrapper.style.position="fixed"; wrapper.style.top="20px"; wrapper.style.left="20px";
-        wrapper.style.background="#121826"; wrapper.style.padding="10px"; wrapper.style.border="1px solid #4aa8ff";
-        document.body.appendChild(wrapper);
-      }
-
       save(); renderAll();
       showMarker(item.lat,item.lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
     };
+    let bPlace=document.createElement("button"); bPlace.textContent="📍";
+    bPlace.onclick=(e)=>{ e.stopPropagation(); enablePlaceMode(item); };
     let bDel=document.createElement("button"); bDel.textContent="❌"; bDel.className="danger";
     bDel.onclick=(e)=>{ e.stopPropagation(); if(confirm("Удалить "+item.name+"?")){ data[type].splice(i,1); save(); renderAll(); } };
-    tools.appendChild(bEdit); tools.appendChild(bDel);
+    tools.appendChild(bEdit); tools.appendChild(bPlace); tools.appendChild(bDel);
     div.appendChild(tools);
     div.onclick=()=>showMarker(item.lat,item.lng,item.name);
     box.appendChild(div);
