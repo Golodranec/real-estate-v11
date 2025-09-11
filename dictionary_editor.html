@@ -56,7 +56,7 @@ input,select{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px so
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const KEY="location_dict_v3";
+const KEY="location_dict_v4";
 let data=JSON.parse(localStorage.getItem(KEY) || "null");
 if(!data){
   data={
@@ -118,10 +118,32 @@ function renderSection(type,label,withParent=false){
       e.stopPropagation();
       let newName=prompt("Новое имя",item.name);
       if(newName){ item.name=newName; }
+
       if(withParent){
-        let parent=prompt("Укажите район",item.parentDistrict||"");
-        if(parent!==null) item.parentDistrict=parent;
+        // выпадающий список выбора района
+        let districtList=data.districts.map(d=>d.name);
+        let select=document.createElement("select");
+        districtList.forEach(d=>{
+          let opt=document.createElement("option");
+          opt.value=d; opt.textContent=d;
+          if(item.parentDistrict===d) opt.selected=true;
+          select.appendChild(opt);
+        });
+        let wrapper=document.createElement("div");
+        wrapper.appendChild(select);
+        let saveBtn=document.createElement("button");
+        saveBtn.textContent="Сохранить район";
+        saveBtn.onclick=()=>{
+          item.parentDistrict=select.value;
+          save(); renderAll();
+          document.body.removeChild(wrapper);
+        };
+        wrapper.appendChild(saveBtn);
+        wrapper.style.position="fixed"; wrapper.style.top="20px"; wrapper.style.left="20px";
+        wrapper.style.background="#121826"; wrapper.style.padding="10px"; wrapper.style.border="1px solid #4aa8ff";
+        document.body.appendChild(wrapper);
       }
+
       save(); renderAll();
       showMarker(item.lat,item.lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
     };
