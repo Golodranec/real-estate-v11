@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Admin Builder — Cascade Filters v5 FULL WORK + Preview FIX (FULL)</title>
+<title>Admin Builder — Cascade Filters v13.9.6</title>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--accent:#4aa8ff;--danger:#ef4444;--warn:#f59e0b;}
 *{box-sizing:border-box}
@@ -63,16 +63,23 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
 .preview-table th,.preview-table td{border:1px solid #31405a;padding:8px;text-align:left}
 .preview-map{display:flex;align-items:center;justify-content:center;background:#0f1624;border:1px dashed #3a4c6b;border-radius:10px;height:100%}
 .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+
+/* мини-стили для конструктора формы объектов */
+.of-card{border:1px solid var(--border);background:#121a2a;border-radius:10px;padding:10px}
+.of-card.dragging{opacity:.6;border-style:dashed}
+.of-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.of-hint{color:#9fb0c8;font-size:12px}
 </style>
 </head>
 <body>
 <header>
-  <span id="ver" class="badge">cascade-v5-full-work-preview-fix-full</span>
+  <span id="ver" class="badge">cascade-v13.9.6</span>
   <div class="tabs">
     <button class="tab active" data-tab="filters">Фильтры</button>
     <button class="tab" data-tab="fields">Поля</button>
     <button class="tab" data-tab="layout">Макет</button>
     <button class="tab" data-tab="preview">Предпросмотр</button>
+    <button class="tab" data-tab="objform">Форма объектов</button>
   </div>
   <div style="margin-left:auto" class="row">
     <button id="btnExport" class="btn">Экспорт</button>
@@ -88,9 +95,31 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
   <section id="tab-preview" class="panel" style="display:none">
     <div class="canvas-wrap"><div id="preview" class="preview-grid"></div></div>
   </section>
+
+  <!-- НОВАЯ ВКЛАДКА: ФОРМА ОБЪЕКТОВ -->
+  <section id="tab-objform" class="panel" style="display:none">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h3>Форма объектов — настройка полей</h3>
+      <small class="of-hint">Конфиг хранится в localStorage под ключом <b>objectFormConfig</b></small>
+    </div>
+    <div class="row">
+      <button id="ofAdd" class="btn">+ Поле</button>
+      <button id="ofReset" class="btn warn">Сбросить к стандартным</button>
+      <button id="ofExport" class="btn">Экспорт JSON</button>
+      <label class="btn"><input id="ofImport" type="file" accept=".json" style="display:none">Импорт JSON</label>
+    </div>
+    <div id="ofList" class="list" style="margin-top:12px"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="title-row">
+        <h3>Мини-предпросмотр формы «Добавить объект»</h3>
+        <small class="muted">Рендер из objectFormConfig</small>
+      </div>
+      <div id="ofPreview" class="grid" style="grid-template-columns:repeat(3,1fr)"></div>
+    </div>
+  </section>
 </main>
 
-<footer>build: admin_cascade_v5_full_work_preview_fix_full</footer>
+<footer>build: admin_cascade_v13.9.6</footer>
 
 <script>
 /* Глобальная ловушка ошибок */
@@ -102,7 +131,7 @@ window.addEventListener('error', function(e){
   if(host) host.prepend(box);
 });
 
-/* ================= DATA ================ */
+/* ================= DATA (ИЗ ТВОЕГО СТАБИЛЬНОГО ФАЙЛА) ================ */
 const KEY="admin_cascade_v5_full_work_preview_full";
 let data={
   fields:[
@@ -153,7 +182,7 @@ try{
   }
 }catch(e){}
 
-/* ================= HELPERS ================ */
+/* ================= HELPERS (ИЗ ТВОЕГО ФАЙЛА) ================ */
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
 function byField(name){ return data.fields.find(function(f){ return f.field===name; }); }
 function normalize(){
@@ -188,7 +217,7 @@ function visibleFor(f){
   var entries=[]; for(var k in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,k)){ entries.push([k, f.visibleWhen[k]]); break; } }
   if(!entries.length) return true;
   var pair=entries[0]; var key=pair[0], val=pair[1];
-  if(!(key in previewState) || !previewState[key]) return false; // пусто — скрываем
+  if(!(key in previewState) || !previewState[key]) return false;
   if(Array.isArray(val)) return val.indexOf(previewState[key])>-1;
   return previewState[key]===val;
 }
@@ -200,22 +229,24 @@ function clearDescendants(parentField, childrenMap){
   });
 }
 
-/* ================= TABS ================ */
+/* ================= TABS (ДОБАВИЛ objform) ================ */
 Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(btn){
   btn.onclick=function(){
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.remove('active'); });
     btn.classList.add('active');
     var tab=btn.getAttribute('data-tab');
-    ['filters','fields','layout','preview'].forEach(function(id){
+    ['filters','fields','layout','preview','objform'].forEach(function(id){
       document.getElementById('tab-'+id).style.display = (id===tab)?'block':'none';
     });
     if(tab==='filters') renderGroups();
     if(tab==='fields')  renderFields();
     if(tab==='layout')  renderLayout();
     if(tab==='preview') renderPreview();
+    if(tab==='objform') renderObjForm();
   };
 });
-/* ================= FILTER GROUPS ================ */
+
+/* ================= FILTER GROUPS (как было) ================ */
 function addGroup(){ data.groups.push({name:'Новая линия',desc:'',filters:[]}); save(); renderGroups(); renderPreview(); }
 function removeGroup(i){ data.groups.splice(i,1); save(); renderGroups(); renderPreview(); }
 function addFieldToGroup(gi, fieldName){
@@ -278,7 +309,7 @@ function renderGroups(){
   box.appendChild(list);
 }
 
-/* ================= FIELDS ================ */
+/* ================= FIELDS (как было) ================ */
 function addField(){
   var n=data.fields.length+1; data.fields.push({label:'Поле '+n, field:'field_'+n, type:'text', desc:''});
   save(); renderFields(); renderPreview();
@@ -392,7 +423,8 @@ function renderFields(){
   });
   box.appendChild(list);
 }
-/* ================= LAYOUT ================ */
+
+/* ================= LAYOUT (как было) ================ */
 var nextId=100, dragState=null, resizeState=null;
 function addBlock(type){
   var id=++nextId; data.layout.push({id:id,type:type,title:(type==='filters'?'Фильтры':type.toUpperCase()),x:1,y:1,w:6,h:4});
@@ -451,13 +483,15 @@ function renderLayout(){
   function onResizeMove(e){
     if(!resizeState) return; var b=data.layout.find(function(x){return x.id===resizeState.id;}); if(!b) return;
     var dx=e.clientX-resizeState.startX; var dy=e.clientY-resizeState.startY;
-    var gw=Math.round(resizeState.baseW + dx/resizeState.colW);
+    var gw=Math.round(resizeState.baseW + dx/res
+    izeState.colW);
     var gh=Math.round(resizeState.baseH + dy/resizeState.rowH);
     gw=clamp(gw,1,12-(b.x-1)); gh=clamp(gh,1,24); b.w=gw; b.h=gh; renderLayout();
   }
   function onResizeEnd(){ if(resizeState){ save(); resizeState=null; } document.removeEventListener('mousemove', onResizeMove); }
 }
-/* ================= PREVIEW ================ */
+
+/* ================= PREVIEW (как было) ================ */
 function renderPreview(){
   var grid=document.getElementById('preview'); grid.innerHTML='';
   var rows = data.layout.length ? Math.max.apply(null, data.layout.map(function(b){return b.y+b.h-1;})) : 1;
@@ -564,7 +598,7 @@ function renderPreview(){
   });
 }
 
-/* ================= EXPORT / IMPORT / RESET ================ */
+/* ================= EXPORT / IMPORT / RESET (как было) ================ */
 document.getElementById('btnExport').onclick=function(){
   normalize();
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -590,10 +624,208 @@ document.getElementById('btnReset').onclick=function(){
   location.reload();
 };
 
-/* ================= INIT ================ */
+/* ================= НОВОЕ: КОНСТРУКТОР ФОРМЫ ОБЪЕКТОВ ================= */
+const OBJFORM_KEY = "objectFormConfig";
+const DEFAULT_OBJFORM = [
+  {key:"title",   label:"Заголовок",     type:"text",    required:true,  enabled:true},
+  {key:"address", label:"Адрес",         type:"text",    required:false, enabled:true},
+  {key:"price",   label:"Цена",          type:"number",  required:false, enabled:true},
+  {key:"rooms",   label:"Комнаты",       type:"number",  required:false, enabled:false},
+  {key:"area",    label:"Площадь, м²",   type:"number",  required:false, enabled:false},
+  {key:"status",  label:"Статус",        type:"select",  required:false, enabled:true, values:["sale:Продается","rent:Сдается"]},
+  {key:"images",  label:"Фотографии",    type:"images",  required:false, enabled:true},
+  {key:"coords",  label:"Координаты",    type:"coords",  required:false, enabled:true}
+];
+
+let objForm = (()=>{
+  try{
+    const raw = localStorage.getItem(OBJFORM_KEY);
+    if(!raw) return DEFAULT_OBJFORM.map(f=>({...f}));
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) return DEFAULT_OBJFORM.map(f=>({...f}));
+    return arr.map(f=>({enabled:false,required:false,type:"text",label:f.key,...f}));
+  }catch{ return DEFAULT_OBJFORM.map(f=>({...f})); }
+})();
+
+function ofSave(){ localStorage.setItem(OBJFORM_KEY, JSON.stringify(objForm)); }
+function ofValuesToText(f){
+  if(!f || !f.type) return "";
+  if(f.type==="select"){ return (f.values||[]).join(";"); }
+  if(f.type==="range"){ const mn=f.min??"", mx=f.max??"", st=f.step??""; return [mn,mx,st].join(","); }
+  return "";
+}
+function ofTextToValues(type, text){
+  if(type==="select"){ return { values:(text||"").split(";").map(s=>s.trim()).filter(Boolean) }; }
+  if(type==="range"){
+    const [mn,mx,st]=(text||"").split(",").map(s=>s.trim());
+    return { min:isFinite(+mn)?+mn:undefined, max:isFinite(+mx)?+mx:undefined, step:isFinite(+st)?+st:undefined };
+  }
+  return {};
+}
+function ofRender(){
+  const list = document.getElementById("ofList");
+  list.innerHTML="";
+  objForm.forEach((f,idx)=>{
+    const card=document.createElement("div");
+    card.className="of-card";
+    card.draggable=true;
+    card.dataset.index=idx;
+    card.innerHTML = `
+      <div class="title-row">
+        <div class="row">
+          <h3>${(f.label||f.key||("Поле "+(idx+1)))}</h3>
+          <small class="muted">(${f.key||""})</small>
+          <span class="muted">•</span>
+          <small class="muted">${f.enabled?"включено":"выключено"}</small>
+        </div>
+        <div class="row">
+          <button class="btn" data-act="up">↑</button>
+          <button class="btn" data-act="down">↓</button>
+          <button class="btn danger" data-act="del">Удалить</button>
+        </div>
+      </div>
+    `;
+    const grid=document.createElement("div"); grid.className="of-grid";
+
+    // Включить/выключить
+    let w=document.createElement("div"); w.innerHTML='<label>Включено</label>';
+    let chk=document.createElement("input"); chk.type="checkbox"; chk.checked=!!f.enabled;
+    chk.onchange=()=>{ f.enabled=chk.checked; ofSave(); ofRender(); ofPreview(); };
+    w.appendChild(chk); grid.appendChild(w);
+
+    // Обязательное
+    w=document.createElement("div"); w.innerHTML='<label>Обязательное</label>';
+    let req=document.createElement("input"); req.type="checkbox"; req.checked=!!f.required;
+    req.onchange=()=>{ f.required=req.checked; ofSave(); ofRender(); ofPreview(); };
+    w.appendChild(req); grid.appendChild(w);
+
+    // Ключ
+    w=document.createElement("div"); w.innerHTML='<label>Ключ</label>';
+    let key=document.createElement("input"); key.value=f.key||"";
+    key.oninput=e=>{ f.key=e.target.value.trim(); ofSave(); ofRender(); ofPreview(); };
+    w.appendChild(key); grid.appendChild(w);
+
+    // Метка
+    w=document.createElement("div"); w.innerHTML='<label>Метка</label>';
+    let lab=document.createElement("input"); lab.value=f.label||"";
+    lab.oninput=e=>{ f.label=e.target.value; ofSave(); ofPreview(); };
+    w.appendChild(lab); grid.appendChild(w);
+
+    // Тип
+    w=document.createElement("div"); w.innerHTML='<label>Тип</label>';
+    let sel=document.createElement("select");
+    ["text","number","textarea","select","range","images","coords"].forEach(t=>{
+      const o=document.createElement("option"); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; sel.appendChild(o);
+    });
+    sel.onchange=e=>{ f.type=e.target.value; ofSave(); ofRender(); ofPreview(); };
+    w.appendChild(sel); grid.appendChild(w);
+
+    // Значения (select/range)
+    w=document.createElement("div"); w.innerHTML='<label>Значения (для select: value:Label;… | для range: min,max,step)</label>';
+    let val=document.createElement("input"); val.value=ofValuesToText(f); val.placeholder="пример: sale:Продается;rent:Сдается";
+    val.oninput=e=>{ Object.assign(f, ofTextToValues(f.type, e.target.value)); ofSave(); };
+    w.appendChild(val); grid.appendChild(w);
+
+    card.appendChild(grid);
+
+    // drag
+    card.addEventListener("dragstart", ()=>{ card.classList.add("dragging"); window.__ofDragIndex=idx; });
+    card.addEventListener("dragend", ()=>{ card.classList.remove("dragging"); window.__ofDragIndex=null; });
+    card.addEventListener("dragover", e=>{ e.preventDefault(); });
+    card.addEventListener("drop", e=>{
+      e.preventDefault();
+      const from = window.__ofDragIndex, to = +card.dataset.index;
+      if(from==null || from===to) return;
+      const item = objForm.splice(from,1)[0];
+      objForm.splice(to,0,item);
+      ofSave(); ofRender(); ofPreview();
+    });
+
+    // actions
+    card.querySelectorAll("button[data-act]").forEach(b=>{
+      b.onclick=()=>{
+        const act=b.dataset.act;
+        const i=+card.dataset.index;
+        if(act==="del"){ objForm.splice(i,1); ofSave(); ofRender(); ofPreview(); }
+        if(act==="up" && i>0){ [objForm[i-1],objForm[i]]=[objForm[i],objForm[i-1]]; ofSave(); ofRender(); ofPreview(); }
+        if(act==="down" && i<objForm.length-1){ [objForm[i+1],objForm[i]]=[objForm[i],objForm[i+1]]; ofSave(); ofRender(); ofPreview(); }
+      };
+    });
+
+    list.appendChild(card);
+  });
+}
+function ofPreview(){
+  const box=document.getElementById("ofPreview");
+  box.innerHTML="";
+  const act = objForm.filter(f=>f.enabled);
+  act.forEach(f=>{
+    const cell=document.createElement("div");
+    const lab=document.createElement("label"); lab.textContent=f.label||f.key; cell.appendChild(lab);
+
+    let ctrl = document.createElement("input"); ctrl.style.width="100%";
+    switch(f.type){
+      case "textarea": ctrl=document.createElement("textarea"); ctrl.rows=3; break;
+      case "text": case "number": ctrl.type=f.type; break;
+      case "select":{
+        ctrl=document.createElement("select");
+        (f.values||[]).forEach(v=>{
+          const i=v.indexOf(":"); const value=i>-1?v.slice(0,i):v; const name=i>-1?v.slice(i+1):v;
+          const o=document.createElement("option"); o.value=value; o.textContent=name; ctrl.appendChild(o);
+        });
+        break;
+      }
+      case "range":{
+        const wrap=document.createElement("div"); wrap.className="row";
+        const a=document.createElement("input"); a.type="number"; a.placeholder="min";
+        const b=document.createElement("input"); b.type="number"; b.placeholder="max";
+        wrap.appendChild(a); wrap.appendChild(b); ctrl=wrap; break;
+      }
+      case "images":{
+        const btn=document.createElement("button"); btn.className="btn"; btn.textContent="Загрузить фото"; ctrl=btn; break;
+      }
+      case "coords":{
+        const btn=document.createElement("button"); btn.className="btn"; btn.textContent="Выбрать на карте"; ctrl=btn; break;
+      }
+    }
+    cell.appendChild(ctrl);
+    if(f.required){ const s=document.createElement("small"); s.className="muted"; s.textContent="обязательное"; cell.appendChild(s); }
+    box.appendChild(cell);
+  });
+}
+
+/* Кнопки вкладки формы объектов */
+document.getElementById("ofAdd").onclick=()=>{
+  objForm.push({key:"field_"+(objForm.length+1), label:"Поле "+(objForm.length+1), type:"text", required:false, enabled:true});
+  ofSave(); ofRender(); ofPreview();
+};
+document.getElementById("ofReset").onclick=()=>{
+  if(!confirm("Сбросить конфиг формы к стандартным?")) return;
+  objForm = DEFAULT_OBJFORM.map(f=>({...f}));
+  ofSave(); ofRender(); ofPreview();
+};
+document.getElementById("ofExport").onclick=()=>{
+  const blob=new Blob([JSON.stringify(objForm,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="objectFormConfig.json"; a.click();
+};
+document.getElementById("ofImport").onchange=(e)=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const j=JSON.parse(r.result);
+      objForm = Array.isArray(j)? j : (j.objectFormConfig||[]);
+      if(!Array.isArray(objForm)) throw new Error("Неверный формат");
+      ofSave(); ofRender(); ofPreview(); alert("Импортирован objectFormConfig");
+    }catch(err){ alert("Ошибка импорта: "+err.message); }
+  };
+  r.readAsText(f);
+};
+
+/* ================= INIT (как было + objform) ================ */
 try{
   normalize();
   renderGroups(); renderFields(); renderLayout(); renderPreview();
+  ofRender(); ofPreview();
 }catch(e){
   var box=document.createElement('div'); box.className='errorBox'; box.textContent='Ошибка инициализации: '+e.message;
   document.getElementById('tab-filters').appendChild(box);
