@@ -3,37 +3,51 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v15 — цвет+форма+иконка+удаление</title>
+<title>location_selector_v15 — каскад + цвет/форма/иконка + импорт фикс</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-:root{--bg:#0b0f16;--panel:#121826;--border:#273248;--text:#d7e2f2}
+:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
 header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border)}
 button{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:#1a2234;color:#d7e2f2;cursor:pointer}
+button:hover{border-color:var(--accent)}
 button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
 .badge{background:#23314d;border:1px solid #334567;border-radius:8px;padding:3px 8px;font-weight:700}
 .tabs{display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--border);background:#121826}
 .tab{padding:6px 12px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer}
 .tab.active{background:#2160ff;color:#fff}
-main{display:grid;grid-template-columns:440px 1fr;height:calc(100vh - 94px)}
+main{display:grid;grid-template-columns:460px 1fr;height:calc(100vh - 94px)}
 .sidebar{padding:10px;border-right:1px solid var(--border);background:#121826;overflow:auto}
-.panel{background:#172133;border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
+.panel{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
 h3{margin:0 0 8px 0}
 h4{margin:0 0 8px 0}
-input,select{width:100%;padding:6px;border-radius:6px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
-.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.list{display:grid;gap:6px}
+.item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#111a2a}
+.item .left{display:grid;gap:2px}
+.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.item .meta{color:var(--muted);font-size:12px}
+.tools{display:flex;gap:6px}
+.drag-handle{cursor:grab;opacity:.8}
+.dragging{opacity:.5;outline:1px dashed var(--accent)}
+.sep{height:1px;background:#243048;margin:8px 0}
+.help{font-size:12px;color:#9fb0c8}
+.note{background:#0e1524;border:1px dashed #32405a;padding:8px;border-radius:8px;color:#9fb0c8}
 #map{width:100%;height:100%}
 .checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
 .checkbox-grid label{display:flex;align-items:center;gap:6px;background:#111a2a;padding:6px 8px;border:1px solid #273248;border-radius:8px;cursor:pointer}
-.preview-icon img{width:18px;height:18px;display:inline-block;vertical-align:middle}
+.preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.preview-icon img{max-width:100%;max-height:100%;display:block}
 </style>
 </head>
 <body>
 <header>
   <span class="badge">dictionary v15</span>
   <button id="btnExport">Экспорт</button>
-  <label><input type="file" id="fileImport" style="display:none"><button>Импорт</button></label>
+  <button id="btnImport">Импорт</button>
+  <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
   <button id="btnReset" class="danger">Сброс</button>
 </header>
 
@@ -47,6 +61,7 @@ input,select{width:100%;padding:6px;border-radius:6px;border:1px solid #31405a;b
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
+      <div class="help">Сначала выбираешь родителя, потом появляются дети. Метки рисуются цветом/формой категории или иконкой.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -55,177 +70,412 @@ input,select{width:100%;padding:6px;border-radius:6px;border:1px solid #31405a;b
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const KEY="dict_v15";
-let db=JSON.parse(localStorage.getItem(KEY)||"null");
-if(!db){ db={categories:[]}; save(); }
-function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
-function uid(){ return Math.random().toString(36).slice(2,9); }
+/* ================= STORAGE ================= */
+const KEY="dict_v14"; // держим ту же ключевую запись, чтобы твои данные из v14 сохранились
+let db = loadDB();
 
-/* MAP */
+function loadDB(){
+  // пробуем v14, если пусто — v13/v12, иначе создаём пустую схему
+  const v14 = localStorage.getItem("dict_v14");
+  if(v14){ try{ const obj=JSON.parse(v14); normalize(obj); return obj; }catch(e){} }
+  const v13 = localStorage.getItem("dict_v13");
+  if(v13){ try{ const obj=JSON.parse(v13); normalize(obj); save(obj); return obj; }catch(e){} }
+  const v12 = localStorage.getItem("dict_v12");
+  if(v12){ try{ const obj=JSON.parse(v12); normalize(obj); save(obj); return obj; }catch(e){} }
+  const fresh={categories:[]}; save(fresh); return fresh;
+}
+function save(obj=db){ localStorage.setItem(KEY, JSON.stringify(obj)); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function normalize(obj){
+  if(!obj || typeof obj!=="object") obj={categories:[]};
+  obj.categories = Array.isArray(obj.categories)? obj.categories : [];
+  obj.categories.forEach(c=>{
+    if(!("type" in c)) c.type="select";
+    if(!("items" in c)) c.items=[];
+    if(!("color" in c)) c.color="#3388ff";
+    if(!("shape" in c)) c.shape="circle"; // circle|square|triangle
+    c.items.forEach(it=>{
+      if(!("id" in it)) it.id=uid();
+      if(!("name" in it)) it.name="Без имени";
+      if(!("lat" in it)) it.lat=null;
+      if(!("lng" in it)) it.lng=null;
+      if(!("parentId" in it)) it.parentId=null;
+    });
+  });
+}
+
+/* ================= MAP ================= */
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let markers=[];
 function clearMarkers(){ markers.forEach(m=>map.removeLayer(m)); markers=[]; }
 
-function markerIcon(cat,it){
-  if(cat.iconData){
+function markerIcon(cat){
+  if(cat.iconData){ // приоритет — пользовательская иконка
     return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
   }
-  let shape=cat.shape||"circle";
-  let color=cat.color||"#3388ff";
+  const shape=cat.shape||"circle";
+  const color=cat.color||"#3388ff";
   let html="";
   if(shape==="circle") html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
   if(shape==="square") html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
   if(shape==="triangle") html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
   return L.divIcon({className:"custom-icon",html,iconSize:[20,20],iconAnchor:[10,10]});
 }
-
-function addMarker(lat,lng,label,cat,it){
-  const m=L.marker([lat,lng],{icon:markerIcon(cat,it)}).addTo(map).bindPopup(label);
+function addMarker(lat,lng,label,cat){
+  const m=L.marker([lat,lng],{icon:markerIcon(cat)}).addTo(map).bindPopup(label);
   markers.push(m);
 }
+function showDraggable(it,cat){
+  clearMarkers();
+  const mk=L.marker([it.lat,it.lng],{draggable:true,icon:markerIcon(cat)}).addTo(map).bindPopup(it.name).openPopup();
+  markers.push(mk); map.setView([it.lat,it.lng],14);
+  mk.on('dragend', e=>{const p=e.target.getLatLng(); it.lat=p.lat; it.lng=p.lng; save();});
+}
 
-/* EDITOR */
+/* ================= DND ================= */
+let dnd={type:null,catIndex:null,itemIndex:null};
+function dndStart(e,type,catIndex,itemIndex=null){ dnd={type,catIndex,itemIndex}; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed="move"; }
+function dndEnd(e){ e.currentTarget.classList.remove('dragging'); dnd={type:null,catIndex:null,itemIndex:null}; }
+function dndOver(e){ e.preventDefault(); e.dataTransfer.dropEffect="move"; }
+function dndDropCategory(e,targetIndex){
+  e.preventDefault();
+  if(dnd.type!=="cat"||dnd.catIndex===targetIndex) return;
+  const arr=db.categories; const elem=arr.splice(dnd.catIndex,1)[0];
+  arr.splice(targetIndex,0,elem); save(); renderAll();
+}
+function dndDropItem(e,catIndex,targetItemIndex){
+  e.preventDefault();
+  if(dnd.type!=="item"||dnd.catIndex!==catIndex||dnd.itemIndex===targetItemIndex) return;
+  const arr=db.categories[catIndex].items||[]; const elem=arr.splice(dnd.itemIndex,1)[0];
+  arr.splice(targetItemIndex,0,elem); save(); renderAll();
+}
+
+/* ================= EDITOR ================= */
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
   $editor.innerHTML="";
+
+  // Создание категории
+  const create=document.createElement('div'); create.className='panel';
+  create.innerHTML=`
+    <h3>Новая категория</h3>
+    <div class="row">
+      <input id="newCatName" placeholder="Название (Страны, Города, Районы, Метро...)"/>
+      <select id="newCatType">
+        <option value="select">Select (один)</option>
+        <option value="checkbox">Checkbox (несколько)</option>
+      </select>
+      <select id="newCatParent">
+        <option value="">(нет родителя)</option>
+        ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="row">
+      <span class="preview-icon" id="newIconPreview">icon</span>
+      <input type="color" id="newCatColor" value="#3388ff"/>
+      <select id="newCatShape">
+        <option value="circle">Круг</option>
+        <option value="square">Квадрат</option>
+        <option value="triangle">Треугольник</option>
+      </select>
+      <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
+      <button id="btnAddCat">+ Добавить</button>
+    </div>
+    <div class="help">Чтобы каскад работал, укажи родителя у категории (например, Города → Страны, Районы → Города).</div>
+  `;
+  $editor.appendChild(create);
+
+  const newIconInput = create.querySelector('#newCatIcon');
+  const newIconPreview = create.querySelector('#newIconPreview');
+  let newIconData=null;
+  newIconInput.onchange=e=>{
+    const f=e.target.files[0]; if(!f){ newIconData=null; newIconPreview.textContent='icon'; return; }
+    const r=new FileReader(); r.onload=ev=>{ newIconData=ev.target.result; newIconPreview.innerHTML=`<img src="${newIconData}">`; }; r.readAsDataURL(f);
+  };
+  create.querySelector('#btnAddCat').onclick=()=>{
+    const name=document.getElementById('newCatName').value.trim(); if(!name) return;
+    const type=document.getElementById('newCatType').value;
+    const parent=document.getElementById('newCatParent').value||null;
+    const color=document.getElementById('newCatColor').value;
+    const shape=document.getElementById('newCatShape').value;
+    const cat={id:uid(), name, type, parentCategoryId:parent, color, shape, items:[]};
+    if(newIconData) cat.iconData=newIconData;
+    db.categories.push(cat); save(); renderAll();
+  };
+
+  // Список категорий
   db.categories.forEach((cat,ci)=>{
-    const sec=document.createElement('div'); sec.className='panel';
-    const iconPrev=document.createElement('span'); 
-    iconPrev.className='preview-icon'; 
-    iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
-    sec.innerHTML=`
-      <h3>${cat.name} (${cat.type})</h3>
-      <div class="row">
-        <input value="${cat.name}" id="name${ci}" placeholder="Название"/>
-        <select id="type${ci}">
-          <option value="select"${cat.type==="select"?" selected":""}>Select</option>
-          <option value="checkbox"${cat.type==="checkbox"?" selected":""}>Checkbox</option>
-        </select>
-      </div>
-      <div class="row">
-        <input type="color" id="color${ci}" value="${cat.color||"#3388ff"}"/>
-        <select id="shape${ci}">
-          <option value="circle"${cat.shape==="circle"?" selected":""}>Круг</option>
-          <option value="square"${cat.shape==="square"?" selected":""}>Квадрат</option>
-          <option value="triangle"${cat.shape==="triangle"?" selected":""}>Треугольник</option>
-        </select>
-      </div>
-      <div class="row" id="iconRow${ci}"></div>
-      <div class="row">
-        <button id="save${ci}">Сохранить</button>
-      </div>
-    `;
-    $editor.appendChild(sec);
-    const row=document.getElementById(`iconRow${ci}`);
-    const iconInput=document.createElement('input'); 
-    iconInput.type='file'; iconInput.accept='image/png,image/svg+xml';
-    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='Убрать иконку';
-    row.append(iconPrev,iconInput,btnClearIcon);
-    document.getElementById(`save${ci}`).onclick=()=>{
-      cat.name=document.getElementById(`name${ci}`).value;
-      cat.type=document.getElementById(`type${ci}`).value;
-      cat.color=document.getElementById(`color${ci}`).value;
-      cat.shape=document.getElementById(`shape${ci}`).value;
-      save(); renderAll();
-    };
+    const sec=document.createElement('div'); sec.className='panel'; sec.draggable=true;
+    sec.addEventListener('dragstart', e=>dndStart(e,'cat',ci));
+    sec.addEventListener('dragend', dndEnd);
+    sec.addEventListener('dragover', dndOver);
+    sec.addEventListener('drop', e=>dndDropCategory(e,ci));
+
+    // Заголовок
+    const header=document.createElement('div'); header.className='row';
+    const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
+    const handle=document.createElement('span'); handle.textContent='↕'; handle.title='Перетащи категорию'; handle.className='drag-handle';
+    header.append(title,handle); sec.appendChild(header);
+
+    // Настройки категории
+    const cfg=document.createElement('div'); cfg.className='row';
+    const inpName=document.createElement('input'); inpName.value=cat.name; inpName.placeholder='Название';
+    const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
+    const selParent=document.createElement('select');
+    selParent.innerHTML=`<option value="">(нет родителя)</option>${db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('')}`;
+    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff';
+    const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s==='circle'?'Круг':s==='square'?'Квадрат':'Треугольник'; if((cat.shape||'circle')===s) o.selected=true; shape.appendChild(o);});
+    const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml';
+    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+    const btnSave=document.createElement('button'); btnSave.textContent='Сохранить';
+    const btnDel=document.createElement('button'); btnDel.textContent='Удалить'; btnDel.className='danger';
+
     iconInput.onchange=e=>{
-      const f=e.target.files[0]; if(!f)return;
-      const r=new FileReader();
-      r.onload=ev=>{
-        cat.iconData=ev.target.result; 
-        iconPrev.innerHTML=`<img src="${cat.iconData}">`; 
-        save();
-      };
+      const f=e.target.files[0]; if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); return; }
+      const r=new FileReader(); r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); };
       r.readAsDataURL(f);
     };
-    btnClearIcon.onclick=()=>{
-      delete cat.iconData;
-      iconPrev.textContent='icon';
-      save();
+    btnSave.onclick=()=>{
+      cat.name=inpName.value.trim()||cat.name;
+      cat.type=selType.value;
+      cat.parentCategoryId=selParent.value||null;
+      cat.color=col.value;
+      cat.shape=shape.value;
+      save(); renderAll();
     };
+    btnDel.onclick=()=>{ if(confirm('Удалить категорию и её элементы?')){ db.categories.splice(ci,1); save(); renderAll(); } };
+
+    cfg.append(inpName, selType, selParent, col, shape, iconInput, iconPrev, btnSave, btnDel);
+    sec.appendChild(cfg);
+
+    sec.appendChild(document.createElement('div')).className='sep';
+
+    // Элементы
+    const list=document.createElement('div'); list.className='list';
+    (cat.items||[]).forEach((it,ii)=>{
+      const line=document.createElement('div'); line.className='item'; line.draggable=true;
+      line.addEventListener('dragstart', e=>dndStart(e,'item',ci,ii));
+      line.addEventListener('dragend', dndEnd);
+      line.addEventListener('dragover', dndOver);
+      line.addEventListener('drop', e=>dndDropItem(e,ci,ii));
+
+      const left=document.createElement('div'); left.className='left';
+      const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
+      const parentLabel = it.parentId ? (' • род.: '+resolveItemName(it.parentId)) : '';
+      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}${parentLabel}`;
+      left.append(nm,meta);
+
+      const tools=document.createElement('div'); tools.className='tools';
+      const edit=document.createElement('button'); edit.textContent='✎'; edit.title='Переименовать';
+      edit.onclick=()=>{ const nn=prompt('Новое имя', it.name); if(nn){ it.name=nn.trim(); save(); renderAll(); } };
+
+      const setParent=document.createElement('button'); setParent.textContent='↗ родитель'; setParent.title='Назначить родителя';
+      setParent.onclick=()=>{
+        if(!cat.parentCategoryId){ alert('У категории нет родителя. Сначала задайте родителя у категории.'); return; }
+        const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
+        if(!parentCat || !parentCat.items.length){ alert('В родительской категории нет элементов.'); return; }
+        const id = prompt('ID родителя (пусто — убрать)\n'+parentCat.items.map(x=>`${x.name} — ${x.id}`).join('\n'), it.parentId||'');
+        if(id!==null){ it.parentId = id.trim()||null; save(); renderAll(); }
+      };
+
+      const place=document.createElement('button'); place.textContent='📍'; place.title='Поставить метку';
+      place.onclick=()=>{ alert('Кликни по карте для: '+it.name); map.once('click', e=>{ it.lat=e.latlng.lat; it.lng=e.latlng.lng; save(); showDraggable(it,cat); }); };
+
+      const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка'; clearBtn.title='Убрать метку';
+      clearBtn.onclick=()=>{ it.lat=null; it.lng=null; save(); clearMarkers(); renderAll(); };
+
+      const del=document.createElement('button'); del.textContent='❌'; del.className='danger'; del.title='Удалить элемент';
+      del.onclick=()=>{ if(confirm('Удалить "'+it.name+'"?')){ cat.items.splice(ii,1); save(); renderAll(); } };
+
+      line.onclick=()=>{ if(it.lat!=null && it.lng!=null) showDraggable(it,cat); };
+      tools.append(edit,setParent,place,clearBtn,del);
+      line.append(left,tools); list.appendChild(line);
+    });
+    sec.appendChild(list);
+
+    // Добавление элемента
+    const addRow=document.createElement('div'); addRow.className='row';
+    const inp=document.createElement('input'); inp.placeholder='Новый элемент';
+    const parentPicker=document.createElement('select');
+    if(cat.parentCategoryId){
+      const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
+      parentPicker.innerHTML = `<option value="">(без родителя)</option>${(parentCat?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}`;
+    }else{
+      parentPicker.innerHTML = `<option value="">(родитель не задан)</option>`;
+    }
+    const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
+    addBtn.onclick=()=>{
+      const nm=inp.value.trim()||'Новый';
+      cat.items=cat.items||[];
+      cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId: parentPicker.value||null});
+      inp.value=''; save(); renderAll();
+    };
+    addRow.append(inp,parentPicker,addBtn); sec.appendChild(addRow);
+
+    $editor.appendChild(sec);
   });
-  const add=document.createElement('div'); add.className='panel';
-  add.innerHTML=`<h3>Новая категория</h3>
-    <div class="row">
-      <input id="newName" placeholder="Название"/>
-      <select id="newType"><option value="select">Select</option><option value="checkbox">Checkbox</option></select>
-      <input type="color" id="newColor" value="#3388ff"/>
-      <select id="newShape"><option value="circle">Круг</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option></select>
-      <input type="file" id="newIcon" accept="image/png,image/svg+xml"/>
-      <button id="btnAdd">+ Добавить</button>
-    </div>`;
-  $editor.appendChild(add);
-  document.getElementById('btnAdd').onclick=()=>{
-    const nm=document.getElementById('newName').value.trim()||"Новая";
-    const tp=document.getElementById('newType').value;
-    const col=document.getElementById('newColor').value;
-    const sh=document.getElementById('newShape').value;
-    let newCat={id:uid(),name:nm,type:tp,color:col,shape:sh,items:[]};
-    const file=document.getElementById('newIcon').files[0];
-    if(file){
-      const r=new FileReader();
-      r.onload=ev=>{newCat.iconData=ev.target.result; db.categories.push(newCat); save(); renderAll();};
-      r.readAsDataURL(file);
-    }else{ db.categories.push(newCat); save(); renderAll(); }
-  };
 }
 
-/* PREVIEW */
+function resolveItemName(id){
+  for(const c of db.categories){
+    const f=(c.items||[]).find(x=>x.id===id);
+    if(f) return f.name;
+  }
+  return null;
+}
+
+/* ================= PREVIEW (CASCADE) ================= */
 const $cascade=document.getElementById('cascadeBox');
-let selected={};
+let selected={}; // categoryId -> string | Set<string>
+
+function topoOrderCategories(){
+  const cats=[...db.categories];
+  const idToNode=new Map(cats.map(c=>[c.id,{c,indeg:0,kids:[]}]));
+  for(const {c} of idToNode.values()){
+    if(c.parentCategoryId && idToNode.has(c.parentCategoryId)){
+      idToNode.get(c.parentCategoryId).kids.push(c.id);
+      idToNode.get(c.id).indeg++;
+    }
+  }
+  const q=[]; for(const [id,node] of idToNode){ if(node.indeg===0) q.push(id); }
+  const order=[];
+  while(q.length){
+    const id=q.shift(); order.push(idToNode.get(id).c);
+    for(const kid of idToNode.get(id).kids){
+      const kn=idToNode.get(kid); kn.indeg--; if(kn.indeg===0) q.push(kid);
+    }
+  }
+  const set=new Set(order.map(c=>c.id));
+  for(const c of cats) if(!set.has(c.id)) order.push(c);
+  return order;
+}
+function getSelectedIds(catId){
+  const cat=db.categories.find(x=>x.id===catId);
+  const v=selected[catId];
+  if(!v) return [];
+  return (cat && cat.type==='checkbox') ? Array.from(v) : (v?[v]:[]);
+}
+function dropChildrenSelections(parentCatId){
+  const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
+  for(const ch of children){
+    delete selected[ch.id];
+    dropChildrenSelections(ch.id);
+  }
+}
+
 function renderPreview(){
   $cascade.innerHTML=""; clearMarkers();
-  db.categories.forEach(cat=>{
+  const ordered=topoOrderCategories();
+
+  ordered.forEach(cat=>{
     const box=document.createElement('div'); box.className='panel';
     const h=document.createElement('h4'); h.textContent=cat.name; box.appendChild(h);
+
+    // родитель выбран?
+    let parentIds=null;
+    if(cat.parentCategoryId){
+      const parentSelected=getSelectedIds(cat.parentCategoryId);
+      if(parentSelected.length===0){
+        const note=document.createElement('div'); note.className='note';
+        note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name || 'родителя');
+        box.appendChild(note); $cascade.appendChild(box); return;
+      }
+      parentIds=parentSelected;
+    }
+
+    // отфильтрованные элементы
+    let items=(cat.items||[]);
+    if(parentIds){ items=items.filter(it=> it.parentId && parentIds.includes(it.parentId)); }
+
     if(cat.type==='select'){
-      const sel=document.createElement('select');
-      sel.innerHTML='<option value="">— выберите —</option>'+ (cat.items||[]).map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
-      sel.value=selected[cat.id]||"";
+      const sel=document.createElement('select'); sel.style.width='100%';
+      sel.innerHTML = `<option value="">— выберите —</option>` + items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
       sel.onchange=()=>{
-        selected[cat.id]=sel.value||null; clearMarkers();
-        const it=(cat.items||[]).find(x=>x.id===sel.value);
-        if(it && it.lat && it.lng){ addMarker(it.lat,it.lng,it.name,cat,it); map.setView([it.lat,it.lng],13); }
+        selected[cat.id]=sel.value||null;
+        clearMarkers();
+        const it=items.find(x=>x.id===sel.value);
+        if(it && it.lat!=null && it.lng!=null){ addMarker(it.lat,it.lng,it.name,cat); map.setView([it.lat,it.lng],13); }
+        dropChildrenSelections(cat.id);
+        renderPreview();
       };
       box.appendChild(sel);
     }else{
       const grid=document.createElement('div'); grid.className='checkbox-grid';
-      const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
-      (cat.items||[]).forEach(it=>{
+      const set = selected[cat.id] instanceof Set ? selected[cat.id] : new Set();
+      items.forEach(it=>{
         const lbl=document.createElement('label');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
         cb.onchange=()=>{
           if(cb.checked) set.add(it.id); else set.delete(it.id);
-          selected[cat.id]=set; clearMarkers();
-          for(const id of set){
-            const itm=cat.items.find(x=>x.id===id);
-            if(itm && itm.lat && itm.lng) addMarker(itm.lat,itm.lng,itm.name,cat,itm);
+          selected[cat.id]=set;
+          clearMarkers();
+          for(const oid of set){
+            const item=items.find(x=>x.id===oid);
+            if(item && item.lat!=null && item.lng!=null) addMarker(item.lat,item.lng,item.name,cat);
           }
+          dropChildrenSelections(cat.id);
+          renderPreview();
         };
         lbl.append(cb,document.createTextNode(it.name)); grid.appendChild(lbl);
       });
       box.appendChild(grid);
+
+      // первичная отрисовка маркеров для выбранных
+      for(const oid of set){
+        const it=items.find(x=>x.id===oid);
+        if(it && it.lat!=null && it.lng!=null) addMarker(it.lat,it.lng,it.name,cat);
+      }
     }
+
     $cascade.appendChild(box);
   });
 }
 
-/* EXPORT/IMPORT/RESET */
-document.getElementById('btnExport').onclick=()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dict_v15.json';a.click();};
-document.getElementById('fileImport').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save();selected={};renderAll();}catch(err){alert('Ошибка импорта');}};r.readAsText(f);};
-document.getElementById('btnReset').onclick=()=>{localStorage.removeItem(KEY);location.reload();};
+/* ================= EXPORT / IMPORT / RESET / TABS ================= */
+document.getElementById('btnExport').onclick=()=>{
+  normalize(db);
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v15.json'; a.click();
+};
+
+document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      let obj=JSON.parse(r.result);
+      // поддержка разных форматов
+      if(Array.isArray(obj.categories)) {
+        // ок
+      } else if (obj && obj.db && Array.isArray(obj.db.categories)) {
+        obj = obj.db;
+      } else {
+        throw new Error('В файле нет поля categories');
+      }
+      normalize(obj);
+      db=obj; save(); selected={}; renderAll();
+      alert('Импортировано');
+    }catch(err){ alert('Ошибка импорта: '+err.message); }
+  };
+  r.readAsText(f);
+};
+
+document.getElementById('btnReset').onclick=()=>{ if(confirm('Очистить всё?')){ localStorage.removeItem(KEY); location.reload(); } };
+
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
     const which=tab.dataset.tab;
-    document.getElementById('editorTab').style.display=which==='editor'?'block':'none';
-    document.getElementById('previewTab').style.display=which==='preview'?'block':'none';
+    document.getElementById('editorTab').style.display = which==='editor'?'block':'none';
+    document.getElementById('previewTab').style.display = which==='preview'?'block':'none';
   };
 });
 
-/* INIT */
+/* ================= INIT ================= */
 function renderAll(){ renderEditor(); renderPreview(); }
 renderAll();
 </script>
