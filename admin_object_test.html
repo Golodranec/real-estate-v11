@@ -80,28 +80,49 @@ function addObjField(){
 function removeObjField(idx){objFormConfig.splice(idx,1);saveObjForm();renderObjForm();}
 
 function renderObjForm(){
-  let box=document.getElementById("objFields"); box.innerHTML="";
+  let box=document.getElementById("objFields"); 
+  box.innerHTML="";
   objFormConfig.forEach((f,i)=>{
-    let card=document.createElement("div"); card.className="card";
+    let card=document.createElement("div"); 
+    card.className="card";
     card.innerHTML=`
-      <div class="row"><h3>${f.label}</h3><button class="btn danger" onclick="removeObjField(${i})">Удалить</button></div>
+      <div class="row">
+        <h3>${f.label}</h3>
+        <button class="btn danger" onclick="removeObjField(${i})">Удалить</button>
+      </div>
       <div class="form-grid">
-        <div><label>Заголовок</label><input value="${f.label}" oninput="objFormConfig[${i}].label=this.value;saveObjForm();renderObjForm();"></div>
-        <div><label>Имя поля</label><input value="${f.name}" oninput="objFormConfig[${i}].name=this.value;saveObjForm();"></div>
+        <div><label>Заголовок</label><input value="${f.label}" data-idx="${i}" data-field="label"></div>
+        <div><label>Имя поля</label><input value="${f.name}" data-idx="${i}" data-field="name"></div>
         <div><label>Тип</label>
-          <select onchange="objFormConfig[${i}].type=this.value;saveObjForm();renderObjForm();">
+          <select data-idx="${i}" data-field="type">
             ${["text","number","select","range","images","coords"].map(t=>`<option value="${t}" ${f.type===t?"selected":""}>${t}</option>`).join("")}
           </select>
         </div>
-        <div><label>Обязательное</label><input type="checkbox" ${f.required?"checked":""} onchange="objFormConfig[${i}].required=this.checked;saveObjForm();"></div>
+        <div><label>Обязательное</label><input type="checkbox" data-idx="${i}" data-field="required" ${f.required?"checked":""}></div>
       </div>`;
     if(f.type==="select"){
-      let opt=document.createElement("div"); opt.innerHTML=`<label>Опции (через запятую)</label><textarea rows="2">${f.options?f.options.join(", "):""}</textarea>`;
-      opt.querySelector("textarea").oninput=function(){objFormConfig[i].options=this.value.split(",").map(s=>s.trim()).filter(Boolean);saveObjForm();renderObjForm();};
+      let opt=document.createElement("div"); 
+      opt.innerHTML=`<label>Опции (через запятую)</label>
+                     <textarea rows="2" data-idx="${i}" data-field="options">${f.options?f.options.join(", "):""}</textarea>`;
       card.appendChild(opt);
     }
     box.appendChild(card);
   });
+
+  // навешиваем обработчики после рендера
+  box.querySelectorAll("input[data-field], select[data-field], textarea[data-field]").forEach(el=>{
+    el.oninput=el.onchange=function(){
+      let idx=parseInt(el.dataset.idx);
+      let field=el.dataset.field;
+      if(field==="required") objFormConfig[idx][field]=el.checked;
+      else if(field==="options") objFormConfig[idx][field]=el.value.split(",").map(s=>s.trim()).filter(Boolean);
+      else objFormConfig[idx][field]=el.value;
+      saveObjForm();
+      if(field==="type"){ renderObjForm(); } // перерисовываем только если тип изменился
+      renderObjPreview();
+    };
+  });
+
   renderObjPreview();
 }
 
