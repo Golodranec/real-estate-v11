@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Справочник локаций v7 — редактор + предпросмотр</title>
+<title>Справочник v8 — селекты + чекбоксы</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -29,12 +29,14 @@ input,select{width:100%;padding:6px;border-radius:6px;border:1px solid #31405a;b
 .tools{display:flex;gap:6px}
 small.muted{color:var(--muted)}
 #map{width:100%;height:100%}
-.previewSel{margin:6px 0}
+.previewSel{margin:6px 0;width:100%}
+.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+.checkbox-grid label{display:flex;align-items:center;gap:4px;background:#111a2a;padding:4px 6px;border-radius:6px;cursor:pointer}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v7</span>
+  <span class="badge">dictionary v8</span>
   <button id="btnExport">Экспорт</button>
   <label><input type="file" id="fileImport" style="display:none"><button>Импорт</button></label>
   <button id="btnReset" class="danger">Сброс</button>
@@ -48,7 +50,7 @@ small.muted{color:var(--muted)}
 <main>
   <aside class="sidebar" id="editorTab"></aside>
   <aside class="sidebar" id="previewTab" style="display:none">
-    <div class="panel"><h3>Предпросмотр каскада</h3><div id="cascadeBox"></div></div>
+    <div class="panel"><h3>Предпросмотр</h3><div id="cascadeBox"></div></div>
   </aside>
   <div id="map"></div>
 </main>
@@ -56,14 +58,18 @@ small.muted{color:var(--muted)}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ====== STORAGE ====== */
-const KEY="dict_v7";
+const KEY="dict_v8";
 let db = JSON.parse(localStorage.getItem(KEY) || "null");
 if(!db){
   db = {
     categories:[
-      {id:uid(), name:"Страны", parentCategoryId:null, items:[{id:uid(), name:"Узбекистан", lat:41.3, lng:69.2, parentId:null}]},
-      {id:uid(), name:"Города", parentCategoryId:null, items:[{id:uid(), name:"Ташкент", lat:41.311, lng:69.279, parentId:null}]},
-      {id:uid(), name:"Районы", parentCategoryId:null, items:[{id:uid(), name:"Юнусабад", lat:41.367, lng:69.287, parentId:null}]}
+      {id:uid(), name:"Страны", type:"select", parentCategoryId:null, items:[{id:uid(), name:"Узбекистан", lat:41.3, lng:69.2, parentId:null}]},
+      {id:uid(), name:"Города", type:"select", parentCategoryId:null, items:[{id:uid(), name:"Ташкент", lat:41.311, lng:69.279, parentId:null}]},
+      {id:uid(), name:"Районы", type:"checkbox", parentCategoryId:null, items:[
+        {id:uid(), name:"Юнусабад", lat:41.367, lng:69.287, parentId:null},
+        {id:uid(), name:"Мирабад", lat:41.315, lng:69.275, parentId:null},
+        {id:uid(), name:"Чиланзар", lat:41.285, lng:69.204, parentId:null}
+      ]}
     ]
   };
   save();
@@ -74,36 +80,18 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 /* ====== MAP ====== */
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-let marker=null; let placeMode=null;
-map.on("click", e=>{
-  if(placeMode){
-    const {lat,lng}=e.latlng;
-    placeMode(lat,lng); placeMode=null;
-  }
-});
-function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
-  if(marker) map.removeLayer(marker);
-  marker=L.marker([lat,lng],{draggable}).addTo(map).bindPopup(label).openPopup();
-  map.setView([lat,lng],14);
-  if(draggable && onDragEnd){
-    marker.on("dragend", e=>{
-      const p=e.target.getLatLng();
-      onDragEnd(p.lat,p.lng);
-    });
-  }
-}
+let markers=[];
 
-/* ====== EDITOR RENDER ====== */
+function clearMarkers(){ markers.forEach(m=>map.removeLayer(m)); markers=[]; }
+function addMarker(lat,lng,label){ const m=L.marker([lat,lng]).addTo(map).bindPopup(label); markers.push(m); }
+
+/* ====== EDITOR ====== */
 const $editor=$("#editorTab");
 function renderEditor(){
   $editor.innerHTML="";
-  const addPanel=document.createElement("div"); addPanel.className="panel";
-  addPanel.innerHTML=`<h3>Добавить категорию</h3><div class="row"><input id="newCatName" placeholder="Название категории"/><button id="btnAddCat">+ Добавить</button></div>`;
-  $editor.appendChild(addPanel);
-
   db.categories.forEach(cat=>{
     const sec=document.createElement("div"); sec.className="panel";
-    const h=document.createElement("h3"); h.textContent=cat.name; sec.appendChild(h);
+    const h=document.createElement("h3"); h.textContent=cat.name+" ("+cat.type+")"; sec.appendChild(h);
     const list=document.createElement("div"); list.className="list";
     cat.items.forEach((it,idx)=>{
       const line=document.createElement("div"); line.className="item";
@@ -112,36 +100,55 @@ function renderEditor(){
       const edit=document.createElement("button"); edit.textContent="✎";
       edit.onclick=()=>{ const nn=prompt("Новое имя",it.name); if(nn){ it.name=nn; save(); renderAll(); } };
       const place=document.createElement("button"); place.textContent="📍";
-      place.onclick=()=>{ alert("Кликни по карте, чтобы поставить метку для "+it.name); placeMode=(lat,lng)=>{ it.lat=lat; it.lng=lng; save(); showMarker(lat,lng,it.name,true,(la,ln)=>{it.lat=la;it.lng=ln;save();renderAll();});renderAll(); }; };
+      place.onclick=()=>{ alert("Кликни по карте для "+it.name); map.once("click", e=>{it.lat=e.latlng.lat; it.lng=e.latlng.lng; save(); renderAll();}); };
       const del=document.createElement("button"); del.textContent="❌"; del.className="danger";
-      del.onclick=()=>{ if(confirm("Удалить "+it.name+"?")){ cat.items.splice(idx,1); save(); renderAll(); } };
-      line.onclick=()=>{ if(it.lat && it.lng) showMarker(it.lat,it.lng,it.name); };
+      del.onclick=()=>{ if(confirm("Удалить?")){ cat.items.splice(idx,1); save(); renderAll(); } };
+      line.onclick=()=>{ if(it.lat&&it.lng) {clearMarkers(); addMarker(it.lat,it.lng,it.name);} };
       tools.append(edit,place,del); line.append(name,tools); list.appendChild(line);
     });
     const row=document.createElement("div"); row.className="row";
     const inp=document.createElement("input"); inp.placeholder="Новый элемент";
     const btn=document.createElement("button"); btn.textContent="+ Новый";
-    btn.onclick=()=>{ const name=inp.value.trim()||"Новый"; cat.items.push({id:uid(),name,lat:null,lng:null,parentId:null}); save(); renderAll(); };
+    btn.onclick=()=>{ const nm=inp.value.trim()||"Новый"; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:null}); save(); renderAll(); };
     row.append(inp,btn); sec.appendChild(list); sec.appendChild(row);
     $editor.appendChild(sec);
   });
-  $("#btnAddCat").onclick=()=>{ const nm=$("#newCatName").value.trim(); if(!nm) return; db.categories.push({id:uid(),name:nm,parentCategoryId:null,items:[]}); save(); renderAll(); };
 }
 
-/* ====== PREVIEW RENDER ====== */
+/* ====== PREVIEW ====== */
 const $cascade=$("#cascadeBox");
 function renderPreview(){
   $cascade.innerHTML="";
-  let selects={};
-  db.categories.forEach((cat,ci)=>{
-    const sel=document.createElement("select"); sel.className="previewSel";
-    sel.innerHTML="<option value=''>— "+cat.name+" —</option>";
-    cat.items.forEach(it=>{ sel.innerHTML+=`<option value='${it.id}'>${it.name}</option>`; });
-    sel.onchange=()=>{
-      const it=cat.items.find(x=>x.id===sel.value);
-      if(it && it.lat && it.lng) showMarker(it.lat,it.lng,it.name);
-    };
-    $cascade.appendChild(sel);
+  clearMarkers();
+  db.categories.forEach(cat=>{
+    const wrap=document.createElement("div"); wrap.className="panel";
+    const title=document.createElement("h4"); title.textContent=cat.name; wrap.appendChild(title);
+
+    if(cat.type==="select"){
+      const sel=document.createElement("select"); sel.className="previewSel";
+      sel.innerHTML="<option value=''>— выберите —</option>";
+      cat.items.forEach(it=>{ sel.innerHTML+=`<option value='${it.id}'>${it.name}</option>`; });
+      sel.onchange=()=>{ const it=cat.items.find(x=>x.id===sel.value); if(it&&it.lat&&it.lng){ clearMarkers(); addMarker(it.lat,it.lng,it.name); map.setView([it.lat,it.lng],13);} };
+      wrap.appendChild(sel);
+    }else if(cat.type==="checkbox"){
+      const grid=document.createElement("div"); grid.className="checkbox-grid";
+      cat.items.forEach(it=>{
+        const label=document.createElement("label");
+        const cb=document.createElement("input"); cb.type="checkbox"; cb.value=it.id;
+        cb.onchange=()=>{
+          clearMarkers();
+          cat.items.filter(x=>grid.querySelectorAll("input:checked")).forEach(xx=>{ if(xx.lat&&xx.lng) addMarker(xx.lat,xx.lng,xx.name); });
+          grid.querySelectorAll("input:checked").forEach(ch=>{
+            const item=cat.items.find(x=>x.id===ch.value);
+            if(item&&item.lat&&item.lng) addMarker(item.lat,item.lng,item.name);
+          });
+        };
+        label.append(cb,document.createTextNode(it.name));
+        grid.appendChild(label);
+      });
+      wrap.appendChild(grid);
+    }
+    $cascade.appendChild(wrap);
   });
 }
 
@@ -149,10 +156,10 @@ function renderPreview(){
 function renderAll(){ renderEditor(); renderPreview(); }
 function $(s){ return document.querySelector(s); }
 
-/* ====== EXPORT/IMPORT/RESET ====== */
-$("#btnExport").onclick=()=>{ const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="dict_v7.json"; a.click(); };
+/* ====== EXPORT/IMPORT ====== */
+$("#btnExport").onclick=()=>{ const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="dict_v8.json"; a.click(); };
 $("#fileImport").onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ db=JSON.parse(r.result); save(); renderAll(); alert("Импортировано!"); }catch(err){ alert("Ошибка импорта"); } }; r.readAsText(f); };
-$("#btnReset").onclick=()=>{ if(confirm("Очистить справочник?")){ localStorage.removeItem(KEY); location.reload(); } };
+$("#btnReset").onclick=()=>{ if(confirm("Очистить?")){ localStorage.removeItem(KEY); location.reload(); } };
 
 /* ====== TAB SWITCH ====== */
 document.querySelectorAll(".tab").forEach(tab=>{
