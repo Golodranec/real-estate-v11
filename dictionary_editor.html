@@ -3,74 +3,121 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Редактор локаций — Ташкент</title>
+<title>Справочник локаций — динамические категории</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-body{margin:0;font-family:sans-serif;background:#0b0f16;color:#d7e2f2}
-header{padding:10px;background:#0e1420;border-bottom:1px solid #273248;display:flex;gap:8px;align-items:center}
-button{padding:6px 10px;border-radius:6px;border:1px solid #273248;background:#1a2234;color:#d7e2f2;cursor:pointer}
-button:hover{border-color:#4aa8ff}
+:root{--bg:#0b0f16;--panel:#121826;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border)}
+button{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:#d7e2f2;cursor:pointer}
+button:hover{border-color:var(--accent)}
 button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-.tabs{display:flex;gap:8px;margin:10px}
-.tab{padding:6px 12px;background:#1a2234;border:1px solid #273248;border-radius:6px;cursor:pointer}
-.tab.active{background:#2160ff;color:#fff}
-main{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 60px)}
-.sidebar{padding:10px;overflow:auto;background:#121826;border-right:1px solid #273248}
-.list{margin-top:10px}
-.item{padding:6px;border:1px solid #273248;margin-bottom:6px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-.item:hover{border-color:#4aa8ff}
-.tools{display:flex;gap:4px}
+button.ghost{background:transparent;border-color:#334}
+.badge{background:#23314d;border:1px solid #334567;border-radius:8px;padding:3px 8px;font-weight:700}
+main{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 52px)}
+.sidebar{display:flex;flex-direction:column;gap:10px;padding:10px;border-right:1px solid var(--border);background:#121826;overflow:auto}
+.panel{background:#172133;border:1px solid var(--border);border-radius:12px;padding:10px}
+h3{margin:0 0 8px 0}
+input,select{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.list{display:grid;gap:6px}
+.item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#111a2a}
+.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.tools{display:flex;gap:6px}
+small.muted{color:var(--muted)}
 #map{width:100%;height:100%}
-input,select{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31405a;background:#0f1624;color:#fff}
-.searchResults{background:#172133;border:1px solid #31405a;border-radius:6px;margin-top:4px;max-height:200px;overflow:auto}
-.searchResults div{padding:6px;cursor:pointer}
+.searchResults{background:#172133;border:1px solid #31405a;border-radius:8px;margin-top:6px;max-height:220px;overflow:auto}
+.searchResults div{padding:6px 8px;cursor:pointer}
 .searchResults div:hover{background:#1a2234}
-.sectionHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media (max-width:1100px){main{grid-template-columns:1fr;grid-auto-rows:minmax(360px,auto)}} 
 </style>
 </head>
 <body>
 <header>
-  <h2 style="flex:1">Локации — Ташкент</h2>
-  <button onclick="exportData()">Экспорт</button>
-  <label><input type="file" id="importFile" style="display:none" onchange="importData(event)"><button>Импорт</button></label>
-  <button class="danger" onclick="resetData()">Сброс</button>
+  <span class="badge">dictionary-dynamic v6</span>
+  <button id="btnExport">Экспорт</button>
+  <label><input type="file" id="fileImport" style="display:none"><button class="ghost">Импорт</button></label>
+  <button id="btnReset" class="danger">Сброс</button>
+  <span style="margin-left:auto" class="small muted">Хранилище: localStorage</span>
 </header>
-<div class="tabs">
-  <div class="tab active" data-tab="metro">Метро</div>
-  <div class="tab" data-tab="districts">Районы</div>
-  <div class="tab" data-tab="blocks">Массивы</div>
-  <div class="tab" data-tab="address">Адреса</div>
-</div>
+
 <main>
-  <div class="sidebar">
-    <div id="metroTab"></div>
-    <div id="districtsTab" style="display:none"></div>
-    <div id="blocksTab" style="display:none"></div>
-    <div id="addressTab" style="display:none">
-      <input id="addressInput" placeholder="Введите адрес или название"/>
+  <aside class="sidebar">
+    <section class="panel">
+      <h3>Категории</h3>
+      <div class="row">
+        <input id="newCatName" placeholder="Название (пример: Страны, Города, Районы, Метро, Массивы)"/>
+        <button id="btnAddCat">+ Добавить</button>
+      </div>
+      <div id="catList" class="list" style="margin-top:8px"></div>
+    </section>
+
+    <section class="panel">
+      <h3 id="activeCatTitle">Элементы категории</h3>
+      <div class="row">
+        <input id="newItemName" placeholder="Название нового элемента"/>
+        <button id="btnAddItem">+ Новый</button>
+      </div>
+      <div class="row" id="parentCfg" style="margin-top:6px;display:none">
+        <select id="parentCategorySelect" title="Родительская категория"></select>
+        <small class="muted">Привязка для элементов этой категории (например: Массив → Район)</small>
+      </div>
+      <div id="itemList" class="list" style="margin-top:8px"></div>
+    </section>
+
+    <section class="panel">
+      <h3>Поиск по справочнику</h3>
+      <input id="searchInput" placeholder="Введите название...">
       <div id="searchResults" class="searchResults"></div>
-    </div>
-  </div>
+    </section>
+  </aside>
+
   <div id="map"></div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const KEY="location_dict_v5";
-let data=JSON.parse(localStorage.getItem(KEY) || "null");
-if(!data){
-  data={
-    metro:[{name:"Олмазор",lat:41.356,lng:69.203}],
-    districts:[{name:"Юнусабад",lat:41.367,lng:69.287}],
-    blocks:[{name:"Юнусабад-9",lat:41.370,lng:69.290,parentDistrict:"Юнусабад"}]
+/* ====== STORAGE ====== */
+const KEY="dict_dynamic_v6";
+let db = JSON.parse(localStorage.getItem(KEY) || "null");
+if(!db){
+  db = {
+    categories:[
+      {id:uid(), name:"Районы", parentCategoryId:null, items:[
+        {id:uid(), name:"Юнусабад", lat:41.367, lng:69.287, parentId:null},
+        {id:uid(), name:"Чиланзар", lat:41.285, lng:69.204, parentId:null},
+        {id:uid(), name:"Мирзо-Улугбек", lat:41.324, lng:69.345, parentId:null}
+      ]},
+      {id:uid(), name:"Метро", parentCategoryId:null, items:[
+        {id:uid(), name:"Олмазор", lat:41.356, lng:69.203, parentId:null},
+        {id:uid(), name:"Алишер Навои", lat:41.311, lng:69.278, parentId:null},
+        {id:uid(), name:"Ойбек", lat:41.308, lng:69.295, parentId:null}
+      ]},
+      {id:uid(), name:"Массивы", parentCategoryId:null, items:[
+        {id:uid(), name:"Юнусабад-9", lat:41.370, lng:69.290, parentId:null}
+      ]}
+    ]
   };
   save();
 }
+function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
 
+/* ====== MAP ====== */
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let marker=null;
-let placeMode=null;
+let placeMode=null; // функция, которую вызовём при клике
+
+map.on("click", e=>{
+  if(placeMode){
+    const {lat,lng}=e.latlng;
+    placeMode(lat,lng);
+    placeMode=null;
+  }
+});
 
 function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
   if(marker) map.removeLayer(marker);
@@ -78,109 +125,234 @@ function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
   map.setView([lat,lng],14);
   if(draggable && onDragEnd){
     marker.on("dragend", e=>{
-      let pos=e.target.getLatLng();
-      onDragEnd(pos.lat,pos.lng);
+      const p=e.target.getLatLng();
+      onDragEnd(p.lat,p.lng);
     });
   }
 }
 
-map.on("click",e=>{
-  if(placeMode){
-    let pos=e.latlng;
-    placeMode(pos.lat,pos.lng);
-    placeMode=null;
-  }
-});
+/* ====== STATE ====== */
+let activeCatId = db.categories[0]?.id || null;
 
-function enablePlaceMode(item){
-  alert("Кликни по карте, чтобы поставить метку для: "+item.name);
-  placeMode=(lat,lng)=>{
-    item.lat=lat; item.lng=lng; save();
-    showMarker(lat,lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
-  };
+const $ = s=>document.querySelector(s);
+const $catList = $("#catList");
+const $itemList = $("#itemList");
+const $activeCatTitle = $("#activeCatTitle");
+const $parentCfg = $("#parentCfg");
+const $parentCategorySelect = $("#parentCategorySelect");
+
+/* ====== RENDER CATEGORY LIST ====== */
+function renderCategories(){
+  $catList.innerHTML="";
+  db.categories.forEach((cat,idx)=>{
+    const div=document.createElement("div"); div.className="item";
+    const left=document.createElement("div");
+    left.className="name";
+    left.textContent = (cat.id===activeCatId?"★ ":"") + cat.name;
+    left.title="Сделать активной";
+    left.style.cursor="pointer";
+    left.onclick=()=>{ activeCatId=cat.id; renderAll(); };
+    const tools=document.createElement("div"); tools.className="tools";
+
+    const up=document.createElement("button"); up.textContent="↑";
+    up.onclick=(e)=>{ e.stopPropagation(); if(idx>0){ const t=db.categories[idx]; db.categories.splice(idx,1); db.categories.splice(idx-1,0,t); save(); renderAll(); } };
+    const down=document.createElement("button"); down.textContent="↓";
+    down.onclick=(e)=>{ e.stopPropagation(); if(idx<db.categories.length-1){ const t=db.categories[idx]; db.categories.splice(idx,1); db.categories.splice(idx+1,0,t); save(); renderAll(); } };
+
+    const rename=document.createElement("button"); rename.textContent="✎";
+    rename.onclick=(e)=>{ e.stopPropagation(); const nn=prompt("Новое имя категории", cat.name); if(nn){ cat.name=nn; save(); renderAll(); } };
+
+    const setParent=document.createElement("button"); setParent.textContent="↗ родитель";
+    setParent.title="Назначить родительскую категорию (для привязки элементов этой категории)";
+    setParent.onclick=(e)=>{
+      e.stopPropagation();
+      // список категорий-родителей (все, кроме самой)
+      const opts = db.categories.filter(c=>c.id!==cat.id);
+      if(!opts.length){ alert("Нет других категорий. Сначала добавь хотя бы ещё одну."); return; }
+      const current = cat.parentCategoryId || "";
+      const pick = prompt("ID родительской категории (оставь пустым, чтобы убрать)\n"+opts.map(o=>`${o.name} — ${o.id}`).join("\n"), current);
+      if(pick!==null){
+        cat.parentCategoryId = pick.trim() || null;
+        // зачистим parentId у элементов, если сняли родителя
+        if(!cat.parentCategoryId){ cat.items.forEach(it=>it.parentId=null); }
+        save(); renderAll();
+      }
+    };
+
+    const del=document.createElement("button"); del.textContent="❌"; del.className="danger";
+    del.onclick=(e)=>{ e.stopPropagation();
+      if(!confirm('Удалить категорию "'+cat.name+'"? Все её элементы тоже удалятся.')) return;
+      const idx = db.categories.findIndex(c=>c.id===cat.id);
+      db.categories.splice(idx,1);
+      if(activeCatId===cat.id){ activeCatId=db.categories[0]?.id||null; }
+      save(); renderAll();
+    };
+
+    tools.append(up,down,rename,setParent,del);
+    div.append(left,tools);
+    $catList.appendChild(div);
+  });
 }
 
-function renderSection(type,label,withParent=false){
-  let box=document.getElementById(type+"Tab");
-  box.innerHTML="";
-  let header=document.createElement("div"); header.className="sectionHeader";
-  header.innerHTML=`<b>${label}</b>`;
-  let btn=document.createElement("button"); btn.textContent="+ Новый";
-  btn.onclick=()=>{
-    let newItem={name:"Новый "+label,lat:41.3111,lng:69.2797};
-    if(withParent) newItem.parentDistrict="";
-    data[type].push(newItem);
+/* ====== RENDER ITEMS OF ACTIVE CATEGORY ====== */
+function renderItems(){
+  const cat = db.categories.find(c=>c.id===activeCatId);
+  if(!cat){ $activeCatTitle.textContent="Элементы категории"; $itemList.innerHTML=""; $parentCfg.style.display="none"; return; }
+
+  $activeCatTitle.textContent = "Элементы: "+cat.name;
+  // блок настройки родителя категории
+  $parentCfg.style.display="block";
+  $parentCategorySelect.innerHTML="<option value=''>— без родителя —</option>";
+  db.categories.forEach(c=>{
+    if(c.id===cat.id) return;
+    const opt=document.createElement("option");
+    opt.value=c.id; opt.textContent=c.name;
+    if(cat.parentCategoryId===c.id) opt.selected=true;
+    $parentCategorySelect.appendChild(opt);
+  });
+  $parentCategorySelect.onchange = ()=>{
+    const val = $parentCategorySelect.value || null;
+    cat.parentCategoryId = val;
+    if(!val){ cat.items.forEach(it=>it.parentId=null); }
     save(); renderAll();
   };
-  header.appendChild(btn); box.appendChild(header);
 
-  data[type].forEach((item,i)=>{
-    let div=document.createElement("div"); div.className="item";
-    let span=document.createElement("span"); 
-    span.textContent=item.name+(item.parentDistrict?` (${item.parentDistrict})`:"");
-    div.appendChild(span);
-    let tools=document.createElement("div"); tools.className="tools";
-    let bEdit=document.createElement("button"); bEdit.textContent="✎";
-    bEdit.onclick=(e)=>{
+  $itemList.innerHTML="";
+  cat.items.forEach((it,idx)=>{
+    const line=document.createElement("div"); line.className="item";
+
+    const left=document.createElement("div"); left.style.display="grid"; left.style.gap="4px";
+    const title=document.createElement("div"); title.className="name"; title.textContent=it.name;
+    const meta=document.createElement("div"); meta.innerHTML=`<small class="muted">${(it.lat??'—')}, ${(it.lng??'—')}${cat.parentCategoryId? (it.parentId? " • род.: "+(nameByParent(it.parentId) || "—") : " • без привязки"):""}</small>`;
+    left.append(title, meta);
+
+    const tools=document.createElement("div"); tools.className="tools";
+
+    const up=document.createElement("button"); up.textContent="↑";
+    up.onclick=(e)=>{ e.stopPropagation(); if(idx>0){ const t=cat.items[idx]; cat.items.splice(idx,1); cat.items.splice(idx-1,0,t); save(); renderAll(); } };
+    const down=document.createElement("button"); down.textContent="↓";
+    down.onclick=(e)=>{ e.stopPropagation(); if(idx<cat.items.length-1){ const t=cat.items[idx]; cat.items.splice(idx,1); cat.items.splice(idx+1,0,t); save(); renderAll(); } };
+
+    const rename=document.createElement("button"); rename.textContent="✎";
+    rename.onclick=(e)=>{ e.stopPropagation(); const nn=prompt("Новое имя", it.name); if(nn){ it.name=nn; save(); renderAll(); } };
+
+    // выбор родительского элемента, если у категории задан родитель
+    if(cat.parentCategoryId){
+      const parentCat = db.categories.find(c=>c.id===cat.parentCategoryId);
+      const pickParent=document.createElement("button"); pickParent.textContent="↗ привязать";
+      pickParent.title="Выбрать родительский элемент";
+      pickParent.onclick=(e)=>{
+        e.stopPropagation();
+        const list = parentCat.items;
+        if(!list.length){ alert("В родительской категории нет элементов."); return; }
+        const hint = "ID родителя (или пусто чтобы убрать)\n"+list.map(x=>`${x.name} — ${x.id}`).join("\n");
+        const sel = prompt(hint, it.parentId||"");
+        if(sel!==null){
+          it.parentId = sel.trim() || null;
+          save(); renderAll();
+        }
+      };
+      tools.appendChild(pickParent);
+    }
+
+    const place=document.createElement("button"); place.textContent="📍";
+    place.title="Поставить/переместить метку (клик по карте)";
+    place.onclick=(e)=>{
       e.stopPropagation();
-      let newName=prompt("Новое имя",item.name);
-      if(newName){ item.name=newName; }
-      save(); renderAll();
-      showMarker(item.lat,item.lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
+      alert("Кликни по карте, чтобы поставить метку для: "+it.name);
+      placeMode = (lat,lng)=>{
+        it.lat=lat; it.lng=lng; save();
+        showMarker(lat,lng,it.name,true,(la,ln)=>{ it.lat=la; it.lng=ln; save(); renderAll(); });
+        renderAll();
+      };
     };
-    let bPlace=document.createElement("button"); bPlace.textContent="📍";
-    bPlace.onclick=(e)=>{ e.stopPropagation(); enablePlaceMode(item); };
-    let bDel=document.createElement("button"); bDel.textContent="❌"; bDel.className="danger";
-    bDel.onclick=(e)=>{ e.stopPropagation(); if(confirm("Удалить "+item.name+"?")){ data[type].splice(i,1); save(); renderAll(); } };
-    tools.appendChild(bEdit); tools.appendChild(bPlace); tools.appendChild(bDel);
-    div.appendChild(tools);
-    div.onclick=()=>showMarker(item.lat,item.lng,item.name);
-    box.appendChild(div);
+
+    const del=document.createElement("button"); del.textContent="❌"; del.className="danger";
+    del.onclick=(e)=>{ e.stopPropagation(); if(confirm('Удалить "'+it.name+'"?')){ cat.items.splice(idx,1); save(); renderAll(); } };
+
+    line.onclick=()=>{ if(it.lat!=null && it.lng!=null) showMarker(it.lat,it.lng,it.name); };
+    tools.append(up,down,rename,place,del);
+    line.append(left,tools);
+    $itemList.appendChild(line);
   });
 }
-function renderAll(){ renderSection("metro","Метро"); renderSection("districts","Район"); renderSection("blocks","Массив",true); }
-renderAll();
+function nameByParent(parentId){
+  for(const c of db.categories){
+    const found=c.items.find(x=>x.id===parentId);
+    if(found) return found.name;
+  }
+  return null;
+}
 
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.onclick=()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    tab.classList.add("active");
-    ["metro","districts","blocks","address"].forEach(t=>{
-      document.getElementById(t+"Tab").style.display=(tab.dataset.tab===t)?"block":"none";
-    });
-  };
-});
-
-document.getElementById("addressInput").addEventListener("input",e=>{
-  let q=e.target.value.toLowerCase();
-  let box=document.getElementById("searchResults"); box.innerHTML="";
+/* ====== SEARCH ====== */
+$("#searchInput").addEventListener("input", e=>{
+  const q=(e.target.value||"").trim().toLowerCase();
+  const box=$("#searchResults"); box.innerHTML="";
   if(!q) return;
-  let results=[];
-  data.metro.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"метро"}); });
-  data.districts.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"район"}); });
-  data.blocks.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"массив",parent:it.parentDistrict}); });
-  results.forEach(r=>{
-    let div=document.createElement("div"); 
-    div.textContent=r.name+" ("+r.type+(r.parent?`, район: ${r.parent}`:"")+")";
-    div.onclick=()=>showMarker(r.lat,r.lng,r.name);
+  const rows=[];
+  db.categories.forEach(cat=>{
+    cat.items.forEach(it=>{
+      if((it.name||"").toLowerCase().includes(q)){
+        rows.push({cat, it});
+      }
+    });
+  });
+  rows.forEach(({cat,it})=>{
+    const div=document.createElement("div");
+    const parentTxt = it.parentId? ` • род.: ${(nameByParent(it.parentId)||"—")}`:"";
+    div.textContent = `${it.name}  —  ${cat.name}${parentTxt}`;
+    div.onclick=()=>{
+      activeCatId=cat.id; renderAll();
+      if(it.lat!=null && it.lng!=null) showMarker(it.lat,it.lng,it.name);
+    };
     box.appendChild(div);
   });
 });
 
-function save(){ localStorage.setItem(KEY,JSON.stringify(data)); }
-function exportData(){
-  let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="locations.json"; a.click();
-}
-function importData(e){
-  let f=e.target.files[0]; if(!f) return;
-  let r=new FileReader(); r.onload=()=>{
-    try{ data=JSON.parse(r.result); save(); renderAll(); alert("Импортировано!"); }
-    catch(err){ alert("Ошибка импорта"); }
-  };
+/* ====== HANDLERS (ADD/EXPORT/IMPORT/RESET) ====== */
+$("#btnAddCat").onclick=()=>{
+  const name=$("#newCatName").value.trim();
+  if(!name) return;
+  db.categories.push({id:uid(), name, parentCategoryId:null, items:[]});
+  $("#newCatName").value="";
+  save(); renderAll();
+};
+
+$("#btnAddItem").onclick=()=>{
+  const cat = db.categories.find(c=>c.id===activeCatId); if(!cat) return;
+  const name=$("#newItemName").value.trim() || ("Новый "+cat.name.slice(0,-1));
+  $("#newItemName").value="";
+  cat.items.push({id:uid(), name, lat:41.3111, lng:69.2797, parentId:null});
+  save(); renderAll();
+};
+
+$("#btnExport").onclick=()=>{
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="dictionary_dynamic_v6.json"; a.click();
+};
+
+$("#fileImport").addEventListener("change", e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+      const obj=JSON.parse(r.result);
+      if(!obj || !Array.isArray(obj.categories)) throw new Error("Неверный формат");
+      db=obj; save(); // поправим активную категорию
+      activeCatId = db.categories[0]?.id || null;
+      renderAll(); alert("Импортировано!");
+    }catch(err){ alert("Ошибка импорта: "+err.message); } };
   r.readAsText(f);
-}
-function resetData(){ if(confirm("Очистить справочник?")){ data={metro:[],districts:[],blocks:[]}; save(); renderAll(); } }
+});
+
+$("#btnReset").onclick=()=>{
+  if(!confirm("Очистить справочник и настройки?")) return;
+  localStorage.removeItem(KEY);
+  location.reload();
+};
+
+/* ====== RENDER ALL ====== */
+function renderAll(){ renderCategories(); renderItems(); }
+renderAll();
 </script>
 </body>
 </html>
