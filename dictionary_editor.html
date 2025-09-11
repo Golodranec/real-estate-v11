@@ -14,14 +14,14 @@ button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
 .tabs{display:flex;gap:8px;margin:10px}
 .tab{padding:6px 12px;background:#1a2234;border:1px solid #273248;border-radius:6px;cursor:pointer}
 .tab.active{background:#2160ff;color:#fff}
-main{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 60px)}
+main{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 60px)}
 .sidebar{padding:10px;overflow:auto;background:#121826;border-right:1px solid #273248}
 .list{margin-top:10px}
 .item{padding:6px;border:1px solid #273248;margin-bottom:6px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
 .item:hover{border-color:#4aa8ff}
 .tools{display:flex;gap:4px}
 #map{width:100%;height:100%}
-input{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31405a;background:#0f1624;color:#fff}
+input,select{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31405a;background:#0f1624;color:#fff}
 .searchResults{background:#172133;border:1px solid #31405a;border-radius:6px;margin-top:4px;max-height:200px;overflow:auto}
 .searchResults div{padding:6px;cursor:pointer}
 .searchResults div:hover{background:#1a2234}
@@ -56,13 +56,13 @@ input{width:100%;padding:6px;margin:6px 0;border-radius:6px;border:1px solid #31
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const KEY="location_dict_v2";
+const KEY="location_dict_v3";
 let data=JSON.parse(localStorage.getItem(KEY) || "null");
 if(!data){
   data={
     metro:[{name:"Олмазор",lat:41.356,lng:69.203}],
     districts:[{name:"Юнусабад",lat:41.367,lng:69.287}],
-    blocks:[{name:"Юнусабад-9",lat:41.370,lng:69.290}]
+    blocks:[{name:"Юнусабад-9",lat:41.370,lng:69.290,parentDistrict:"Юнусабад"}]
   };
   save();
 }
@@ -70,6 +70,7 @@ if(!data){
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let marker=null;
+let editCallback=null;
 
 function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
   if(marker) map.removeLayer(marker);
@@ -81,30 +82,47 @@ function showMarker(lat,lng,label,draggable=false,onDragEnd=null){
       onDragEnd(pos.lat,pos.lng);
     });
   }
+  editCallback=onDragEnd;
 }
 
-function renderSection(type,label){
+map.on("click",e=>{
+  if(editCallback){
+    let pos=e.latlng;
+    if(marker){ marker.setLatLng(pos); }
+    editCallback(pos.lat,pos.lng);
+  }
+});
+
+function renderSection(type,label,withParent=false){
   let box=document.getElementById(type+"Tab");
   box.innerHTML="";
   let header=document.createElement("div"); header.className="sectionHeader";
   header.innerHTML=`<b>${label}</b>`;
   let btn=document.createElement("button"); btn.textContent="+ Новый";
   btn.onclick=()=>{
-    data[type].push({name:"Новый "+label,lat:41.3111,lng:69.2797});
+    let newItem={name:"Новый "+label,lat:41.3111,lng:69.2797};
+    if(withParent) newItem.parentDistrict="";
+    data[type].push(newItem);
     save(); renderAll();
   };
   header.appendChild(btn); box.appendChild(header);
 
   data[type].forEach((item,i)=>{
     let div=document.createElement("div"); div.className="item";
-    let span=document.createElement("span"); span.textContent=item.name;
+    let span=document.createElement("span"); 
+    span.textContent=item.name+(item.parentDistrict?` (${item.parentDistrict})`:"");
     div.appendChild(span);
     let tools=document.createElement("div"); tools.className="tools";
     let bEdit=document.createElement("button"); bEdit.textContent="✎";
     bEdit.onclick=(e)=>{
       e.stopPropagation();
       let newName=prompt("Новое имя",item.name);
-      if(newName){ item.name=newName; save(); renderAll(); }
+      if(newName){ item.name=newName; }
+      if(withParent){
+        let parent=prompt("Укажите район",item.parentDistrict||"");
+        if(parent!==null) item.parentDistrict=parent;
+      }
+      save(); renderAll();
       showMarker(item.lat,item.lng,item.name,true,(lat,lng)=>{ item.lat=lat; item.lng=lng; save(); });
     };
     let bDel=document.createElement("button"); bDel.textContent="❌"; bDel.className="danger";
@@ -115,7 +133,7 @@ function renderSection(type,label){
     box.appendChild(div);
   });
 }
-function renderAll(){ renderSection("metro","Метро"); renderSection("districts","Район"); renderSection("blocks","Массив"); }
+function renderAll(){ renderSection("metro","Метро"); renderSection("districts","Район"); renderSection("blocks","Массив",true); }
 renderAll();
 
 document.querySelectorAll(".tab").forEach(tab=>{
@@ -135,9 +153,10 @@ document.getElementById("addressInput").addEventListener("input",e=>{
   let results=[];
   data.metro.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"метро"}); });
   data.districts.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"район"}); });
-  data.blocks.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"массив"}); });
+  data.blocks.forEach(it=>{ if(it.name.toLowerCase().includes(q)) results.push({...it,type:"массив",parent:it.parentDistrict}); });
   results.forEach(r=>{
-    let div=document.createElement("div"); div.textContent=r.name+" ("+r.type+")";
+    let div=document.createElement("div"); 
+    div.textContent=r.name+" ("+r.type+(r.parent?`, район: ${r.parent}`:"")+")";
     div.onclick=()=>showMarker(r.lat,r.lng,r.name);
     box.appendChild(div);
   });
