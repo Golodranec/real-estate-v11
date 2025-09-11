@@ -63,8 +63,7 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
 .preview-table th,.preview-table td{border:1px solid #31405a;padding:8px;text-align:left}
 .preview-map{display:flex;align-items:center;justify-content:center;background:#0f1624;border:1px dashed #3a4c6b;border-radius:10px;height:100%}
 .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-
-/* мини-стили для конструктора формы объектов */
+/* форма объектов */
 .of-card{border:1px solid var(--border);background:#121a2a;border-radius:10px;padding:10px}
 .of-card.dragging{opacity:.6;border-style:dashed}
 .of-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -95,12 +94,10 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
   <section id="tab-preview" class="panel" style="display:none">
     <div class="canvas-wrap"><div id="preview" class="preview-grid"></div></div>
   </section>
-
-  <!-- НОВАЯ ВКЛАДКА: ФОРМА ОБЪЕКТОВ -->
   <section id="tab-objform" class="panel" style="display:none">
     <div class="row" style="justify-content:space-between;margin-bottom:8px">
       <h3>Форма объектов — настройка полей</h3>
-      <small class="of-hint">Конфиг хранится в localStorage под ключом <b>objectFormConfig</b></small>
+      <small class="of-hint">Конфиг хранится в localStorage (<b>objectFormConfig</b>)</small>
     </div>
     <div class="row">
       <button id="ofAdd" class="btn">+ Поле</button>
@@ -112,7 +109,6 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
     <div class="card" style="margin-top:12px">
       <div class="title-row">
         <h3>Мини-предпросмотр формы «Добавить объект»</h3>
-        <small class="muted">Рендер из objectFormConfig</small>
       </div>
       <div id="ofPreview" class="grid" style="grid-template-columns:repeat(3,1fr)"></div>
     </div>
@@ -120,7 +116,6 @@ footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--
 </main>
 
 <footer>build: admin_cascade_v13.9.6</footer>
-
 <script>
 /* Глобальная ловушка ошибок */
 window.addEventListener('error', function(e){
@@ -131,8 +126,8 @@ window.addEventListener('error', function(e){
   if(host) host.prepend(box);
 });
 
-/* ================= DATA (ИЗ ТВОЕГО СТАБИЛЬНОГО ФАЙЛА) ================ */
-const KEY="admin_cascade_v5_full_work_preview_full";
+/* ================= DATA ================ */
+const KEY="admin_cascade_v13_9_6_full";
 let data={
   fields:[
     {label:"Страна",field:"country",type:"select",options:["Узбекистан"]},
@@ -166,14 +161,14 @@ let data={
   ]
 };
 
-/* Тестовые данные для CARDS/TABLE */
+/* Демо-данные */
 var demoItems=[
   {category:"Квартира", rooms:3, district:"Юнусабад", price:"$120 000", area:"85 м²", title:"Квартира, Юнусабад", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23223'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
   {category:"Дом", rooms:5, district:"Чиланзар", price:"$250 000", area:"210 м²", title:"Дом, Чиланзар", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23333'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
   {category:"Коммерция", rooms:"офис", district:"Мирзо-Улугбек", price:"$1 200/мес", area:"120 м²", title:"Офис, М.Улугбек", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%232a2a55'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"}
 ];
 
-/* Состояние предпросмотра */
+/* Состояние */
 let previewState = {};
 try{
   var saved=localStorage.getItem(KEY);
@@ -182,21 +177,21 @@ try{
   }
 }catch(e){}
 
-/* ================= HELPERS (ИЗ ТВОЕГО ФАЙЛА) ================ */
+/* HELPERS */
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
-function byField(name){ return data.fields.find(function(f){ return f.field===name; }); }
+function byField(name){ return data.fields.find(f=>f.field===name); }
 function normalize(){
-  data.fields.forEach(function(f){
+  data.fields.forEach(f=>{
     if(!f.options) f.options=[];
     if(f.type==="range" && !f.rangeLabels) f.rangeLabels=["от","до"];
     if(f.type==="select"){ if(!f.dict) f.dict={}; if(!f.parent) f.parent=""; }
     if(!("desc" in f)) f.desc="";
   });
-  data.groups.forEach(function(g){ if(!g.desc) g.desc=""; if(!g.filters) g.filters=[]; });
+  data.groups.forEach(g=>{ if(!g.desc) g.desc=""; if(!g.filters) g.filters=[]; });
 }
 function buildChildrenMap(){
-  var children={};
-  data.fields.forEach(function(f){
+  const children={};
+  data.fields.forEach(f=>{
     if(f.parent){
       if(!children[f.parent]) children[f.parent]=[];
       children[f.parent].push(f.field);
@@ -207,35 +202,35 @@ function buildChildrenMap(){
 function computeOptionsFor(f){
   if(f.type!=='select') return [];
   if(f.parent){
-    var pv=previewState[f.parent]||'';
+    const pv=previewState[f.parent]||'';
     return (f.dict && f.dict[pv]) ? f.dict[pv] : [];
   }
   return Array.isArray(f.options)?f.options:[];
 }
 function visibleFor(f){
   if(!f.visibleWhen) return true;
-  var entries=[]; for(var k in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,k)){ entries.push([k, f.visibleWhen[k]]); break; } }
-  if(!entries.length) return true;
-  var pair=entries[0]; var key=pair[0], val=pair[1];
-  if(!(key in previewState) || !previewState[key]) return false;
-  if(Array.isArray(val)) return val.indexOf(previewState[key])>-1;
-  return previewState[key]===val;
+  let k=null,v=null;
+  for(const kk in f.visibleWhen){ k=kk; v=f.visibleWhen[kk]; break; }
+  if(!k) return true;
+  if(!(k in previewState) || !previewState[k]) return false;
+  if(Array.isArray(v)) return v.includes(previewState[k]);
+  return previewState[k]===v;
 }
 function clearDescendants(parentField, childrenMap){
   if(!childrenMap[parentField]) return;
-  childrenMap[parentField].forEach(function(ch){
+  childrenMap[parentField].forEach(ch=>{
     if(previewState[ch]) delete previewState[ch];
     clearDescendants(ch, childrenMap);
   });
 }
 
-/* ================= TABS (ДОБАВИЛ objform) ================ */
-Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(btn){
+/* TABS */
+Array.from(document.querySelectorAll('.tab')).forEach(btn=>{
   btn.onclick=function(){
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.remove('active'); });
+    Array.from(document.querySelectorAll('.tab')).forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    var tab=btn.getAttribute('data-tab');
-    ['filters','fields','layout','preview','objform'].forEach(function(id){
+    const tab=btn.getAttribute('data-tab');
+    ['filters','fields','layout','preview','objform'].forEach(id=>{
       document.getElementById('tab-'+id).style.display = (id===tab)?'block':'none';
     });
     if(tab==='filters') renderGroups();
@@ -246,7 +241,7 @@ Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(btn){
   };
 });
 
-/* ================= FILTER GROUPS (как было) ================ */
+/* FILTER GROUPS */
 function addGroup(){ data.groups.push({name:'Новая линия',desc:'',filters:[]}); save(); renderGroups(); renderPreview(); }
 function removeGroup(i){ data.groups.splice(i,1); save(); renderGroups(); renderPreview(); }
 function addFieldToGroup(gi, fieldName){
@@ -255,52 +250,51 @@ function addFieldToGroup(gi, fieldName){
   }
 }
 function removeFilter(gIndex, fIndex){ data.groups[gIndex].filters.splice(fIndex,1); save(); renderGroups(); renderPreview(); }
-
-var dragChip=null;
+let dragChip=null;
 function renderGroups(){
-  var box=document.getElementById('tab-filters'); box.innerHTML='';
-  var top=document.createElement('div'); top.className='row'; top.style.marginBottom='10px';
-  var bAdd=document.createElement('button'); bAdd.className='btn'; bAdd.textContent='+ Ряд'; bAdd.onclick=addGroup; top.appendChild(bAdd);
+  const box=document.getElementById('tab-filters'); box.innerHTML='';
+  const top=document.createElement('div'); top.className='row'; top.style.marginBottom='10px';
+  const bAdd=document.createElement('button'); bAdd.className='btn'; bAdd.textContent='+ Ряд'; bAdd.onclick=addGroup; top.appendChild(bAdd);
   box.appendChild(top);
 
-  var list=document.createElement('div'); list.className='list';
-  data.groups.forEach(function(g,gi){
-    var card=document.createElement('div'); card.className='card';
+  const list=document.createElement('div'); list.className='list';
+  data.groups.forEach((g,gi)=>{
+    const card=document.createElement('div'); card.className='card';
 
-    var head=document.createElement('div'); head.className='title-row';
-    var left=document.createElement('div'); left.className='row';
-    var h=document.createElement('h3'); h.textContent=g.name||( 'Линия '+(gi+1) ); left.appendChild(h);
-    var meta=document.createElement('small'); meta.className='muted'; meta.textContent=g.desc||''; left.appendChild(meta);
+    const head=document.createElement('div'); head.className='title-row';
+    const left=document.createElement('div'); left.className='row';
+    const h=document.createElement('h3'); h.textContent=g.name||( 'Линия '+(gi+1) ); left.appendChild(h);
+    const meta=document.createElement('small'); meta.className='muted'; meta.textContent=g.desc||''; left.appendChild(meta);
     head.appendChild(left);
 
-    var right=document.createElement('div'); right.className='row';
-    var sel=document.createElement('select'); var o0=document.createElement('option'); o0.value=''; o0.textContent='Добавить поле…'; sel.appendChild(o0);
-    data.fields.forEach(function(ff){ var o=document.createElement('option'); o.value=ff.field; o.textContent=ff.label+' ('+ff.field+')'; sel.appendChild(o); });
-    sel.onchange=function(e){ if(e.target.value){ addFieldToGroup(gi, e.target.value); e.target.value=''; } };
-    var del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить ряд'; del.onclick=function(){ removeGroup(gi); };
+    const right=document.createElement('div'); right.className='row';
+    const sel=document.createElement('select'); const o0=document.createElement('option'); o0.value=''; o0.textContent='Добавить поле…'; sel.appendChild(o0);
+    data.fields.forEach(ff=>{ const o=document.createElement('option'); o.value=ff.field; o.textContent=ff.label+' ('+ff.field+')'; sel.appendChild(o); });
+    sel.onchange=e=>{ if(e.target.value){ addFieldToGroup(gi, e.target.value); e.target.value=''; } };
+    const del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить ряд'; del.onclick=()=>removeGroup(gi);
     right.appendChild(sel); right.appendChild(del);
     head.appendChild(right);
     card.appendChild(head);
 
-    var editors=document.createElement('div'); editors.className='inline'; editors.style.margin='8px 0';
-    var w1=document.createElement('div'); w1.innerHTML='<label>Заголовок</label>'; var i1=document.createElement('input'); i1.value=g.name||''; i1.oninput=function(e){ data.groups[gi].name=e.target.value; save(); renderPreview(); }; w1.appendChild(i1);
-    var w2=document.createElement('div'); w2.innerHTML='<label>Описание</label>'; var i2=document.createElement('input'); i2.value=g.desc||''; i2.oninput=function(e){ data.groups[gi].desc=e.target.value; save(); renderPreview(); }; w2.appendChild(i2);
+    const editors=document.createElement('div'); editors.className='inline'; editors.style.margin='8px 0';
+    let w1=document.createElement('div'); w1.innerHTML='<label>Заголовок</label>'; let i1=document.createElement('input'); i1.value=g.name||''; i1.oninput=e=>{ data.groups[gi].name=e.target.value; save(); renderPreview(); }; w1.appendChild(i1);
+    let w2=document.createElement('div'); w2.innerHTML='<label>Описание</label>'; let i2=document.createElement('input'); i2.value=g.desc||''; i2.oninput=e=>{ data.groups[gi].desc=e.target.value; save(); renderPreview(); }; w2.appendChild(i2);
     editors.appendChild(w1); editors.appendChild(w2); card.appendChild(editors);
 
-    var row=document.createElement('div'); row.className='chips dropzone'; row.setAttribute('data-group', gi);
-    (g.filters||[]).forEach(function(fname,fi){
-      var f=byField(fname); var chip=document.createElement('div'); chip.className='chip'; chip.draggable=true; chip.setAttribute('data-name', fname);
+    const row=document.createElement('div'); row.className='chips dropzone'; row.setAttribute('data-group', gi);
+    (g.filters||[]).forEach((fname,fi)=>{
+      const f=byField(fname); const chip=document.createElement('div'); chip.className='chip'; chip.draggable=true; chip.setAttribute('data-name', fname);
       chip.innerHTML='<span class="grab">↕</span><small>'+(f ? (f.label||fname) : fname)+'</small>';
-      var x=document.createElement('button'); x.className='btn danger'; x.textContent='x'; x.style.padding='2px 6px'; x.onclick=function(){ removeFilter(gi,fi); };
+      const x=document.createElement('button'); x.className='btn danger'; x.textContent='x'; x.style.padding='2px 6px'; x.onclick=()=>removeFilter(gi,fi);
       chip.appendChild(x);
-      chip.addEventListener('dragstart', function(){ dragChip={name:fname, fromG:gi, fromIndex:fi}; chip.classList.add('dragging'); });
-      chip.addEventListener('dragend', function(){ chip.classList.remove('dragging'); dragChip=null; });
+      chip.addEventListener('dragstart', ()=>{ dragChip={name:fname, fromG:gi, fromIndex:fi}; chip.classList.add('dragging'); });
+      chip.addEventListener('dragend', ()=>{ chip.classList.remove('dragging'); dragChip=null; });
       row.appendChild(chip);
     });
-    row.addEventListener('dragover', function(e){ e.preventDefault(); });
-    row.addEventListener('drop', function(e){
-      e.preventDefault(); var toG=parseInt(row.getAttribute('data-group'),10); if(!dragChip) return;
-      var arr=data.groups[dragChip.fromG].filters; var idx=arr.indexOf(dragChip.name); if(idx>-1) arr.splice(idx,1);
+    row.addEventListener('dragover', e=>{ e.preventDefault(); });
+    row.addEventListener('drop', e=>{
+      e.preventDefault(); const toG=parseInt(row.getAttribute('data-group'),10); if(!dragChip) return;
+      const arr=data.groups[dragChip.fromG].filters; const idx=arr.indexOf(dragChip.name); if(idx>-1) arr.splice(idx,1);
       data.groups[toG].filters.push(dragChip.name); save(); renderGroups(); renderPreview();
     });
     card.appendChild(row);
@@ -309,111 +303,111 @@ function renderGroups(){
   box.appendChild(list);
 }
 
-/* ================= FIELDS (как было) ================ */
+/* FIELDS */
 function addField(){
-  var n=data.fields.length+1; data.fields.push({label:'Поле '+n, field:'field_'+n, type:'text', desc:''});
+  const n=data.fields.length+1; data.fields.push({label:'Поле '+n, field:'field_'+n, type:'text', desc:''});
   save(); renderFields(); renderPreview();
 }
 function removeField(i){
-  var name=data.fields[i].field;
-  data.groups.forEach(function(g){ g.filters = (g.filters||[]).filter(function(n){ return n!==name; }); });
+  const name=data.fields[i].field;
+  data.groups.forEach(g=>{ g.filters = (g.filters||[]).filter(n=>n!==name); });
   data.fields.splice(i,1); save(); renderFields(); renderGroups(); renderPreview();
 }
 function renderFields(){
-  var box=document.getElementById('tab-fields'); box.innerHTML='';
-  var top=document.createElement('div'); top.className='row'; top.style.justifyContent='space-between'; top.style.marginBottom='8px';
-  var h=document.createElement('h3'); h.textContent='Все поля'; top.appendChild(h);
-  var add=document.createElement('button'); add.className='btn'; add.textContent='+ Поле'; add.onclick=addField; top.appendChild(add);
+  const box=document.getElementById('tab-fields'); box.innerHTML='';
+  const top=document.createElement('div'); top.className='row'; top.style.justifyContent='space-between'; top.style.marginBottom='8px';
+  const h=document.createElement('h3'); h.textContent='Все поля'; top.appendChild(h);
+  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Поле'; add.onclick=addField; top.appendChild(add);
   box.appendChild(top);
 
-  var list=document.createElement('div'); list.className='list';
-  var fieldNames=data.fields.map(function(f){ return f.field; });
+  const list=document.createElement('div'); list.className='list';
+  const fieldNames=data.fields.map(f=>f.field);
 
-  data.fields.forEach(function(f,i){
-    var card=document.createElement('div'); card.className='card';
-    var head=document.createElement('div'); head.className='title-row';
-    var left=document.createElement('div'); left.className='row';
-    var t=document.createElement('h3'); t.textContent=f.label||f.field; left.appendChild(t);
-    var meta=document.createElement('small'); meta.className='muted'; meta.textContent=' ('+f.field+')'; left.appendChild(meta);
+  data.fields.forEach((f,i)=>{
+    const card=document.createElement('div'); card.className='card';
+    const head=document.createElement('div'); head.className='title-row';
+    const left=document.createElement('div'); left.className='row';
+    const t=document.createElement('h3'); t.textContent=f.label||f.field; left.appendChild(t);
+    const meta=document.createElement('small'); meta.className='muted'; meta.textContent=' ('+f.field+')'; left.appendChild(meta);
     head.appendChild(left);
-    var r=document.createElement('div'); r.className='row';
-    var del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить'; del.onclick=function(){ removeField(i); };
+    const r=document.createElement('div'); r.className='row';
+    const del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить'; del.onclick=()=>removeField(i);
     r.appendChild(del); head.appendChild(r); card.appendChild(head);
 
-    var grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns='repeat(2,1fr)'; grid.style.gap='10px';
+    const grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns='repeat(2,1fr)'; grid.style.gap='10px';
 
-    var w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
-    var inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=function(e){ data.fields[i].label=e.target.value; save(); renderGroups(); renderPreview(); };
+    let w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
+    let inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=e=>{ data.fields[i].label=e.target.value; save(); renderGroups(); renderPreview(); };
     w.appendChild(inp); grid.appendChild(w);
 
     w=document.createElement('div'); w.innerHTML='<label>Имя</label>';
-    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=function(e){ data.fields[i].field=e.target.value; save(); renderGroups(); renderPreview(); };
+    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=e=>{ data.fields[i].field=e.target.value; save(); renderGroups(); renderPreview(); };
     w.appendChild(inp); grid.appendChild(w);
 
     w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
-    var selType=document.createElement('select');
-    ['text','number','select','range'].forEach(function(tt){ var o=document.createElement('option'); o.value=tt; o.textContent=tt; if(f.type===tt) o.selected=true; selType.appendChild(o); });
-    selType.onchange=function(e){ data.fields[i].type=e.target.value; if(e.target.value!=='select'){ data.fields[i].parent=''; data.fields[i].dict={}; } save(); renderPreview(); renderFields(); };
+    const selType=document.createElement('select');
+    ['text','number','select','range'].forEach(tt=>{ const o=document.createElement('option'); o.value=tt; o.textContent=tt; if(f.type===tt) o.selected=true; selType.appendChild(o); });
+    selType.onchange=e=>{ data.fields[i].type=e.target.value; if(e.target.value!=='select'){ data.fields[i].parent=''; data.fields[i].dict={}; } save(); renderPreview(); renderFields(); };
     w.appendChild(selType); grid.appendChild(w);
 
     w=document.createElement('div'); w.innerHTML='<label>Описание</label>';
-    inp=document.createElement('input'); inp.placeholder='подпись/подсказка'; inp.value=f.desc||''; inp.oninput=function(e){ data.fields[i].desc=e.target.value; save(); renderPreview(); };
+    inp=document.createElement('input'); inp.placeholder='подпись/подсказка'; inp.value=f.desc||''; inp.oninput=e=>{ data.fields[i].desc=e.target.value; save(); renderPreview(); };
     w.appendChild(inp); grid.appendChild(w);
 
-    var wp=document.createElement('div'); wp.innerHTML='<label>Родитель (для каскада)</label>';
-    var selP=document.createElement('select');
-    var parOpts=[''].concat( fieldNames.filter(function(n){ return n!==f.field && (byField(n)&&byField(n).type==='select'); }) );
-    parOpts.forEach(function(nm){ var o=document.createElement('option'); o.value=nm; o.textContent=nm===''?'(нет)':nm; if((f.parent||'')===nm) o.selected=true; selP.appendChild(o); });
-    selP.onchange=function(e){ data.fields[i].parent=e.target.value||''; save(); renderPreview(); renderFields(); };
+    const wp=document.createElement('div'); wp.innerHTML='<label>Родитель (для каскада)</label>';
+    const selP=document.createElement('select');
+    const parOpts=[''].concat( fieldNames.filter(n=> n!==f.field && (byField(n)&&byField(n).type==='select') ) );
+    parOpts.forEach(nm=>{ const o=document.createElement('option'); o.value=nm; o.textContent=nm===''?'(нет)':nm; if((f.parent||'')===nm) o.selected=true; selP.appendChild(o); });
+    selP.onchange=e=>{ data.fields[i].parent=e.target.value||''; save(); renderPreview(); renderFields(); };
     wp.appendChild(selP); grid.appendChild(wp);
 
-    var wOD=document.createElement('div');
+    let wOD=document.createElement('div');
     if(f.type==='select'){
       if(f.parent){
         wOD.innerHTML='<label>Карта опций (parent=опция1, опция2)</label>';
-        var ta=document.createElement('textarea'); ta.rows=5;
-        var lines=Object.keys(f.dict||{}).map(function(pk){ return pk+'='+(f.dict[pk]||[]).join(', '); });
+        let ta=document.createElement('textarea'); ta.rows=5;
+        let lines=Object.keys(f.dict||{}).map(pk=> pk+'='+(f.dict[pk]||[]).join(', ') );
         ta.value=lines.join('\n');
-        ta.oninput=function(e){
-          var map={};
-          e.target.value.split('\n').forEach(function(line){
-            var t=line.trim(); if(!t) return;
-            var parts=t.split('='); var k=parts[0]; var rest=parts.slice(1).join('=');
-            map[k.trim()]=(rest||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+        ta.oninput=e=>{
+          let map={};
+          e.target.value.split('\n').forEach(line=>{
+            let t=line.trim(); if(!t) return;
+            let parts=t.split('='); let k=parts[0]; let rest=parts.slice(1).join('=');
+            map[k.trim()]=(rest||'').split(',').map(s=>s.trim()).filter(Boolean);
           });
           data.fields[i].dict=map; save(); renderPreview();
         };
         wOD.appendChild(ta);
       }else{
         wOD.innerHTML='<label>Опции (через запятую)</label>';
-        var ta2=document.createElement('textarea'); ta2.rows=3; ta2.value=Array.isArray(f.options)?f.options.join(', '):'';
-        ta2.oninput=function(e){ data.fields[i].options=e.target.value.split(',').map(function(s){return s.trim();}).filter(Boolean); save(); renderPreview(); };
+        let ta2=document.createElement('textarea'); ta2.rows=3; ta2.value=Array.isArray(f.options)?f.options.join(', '):'';
+        ta2.oninput=e=>{ data.fields[i].options=e.target.value.split(',').map(s=>s.trim()).filter(Boolean); save(); renderPreview(); };
         wOD.appendChild(ta2);
       }
     }else if(f.type==='range'){
       wOD.innerHTML='<label>Подписи диапазона (левая, правая)</label>';
-      var rlab=document.createElement('input'); var L=(f.rangeLabels&&f.rangeLabels[0])||'от'; var R=(f.rangeLabels&&f.rangeLabels[1])||'до';
-      rlab.value=L+', '+R; rlab.oninput=function(e){ var p=e.target.value.split(',').map(function(s){return s.trim();}); data.fields[i].rangeLabels=[p[0]||'от', p[1]||'до']; save(); renderPreview(); };
+      const rlab=document.createElement('input'); const L=(f.rangeLabels&&f.rangeLabels[0])||'от'; const R=(f.rangeLabels&&f.rangeLabels[1])||'до';
+      rlab.value=L+', '+R; rlab.oninput=e=>{ const p=e.target.value.split(',').map(s=>s.trim()); data.fields[i].rangeLabels=[p[0]||'от', p[1]||'до']; save(); renderPreview(); };
       wOD.appendChild(rlab);
     }else{
       wOD.innerHTML='<label>&nbsp;</label><div class="muted">Для этого типа настроек нет</div>';
     }
     grid.appendChild(wOD);
 
-    var wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение или ключ=знач1|знач2)</label>';
-    var vin=document.createElement('input'); vin.placeholder='например: category=Квартира|Дом|Коммерция';
+    const wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение или ключ=знач1|знач2)</label>';
+    const vin=document.createElement('input'); vin.placeholder='например: category=Квартира|Дом|Коммерция';
     if(f.visibleWhen){
-      var k0=null,v0=null; for(var kk in f.visibleWhen){ if(Object.prototype.hasOwnProperty.call(f.visibleWhen,kk)){ k0=kk; v0=f.visibleWhen[kk]; break; } }
+      let k0=null,v0=null; for(const kk in f.visibleWhen){ k0=kk; v0=f.visibleWhen[kk]; break; }
       if(k0){ vin.value=Array.isArray(v0)? (k0+'='+v0.join('|')) : (k0+'='+v0); }
     }
-    vin.oninput=function(e){
-      var v=e.target.value.trim();
+    vin.oninput=e=>{
+      const v=e.target.value.trim();
       if(!v){ data.fields[i].visibleWhen=null; save(); renderPreview(); return; }
-      var parts=v.split('='); var k=parts[0]; var rest=parts.slice(1).join('=');
+      const parts=v.split('='); const k=parts[0]; const rest=parts.slice(1).join('=');
       if(rest.indexOf('|')>-1){
-        data.fields[i].visibleWhen=(function(){ var o={}; o[k.trim()]=rest.split('|').map(function(s){return s.trim();}).filter(Boolean); return o; })();
+        data.fields[i].visibleWhen=((() => { const o={}; o[k.trim()]=rest.split('|').map(s=>s.trim()).filter(Boolean); return o; })());
       }else{
-        data.fields[i].visibleWhen=(function(){ var o={}; o[k.trim()]=(rest||'').trim(); return o; })();
+        data.fields[i].visibleWhen=((() => { const o={}; o[k.trim()]=(rest||'').trim(); return o; })());
       }
       save(); renderPreview();
     };
@@ -423,49 +417,48 @@ function renderFields(){
   });
   box.appendChild(list);
 }
-
-/* ================= LAYOUT (как было) ================ */
-var nextId=100, dragState=null, resizeState=null;
+/* LAYOUT */
+let nextId=100, dragState=null, resizeState=null;
 function addBlock(type){
-  var id=++nextId; data.layout.push({id:id,type:type,title:(type==='filters'?'Фильтры':type.toUpperCase()),x:1,y:1,w:6,h:4});
+  const id=++nextId; data.layout.push({id:id,type:type,title:(type==='filters'?'Фильтры':type.toUpperCase()),x:1,y:1,w:6,h:4});
   save(); renderLayout(); renderPreview();
 }
-function removeBlock(id){ var i=data.layout.findIndex(function(b){return b.id===id;}); if(i>-1){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); } }
+function removeBlock(id){ const i=data.layout.findIndex(b=>b.id===id); if(i>-1){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); } }
 function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
-function autoLayout(){ var col=1,row=1; data.layout.forEach(function(b){ b.w=6;b.h=4;b.x=col;b.y=row; col=(col===1)?7:1; if(col===1) row+=4; }); save(); renderLayout(); renderPreview(); }
+function autoLayout(){ let col=1,row=1; data.layout.forEach(b=>{ b.w=6;b.h=4;b.x=col;b.y=row; col=(col===1)?7:1; if(col===1) row+=4; }); save(); renderLayout(); renderPreview(); }
 function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
 
 function renderLayout(){
-  var box=document.getElementById('tab-layout'); box.innerHTML='';
-  var bar=document.createElement('div'); bar.className='row'; bar.style.marginBottom='10px';
-  ['filters','form','cards','table','map'].forEach(function(t){ var b=document.createElement('button'); b.className='btn'; b.textContent='+ '+(t==='filters'?'Фильтры':t.toUpperCase()); b.onclick=function(){ addBlock(t); }; bar.appendChild(b); });
-  var bAuto=document.createElement('button'); bAuto.className='btn warn'; bAuto.textContent='Авторасстановка'; bAuto.onclick=autoLayout; bar.appendChild(bAuto);
-  var bClr=document.createElement('button'); bClr.className='btn danger'; bClr.textContent='Очистить'; bClr.onclick=clearLayout; bar.appendChild(bClr);
+  const box=document.getElementById('tab-layout'); box.innerHTML='';
+  const bar=document.createElement('div'); bar.className='row'; bar.style.marginBottom='10px';
+  ['filters','form','cards','table','map'].forEach(t=>{ const b=document.createElement('button'); b.className='btn'; b.textContent='+ '+(t==='filters'?'Фильтры':t.toUpperCase()); b.onclick=()=>addBlock(t); bar.appendChild(b); });
+  const bAuto=document.createElement('button'); bAuto.className='btn warn'; bAuto.textContent='Авторасстановка'; bAuto.onclick=autoLayout; bar.appendChild(bAuto);
+  const bClr=document.createElement('button'); bClr.className='btn danger'; bClr.textContent='Очистить'; bClr.onclick=clearLayout; bar.appendChild(bClr);
   box.appendChild(bar);
 
-  var wrap=document.createElement('div'); wrap.className='canvas-wrap';
-  var grid=document.createElement('div'); grid.className='canvas'; wrap.appendChild(grid); box.appendChild(wrap);
+  const wrap=document.createElement('div'); wrap.className='canvas-wrap';
+  const grid=document.createElement('div'); grid.className='canvas'; wrap.appendChild(grid); box.appendChild(wrap);
 
-  var rows = data.layout.length ? Math.max.apply(null, data.layout.map(function(b){return b.y+b.h-1;})) : 1;
+  const rows = data.layout.length ? Math.max(...data.layout.map(b=> b.y+b.h-1 )) : 1;
   grid.style.minHeight=(rows*90 + (rows-1)*6) + 'px';
 
-  data.layout.forEach(function(b){
-    var card=document.createElement('div'); card.className='block'; card.setAttribute('data-id', b.id);
+  data.layout.forEach(b=>{
+    const card=document.createElement('div'); card.className='block'; card.setAttribute('data-id', b.id);
     card.style.gridColumn=b.x+'/span '+b.w; card.style.gridRow=b.y+'/span '+b.h;
-    var head=document.createElement('header');
-    var title=document.createElement('span'); title.className='title'; title.textContent=b.title||b.type;
-    title.ondblclick=function(){ var t=prompt('Название блока:', b.title||b.type); if(t!=null){ b.title=t; save(); renderLayout(); renderPreview(); } };
-    var rm=document.createElement('button'); rm.className='x'; rm.textContent='x'; rm.onclick=function(){ removeBlock(b.id); };
+    const head=document.createElement('header');
+    const title=document.createElement('span'); title.className='title'; title.textContent=b.title||b.type;
+    title.ondblclick=function(){ const t=prompt('Название блока:', b.title||b.type); if(t!=null){ b.title=t; save(); renderLayout(); renderPreview(); } };
+    const rm=document.createElement('button'); rm.className='x'; rm.textContent='x'; rm.onclick=()=>removeBlock(b.id);
     head.appendChild(title); head.appendChild(rm);
     head.addEventListener('mousedown', function(e){
-      var rect=grid.getBoundingClientRect(); var colW=rect.width/12; var rowH=96;
+      const rect=grid.getBoundingClientRect(); const colW=rect.width/12; const rowH=96;
       dragState={id:b.id, startX:e.clientX, startY:e.clientY, baseX:b.x, baseY:b.y, colW:colW, rowH:rowH};
       document.addEventListener('mousemove', onDragMove); document.addEventListener('mouseup', onDragEnd, {once:true});
     });
-    var body=document.createElement('div'); body.className='body'; body.textContent='Секция макета';
-    var res=document.createElement('div'); res.className='resize';
+    const body=document.createElement('div'); body.className='body'; body.textContent='Секция макета';
+    const res=document.createElement('div'); res.className='resize';
     res.addEventListener('mousedown', function(e){
-      e.stopPropagation(); var rect=grid.getBoundingClientRect(); var colW=rect.width/12; var rowH=96;
+      e.stopPropagation(); const rect=grid.getBoundingClientRect(); const colW=rect.width/12; const rowH=96;
       resizeState={id:b.id, startX:e.clientX, startY:e.clientY, baseW:b.w, baseH:b.h, colW:colW, rowH:rowH};
       document.addEventListener('mousemove', onResizeMove); document.addEventListener('mouseup', onResizeEnd, {once:true});
     });
@@ -473,57 +466,52 @@ function renderLayout(){
   });
 
   function onDragMove(e){
-    if(!dragState) return; var b=data.layout.find(function(x){return x.id===dragState.id;}); if(!b) return;
-    var dx=e.clientX-dragState.startX; var dy=e.clientY-dragState.startY;
-    var gx=Math.round(dragState.baseX + dx/dragState.colW);
-    var gy=Math.round(dragState.baseY + dy/dragState.rowH);
+    if(!dragState) return; const b=data.layout.find(x=>x.id===dragState.id); if(!b) return;
+    const dx=e.clientX-dragState.startX; const dy=e.clientY-dragState.startY;
+    let gx=Math.round(dragState.baseX + dx/dragState.colW);
+    let gy=Math.round(dragState.baseY + dy/dragState.rowH);
     gx=clamp(gx,1,12-(b.w-1)); gy=clamp(gy,1,Math.max(1,gy)); b.x=gx; b.y=gy; renderLayout();
   }
   function onDragEnd(){ if(dragState){ save(); dragState=null; } document.removeEventListener('mousemove', onDragMove); }
   function onResizeMove(e){
-    if(!resizeState) return; var b=data.layout.find(function(x){return x.id===resizeState.id;}); if(!b) return;
-    var dx=e.clientX-resizeState.startX; var dy=e.clientY-resizeState.startY;
-    var gw=Math.round(resizeState.baseW + dx/res
-    izeState.colW);
-    var gh=Math.round(resizeState.baseH + dy/resizeState.rowH);
-    gw=clamp(gw,1,12-(b.x-1)); gh=clamp(gh,1,24); b.w=gw; b.h=gh; renderLayout();
+    if(!resizeState) return; const b=data.layout.find(x=>x.id===resizeState.id); if(!b) return;
+    const dx=e.clientX-resizeState.startX; const dy=e.clientY-resizeState.startY;
+    let gw=Math.round(resizeState.baseW + dx/resizestate.colW);
   }
   function onResizeEnd(){ if(resizeState){ save(); resizeState=null; } document.removeEventListener('mousemove', onResizeMove); }
 }
 
-/* ================= PREVIEW (как было) ================ */
+/* PREVIEW */
 function renderPreview(){
-  var grid=document.getElementById('preview'); grid.innerHTML='';
-  var rows = data.layout.length ? Math.max.apply(null, data.layout.map(function(b){return b.y+b.h-1;})) : 1;
+  const grid=document.getElementById('preview'); grid.innerHTML='';
+  const rows = data.layout.length ? Math.max(...data.layout.map(b=> b.y+b.h-1 )) : 1;
   grid.style.minHeight = (rows*90 + (rows-1)*6) + 'px';
 
-  var children=buildChildrenMap();
+  const children=buildChildrenMap();
 
-  data.layout.forEach(function(b){
-    var card=document.createElement('div'); card.className='preview-card';
+  data.layout.forEach(b=>{
+    const card=document.createElement('div'); card.className='preview-card';
     card.style.gridColumn=b.x+' / span '+b.w; card.style.gridRow=b.y+' / span '+b.h;
-
-    var section=document.createElement('div'); section.className='preview-section';
+    const section=document.createElement('div'); section.className='preview-section';
 
     if(b.type==='filters'){
-      data.groups.forEach(function(g,gi){
-        var group=document.createElement('div'); group.className='p-group';
-        var title=document.createElement('div'); title.className='p-title';
+      data.groups.forEach((g,gi)=>{
+        const group=document.createElement('div'); group.className='p-group';
+        const title=document.createElement('div'); title.className='p-title';
         title.textContent = g.name || (gi===0?'Верхняя линия':'Линия '+(gi+1));
         group.appendChild(title);
-        if(g.desc){ var d=document.createElement('div'); d.className='muted'; d.style.marginBottom='8px'; d.textContent=g.desc; group.appendChild(d); }
-        var row=document.createElement('div'); row.className='p-row';
+        if(g.desc){ const d=document.createElement('div'); d.className='muted'; d.style.marginBottom='8px'; d.textContent=g.desc; group.appendChild(d); }
+        const row=document.createElement('div'); row.className='p-row';
 
-        (g.filters||[]).forEach(function(name){
-          var f=byField(name); if(!f) return;
-          var box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?'':'none';
-          var lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || 'Без названия'; box.appendChild(lab);
+        (g.filters||[]).forEach(name=>{
+          const f=byField(name); if(!f) return;
+          const box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?'':'none';
+          const lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || 'Без названия'; box.appendChild(lab);
 
           if(f.type==='select'){
-            var sel=document.createElement('select');
-            var opts = computeOptionsFor(f);
-            var optionsHtml = '<option value=\"\">—</option>' + opts.map(function(o){ return '<option>'+o+'</option>'; }).join('');
-            sel.innerHTML = optionsHtml;
+            const sel=document.createElement('select');
+            const opts = computeOptionsFor(f);
+            sel.innerHTML = '<option value="">—</option>' + opts.map(o=> '<option>'+o+'</option>').join('');
             if(previewState[f.field] && opts.indexOf(previewState[f.field])>-1) sel.value=previewState[f.field];
             sel.addEventListener('change', function(){
               previewState[f.field]=sel.value;
@@ -532,19 +520,18 @@ function renderPreview(){
             });
             box.appendChild(sel);
           }else if(f.type==='range'){
-            var div=document.createElement('div'); div.className='row';
-            var a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+'_min']||'';
-            var bb=document.createElement('input'); bb.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; bb.value = previewState[f.field+'_max']||'';
+            const div=document.createElement('div'); div.className='row';
+            const a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+'_min']||'';
+            const bb=document.createElement('input'); bb.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; bb.value = previewState[f.field+'_max']||'';
             a.addEventListener('input', function(){ previewState[f.field+'_min']=a.value; });
             bb.addEventListener('input', function(){ previewState[f.field+'_max']=bb.value; });
             div.appendChild(a); div.appendChild(bb); box.appendChild(div);
           }else if(f.type==='number'){
-            var num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||'';
+            const num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||'';
             num.addEventListener('input', function(){ previewState[f.field]=num.value; });
             box.appendChild(num);
           }else{
-            var t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||'';
-            t.addEventListener('input', function(){ previewState[f.field]=t.value; });
+            const t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||''; t.addEventListener('input', function(){ previewState[f.field]=t.value; });
             box.appendChild(t);
           }
           row.appendChild(box);
@@ -553,11 +540,11 @@ function renderPreview(){
         group.appendChild(row); section.appendChild(group);
       });
     } else if(b.type==='form'){
-      var fg=document.createElement('div'); fg.className='form-grid';
-      ['Имя','Телефон','Email','Комментарий'].forEach(function(lbl,idx){
-        var wrap=document.createElement('div');
-        var lab=document.createElement('label'); lab.textContent=lbl; wrap.appendChild(lab);
-        var input = (idx===3)? document.createElement('textarea') : document.createElement('input');
+      const fg=document.createElement('div'); fg.className='form-grid';
+      ['Имя','Телефон','Email','Комментарий'].forEach((lbl,idx)=>{
+        const wrap=document.createElement('div');
+        const lab=document.createElement('label'); lab.textContent=lbl; wrap.appendChild(lab);
+        const input = (idx===3)? document.createElement('textarea') : document.createElement('input');
         if(idx===1) input.type='tel';
         if(idx===2) input.type='email';
         input.placeholder = lbl;
@@ -566,30 +553,30 @@ function renderPreview(){
       });
       section.appendChild(fg);
     } else if(b.type==='cards'){
-      var gridCards=document.createElement('div'); gridCards.className='preview-cards';
-      demoItems.forEach(function(it){
-        var ci=document.createElement('div'); ci.className='preview-card-item';
-        var img=document.createElement('img'); img.src=it.img; ci.appendChild(img);
-        var body=document.createElement('div'); body.className='pc-body';
-        var ttl=document.createElement('div'); ttl.className='pc-title'; ttl.textContent=it.title; body.appendChild(ttl);
-        var adr=document.createElement('div'); adr.textContent='Район: '+it.district; body.appendChild(adr);
-        var r=document.createElement('div'); r.textContent='Комнат: '+it.rooms; body.appendChild(r);
-        var pr=document.createElement('div'); pr.textContent='Цена: '+it.price+' ('+it.area+')'; body.appendChild(pr);
+      const gridCards=document.createElement('div'); gridCards.className='preview-cards';
+      demoItems.forEach(it=>{
+        const ci=document.createElement('div'); ci.className='preview-card-item';
+        const img=document.createElement('img'); img.src=it.img; ci.appendChild(img);
+        const body=document.createElement('div'); body.className='pc-body';
+        const ttl=document.createElement('div'); ttl.className='pc-title'; ttl.textContent=it.title; body.appendChild(ttl);
+        const adr=document.createElement('div'); adr.textContent='Район: '+it.district; body.appendChild(adr);
+        const r=document.createElement('div'); r.textContent='Комнат: '+it.rooms; body.appendChild(r);
+        const pr=document.createElement('div'); pr.textContent='Цена: '+it.price+' ('+it.area+')'; body.appendChild(pr);
         ci.appendChild(body); gridCards.appendChild(ci);
       });
       section.appendChild(gridCards);
     } else if(b.type==='table'){
-      var table=document.createElement('table'); table.className='preview-table';
-      var thead=document.createElement('thead'); thead.innerHTML='<tr><th>Категория</th><th>Район</th><th>Комнат</th><th>Площадь</th><th>Цена</th></tr>'; table.appendChild(thead);
-      var tbody=document.createElement('tbody');
-      demoItems.forEach(function(it){
-        var tr=document.createElement('tr');
+      const table=document.createElement('table'); table.className='preview-table';
+      const thead=document.createElement('thead'); thead.innerHTML='<tr><th>Категория</th><th>Район</th><th>Комнат</th><th>Площадь</th><th>Цена</th></tr>'; table.appendChild(thead);
+      const tbody=document.createElement('tbody');
+      demoItems.forEach(it=>{
+        const tr=document.createElement('tr');
         tr.innerHTML='<td>'+it.category+'</td><td>'+it.district+'</td><td>'+it.rooms+'</td><td>'+it.area+'</td><td>'+it.price+'</td>';
         tbody.appendChild(tr);
       });
       table.appendChild(tbody); section.appendChild(table);
     } else if(b.type==='map'){
-      var m=document.createElement('div'); m.className='preview-map'; m.textContent='MAP (placeholder)';
+      const m=document.createElement('div'); m.className='preview-map'; m.textContent='MAP (placeholder)';
       section.appendChild(m);
     }
 
@@ -597,17 +584,16 @@ function renderPreview(){
     grid.appendChild(card);
   });
 }
-
-/* ================= EXPORT / IMPORT / RESET (как было) ================ */
+/* EXPORT / IMPORT / RESET */
 document.getElementById('btnExport').onclick=function(){
   normalize();
-  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admin-cascade-v5-preview.json'; a.click();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admin-cascade-v13_9_6.json'; a.click();
 };
 document.getElementById('fileImport').onchange=function(e){
-  var f=e.target.files[0]; if(!f) return; var r=new FileReader();
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
   r.onload=function(){ try{
-      var obj=JSON.parse(r.result);
+      const obj=JSON.parse(r.result);
       if(obj.fields) data.fields=obj.fields;
       if(obj.groups) data.groups=obj.groups;
       if(obj.layout) data.layout=obj.layout;
@@ -624,211 +610,97 @@ document.getElementById('btnReset').onclick=function(){
   location.reload();
 };
 
-/* ================= НОВОЕ: КОНСТРУКТОР ФОРМЫ ОБЪЕКТОВ ================= */
-const OBJFORM_KEY = "objectFormConfig";
-const DEFAULT_OBJFORM = [
-  {key:"title",   label:"Заголовок",     type:"text",    required:true,  enabled:true},
-  {key:"address", label:"Адрес",         type:"text",    required:false, enabled:true},
-  {key:"price",   label:"Цена",          type:"number",  required:false, enabled:true},
-  {key:"rooms",   label:"Комнаты",       type:"number",  required:false, enabled:false},
-  {key:"area",    label:"Площадь, м²",   type:"number",  required:false, enabled:false},
-  {key:"status",  label:"Статус",        type:"select",  required:false, enabled:true, values:["sale:Продается","rent:Сдается"]},
-  {key:"images",  label:"Фотографии",    type:"images",  required:false, enabled:true},
-  {key:"coords",  label:"Координаты",    type:"coords",  required:false, enabled:true}
-];
+/* ====== ФОРМА ОБЪЕКТОВ (админ-конструктор) ====== */
+const OBJFORM_KEY="objectFormConfig";
+let objFormConfig = JSON.parse(localStorage.getItem(OBJFORM_KEY) || "[]");
+function saveObjForm(){ localStorage.setItem(OBJFORM_KEY, JSON.stringify(objFormConfig)); }
+function renderObjForm(){
+  const box=document.getElementById('ofList'); if(!box) return; box.innerHTML='';
+  objFormConfig.forEach((f,i)=>{
+    const card=document.createElement('div'); card.className='of-card';
+    card.innerHTML=`<div class="title-row"><h3>${f.label||'Поле '+(i+1)}</h3>
+      <button class="btn danger">Удалить</button></div>`;
+    card.querySelector('.btn.danger').onclick=()=>{ objFormConfig.splice(i,1); saveObjForm(); renderObjForm(); };
+    const grid=document.createElement('div'); grid.className='of-grid';
 
-let objForm = (()=>{
-  try{
-    const raw = localStorage.getItem(OBJFORM_KEY);
-    if(!raw) return DEFAULT_OBJFORM.map(f=>({...f}));
-    const arr = JSON.parse(raw);
-    if(!Array.isArray(arr)) return DEFAULT_OBJFORM.map(f=>({...f}));
-    return arr.map(f=>({enabled:false,required:false,type:"text",label:f.key,...f}));
-  }catch{ return DEFAULT_OBJFORM.map(f=>({...f})); }
-})();
+    let w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
+    let inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=e=>{ f.label=e.target.value; saveObjForm(); renderObjFormPreview(); };
+    w.appendChild(inp); grid.appendChild(w);
 
-function ofSave(){ localStorage.setItem(OBJFORM_KEY, JSON.stringify(objForm)); }
-function ofValuesToText(f){
-  if(!f || !f.type) return "";
-  if(f.type==="select"){ return (f.values||[]).join(";"); }
-  if(f.type==="range"){ const mn=f.min??"", mx=f.max??"", st=f.step??""; return [mn,mx,st].join(","); }
-  return "";
-}
-function ofTextToValues(type, text){
-  if(type==="select"){ return { values:(text||"").split(";").map(s=>s.trim()).filter(Boolean) }; }
-  if(type==="range"){
-    const [mn,mx,st]=(text||"").split(",").map(s=>s.trim());
-    return { min:isFinite(+mn)?+mn:undefined, max:isFinite(+mx)?+mx:undefined, step:isFinite(+st)?+st:undefined };
-  }
-  return {};
-}
-function ofRender(){
-  const list = document.getElementById("ofList");
-  list.innerHTML="";
-  objForm.forEach((f,idx)=>{
-    const card=document.createElement("div");
-    card.className="of-card";
-    card.draggable=true;
-    card.dataset.index=idx;
-    card.innerHTML = `
-      <div class="title-row">
-        <div class="row">
-          <h3>${(f.label||f.key||("Поле "+(idx+1)))}</h3>
-          <small class="muted">(${f.key||""})</small>
-          <span class="muted">•</span>
-          <small class="muted">${f.enabled?"включено":"выключено"}</small>
-        </div>
-        <div class="row">
-          <button class="btn" data-act="up">↑</button>
-          <button class="btn" data-act="down">↓</button>
-          <button class="btn danger" data-act="del">Удалить</button>
-        </div>
-      </div>
-    `;
-    const grid=document.createElement("div"); grid.className="of-grid";
+    w=document.createElement('div'); w.innerHTML='<label>Имя поля</label>';
+    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=e=>{ f.field=e.target.value; saveObjForm(); };
+    w.appendChild(inp); grid.appendChild(w);
 
-    // Включить/выключить
-    let w=document.createElement("div"); w.innerHTML='<label>Включено</label>';
-    let chk=document.createElement("input"); chk.type="checkbox"; chk.checked=!!f.enabled;
-    chk.onchange=()=>{ f.enabled=chk.checked; ofSave(); ofRender(); ofPreview(); };
-    w.appendChild(chk); grid.appendChild(w);
-
-    // Обязательное
-    w=document.createElement("div"); w.innerHTML='<label>Обязательное</label>';
-    let req=document.createElement("input"); req.type="checkbox"; req.checked=!!f.required;
-    req.onchange=()=>{ f.required=req.checked; ofSave(); ofRender(); ofPreview(); };
-    w.appendChild(req); grid.appendChild(w);
-
-    // Ключ
-    w=document.createElement("div"); w.innerHTML='<label>Ключ</label>';
-    let key=document.createElement("input"); key.value=f.key||"";
-    key.oninput=e=>{ f.key=e.target.value.trim(); ofSave(); ofRender(); ofPreview(); };
-    w.appendChild(key); grid.appendChild(w);
-
-    // Метка
-    w=document.createElement("div"); w.innerHTML='<label>Метка</label>';
-    let lab=document.createElement("input"); lab.value=f.label||"";
-    lab.oninput=e=>{ f.label=e.target.value; ofSave(); ofPreview(); };
-    w.appendChild(lab); grid.appendChild(w);
-
-    // Тип
-    w=document.createElement("div"); w.innerHTML='<label>Тип</label>';
-    let sel=document.createElement("select");
-    ["text","number","textarea","select","range","images","coords"].forEach(t=>{
-      const o=document.createElement("option"); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; sel.appendChild(o);
+    w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
+    const sel=document.createElement('select');
+    ['text','number','select','range','images','coords'].forEach(t=>{
+      const o=document.createElement('option'); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; sel.appendChild(o);
     });
-    sel.onchange=e=>{ f.type=e.target.value; ofSave(); ofRender(); ofPreview(); };
+    sel.onchange=e=>{ f.type=e.target.value; saveObjForm(); renderObjFormPreview(); };
     w.appendChild(sel); grid.appendChild(w);
 
-    // Значения (select/range)
-    w=document.createElement("div"); w.innerHTML='<label>Значения (для select: value:Label;… | для range: min,max,step)</label>';
-    let val=document.createElement("input"); val.value=ofValuesToText(f); val.placeholder="пример: sale:Продается;rent:Сдается";
-    val.oninput=e=>{ Object.assign(f, ofTextToValues(f.type, e.target.value)); ofSave(); };
-    w.appendChild(val); grid.appendChild(w);
+    w=document.createElement('div'); w.innerHTML='<label>Обязательное</label>';
+    const chk=document.createElement('input'); chk.type='checkbox'; chk.checked=!!f.required; chk.onchange=()=>{ f.required=chk.checked; saveObjForm(); };
+    w.appendChild(chk); grid.appendChild(w);
 
-    card.appendChild(grid);
-
-    // drag
-    card.addEventListener("dragstart", ()=>{ card.classList.add("dragging"); window.__ofDragIndex=idx; });
-    card.addEventListener("dragend", ()=>{ card.classList.remove("dragging"); window.__ofDragIndex=null; });
-    card.addEventListener("dragover", e=>{ e.preventDefault(); });
-    card.addEventListener("drop", e=>{
-      e.preventDefault();
-      const from = window.__ofDragIndex, to = +card.dataset.index;
-      if(from==null || from===to) return;
-      const item = objForm.splice(from,1)[0];
-      objForm.splice(to,0,item);
-      ofSave(); ofRender(); ofPreview();
-    });
-
-    // actions
-    card.querySelectorAll("button[data-act]").forEach(b=>{
-      b.onclick=()=>{
-        const act=b.dataset.act;
-        const i=+card.dataset.index;
-        if(act==="del"){ objForm.splice(i,1); ofSave(); ofRender(); ofPreview(); }
-        if(act==="up" && i>0){ [objForm[i-1],objForm[i]]=[objForm[i],objForm[i-1]]; ofSave(); ofRender(); ofPreview(); }
-        if(act==="down" && i<objForm.length-1){ [objForm[i+1],objForm[i]]=[objForm[i],objForm[i+1]]; ofSave(); ofRender(); ofPreview(); }
-      };
-    });
-
-    list.appendChild(card);
-  });
-}
-function ofPreview(){
-  const box=document.getElementById("ofPreview");
-  box.innerHTML="";
-  const act = objForm.filter(f=>f.enabled);
-  act.forEach(f=>{
-    const cell=document.createElement("div");
-    const lab=document.createElement("label"); lab.textContent=f.label||f.key; cell.appendChild(lab);
-
-    let ctrl = document.createElement("input"); ctrl.style.width="100%";
-    switch(f.type){
-      case "textarea": ctrl=document.createElement("textarea"); ctrl.rows=3; break;
-      case "text": case "number": ctrl.type=f.type; break;
-      case "select":{
-        ctrl=document.createElement("select");
-        (f.values||[]).forEach(v=>{
-          const i=v.indexOf(":"); const value=i>-1?v.slice(0,i):v; const name=i>-1?v.slice(i+1):v;
-          const o=document.createElement("option"); o.value=value; o.textContent=name; ctrl.appendChild(o);
-        });
-        break;
-      }
-      case "range":{
-        const wrap=document.createElement("div"); wrap.className="row";
-        const a=document.createElement("input"); a.type="number"; a.placeholder="min";
-        const b=document.createElement("input"); b.type="number"; b.placeholder="max";
-        wrap.appendChild(a); wrap.appendChild(b); ctrl=wrap; break;
-      }
-      case "images":{
-        const btn=document.createElement("button"); btn.className="btn"; btn.textContent="Загрузить фото"; ctrl=btn; break;
-      }
-      case "coords":{
-        const btn=document.createElement("button"); btn.className="btn"; btn.textContent="Выбрать на карте"; ctrl=btn; break;
-      }
+    if(f.type==='select'){
+      let wOpt=document.createElement('div'); wOpt.innerHTML='<label>Опции (через запятую)</label>';
+      let ta=document.createElement('textarea'); ta.rows=3; ta.value=Array.isArray(f.options)?f.options.join(', '):'';
+      ta.oninput=e=>{ f.options=e.target.value.split(',').map(s=>s.trim()).filter(Boolean); saveObjForm(); renderObjFormPreview(); };
+      wOpt.appendChild(ta); grid.appendChild(wOpt);
+    }else if(f.type==='range'){
+      let wR=document.createElement('div'); wR.innerHTML='<label>Подписи диапазона (левая, правая)</label>';
+      const rlab=document.createElement('input'); const L=(f.rangeLabels&&f.rangeLabels[0])||'от'; const R=(f.rangeLabels&&f.rangeLabels[1])||'до';
+      rlab.value=L+', '+R; rlab.oninput=e=>{ const p=e.target.value.split(',').map(s=>s.trim()); f.rangeLabels=[p[0]||'от', p[1]||'до']; saveObjForm(); renderObjFormPreview(); };
+      wR.appendChild(rlab); grid.appendChild(wR);
     }
-    cell.appendChild(ctrl);
-    if(f.required){ const s=document.createElement("small"); s.className="muted"; s.textContent="обязательное"; cell.appendChild(s); }
-    box.appendChild(cell);
+
+    card.appendChild(grid); box.appendChild(card);
+  });
+
+  renderObjFormPreview();
+}
+function renderObjFormPreview(){
+  const prev=document.getElementById('ofPreview'); if(!prev) return; prev.innerHTML='';
+  objFormConfig.forEach(f=>{
+    const wrap=document.createElement('div');
+    const lab=document.createElement('label'); lab.textContent=f.label||f.field; wrap.appendChild(lab);
+    if(f.type==='select'){
+      const sel=document.createElement('select');
+      (f.options||[]).forEach(o=>{ const op=document.createElement('option'); op.textContent=o; sel.appendChild(op); });
+      wrap.appendChild(sel);
+    }else if(f.type==='range'){
+      const row=document.createElement('div'); row.className='row';
+      const a=document.createElement('input'); a.placeholder=(f.rangeLabels&&f.rangeLabels[0])||'от';
+      const b=document.createElement('input'); b.placeholder=(f.rangeLabels&&f.rangeLabels[1])||'до';
+      row.appendChild(a); row.appendChild(b); wrap.appendChild(row);
+    }else if(f.type==='images'){
+      const p=document.createElement('div'); p.className='muted'; p.textContent='Поле загрузки фото (предпросмотр)'; wrap.appendChild(p);
+    }else if(f.type==='coords'){
+      const p=document.createElement('div'); p.className='muted'; p.textContent='Поле координат (предпросмотр)'; wrap.appendChild(p);
+    }else{
+      const inp=document.createElement('input'); inp.placeholder=f.label||f.field; wrap.appendChild(inp);
+    }
+    prev.appendChild(wrap);
   });
 }
-
-/* Кнопки вкладки формы объектов */
-document.getElementById("ofAdd").onclick=()=>{
-  objForm.push({key:"field_"+(objForm.length+1), label:"Поле "+(objForm.length+1), type:"text", required:false, enabled:true});
-  ofSave(); ofRender(); ofPreview();
-};
-document.getElementById("ofReset").onclick=()=>{
-  if(!confirm("Сбросить конфиг формы к стандартным?")) return;
-  objForm = DEFAULT_OBJFORM.map(f=>({...f}));
-  ofSave(); ofRender(); ofPreview();
-};
-document.getElementById("ofExport").onclick=()=>{
-  const blob=new Blob([JSON.stringify(objForm,null,2)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="objectFormConfig.json"; a.click();
-};
-document.getElementById("ofImport").onchange=(e)=>{
-  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
-  r.onload=()=>{
-    try{
-      const j=JSON.parse(r.result);
-      objForm = Array.isArray(j)? j : (j.objectFormConfig||[]);
-      if(!Array.isArray(objForm)) throw new Error("Неверный формат");
-      ofSave(); ofRender(); ofPreview(); alert("Импортирован objectFormConfig");
-    }catch(err){ alert("Ошибка импорта: "+err.message); }
-  };
-  r.readAsText(f);
-};
-
-/* ================= INIT (как было + objform) ================ */
+document.getElementById('ofAdd').onclick=()=>{ objFormConfig.push({label:'Новое поле',field:'field_'+(objFormConfig.length+1),type:'text'}); saveObjForm(); renderObjForm(); };
+document.getElementById('ofReset').onclick=()=>{ objFormConfig=[
+  {label:'Заголовок',field:'title',type:'text',required:true},
+  {label:'Цена',field:'price',type:'number',required:true},
+  {label:'Адрес',field:'address',type:'text'},
+  {label:'Фото',field:'images',type:'images'},
+  {label:'Координаты',field:'coords',type:'coords'}
+]; saveObjForm(); renderObjForm(); };
+document.getElementById('ofExport').onclick=()=>{ const blob=new Blob([JSON.stringify(objFormConfig,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='objectFormConfig.json'; a.click(); };
+document.getElementById('ofImport').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ objFormConfig=JSON.parse(r.result); saveObjForm(); renderObjForm(); }catch(err){alert('Ошибка импорта')} }; r.readAsText(f); };
+/* INIT */
 try{
   normalize();
   renderGroups(); renderFields(); renderLayout(); renderPreview();
-  ofRender(); ofPreview();
+  renderObjForm();
 }catch(e){
-  var box=document.createElement('div'); box.className='errorBox'; box.textContent='Ошибка инициализации: '+e.message;
-  document.getElementById('tab-filters').appendChild(box);
+  console.error(e);
 }
 </script>
 </body>
