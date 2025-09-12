@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v23 — фикс селекта и галочек</title>
+<title>location_selector_v24 — фикс галочек и лимита 5</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -42,16 +42,16 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 /* селект-чекбокс (галочка строго слева, текст справа) */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none;padding:0}
+.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none;padding:0;text-align:left}
 .multi-select.open .multi-select-menu{display:block}
-.multi-select-menu label{display:flex;align-items:flex-start;gap:8px;padding:6px 10px;cursor:pointer}
+.multi-select-menu label{display:flex;align-items:center;justify-content:flex-start;gap:6px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{margin:2px 0 0 0;flex-shrink:0}
+.multi-select-menu input[type="checkbox"]{margin:0;padding:0;position:relative;left:0;flex-shrink:0}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v23</span>
+  <span class="badge">dictionary v24</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -68,7 +68,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
-      <div class="help">Checkbox категории: видно выбранные элементы, список не закрывается.</div>
+      <div class="help">Checkbox категории: видно выбранные элементы (до 5 названий, дальше счётчик).</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -390,7 +390,7 @@ function renderPreview(){
           btn.textContent='Выбрать...';
         }else{
           const names=items.filter(x=>set.has(x.id)).map(x=>x.name);
-          btn.textContent=names.length<=3 ? names.join(', ') : `Выбрано: ${names.length}`;
+          btn.textContent = names.length <= 5 ? names.join(', ') : `Выбрано: ${names.length}`;
         }
       }
       updateBtnText();
@@ -449,7 +449,7 @@ document.addEventListener('click', e=>{
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v23.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v24.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
