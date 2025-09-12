@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v24 — фикс галочек и лимита 5</title>
+<title>location_selector_v25 — галочки влево и фикс кнопки</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -46,12 +46,19 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;justify-content:flex-start;gap:6px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{margin:0;padding:0;position:relative;left:0;flex-shrink:0}
+.multi-select-menu input[type="checkbox"]{
+  margin:0;
+  padding:0;
+  flex-shrink:0;
+  vertical-align:top;
+  position:relative;
+  top:2px;
+}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v24</span>
+  <span class="badge">dictionary v25</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -68,7 +75,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
-      <div class="help">Checkbox категории: видно выбранные элементы (до 5 названий, дальше счётчик).</div>
+      <div class="help">Checkbox категории: видно до 5 названий, дальше счётчик. Галочки строго слева.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -348,7 +355,7 @@ function dropChildrenSelections(parentCatId){
 
 function renderPreview(){
   $cascade.innerHTML="";
-  clearMarkers(); // очищаем карту один раз
+  clearMarkers();
 
   const ordered=db.categories;
   ordered.forEach(cat=>{
@@ -404,7 +411,7 @@ function renderPreview(){
           dropChildrenSelections(cat.id);
           updateBtnText();
 
-          // обновляем маркеры без закрытия селекта
+          // обновляем маркеры
           clearMarkers();
           for(const c of db.categories){
             const ids=getSelectedIds(c.id);
@@ -449,7 +456,7 @@ document.addEventListener('click', e=>{
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v24.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v25.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
