@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v15 — каскад + цвет/форма/иконка + импорт фикс</title>
+<title>location_selector_v17 — каскад + селект-чекбоксы + удаление метки + удалить иконку</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -40,11 +40,19 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .checkbox-grid label{display:flex;align-items:center;gap:6px;background:#111a2a;padding:6px 8px;border:1px solid #273248;border-radius:8px;cursor:pointer}
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
+
+/* Стили для мульти-селекта в предпросмотре */
+.multi-select{position:relative;width:100%}
+.multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left}
+.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:6px;z-index:1000;max-height:220px;overflow:auto;display:none}
+.multi-select.open .multi-select-menu{display:block}
+.multi-select-menu label{display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer}
+.multi-select-menu label:hover{background:#1f293d}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v15</span>
+  <span class="badge">dictionary v17</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -61,7 +69,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
-      <div class="help">Сначала выбираешь родителя, потом появляются дети. Метки рисуются цветом/формой категории или иконкой.</div>
+      <div class="help">Сначала выбираешь родителя, потом появляются дети. Метки рисуются цветом/формой категории или иконкой. Для checkbox используется селект с чекбоксами. В попапе маркера есть удаление.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -71,11 +79,10 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ================= STORAGE ================= */
-const KEY="dict_v14"; // держим ту же ключевую запись, чтобы твои данные из v14 сохранились
+const KEY="dict_v14"; // оставляем ключ, чтобы миграция с v14 работала
 let db = loadDB();
 
 function loadDB(){
-  // пробуем v14, если пусто — v13/v12, иначе создаём пустую схему
   const v14 = localStorage.getItem("dict_v14");
   if(v14){ try{ const obj=JSON.parse(v14); normalize(obj); return obj; }catch(e){} }
   const v13 = localStorage.getItem("dict_v13");
@@ -122,15 +129,23 @@ function markerIcon(cat){
   if(shape==="triangle") html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
   return L.divIcon({className:"custom-icon",html,iconSize:[20,20],iconAnchor:[10,10]});
 }
-function addMarker(lat,lng,label,cat){
-  const m=L.marker([lat,lng],{icon:markerIcon(cat)}).addTo(map).bindPopup(label);
+function addMarkerForItem(it,cat){
+  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat)}).addTo(map);
+  m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarker('${it.id}')">🗑 Удалить метку</button>`);
   markers.push(m);
 }
 function showDraggable(it,cat){
   clearMarkers();
-  const mk=L.marker([it.lat,it.lng],{draggable:true,icon:markerIcon(cat)}).addTo(map).bindPopup(it.name).openPopup();
+  const mk=L.marker([it.lat,it.lng],{draggable:true,icon:markerIcon(cat)}).addTo(map).bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarker('${it.id}')">🗑 Удалить метку</button>`).openPopup();
   markers.push(mk); map.setView([it.lat,it.lng],14);
   mk.on('dragend', e=>{const p=e.target.getLatLng(); it.lat=p.lat; it.lng=p.lng; save();});
+}
+window.removeMarker=function(id){
+  for(const c of db.categories){
+    const it=(c.items||[]).find(x=>x.id===id);
+    if(it){ it.lat=null; it.lng=null; break; }
+  }
+  save(); clearMarkers(); renderPreview();
 }
 
 /* ================= DND ================= */
@@ -180,6 +195,7 @@ function renderEditor(){
         <option value="triangle">Треугольник</option>
       </select>
       <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
+      <button id="newIconRemove" class="danger" disabled>Убрать иконку</button>
       <button id="btnAddCat">+ Добавить</button>
     </div>
     <div class="help">Чтобы каскад работал, укажи родителя у категории (например, Города → Страны, Районы → Города).</div>
@@ -188,10 +204,20 @@ function renderEditor(){
 
   const newIconInput = create.querySelector('#newCatIcon');
   const newIconPreview = create.querySelector('#newIconPreview');
+  const newIconRemove = create.querySelector('#newIconRemove');
   let newIconData=null;
   newIconInput.onchange=e=>{
-    const f=e.target.files[0]; if(!f){ newIconData=null; newIconPreview.textContent='icon'; return; }
-    const r=new FileReader(); r.onload=ev=>{ newIconData=ev.target.result; newIconPreview.innerHTML=`<img src="${newIconData}">`; }; r.readAsDataURL(f);
+    const f=e.target.files[0];
+    if(!f){ newIconData=null; newIconPreview.textContent='icon'; newIconRemove.disabled=true; return; }
+    const r=new FileReader();
+    r.onload=ev=>{ newIconData=ev.target.result; newIconPreview.innerHTML=`<img src="${newIconData}">`; newIconRemove.disabled=false; };
+    r.readAsDataURL(f);
+  };
+  newIconRemove.onclick=()=>{
+    newIconData=null;
+    newIconInput.value="";
+    newIconPreview.textContent='icon';
+    newIconRemove.disabled=true;
   };
   create.querySelector('#btnAddCat').onclick=()=>{
     const name=document.getElementById('newCatName').value.trim(); if(!name) return;
@@ -228,13 +254,23 @@ function renderEditor(){
     const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s==='circle'?'Круг':s==='square'?'Квадрат':'Треугольник'; if((cat.shape||'circle')===s) o.selected=true; shape.appendChild(o);});
     const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml';
     const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+    const btnRemoveIcon=document.createElement('button'); btnRemoveIcon.textContent='Убрать иконку'; btnRemoveIcon.className='danger'; btnRemoveIcon.disabled = !cat.iconData;
     const btnSave=document.createElement('button'); btnSave.textContent='Сохранить';
     const btnDel=document.createElement('button'); btnDel.textContent='Удалить'; btnDel.className='danger';
 
     iconInput.onchange=e=>{
-      const f=e.target.files[0]; if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); return; }
-      const r=new FileReader(); r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); };
+      const f=e.target.files[0];
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; btnRemoveIcon.disabled=true; save(); return; }
+      const r=new FileReader();
+      r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; btnRemoveIcon.disabled=false; save(); };
       r.readAsDataURL(f);
+    };
+    btnRemoveIcon.onclick=()=>{
+      delete cat.iconData;
+      iconPrev.textContent='icon';
+      iconInput.value="";
+      btnRemoveIcon.disabled=true;
+      save(); renderAll();
     };
     btnSave.onclick=()=>{
       cat.name=inpName.value.trim()||cat.name;
@@ -246,7 +282,7 @@ function renderEditor(){
     };
     btnDel.onclick=()=>{ if(confirm('Удалить категорию и её элементы?')){ db.categories.splice(ci,1); save(); renderAll(); } };
 
-    cfg.append(inpName, selType, selParent, col, shape, iconInput, iconPrev, btnSave, btnDel);
+    cfg.append(inpName, selType, selParent, col, shape, iconInput, iconPrev, btnRemoveIcon, btnSave, btnDel);
     sec.appendChild(cfg);
 
     sec.appendChild(document.createElement('div')).className='sep';
@@ -384,7 +420,7 @@ function renderPreview(){
       parentIds=parentSelected;
     }
 
-    // отфильтрованные элементы
+    // отфильтрованные элементы под выбранного родителя
     let items=(cat.items||[]);
     if(parentIds){ items=items.filter(it=> it.parentId && parentIds.includes(it.parentId)); }
 
@@ -396,14 +432,22 @@ function renderPreview(){
         selected[cat.id]=sel.value||null;
         clearMarkers();
         const it=items.find(x=>x.id===sel.value);
-        if(it && it.lat!=null && it.lng!=null){ addMarker(it.lat,it.lng,it.name,cat); map.setView([it.lat,it.lng],13); }
+        if(it && it.lat!=null && it.lng!=null){ addMarkerForItem(it,cat); map.setView([it.lat,it.lng],13); }
         dropChildrenSelections(cat.id);
         renderPreview();
       };
       box.appendChild(sel);
     }else{
-      const grid=document.createElement('div'); grid.className='checkbox-grid';
+      const wrapper=document.createElement('div'); wrapper.className='multi-select';
+      const btn=document.createElement('div'); btn.className='multi-select-btn';
+      const menu=document.createElement('div'); menu.className='multi-select-menu';
       const set = selected[cat.id] instanceof Set ? selected[cat.id] : new Set();
+      function refreshBtnText(){
+        if(set.size===0){ btn.textContent="— выберите —"; return; }
+        const names=Array.from(set).map(id=>items.find(x=>x.id===id)?.name).filter(Boolean);
+        if(names.length<=3) btn.textContent=names.join(", ");
+        else btn.textContent=names.slice(0,2).join(", ")+" +"+(names.length-2);
+      }
       items.forEach(it=>{
         const lbl=document.createElement('label');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
@@ -413,19 +457,21 @@ function renderPreview(){
           clearMarkers();
           for(const oid of set){
             const item=items.find(x=>x.id===oid);
-            if(item && item.lat!=null && item.lng!=null) addMarker(item.lat,item.lng,item.name,cat);
+            if(item && item.lat!=null && item.lng!=null) addMarkerForItem(item,cat);
           }
           dropChildrenSelections(cat.id);
           renderPreview();
         };
-        lbl.append(cb,document.createTextNode(it.name)); grid.appendChild(lbl);
+        lbl.append(cb,document.createTextNode(it.name)); menu.appendChild(lbl);
       });
-      box.appendChild(grid);
+      refreshBtnText();
+      btn.onclick=()=>wrapper.classList.toggle("open");
+      wrapper.append(btn,menu); box.appendChild(wrapper);
 
       // первичная отрисовка маркеров для выбранных
       for(const oid of set){
         const it=items.find(x=>x.id===oid);
-        if(it && it.lat!=null && it.lng!=null) addMarker(it.lat,it.lng,it.name,cat);
+        if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
       }
     }
 
@@ -437,7 +483,7 @@ function renderPreview(){
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v15.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v17.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
@@ -447,7 +493,6 @@ document.getElementById('fileImport').onchange=e=>{
   r.onload=()=>{
     try{
       let obj=JSON.parse(r.result);
-      // поддержка разных форматов
       if(Array.isArray(obj.categories)) {
         // ок
       } else if (obj && obj.db && Array.isArray(obj.db.categories)) {
