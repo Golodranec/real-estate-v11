@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v37.7.1 — full stable + icon upload</title>
+<title>location_selector_v37.7.2 — full stable</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
@@ -52,7 +52,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v37.7.1</span>
+  <span class="badge">dictionary v37.7.2</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -125,7 +125,6 @@ function normalize(obj){
       if(!("lat" in it)) it.lat=null;
       if(!("lng" in it)) it.lng=null;
       if(!("parentId" in it)) it.parentId=null;
-      if(!("iconData" in it)){} // опционально
     });
   });
   obj.polygons.forEach(p=>{
@@ -146,7 +145,7 @@ map.addLayer(cluster);
 
 function clearMarkers(){ cluster.clearLayers(); }
 
-// приоритет: иконка элемента -> иконка категории -> форма/цвет
+// приоритет: иконка элемента → иконка категории → форма/цвет
 function markerIcon(cat,it=null){
   if(it && it.iconData) return L.icon({iconUrl:it.iconData,iconSize:[24,24],iconAnchor:[12,12]});
   if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
@@ -163,13 +162,14 @@ function addMarkerForItem(it,cat){
   m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
   cluster.addLayer(m);
 }
+
 window.removeMarkerById=function(id){
   for(const c of db.categories){
     const it=(c.items||[]).find(x=>x.id===id);
     if(it){ it.lat=null; it.lng=null; break; }
   }
-  save(); renderAll();
-}
+  save(); renderAll(); // 🔑 обновляем сразу карту и UI
+};
 
 /***** POLYGONS CORE *****/
 const polyFG=new L.FeatureGroup();
@@ -330,7 +330,7 @@ function renderEditor(){
     const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку'; iconBtn.onclick=()=>iconInput.click();
     iconInput.onchange=e=>{
       const f=e.target.files[0];
-      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); return; }
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); renderPreview(); return; }
       const r=new FileReader(); r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); renderPreview(); }; r.readAsDataURL(f);
     };
     const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖'; btnClearIcon.title='Очистить иконку'; btnClearIcon.onclick=()=>{ delete cat.iconData; iconPrev.textContent='icon'; save(); renderPreview(); };
@@ -349,7 +349,7 @@ function renderEditor(){
 
       const tools=document.createElement('div'); tools.className='tools';
 
-      // иконка элемента (превью + загрузка + очистка)
+      // иконка элемента
       const itIconPrev=document.createElement('span'); itIconPrev.className='preview-icon'; itIconPrev.title="Иконка элемента"; itIconPrev.innerHTML=it.iconData?`<img src="${it.iconData}">`:'icon';
       const itIconInput=document.createElement('input'); itIconInput.type='file'; itIconInput.accept='image/png,image/svg+xml'; itIconInput.style.display='none';
       const itIconBtn=document.createElement('button'); itIconBtn.textContent='🖼'; itIconBtn.title='Загрузить иконку элемента'; itIconBtn.onclick=()=>itIconInput.click();
@@ -368,7 +368,7 @@ function renderEditor(){
         map.once('click', e=>{
           it.lat=e.latlng.lat; it.lng=e.latlng.lng; save();
           meta.textContent=`lat:${it.lat.toFixed(5)} lng:${it.lng.toFixed(5)}`;
-          addMarkerForItem(it,cat);
+          renderAll(); // 🔑 сразу перерисовываем карту и маркеры
           map.setView([it.lat,it.lng],14);
         });
       };
@@ -445,7 +445,6 @@ function dropChildrenSelections(parentCatId){
 
 function renderPreview(){
   $cascade.innerHTML="";
-  clearMarkers();
 
   db.categories.forEach(cat=>{
     const box=document.createElement('div'); box.className='panel'; box.dataset.catId=cat.id;
@@ -473,7 +472,7 @@ function renderPreview(){
       const sel=document.createElement('select'); sel.style.width='100%';
       sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
       if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
-      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); };
+      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
       box.appendChild(sel);
     }else{
       const multi=document.createElement('div'); multi.className='multi-select';
@@ -501,6 +500,7 @@ function renderPreview(){
           reopenMultiCatId=cat.id;
           saveSelected();
           renderPreview();
+          updatePolygonVisibility();
         };
         lbl.append(cb,document.createTextNode(it.name));
         menu.appendChild(lbl);
@@ -515,32 +515,7 @@ function renderPreview(){
 
     $cascade.appendChild(box);
   });
-
-  // маркеры по выбранным
-  for(const cat of db.categories){
-    const ids=getSelectedIds(cat.id);
-    for(const id of ids){
-      const it=(cat.items||[]).find(x=>x.id===id);
-      if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
-    }
-  }
-
-  if(reopenMultiCatId){
-    const panel=$cascade.querySelector(`.panel[data-cat-id="${reopenMultiCatId}"] .multi-select`);
-    if(panel) panel.classList.add('open');
-    reopenMultiCatId=null;
-  }
-
-  // полигоны по выбранным (имя элемента == имя полигона)
-  updatePolygonVisibility();
 }
-
-// закрывать открытые мультиселекты кликом вне
-document.addEventListener('click', e=>{
-  document.querySelectorAll('.multi-select.open').forEach(ms=>{
-    if(!ms.contains(e.target)) ms.classList.remove('open');
-  });
-});
 
 /***** SEARCH *****/
 const $search=document.getElementById('globalSearch');
@@ -562,6 +537,7 @@ $search.oninput=()=>{
       else{ if(!(selected[r.cat.id] instanceof Set)) selected[r.cat.id]=new Set(); selected[r.cat.id].add(r.it.id); }
       saveSelected();
       renderPreview();
+      updatePolygonVisibility();
       if(r.it.lat!=null && r.it.lng!=null) map.setView([r.it.lat,r.it.lng],14);
       $search.value=""; $results.innerHTML="";
     };
@@ -588,7 +564,7 @@ function updatePolygonVisibility(){
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v37.7.1.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v37.7.2.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
@@ -600,7 +576,14 @@ document.getElementById('fileImport').onchange=e=>{
       if(obj && obj.db) obj=obj.db;
       if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
       if(!Array.isArray(obj.polygons)) obj.polygons=[];
-      normalize(obj); db=obj; save(); selected={}; loadSelected(); renderAll(); alert('Импортировано');
+      normalize(obj); db=obj; save(); selected={}; loadSelected();
+
+      // 🔑 сразу всё перерисовываем, чтобы не ждать ручного выбора
+      renderAll();
+      rebuildPolys();
+      renderPolyList();
+      updatePolygonVisibility();
+      alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
   };
   r.readAsText(f);
@@ -618,7 +601,22 @@ document.querySelectorAll('.tab').forEach(tab=>{
 });
 
 /***** RENDER & INIT *****/
-function renderAll(){ rebuildPolys(); renderEditor(); renderPreview(); renderPolyList(); updatePolygonVisibility(); }
+function renderAll(){
+  rebuildPolys();
+  renderEditor();
+  renderPreview();
+  renderPolyList();
+  updatePolygonVisibility();
+
+  // 🔑 Всегда показываем все сохранённые метки вне зависимости от выбранных
+  clearMarkers();
+  db.categories.forEach(cat=>{
+    (cat.items||[]).forEach(it=>{
+      if(it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    });
+  });
+}
+
 loadSelected();
 renderAll();
 </script>
