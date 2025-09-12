@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v37.1 — фиксы</title>
+<title>location_selector_v37.2 — фиксы иконок</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
@@ -23,8 +23,7 @@ button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
 main{display:grid;grid-template-columns:460px 1fr;height:calc(100vh - 94px)}
 .sidebar{padding:10px;border-right:1px solid var(--border);background:#121826;overflow:auto}
 .panel{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
-h3{margin:0 0 8px 0}
-h4{margin:0 0 8px 0}
+h3,h4{margin:0 0 8px 0}
 input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .list{display:grid;gap:6px}
@@ -36,8 +35,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 #map{width:100%;height:100%}
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
-
-/* мультиселект */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:2000;max-height:260px;overflow:auto;display:none}
@@ -47,8 +44,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select-menu input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
 .multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
 .multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
-
-/* полигоны */
 .poly-item{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px dashed #31405a;background:#10192a;padding:6px}
 .poly-name{font-weight:700}
 .poly-meta{font-size:12px;color:#9fb0c8}
@@ -56,18 +51,16 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v37.1</span>
+  <span class="badge">dictionary v37.2</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
   <button id="btnReset" class="danger">Сброс</button>
 </header>
-
 <div class="tabs">
   <div class="tab active" data-tab="editor">Редактор</div>
   <div class="tab" data-tab="preview">Предпросмотр</div>
 </div>
-
 <main>
   <aside class="sidebar" id="editorTab"></aside>
   <aside class="sidebar" id="previewTab" style="display:none">
@@ -86,7 +79,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       </div>
       <div id="polyList" class="list"></div>
     </div>
-
     <div class="panel">
       <h3>Предпросмотр</h3>
       <input id="globalSearch" placeholder="Поиск..."/>
@@ -96,7 +88,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   </aside>
   <div id="map"></div>
 </main>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -106,8 +97,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 const KEY="dict_v14";
 let db=loadDB();
 function loadDB(){
-  try{const raw=localStorage.getItem(KEY);if(raw){const obj=JSON.parse(raw);normalize(obj);return obj;}}
-  catch(e){}
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){
+      const obj=JSON.parse(raw);
+      normalize(obj);
+      return obj;
+    }
+  }catch(e){}
   return {categories:[]};
 }
 function save(obj=db){localStorage.setItem(KEY,JSON.stringify(obj));}
@@ -134,13 +131,13 @@ function normalize(obj){
 /***** MAP *****/
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-let cluster=L.markerClusterGroup();map.addLayer(cluster);
 
+let cluster=L.markerClusterGroup();
+map.addLayer(cluster);
 function clearMarkers(){cluster.clearLayers();}
 function markerIcon(cat){
-  const color=cat.color||"#3388ff";
-  const shape=cat.shape||"circle";
-  let html="";
+  if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
+  const color=cat.color||"#3388ff"; const shape=cat.shape||"circle"; let html="";
   if(shape==="circle") html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
   if(shape==="square") html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
   if(shape==="triangle") html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
@@ -149,7 +146,7 @@ function markerIcon(cat){
 function addMarkerForItem(it,cat){
   if(it.lat==null||it.lng==null) return;
   const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat)});
-  m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить</button>`);
+  m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
   cluster.addLayer(m);
 }
 window.removeMarkerById=function(id){
@@ -264,7 +261,7 @@ map.on(L.Draw.Event.EDITSTOP, ()=>{
   savePolys(); renderPolyList(); updatePolygonVisibility();
 });
 
-/***** EDITOR (полный как в v36) *****/
+/***** EDITOR (фикс иконки) *****/
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
   $editor.innerHTML="";
@@ -311,24 +308,49 @@ function renderEditor(){
   // список категорий
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div'); sec.className='panel';
-
     const header=document.createElement('div'); header.className='row';
     const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
     header.append(title); sec.appendChild(header);
 
     const cfg=document.createElement('div'); cfg.className='row';
-    const inpName=document.createElement('input'); inpName.value=cat.name; inpName.onchange=()=>{cat.name=inpName.value.trim()||cat.name; save(); renderAll();};
-    const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
-    selType.onchange=()=>{cat.type=selType.value; save(); renderAll();};
-    const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
-    selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; save(); renderAll();};
-    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; save();};
-    const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);}); shape.onchange=()=>{cat.shape=shape.value; save();};
-    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
-    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
-    btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
+    const inpName=document.createElement('input'); inpName.value=cat.name;
+    inpName.onchange=()=>{cat.name=inpName.value.trim()||cat.name; save(); renderAll();};
 
-    cfg.append(inpName,selType,selParent,col,shape,iconPrev,btnClearIcon);
+    const selType=document.createElement('select');
+    ['select','checkbox'].forEach(t=>{
+      const o=document.createElement('option');o.value=t;o.textContent=t;
+      if(cat.type===t)o.selected=true;selType.appendChild(o);
+    });
+    selType.onchange=()=>{cat.type=selType.value; save(); renderAll();};
+
+    const selParent=document.createElement('select');
+    selParent.innerHTML=`<option value="">(нет родителя)</option>`+
+      db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
+    selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; save(); renderAll();};
+
+    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; save();};
+
+    const shape=document.createElement('select');
+    ['circle','square','triangle'].forEach(s=>{
+      const o=document.createElement('option');o.value=s;o.textContent=s;
+      if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);
+    });
+    shape.onchange=()=>{cat.shape=shape.value; save();};
+
+    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+    const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml';
+    iconInput.onchange=e=>{
+      const f=e.target.files[0];
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); return; }
+      const r=new FileReader();
+      r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); };
+      r.readAsDataURL(f);
+    };
+
+    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
+    btnClearIcon.onclick=()=>{ delete cat.iconData; iconPrev.textContent='icon'; save(); };
+
+    cfg.append(inpName,selType,selParent,col,shape,iconPrev,iconInput,btnClearIcon);
     sec.appendChild(cfg);
 
     // элементы
@@ -364,7 +386,6 @@ function renderEditor(){
     });
     sec.appendChild(list);
 
-    // добавление элемента
     const addRow=document.createElement('div'); addRow.className='row';
     const inp=document.createElement('input'); inp.placeholder='Новый элемент';
     const parentPicker=document.createElement('select');
@@ -384,9 +405,7 @@ function renderEditor(){
     addRow.append(inp,parentPicker,addBtn); sec.appendChild(addRow);
 
     $editor.appendChild(sec);
-  });
-}
-
+ 
 /***** PREVIEW (полный) *****/
 const $cascade=document.getElementById('cascadeBox');
 let selected={};
@@ -405,6 +424,7 @@ function dropChildrenSelections(parentCatId){
     dropChildrenSelections(ch.id);
   }
 }
+
 function renderPreview(){
   $cascade.innerHTML="";
   clearMarkers();
@@ -427,7 +447,7 @@ function renderPreview(){
     let items=(cat.items||[]);
     if(parentIds){ items=items.filter(it=>it.parentId && parentIds.includes(it.parentId)); }
     if(items.length===0){
-      const note=document.createElement('div'); note.className='note gray'; note.textContent='Нет элементов';
+      const note=document.createElement('div'); note.className='note'; note.style.opacity='.7'; note.textContent='Нет элементов';
       box.appendChild(note); $cascade.appendChild(box); return;
     }
 
@@ -468,7 +488,7 @@ function renderPreview(){
       });
 
       btn.onclick=()=>{
-        // фикс: открыт только один селект
+        // открыт может быть только один мультиселект
         document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
         multi.classList.toggle('open');
       };
@@ -478,7 +498,7 @@ function renderPreview(){
     $cascade.appendChild(box);
   });
 
-  // метки по выбранным
+  // отрисовать все метки по выбранным
   for(const cat of db.categories){
     const ids=getSelectedIds(cat.id);
     for(const id of ids){
@@ -487,18 +507,18 @@ function renderPreview(){
     }
   }
 
-  // открыть тот же мультиселект после перерендера
+  // вернуть открытым нужный мультиселект после перерендера
   if(reopenMultiCatId){
     const panel=$cascade.querySelector(`.panel[data-cat-id="${reopenMultiCatId}"] .multi-select`);
     if(panel) panel.classList.add('open');
     reopenMultiCatId=null;
   }
 
-  // видимость полигонов — только по выбранным позициям
+  // видимость полигонов только по выбранным позициям
   updatePolygonVisibility();
 }
 
-// клик вне мультиселекта — закрыть все
+// клик вне мультиселекта — закрыть открытые
 document.addEventListener('click', e=>{
   document.querySelectorAll('.multi-select.open').forEach(ms=>{
     if(!ms.contains(e.target)) ms.classList.remove('open');
@@ -520,6 +540,7 @@ function updatePolygonVisibility(){
     else { map.removeLayer(layer); }
   });
 }
+
 /***** SEARCH *****/
 const $search=document.getElementById('globalSearch');
 const $results=document.getElementById('searchResults');
@@ -545,7 +566,7 @@ $search.oninput=()=>{
         if(!(selected[r.cat.id] instanceof Set)) selected[r.cat.id]=new Set();
         selected[r.cat.id].add(r.it.id);
       }
-      renderPreview(); // внутри уже вызовется updatePolygonVisibility
+      renderPreview(); // внутри вызовется updatePolygonVisibility
       if(r.it.lat!=null && r.it.lng!=null) map.setView([r.it.lat,r.it.lng],14);
       $search.value=""; $results.innerHTML="";
     };
@@ -557,7 +578,7 @@ $search.oninput=()=>{
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v37.1.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v37.2.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
