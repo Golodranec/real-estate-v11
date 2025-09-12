@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v19 — каскад + селект-чекбоксы, авто-закрытие, удалить метку и иконку</title>
+<title>location_selector_v20 — каскад + селект-чекбоксы выравнены по левому краю</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -39,19 +39,19 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
 
-/* селект-чекбокс (как у авито: чекбокс слева, текст справа) */
+/* селект-чекбокс (галочка слева, текст справа, как на Авито) */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left}
-.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none;padding:6px}
+.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none}
 .multi-select.open .multi-select-menu{display:block}
-.multi-select-menu label{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer}
+.multi-select-menu label{display:flex;align-items:center;gap:8px;padding:8px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
 .multi-select-menu input[type="checkbox"]{margin:0;flex-shrink:0}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v19</span>
+  <span class="badge">dictionary v20</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -68,7 +68,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
-      <div class="help">Сначала выбираешь родителя, потом появляются дети. Checkbox-категории рендерятся как селект с галочками. Метки можно удалять из попапа.</div>
+      <div class="help">Checkbox категории теперь как селект: галочка слева, текст справа (как на Авито).</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -109,7 +109,6 @@ function normalize(obj){
     });
   });
 }
-
 /* ================= MAP ================= */
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
@@ -229,7 +228,6 @@ function renderEditor(){
     if(newIconData) cat.iconData=newIconData;
     db.categories.push(cat); save(); renderAll();
   };
-
   /* Список категорий */
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div'); sec.className='panel'; sec.draggable=true;
@@ -343,11 +341,10 @@ function resolveItemName(id){
   }
   return null;
 }
-
-/* ================= PREVIEW ================= */
+/* ================= PREVIEW (CASCADE) ================= */
 const $cascade=document.getElementById('cascadeBox');
-let selected={};                 // categoryId -> string | Set<string>
-let openMenuCatId=null;          // для удержания открытого селекта
+let selected={};
+let openMenuCatId=null;
 
 function topoOrderCategories(){
   const cats=[...db.categories];
@@ -392,7 +389,6 @@ function renderPreview(){
     const box=document.createElement('div'); box.className='panel';
     const h=document.createElement('h4'); h.textContent=cat.name; box.appendChild(h);
 
-    // родитель выбран?
     let parentIds=null;
     if(cat.parentCategoryId){
       const parentSelected=getSelectedIds(cat.parentCategoryId);
@@ -404,7 +400,6 @@ function renderPreview(){
       parentIds=parentSelected;
     }
 
-    // фильтрация по выбранному родителю
     let items=(cat.items||[]);
     if(parentIds){ items=items.filter(it=> it.parentId && parentIds.includes(it.parentId)); }
 
@@ -423,37 +418,39 @@ function renderPreview(){
       box.appendChild(sel);
     }else{
       const wrapper=document.createElement('div'); wrapper.className='multi-select';
-      if(openMenuCatId===cat.id) wrapper.classList.add('open');
-      const btn=document.createElement('div'); btn.className='multi-select-btn';
-      const menu=document.createElement('div'); menu.className='multi-select-menu';
+      const btn=document.createElement('button'); btn.type='button'; btn.className='multi-select-btn';
+
       const set = selected[cat.id] instanceof Set ? selected[cat.id] : new Set();
-
-      function refreshBtnText(){
-        if(set.size===0){ btn.textContent="— выберите —"; return; }
-        const names=Array.from(set).map(id=>items.find(x=>x.id===id)?.name).filter(Boolean);
-        if(names.length<=3) btn.textContent=names.join(", ");
-        else btn.textContent=names.slice(0,2).join(", ")+" +"+(names.length-2);
-      }
-
+      const labelFn=()=>{ 
+        if(set.size===0) return '— выберите —'; 
+        const names=Array.from(set).map(id=>items.find(x=>x.id===id)?.name||''); 
+        return names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:''); 
+      };
+      btn.textContent=labelFn();
+      btn.onclick=(e)=>{ e.stopPropagation(); 
+        if(openMenuCatId && openMenuCatId!==cat.id){ document.querySelectorAll('.multi-select').forEach(ms=>ms.classList.remove('open')); }
+        wrapper.classList.toggle("open"); openMenuCatId=wrapper.classList.contains('open')?cat.id:null;
+      };
+      const menu=document.createElement('div'); menu.className='multi-select-menu';
       items.forEach(it=>{
         const lbl=document.createElement('label');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
         cb.onchange=()=>{
           if(cb.checked) set.add(it.id); else set.delete(it.id);
-          selected[cat.id]=set; save();
+          selected[cat.id]=set;
+          btn.textContent=labelFn();
+          clearMarkers();
+          for(const oid of set){
+            const item=items.find(x=>x.id===oid);
+            if(item && item.lat!=null && item.lng!=null) addMarkerForItem(item,cat);
+          }
           dropChildrenSelections(cat.id);
-          openMenuCatId=cat.id;        // держим открытым тот же селект
-          renderPreview();              // перерисуем детей и маркеры
+          renderPreview();
         };
-        const text=document.createTextNode(it.name);
-        lbl.append(cb,text); menu.appendChild(lbl);
+        lbl.append(cb,document.createTextNode(it.name)); menu.appendChild(lbl);
       });
-
-      refreshBtnText();
-      btn.onclick=(e)=>{ e.stopPropagation(); const nowOpen=!wrapper.classList.contains('open'); document.querySelectorAll('.multi-select').forEach(x=>x.classList.remove('open')); if(nowOpen){ wrapper.classList.add('open'); openMenuCatId=cat.id; } else { openMenuCatId=null; } };
       wrapper.append(btn,menu); box.appendChild(wrapper);
 
-      // маркеры по выбранным
       for(const oid of set){
         const it=items.find(x=>x.id===oid);
         if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
@@ -464,22 +461,18 @@ function renderPreview(){
   });
 }
 
-/* закрытие выпадашки по клику вне */
 document.addEventListener('click', e=>{
-  let clickedInside=false;
   document.querySelectorAll('.multi-select.open').forEach(ms=>{
-    if(ms.contains(e.target)) clickedInside=true; else ms.classList.remove('open');
+    if(!ms.contains(e.target)) ms.classList.remove('open');
   });
-  if(!clickedInside) openMenuCatId=null;
 });
 
 /* ================= EXPORT / IMPORT / RESET / TABS ================= */
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v19.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v20.json'; a.click();
 };
-
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -488,12 +481,9 @@ document.getElementById('fileImport').onchange=e=>{
     try{
       let obj=JSON.parse(r.result);
       if(Array.isArray(obj.categories)) {
-        // ок
       } else if (obj && obj.db && Array.isArray(obj.db.categories)) {
         obj = obj.db;
-      } else {
-        throw new Error('В файле нет поля categories');
-      }
+      } else { throw new Error('В файле нет поля categories'); }
       normalize(obj);
       db=obj; save(); selected={}; renderAll();
       alert('Импортировано');
@@ -501,9 +491,7 @@ document.getElementById('fileImport').onchange=e=>{
   };
   r.readAsText(f);
 };
-
 document.getElementById('btnReset').onclick=()=>{ if(confirm('Очистить всё?')){ localStorage.removeItem(KEY); location.reload(); } };
-
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
