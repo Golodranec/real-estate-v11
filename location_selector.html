@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v30 — кластеры + удаление меток + глобальный поиск</title>
+<title>location_selector_v31 — фикс родителя + открытые чекбоксы + поиск</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
@@ -55,8 +54,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .ms-actions .mini{padding:4px 8px;font-size:12px}
 .multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-
-/* кастомная галка */
 .multi-select-menu input[type="checkbox"]{
   appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
 }
@@ -65,11 +62,12 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 /* глобальный поиск */
 #globalSearch{width:100%;padding:8px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);background:#0f1624;color:#fff}
+.highlight{background:rgba(74,168,255,0.3)}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v30</span>
+  <span class="badge">dictionary v31</span>
   <button id="btnExportJSON">Экспорт JSON</button>
   <button id="btnExportCSV">Экспорт CSV</button>
   <button id="btnImport">Импорт</button>
@@ -95,7 +93,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
@@ -127,7 +124,7 @@ function normalize(obj){
   });
 }
 
-/* ================= MAP + CLUSTER ================= */
+/* ================= MAP ================= */
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 
@@ -179,7 +176,6 @@ const $editor=document.getElementById('editorTab');
 function renderEditor(){
   $editor.innerHTML="";
 
-  // блок создания новой категории
   const create=document.createElement('div'); create.className='panel';
   create.innerHTML=`
     <h3>Новая категория</h3>
@@ -226,7 +222,6 @@ function renderEditor(){
     db.categories.push(cat); save(); renderAll();
   };
 
-  // список категорий
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div'); sec.className='panel'; sec.draggable=true;
     sec.addEventListener('dragstart', e=>dndStart(e,'cat',ci));
@@ -246,18 +241,9 @@ function renderEditor(){
     selParent.innerHTML=`<option value="">(нет родителя)</option>${db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('')}`;
     const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff';
     const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s) o.selected=true; shape.appendChild(o);});
-    const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml';
     const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
-    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
     const btnSave=document.createElement('button'); btnSave.textContent='Сохранить';
     const btnDel=document.createElement('button'); btnDel.textContent='Удалить'; btnDel.className='danger';
-
-    iconInput.onchange=e=>{
-      const f=e.target.files[0];
-      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); return; }
-      const r=new FileReader(); r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); }; r.readAsDataURL(f);
-    };
-    btnClearIcon.onclick=()=>{ delete cat.iconData; iconPrev.textContent='icon'; save(); };
 
     btnSave.onclick=()=>{
       cat.name=inpName.value.trim()||cat.name;
@@ -269,7 +255,7 @@ function renderEditor(){
     };
     btnDel.onclick=()=>{ if(confirm('Удалить категорию и её элементы?')){ db.categories.splice(ci,1); save(); renderAll(); } };
 
-    cfg.append(inpName,selType,selParent,col,shape,iconInput,iconPrev,btnClearIcon,btnSave,btnDel);
+    cfg.append(inpName,selType,selParent,col,shape,iconPrev,btnSave,btnDel);
     sec.appendChild(cfg);
     sec.appendChild(document.createElement('div')).className='sep';
 
@@ -287,8 +273,6 @@ function renderEditor(){
       left.append(nm,meta);
 
       const tools=document.createElement('div'); tools.className='tools';
-      const edit=document.createElement('button'); edit.textContent='✎';
-      edit.onclick=()=>{ const nn=prompt('Новое имя',it.name); if(nn){ it.name=nn.trim(); save(); renderAll(); } };
       const place=document.createElement('button'); place.textContent='📍';
       place.onclick=()=>{ alert('Кликни по карте для: '+it.name); map.once('click', e=>{ it.lat=e.latlng.lat; it.lng=e.latlng.lng; save(); renderPreview(); }); };
       const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка';
@@ -296,7 +280,7 @@ function renderEditor(){
       const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
       del.onclick=()=>{ if(confirm('Удалить "'+it.name+'"?')){ cat.items.splice(ii,1); save(); renderAll(); } };
 
-      tools.append(edit,place,clearBtn,del);
+      tools.append(place,clearBtn,del);
       line.append(left,tools); list.appendChild(line);
     });
     sec.appendChild(list);
@@ -385,7 +369,7 @@ function renderPreview(){
 
       const actions=document.createElement('div'); actions.className='ms-actions';
       const search=document.createElement('input'); search.type='text'; search.placeholder='Поиск...';
-      const selAll=document.createElement('button'); selAll.textContent='Выбрать все'; selAll.className='mini';
+      const selAll=document.createElement('button'); selAll.textContent='Все'; selAll.className='mini';
       const clr=document.createElement('button'); clr.textContent='Очистить'; clr.className='mini';
       actions.append(search,selAll,clr); menu.appendChild(actions);
 
@@ -394,8 +378,7 @@ function renderPreview(){
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
         cb.onchange=()=>{
           if(cb.checked) set.add(it.id); else set.delete(it.id);
-          selected[cat.id]=set; updateBtnText();
-          renderPreview();
+          selected[cat.id]=set; updateBtnText(); renderPreview();
         };
         lbl.append(cb,document.createTextNode(it.name));
         menu.appendChild(lbl);
@@ -417,7 +400,6 @@ function renderPreview(){
     $cascade.appendChild(box);
   });
 
-  // markers от выбранных
   for(const cat of db.categories){
     const ids=getSelectedIds(cat.id);
     for(const id of ids){
@@ -435,38 +417,33 @@ document.addEventListener('click', e=>{
 /* ================= GLOBAL SEARCH ================= */
 document.getElementById('globalSearch').oninput=function(){
   const q=this.value.toLowerCase();
-  if(!q){ renderPreview(); return; }
   $cascade.querySelectorAll('.panel').forEach(p=>{
-    if(p.querySelector('h4')){
-      const itemsText = p.innerText.toLowerCase();
-      p.style.display = itemsText.includes(q)?'block':'none';
-    }
+    p.querySelectorAll('label').forEach(lbl=>{
+      lbl.classList.remove('highlight');
+      if(q && lbl.textContent.toLowerCase().includes(q)) lbl.classList.add('highlight');
+    });
   });
-  // автофокус на метку
   for(const c of db.categories){
     const it=(c.items||[]).find(x=>x.name.toLowerCase().includes(q));
-    if(it && it.lat!=null && it.lng!=null){
-      map.setView([it.lat,it.lng],14); break;
-    }
+    if(it && it.lat!=null && it.lng!=null){ map.setView([it.lat,it.lng],14); break; }
   }
 };
 /* ================= EXPORT / IMPORT / RESET / TABS ================= */
 document.getElementById('btnExportJSON').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v30.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v31.json'; a.click();
 };
 document.getElementById('btnExportCSV').onclick=()=>{
-  const lines=['category,item,lat,lng'];
-  for(const c of db.categories){
-    for(const it of (c.items||[])){
-      lines.push([JSON.stringify(c.name), JSON.stringify(it.name), it.lat??'', it.lng??''].join(','));
-    }
-  }
-  const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v30.csv'; a.click();
+  let rows=["Категория,Элемент,lat,lng"];
+  db.categories.forEach(c=>{
+    (c.items||[]).forEach(it=>{
+      rows.push(`${c.name},${it.name},${it.lat??""},${it.lng??""}`);
+    });
+  });
+  const blob=new Blob([rows.join("\n")],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v31.csv'; a.click();
 };
-
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -476,17 +453,12 @@ document.getElementById('fileImport').onchange=e=>{
       let obj=JSON.parse(r.result);
       if(Array.isArray(obj.categories)){} else if(obj&&obj.db&&Array.isArray(obj.db.categories)){ obj=obj.db; }
       else{ throw new Error('В файле нет categories'); }
-      normalize(obj);
-      db=obj; save(db); selected={}; renderAll();
-      alert('Импортировано');
+      normalize(obj); db=obj; save(); selected={}; renderAll(); alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
   };
   r.readAsText(f);
 };
-
-document.getElementById('btnReset').onclick=()=>{
-  if(confirm('Очистить всё?')){ localStorage.removeItem(KEY); location.reload(); }
-};
+document.getElementById('btnReset').onclick=()=>{ if(confirm('Очистить всё?')){ localStorage.removeItem(KEY); location.reload(); } };
 
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.onclick=()=>{
