@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v20 — каскад + селект-чекбоксы выравнены по левому краю</title>
+<title>location_selector_v21 — каскад + чекбоксы строго слева</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -39,19 +39,19 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
 
-/* селект-чекбокс (галочка слева, текст справа, как на Авито) */
+/* селект-чекбокс (галочка строго слева, текст справа) */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left}
-.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none}
+.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none;padding:0}
 .multi-select.open .multi-select-menu{display:block}
-.multi-select-menu label{display:flex;align-items:center;gap:8px;padding:8px;cursor:pointer}
+.multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
 .multi-select-menu input[type="checkbox"]{margin:0;flex-shrink:0}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v20</span>
+  <span class="badge">dictionary v21</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -127,11 +127,6 @@ function markerIcon(cat){
   if(shape==="triangle") html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
   return L.divIcon({className:"custom-icon",html,iconSize:[20,20],iconAnchor:[10,10]});
 }
-function addMarker(lat,lng,label,cat){
-  const m=L.marker([lat,lng],{icon:markerIcon(cat)}).addTo(map)
-    .bindPopup(`<b>${label}</b><br/><button onclick="removeMarker('${label}')">🗑 Удалить метку</button>`);
-  markers.push(m);
-}
 function addMarkerForItem(it,cat){
   const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat)}).addTo(map)
     .bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
@@ -154,28 +149,41 @@ window.removeMarkerById=function(id){
 
 /* ================= DND ================= */
 let dnd={type:null,catIndex:null,itemIndex:null};
-function dndStart(e,type,catIndex,itemIndex=null){ dnd={type,catIndex,itemIndex}; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed="move"; }
-function dndEnd(e){ e.currentTarget.classList.remove('dragging'); dnd={type:null,catIndex:null,itemIndex:null}; }
-function dndOver(e){ e.preventDefault(); e.dataTransfer.dropEffect="move"; }
+function dndStart(e,type,catIndex,itemIndex=null){
+  dnd={type,catIndex,itemIndex};
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed="move";
+}
+function dndEnd(e){
+  e.currentTarget.classList.remove('dragging');
+  dnd={type:null,catIndex:null,itemIndex:null};
+}
+function dndOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect="move";
+}
 function dndDropCategory(e,targetIndex){
   e.preventDefault();
   if(dnd.type!=="cat"||dnd.catIndex===targetIndex) return;
-  const arr=db.categories; const elem=arr.splice(dnd.catIndex,1)[0];
-  arr.splice(targetIndex,0,elem); save(); renderAll();
+  const arr=db.categories;
+  const elem=arr.splice(dnd.catIndex,1)[0];
+  arr.splice(targetIndex,0,elem);
+  save(); renderAll();
 }
 function dndDropItem(e,catIndex,targetItemIndex){
   e.preventDefault();
   if(dnd.type!=="item"||dnd.catIndex!==catIndex||dnd.itemIndex===targetItemIndex) return;
-  const arr=db.categories[catIndex].items||[]; const elem=arr.splice(dnd.itemIndex,1)[0];
-  arr.splice(targetItemIndex,0,elem); save(); renderAll();
+  const arr=db.categories[catIndex].items||[];
+  const elem=arr.splice(dnd.itemIndex,1)[0];
+  arr.splice(targetItemIndex,0,elem);
+  save(); renderAll();
 }
-
 /* ================= EDITOR ================= */
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
   $editor.innerHTML="";
 
-  /* Новая категория */
+  // Создание категории
   const create=document.createElement('div'); create.className='panel';
   create.innerHTML=`
     <h3>Новая категория</h3>
@@ -199,36 +207,34 @@ function renderEditor(){
         <option value="triangle">Треугольник</option>
       </select>
       <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
-      <button id="newIconRemove" class="danger" disabled>Убрать иконку</button>
       <button id="btnAddCat">+ Добавить</button>
     </div>
     <div class="help">Чтобы каскад работал, укажи родителя у категории (например, Города → Страны, Районы → Города).</div>
   `;
   $editor.appendChild(create);
 
-  const newIconInput = create.querySelector('#newCatIcon');
-  const newIconPreview = create.querySelector('#newIconPreview');
-  const newIconRemove = create.querySelector('#newIconRemove');
+  const newIconInput=create.querySelector('#newCatIcon');
+  const newIconPreview=create.querySelector('#newIconPreview');
   let newIconData=null;
   newIconInput.onchange=e=>{
     const f=e.target.files[0];
-    if(!f){ newIconData=null; newIconPreview.textContent='icon'; newIconRemove.disabled=true; return; }
+    if(!f){ newIconData=null; newIconPreview.textContent='icon'; return; }
     const r=new FileReader();
-    r.onload=ev=>{ newIconData=ev.target.result; newIconPreview.innerHTML=`<img src="${newIconData}">`; newIconRemove.disabled=false; };
+    r.onload=ev=>{ newIconData=ev.target.result; newIconPreview.innerHTML=`<img src="${newIconData}">`; };
     r.readAsDataURL(f);
   };
-  newIconRemove.onclick=()=>{ newIconData=null; newIconInput.value=""; newIconPreview.textContent='icon'; newIconRemove.disabled=true; };
   create.querySelector('#btnAddCat').onclick=()=>{
     const name=document.getElementById('newCatName').value.trim(); if(!name) return;
     const type=document.getElementById('newCatType').value;
     const parent=document.getElementById('newCatParent').value||null;
     const color=document.getElementById('newCatColor').value;
     const shape=document.getElementById('newCatShape').value;
-    const cat={id:uid(), name, type, parentCategoryId:parent, color, shape, items:[]};
+    const cat={id:uid(),name,type,parentCategoryId:parent,color,shape,items:[]};
     if(newIconData) cat.iconData=newIconData;
     db.categories.push(cat); save(); renderAll();
   };
-  /* Список категорий */
+
+  // Список категорий
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div'); sec.className='panel'; sec.draggable=true;
     sec.addEventListener('dragstart', e=>dndStart(e,'cat',ci));
@@ -238,36 +244,45 @@ function renderEditor(){
 
     const header=document.createElement('div'); header.className='row';
     const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
-    const handle=document.createElement('span'); handle.textContent='↕'; handle.title='Перетащи категорию'; handle.className='drag-handle';
+    const handle=document.createElement('span'); handle.textContent='↕'; handle.className='drag-handle';
     header.append(title,handle); sec.appendChild(header);
 
     const cfg=document.createElement('div'); cfg.className='row';
-    const inpName=document.createElement('input'); inpName.value=cat.name; inpName.placeholder='Название';
-    const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
+    const inpName=document.createElement('input'); inpName.value=cat.name;
+    const selType=document.createElement('select');
+    ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
     const selParent=document.createElement('select');
     selParent.innerHTML=`<option value="">(нет родителя)</option>${db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('')}`;
     const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff';
-    const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s==='circle'?'Круг':s==='square'?'Квадрат':'Треугольник'; if((cat.shape||'circle')===s) o.selected=true; shape.appendChild(o);});
+    const shape=document.createElement('select');
+    ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s) o.selected=true;shape.appendChild(o);});
     const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml';
     const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
-    const btnRemoveIcon=document.createElement('button'); btnRemoveIcon.textContent='Убрать иконку'; btnRemoveIcon.className='danger'; btnRemoveIcon.disabled=!cat.iconData;
+    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
     const btnSave=document.createElement('button'); btnSave.textContent='Сохранить';
     const btnDel=document.createElement('button'); btnDel.textContent='Удалить'; btnDel.className='danger';
 
     iconInput.onchange=e=>{
       const f=e.target.files[0];
-      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; btnRemoveIcon.disabled=true; save(); return; }
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); return; }
       const r=new FileReader();
-      r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; btnRemoveIcon.disabled=false; save(); };
+      r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); };
       r.readAsDataURL(f);
     };
-    btnRemoveIcon.onclick=()=>{ delete cat.iconData; iconPrev.textContent='icon'; iconInput.value=""; btnRemoveIcon.disabled=true; save(); renderAll(); };
-    btnSave.onclick=()=>{ cat.name=inpName.value.trim()||cat.name; cat.type=selType.value; cat.parentCategoryId=selParent.value||null; cat.color=col.value; cat.shape=shape.value; save(); renderAll(); };
+    btnClearIcon.onclick=()=>{ delete cat.iconData; iconPrev.textContent='icon'; save(); };
+
+    btnSave.onclick=()=>{
+      cat.name=inpName.value.trim()||cat.name;
+      cat.type=selType.value;
+      cat.parentCategoryId=selParent.value||null;
+      cat.color=col.value;
+      cat.shape=shape.value;
+      save(); renderAll();
+    };
     btnDel.onclick=()=>{ if(confirm('Удалить категорию и её элементы?')){ db.categories.splice(ci,1); save(); renderAll(); } };
 
-    cfg.append(inpName, selType, selParent, col, shape, iconInput, iconPrev, btnRemoveIcon, btnSave, btnDel);
+    cfg.append(inpName,selType,selParent,col,shape,iconInput,iconPrev,btnClearIcon,btnSave,btnDel);
     sec.appendChild(cfg);
-
     sec.appendChild(document.createElement('div')).className='sep';
 
     const list=document.createElement('div'); list.className='list';
@@ -280,93 +295,43 @@ function renderEditor(){
 
       const left=document.createElement('div'); left.className='left';
       const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
-      const parentLabel = it.parentId ? (' • род.: '+resolveItemName(it.parentId)) : '';
-      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}${parentLabel}`;
+      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}`;
       left.append(nm,meta);
 
       const tools=document.createElement('div'); tools.className='tools';
-      const edit=document.createElement('button'); edit.textContent='✎'; edit.title='Переименовать';
-      edit.onclick=()=>{ const nn=prompt('Новое имя', it.name); if(nn){ it.name=nn.trim(); save(); renderAll(); } };
-
-      const setParent=document.createElement('button'); setParent.textContent='↗ родитель'; setParent.title='Назначить родителя';
-      setParent.onclick=()=>{
-        if(!cat.parentCategoryId){ alert('У категории нет родителя. Сначала задайте родителя у категории.'); return; }
-        const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
-        if(!parentCat || !parentCat.items.length){ alert('В родительской категории нет элементов.'); return; }
-        const id = prompt('ID родителя (пусто — убрать)\n'+parentCat.items.map(x=>`${x.name} — ${x.id}`).join('\n'), it.parentId||'');
-        if(id!==null){ it.parentId = id.trim()||null; save(); renderAll(); }
-      };
-
-      const place=document.createElement('button'); place.textContent='📍'; place.title='Поставить метку';
+      const edit=document.createElement('button'); edit.textContent='✎';
+      edit.onclick=()=>{ const nn=prompt('Новое имя',it.name); if(nn){ it.name=nn.trim(); save(); renderAll(); } };
+      const place=document.createElement('button'); place.textContent='📍';
       place.onclick=()=>{ alert('Кликни по карте для: '+it.name); map.once('click', e=>{ it.lat=e.latlng.lat; it.lng=e.latlng.lng; save(); showDraggable(it,cat); }); };
-
-      const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка'; clearBtn.title='Убрать метку';
+      const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка';
       clearBtn.onclick=()=>{ it.lat=null; it.lng=null; save(); clearMarkers(); renderAll(); };
-
-      const del=document.createElement('button'); del.textContent='❌'; del.className='danger'; del.title='Удалить элемент';
+      const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
       del.onclick=()=>{ if(confirm('Удалить "'+it.name+'"?')){ cat.items.splice(ii,1); save(); renderAll(); } };
 
-      line.onclick=()=>{ if(it.lat!=null && it.lng!=null) showDraggable(it,cat); };
-      tools.append(edit,setParent,place,clearBtn,del);
+      line.onclick=()=>{ if(it.lat!=null&&it.lng!=null) showDraggable(it,cat); };
+      tools.append(edit,place,clearBtn,del);
       line.append(left,tools); list.appendChild(line);
     });
     sec.appendChild(list);
 
     const addRow=document.createElement('div'); addRow.className='row';
     const inp=document.createElement('input'); inp.placeholder='Новый элемент';
-    const parentPicker=document.createElement('select');
-    if(cat.parentCategoryId){
-      const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
-      parentPicker.innerHTML = `<option value="">(без родителя)</option>${(parentCat?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}`;
-    }else{
-      parentPicker.innerHTML = `<option value="">(родитель не задан)</option>`;
-    }
     const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
     addBtn.onclick=()=>{
       const nm=inp.value.trim()||'Новый';
       cat.items=cat.items||[];
-      cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId: parentPicker.value||null});
+      cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:null});
       inp.value=''; save(); renderAll();
     };
-    addRow.append(inp,parentPicker,addBtn); sec.appendChild(addRow);
+    addRow.append(inp,addBtn); sec.appendChild(addRow);
 
     $editor.appendChild(sec);
   });
 }
-
-function resolveItemName(id){
-  for(const c of db.categories){
-    const f=(c.items||[]).find(x=>x.id===id);
-    if(f) return f.name;
-  }
-  return null;
-}
 /* ================= PREVIEW (CASCADE) ================= */
 const $cascade=document.getElementById('cascadeBox');
-let selected={};
-let openMenuCatId=null;
+let selected={}; let openMenuCatId=null;
 
-function topoOrderCategories(){
-  const cats=[...db.categories];
-  const idToNode=new Map(cats.map(c=>[c.id,{c,indeg:0,kids:[]}]));
-  for(const {c} of idToNode.values()){
-    if(c.parentCategoryId && idToNode.has(c.parentCategoryId)){
-      idToNode.get(c.parentCategoryId).kids.push(c.id);
-      idToNode.get(c.id).indeg++;
-    }
-  }
-  const q=[]; for(const [id,node] of idToNode){ if(node.indeg===0) q.push(id); }
-  const order=[];
-  while(q.length){
-    const id=q.shift(); order.push(idToNode.get(id).c);
-    for(const kid of idToNode.get(id).kids){
-      const kn=idToNode.get(kid); kn.indeg--; if(kn.indeg===0) q.push(kid);
-    }
-  }
-  const set=new Set(order.map(c=>c.id));
-  for(const c of cats) if(!set.has(c.id)) order.push(c);
-  return order;
-}
 function getSelectedIds(catId){
   const cat=db.categories.find(x=>x.id===catId);
   const v=selected[catId];
@@ -380,10 +345,9 @@ function dropChildrenSelections(parentCatId){
     dropChildrenSelections(ch.id);
   }
 }
-
 function renderPreview(){
   $cascade.innerHTML=""; clearMarkers();
-  const ordered=topoOrderCategories();
+  const ordered=db.categories;
 
   ordered.forEach(cat=>{
     const box=document.createElement('div'); box.className='panel';
@@ -401,59 +365,50 @@ function renderPreview(){
     }
 
     let items=(cat.items||[]);
-    if(parentIds){ items=items.filter(it=> it.parentId && parentIds.includes(it.parentId)); }
+    if(parentIds){ items=items.filter(it=>it.parentId && parentIds.includes(it.parentId)); }
 
     if(cat.type==='select'){
       const sel=document.createElement('select'); sel.style.width='100%';
-      sel.innerHTML = `<option value="">— выберите —</option>` + items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
       if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
       sel.onchange=()=>{
         selected[cat.id]=sel.value||null;
         clearMarkers();
         const it=items.find(x=>x.id===sel.value);
-        if(it && it.lat!=null && it.lng!=null){ addMarkerForItem(it,cat); map.setView([it.lat,it.lng],13); }
+        if(it&&it.lat!=null&&it.lng!=null){ addMarkerForItem(it,cat); map.setView([it.lat,it.lng],13); }
         dropChildrenSelections(cat.id);
         renderPreview();
       };
       box.appendChild(sel);
     }else{
-      const wrapper=document.createElement('div'); wrapper.className='multi-select';
-      const btn=document.createElement('button'); btn.type='button'; btn.className='multi-select-btn';
-
-      const set = selected[cat.id] instanceof Set ? selected[cat.id] : new Set();
-      const labelFn=()=>{ 
-        if(set.size===0) return '— выберите —'; 
-        const names=Array.from(set).map(id=>items.find(x=>x.id===id)?.name||''); 
-        return names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:''); 
-      };
-      btn.textContent=labelFn();
-      btn.onclick=(e)=>{ e.stopPropagation(); 
-        if(openMenuCatId && openMenuCatId!==cat.id){ document.querySelectorAll('.multi-select').forEach(ms=>ms.classList.remove('open')); }
-        wrapper.classList.toggle("open"); openMenuCatId=wrapper.classList.contains('open')?cat.id:null;
-      };
+      const multi=document.createElement('div'); multi.className='multi-select';
+      const btn=document.createElement('div'); btn.className='multi-select-btn'; btn.textContent='Выбрать...';
       const menu=document.createElement('div'); menu.className='multi-select-menu';
+      const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
+
       items.forEach(it=>{
         const lbl=document.createElement('label');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
         cb.onchange=()=>{
           if(cb.checked) set.add(it.id); else set.delete(it.id);
           selected[cat.id]=set;
-          btn.textContent=labelFn();
           clearMarkers();
           for(const oid of set){
             const item=items.find(x=>x.id===oid);
-            if(item && item.lat!=null && item.lng!=null) addMarkerForItem(item,cat);
+            if(item&&item.lat!=null&&item.lng!=null) addMarkerForItem(item,cat);
           }
           dropChildrenSelections(cat.id);
-          renderPreview();
         };
-        lbl.append(cb,document.createTextNode(it.name)); menu.appendChild(lbl);
+        lbl.append(cb,document.createTextNode(it.name));
+        menu.appendChild(lbl);
       });
-      wrapper.append(btn,menu); box.appendChild(wrapper);
+
+      btn.onclick=()=>{ multi.classList.toggle('open'); };
+      multi.append(btn,menu); box.appendChild(multi);
 
       for(const oid of set){
         const it=items.find(x=>x.id===oid);
-        if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+        if(it&&it.lat!=null&&it.lng!=null) addMarkerForItem(it,cat);
       }
     }
 
@@ -471,7 +426,7 @@ document.addEventListener('click', e=>{
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v20.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v21.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
@@ -480,25 +435,22 @@ document.getElementById('fileImport').onchange=e=>{
   r.onload=()=>{
     try{
       let obj=JSON.parse(r.result);
-      if(Array.isArray(obj.categories)) {
-      } else if (obj && obj.db && Array.isArray(obj.db.categories)) {
-        obj = obj.db;
-      } else { throw new Error('В файле нет поля categories'); }
-      normalize(obj);
-      db=obj; save(); selected={}; renderAll();
-      alert('Импортировано');
+      if(Array.isArray(obj.categories)){} else if(obj&&obj.db&&Array.isArray(obj.db.categories)){ obj=obj.db; }
+      else{ throw new Error('В файле нет categories'); }
+      normalize(obj); db=obj; save(); selected={}; renderAll(); alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
   };
   r.readAsText(f);
 };
 document.getElementById('btnReset').onclick=()=>{ if(confirm('Очистить всё?')){ localStorage.removeItem(KEY); location.reload(); } };
+
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
     const which=tab.dataset.tab;
-    document.getElementById('editorTab').style.display = which==='editor'?'block':'none';
-    document.getElementById('previewTab').style.display = which==='preview'?'block':'none';
+    document.getElementById('editorTab').style.display=which==='editor'?'block':'none';
+    document.getElementById('previewTab').style.display=which==='preview'?'block':'none';
   };
 });
 
