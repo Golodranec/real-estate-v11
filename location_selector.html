@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v33 — кластеры + поиск + полигоны</title>
+<title>location_selector_v34 — кластеры + поиск + родитель</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
@@ -37,38 +37,49 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .sep{height:1px;background:#243048;margin:8px 0}
 .help{font-size:12px;color:#9fb0c8}
 .note{background:#0e1524;border:1px dashed #32405a;padding:8px;border-radius:8px;color:#9fb0c8}
-.note.gray{opacity:.6}
+.note.gray{color:#666}
 #map{width:100%;height:100%}
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
 
-/* мультиселект */
+/* селект-чекбокс */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:2000;max-height:260px;overflow:auto;display:none;text-align:left}
+.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none;padding:0;text-align:left}
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
+
 /* кастомный чекбокс */
 .multi-select-menu input[type="checkbox"]{
-  appearance:none;-webkit-appearance:none;
-  width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
-  background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
+  appearance:none;
+  -webkit-appearance:none;
+  width:16px;
+  height:16px;
+  border:2px solid var(--accent);
+  border-radius:4px;
+  background:#1a2234;
+  cursor:pointer;
+  position:relative;
 }
 .multi-select-menu input[type="checkbox"]:checked{
-  background:var(--accent);border-color:var(--accent);
+  background:var(--accent);
+  border-color:var(--accent);
 }
 .multi-select-menu input[type="checkbox"]:checked::after{
-  content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff
+  content:"✔";
+  position:absolute;
+  top:-2px;
+  left:2px;
+  font-size:14px;
+  color:#fff;
 }
-/* глобальный поиск */
-#globalSearch{width:100%;padding:8px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);background:#0f1624;color:#fff}
-.highlight{background:rgba(74,168,255,0.3)}
+.highlight{background:#333366 !important}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v33</span>
+  <span class="badge">dictionary v34</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -85,8 +96,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
-      <input id="globalSearch" placeholder="Поиск по элементам..." />
-      <div class="help">До 5 названий видно в кнопке, дальше счётчик. Метки объединяются в кластеры.</div>
+      <input type="text" id="globalSearch" placeholder="Поиск..." style="margin-bottom:8px;width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#e7f1ff"/>
+      <div class="help">До 5 названий видно в кнопке, дальше счётчик. Галочки кастомные.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -98,68 +109,79 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 <script>
 /* ================= STORAGE ================= */
 const KEY="dict_v14";
-let db=loadDB();
+let db = loadDB();
+
 function loadDB(){
-  const raw=localStorage.getItem(KEY);
-  if(raw){ try{ const obj=JSON.parse(raw); normalize(obj); return obj; }catch(e){} }
-  const fresh={categories:[]}; save(fresh); return fresh;
+  const v14 = localStorage.getItem("dict_v14");
+  if(v14){try{const obj=JSON.parse(v14);normalize(obj);return obj;}catch(e){}}
+  const v13 = localStorage.getItem("dict_v13");
+  if(v13){try{const obj=JSON.parse(v13);normalize(obj);save(obj);return obj;}catch(e){}}
+  const v12 = localStorage.getItem("dict_v12");
+  if(v12){try{const obj=JSON.parse(v12);normalize(obj);save(obj);return obj;}catch(e){}}
+  const fresh={categories:[]};save(fresh);return fresh;
 }
-function save(obj=db){ localStorage.setItem(KEY, JSON.stringify(obj)); }
-function uid(){ return Math.random().toString(36).slice(2,9); }
+function save(obj=db){localStorage.setItem(KEY,JSON.stringify(obj));}
+function uid(){return Math.random().toString(36).slice(2,9);}
 function normalize(obj){
-  if(!obj||typeof obj!=="object") obj={categories:[]};
+  if(!obj||typeof obj!=="object")obj={categories:[]};
   obj.categories=Array.isArray(obj.categories)?obj.categories:[];
   obj.categories.forEach(c=>{
-    if(!("type" in c)) c.type="select";
-    if(!("items" in c)) c.items=[];
-    if(!("color" in c)) c.color="#3388ff";
-    if(!("shape" in c)) c.shape="circle";
-    if(!("parentCategoryId" in c)) c.parentCategoryId=null;
+    if(!("type" in c))c.type="select";
+    if(!("items" in c))c.items=[];
+    if(!("color" in c))c.color="#3388ff";
+    if(!("shape" in c))c.shape="circle";
     c.items.forEach(it=>{
-      if(!("id" in it)) it.id=uid();
-      if(!("name" in it)) it.name="Без имени";
-      if(!("lat" in it)) it.lat=null;
-      if(!("lng" in it)) it.lng=null;
-      if(!("parentId" in it)) it.parentId=null;
+      if(!("id" in it))it.id=uid();
+      if(!("name" in it))it.name="Без имени";
+      if(!("lat" in it))it.lat=null;
+      if(!("lng" in it))it.lng=null;
+      if(!("parentId" in it))it.parentId=null;
     });
   });
 }
 
-/* ================= MAP ================= */
+/* ================= MAP + CLUSTERS ================= */
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 
-let cluster=L.markerClusterGroup();
-map.addLayer(cluster);
-let markersMap=new Map();
+let markers=L.markerClusterGroup();
+map.addLayer(markers);
+function clearMarkers(){markers.clearLayers();}
 
-function clearMarkers(){ cluster.clearLayers(); markersMap.clear(); }
 function markerIcon(cat){
-  if(cat.iconData){ return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]}); }
-  const color=cat.color||"#3388ff"; const shape=cat.shape||"circle"; let html="";
-  if(shape==="circle") html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
-  if(shape==="square") html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
-  if(shape==="triangle") html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
+  if(cat.iconData){
+    return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
+  }
+  const shape=cat.shape||"circle";const color=cat.color||"#3388ff";
+  let html="";
+  if(shape==="circle")html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
+  if(shape==="square")html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
+  if(shape==="triangle")html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
   return L.divIcon({className:"custom-icon",html,iconSize:[20,20],iconAnchor:[10,10]});
 }
 function addMarkerForItem(it,cat){
-  if(it.lat!=null&&it.lng!=null){
-    const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat)});
-    m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
-    cluster.addLayer(m); markersMap.set(it.id,m);
-  }
+  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat)})
+    .bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+  markers.addLayer(m);
 }
 window.removeMarkerById=function(id){
   for(const c of db.categories){
     const it=(c.items||[]).find(x=>x.id===id);
-    if(it){ it.lat=null; it.lng=null; }
+    if(it){it.lat=null;it.lng=null;break;}
   }
-  save(); renderPreview();
+  save();clearMarkers();renderPreview();
 }
 /* ================= DND ================= */
 let dnd={type:null,catIndex:null,itemIndex:null};
-function dndStart(e,type,catIndex,itemIndex=null){dnd={type,catIndex,itemIndex};e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed="move";}
-function dndEnd(e){e.currentTarget.classList.remove('dragging');dnd={type:null,catIndex:null,itemIndex:null};}
+function dndStart(e,type,catIndex,itemIndex=null){
+  dnd={type,catIndex,itemIndex};
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed="move";
+}
+function dndEnd(e){
+  e.currentTarget.classList.remove('dragging');
+  dnd={type:null,catIndex:null,itemIndex:null};
+}
 function dndOver(e){e.preventDefault();e.dataTransfer.dropEffect="move";}
 function dndDropCategory(e,targetIndex){
   e.preventDefault();
@@ -204,15 +226,19 @@ function renderEditor(){
       </select>
       <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
       <button id="btnAddCat">+ Добавить</button>
-    </div>`;
+    </div>
+  `;
   $editor.appendChild(create);
 
   const newIconInput=create.querySelector('#newCatIcon');
   const newIconPreview=create.querySelector('#newIconPreview');
   let newIconData=null;
   newIconInput.onchange=e=>{
-    const f=e.target.files[0];if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
-    const r=new FileReader();r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;};r.readAsDataURL(f);
+    const f=e.target.files[0];
+    if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
+    const r=new FileReader();
+    r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;};
+    r.readAsDataURL(f);
   };
   create.querySelector('#btnAddCat').onclick=()=>{
     const name=document.getElementById('newCatName').value.trim();if(!name)return;
@@ -228,10 +254,10 @@ function renderEditor(){
   // Список категорий
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div');sec.className='panel';sec.draggable=true;
-    sec.addEventListener('dragstart',e=>dndStart(e,'cat',ci));
-    sec.addEventListener('dragend',dndEnd);
-    sec.addEventListener('dragover',dndOver);
-    sec.addEventListener('drop',e=>dndDropCategory(e,ci));
+    sec.addEventListener('dragstart', e=>dndStart(e,'cat',ci));
+    sec.addEventListener('dragend', dndEnd);
+    sec.addEventListener('dragover', dndOver);
+    sec.addEventListener('drop', e=>dndDropCategory(e,ci));
 
     const header=document.createElement('div');header.className='row';
     const title=document.createElement('h3');title.textContent=cat.name+` (${cat.type})`;
@@ -243,28 +269,46 @@ function renderEditor(){
     const selType=document.createElement('select');
     ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
     const selParent=document.createElement('select');
-    selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
+    selParent.innerHTML=`<option value="">(нет родителя)</option>${db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('')}`;
     const col=document.createElement('input');col.type='color';col.value=cat.color||'#3388ff';
-    const shape=document.createElement('select');['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);});
+    const shape=document.createElement('select');
+    ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);});
+    const iconInput=document.createElement('input');iconInput.type='file';iconInput.accept='image/png,image/svg+xml';
     const iconPrev=document.createElement('span');iconPrev.className='preview-icon';iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
     const btnClearIcon=document.createElement('button');btnClearIcon.textContent='✖ иконка';
     const btnSave=document.createElement('button');btnSave.textContent='Сохранить';
     const btnDel=document.createElement('button');btnDel.textContent='Удалить';btnDel.className='danger';
 
+    iconInput.onchange=e=>{
+      const f=e.target.files[0];
+      if(!f){delete cat.iconData;iconPrev.textContent='icon';save();return;}
+      const r=new FileReader();
+      r.onload=ev=>{cat.iconData=ev.target.result;iconPrev.innerHTML=`<img src="${cat.iconData}">`;save();};
+      r.readAsDataURL(f);
+    };
     btnClearIcon.onclick=()=>{delete cat.iconData;iconPrev.textContent='icon';save();};
-    btnSave.onclick=()=>{cat.name=inpName.value.trim()||cat.name;cat.type=selType.value;cat.parentCategoryId=selParent.value||null;cat.color=col.value;cat.shape=shape.value;save();renderAll();};
-    btnDel.onclick=()=>{if(confirm('Удалить категорию?')){db.categories.splice(ci,1);save();renderAll();}};
 
-    cfg.append(inpName,selType,selParent,col,shape,iconPrev,btnClearIcon,btnSave,btnDel);
-    sec.appendChild(cfg);sec.appendChild(document.createElement('div')).className='sep';
+    btnSave.onclick=()=>{
+      cat.name=inpName.value.trim()||cat.name;
+      cat.type=selType.value;
+      cat.parentCategoryId=selParent.value||null;
+      cat.color=col.value;
+      cat.shape=shape.value;
+      save();renderAll();
+    };
+    btnDel.onclick=()=>{if(confirm('Удалить категорию и её элементы?')){db.categories.splice(ci,1);save();renderAll();}};
+
+    cfg.append(inpName,selType,selParent,col,shape,iconInput,iconPrev,btnClearIcon,btnSave,btnDel);
+    sec.appendChild(cfg);
+    sec.appendChild(document.createElement('div')).className='sep';
 
     const list=document.createElement('div');list.className='list';
     (cat.items||[]).forEach((it,ii)=>{
       const line=document.createElement('div');line.className='item';line.draggable=true;
-      line.addEventListener('dragstart',e=>dndStart(e,'item',ci,ii));
-      line.addEventListener('dragend',dndEnd);
-      line.addEventListener('dragover',dndOver);
-      line.addEventListener('drop',e=>dndDropItem(e,ci,ii));
+      line.addEventListener('dragstart', e=>dndStart(e,'item',ci,ii));
+      line.addEventListener('dragend', dndEnd);
+      line.addEventListener('dragover', dndOver);
+      line.addEventListener('drop', e=>dndDropItem(e,ci,ii));
 
       const left=document.createElement('div');left.className='left';
       const nm=document.createElement('div');nm.className='name';nm.textContent=it.name;
@@ -272,21 +316,39 @@ function renderEditor(){
       left.append(nm,meta);
 
       const tools=document.createElement('div');tools.className='tools';
-      const place=document.createElement('button');place.textContent='📍';place.onclick=()=>{alert('Кликни по карте для: '+it.name);map.once('click',e=>{it.lat=e.latlng.lat;it.lng=e.latlng.lng;save();renderPreview();});};
-      const clearBtn=document.createElement('button');clearBtn.textContent='🗑 метка';clearBtn.onclick=()=>{it.lat=null;it.lng=null;save();renderPreview();};
-      const del=document.createElement('button');del.textContent='❌';del.className='danger';del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items.splice(ii,1);save();renderAll();}};
-      tools.append(place,clearBtn,del);
+      const edit=document.createElement('button');edit.textContent='✎';
+      edit.onclick=()=>{const nn=prompt('Новое имя',it.name);if(nn){it.name=nn.trim();save();renderAll();}};
+      const place=document.createElement('button');place.textContent='📍';
+      place.onclick=()=>{alert('Кликни по карте для: '+it.name);map.once('click', e=>{it.lat=e.latlng.lat;it.lng=e.latlng.lng;save();renderPreview();});};
+      const clearBtn=document.createElement('button');clearBtn.textContent='🗑 метка';
+      clearBtn.onclick=()=>{it.lat=null;it.lng=null;save();renderPreview();};
+      const del=document.createElement('button');del.textContent='❌';del.className='danger';
+      del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items.splice(ii,1);save();renderAll();}};
 
-      line.onclick=()=>{if(it.lat!=null&&it.lng!=null){map.setView([it.lat,it.lng],14);} };
+      line.onclick=()=>{if(it.lat!=null&&it.lng!=null){map.setView([it.lat,it.lng],14);}};
+      tools.append(edit,place,clearBtn,del);
       line.append(left,tools);list.appendChild(line);
     });
     sec.appendChild(list);
 
+    // Добавление элемента с выбором родителя
     const addRow=document.createElement('div');addRow.className='row';
     const inp=document.createElement('input');inp.placeholder='Новый элемент';
+    const parentPicker=document.createElement('select');
+    if(cat.parentCategoryId){
+      const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
+      parentPicker.innerHTML=`<option value="">(без родителя)</option>`+(parentCat?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    } else {
+      parentPicker.innerHTML=`<option value="">(родитель не задан)</option>`;
+    }
     const addBtn=document.createElement('button');addBtn.textContent='+ Добавить';
-    addBtn.onclick=()=>{const nm=inp.value.trim()||'Новый';cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:null});inp.value='';save();renderAll();};
-    addRow.append(inp,addBtn);sec.appendChild(addRow);
+    addBtn.onclick=()=>{
+      const nm=inp.value.trim()||'Новый';
+      cat.items=cat.items||[];
+      cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parentPicker.value||null});
+      inp.value='';save();renderAll();
+    };
+    addRow.append(inp,parentPicker,addBtn);sec.appendChild(addRow);
 
     $editor.appendChild(sec);
   });
@@ -295,11 +357,23 @@ function renderEditor(){
 const $cascade=document.getElementById('cascadeBox');
 let selected={};
 
-function getSelectedIds(catId){const cat=db.categories.find(x=>x.id===catId);const v=selected[catId];if(!v)return[];return(cat&&cat.type==='checkbox')?Array.from(v):(v?[v]:[]);}
-function dropChildrenSelections(parentCatId){const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);for(const ch of children){delete selected[ch.id];dropChildrenSelections(ch.id);}}
+function getSelectedIds(catId){
+  const cat=db.categories.find(x=>x.id===catId);
+  const v=selected[catId];
+  if(!v)return[];
+  return (cat&&cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
+}
+function dropChildrenSelections(parentCatId){
+  const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
+  for(const ch of children){
+    delete selected[ch.id];
+    dropChildrenSelections(ch.id);
+  }
+}
 
 function renderPreview(){
   $cascade.innerHTML="";clearMarkers();
+
   db.categories.forEach(cat=>{
     const box=document.createElement('div');box.className='panel';
     const h=document.createElement('h4');h.textContent=cat.name;box.appendChild(h);
@@ -307,17 +381,30 @@ function renderPreview(){
     let parentIds=null;
     if(cat.parentCategoryId){
       const parentSelected=getSelectedIds(cat.parentCategoryId);
-      if(parentSelected.length===0){const note=document.createElement('div');note.className='note';note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');box.appendChild(note);$cascade.appendChild(box);return;}
+      if(parentSelected.length===0){
+        const note=document.createElement('div');note.className='note';
+        note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');
+        box.appendChild(note);$cascade.appendChild(box);return;
+      }
       parentIds=parentSelected;
     }
 
-    let items=(cat.items||[]);if(parentIds){items=items.filter(it=>it.parentId&&parentIds.includes(it.parentId));}
-    if(items.length===0){const note=document.createElement('div');note.className='note gray';note.textContent='Нет элементов';box.appendChild(note);$cascade.appendChild(box);return;}
+    let items=(cat.items||[]);
+    if(parentIds){items=items.filter(it=>it.parentId&&parentIds.includes(it.parentId));}
+    if(items.length===0){
+      const note=document.createElement('div');note.className='note gray';note.textContent='Нет элементов';
+      box.appendChild(note);$cascade.appendChild(box);return;
+    }
 
     if(cat.type==='select'){
-      const sel=document.createElement('select');sel.style.width='100%';sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      const sel=document.createElement('select');sel.style.width='100%';
+      sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
       if(typeof selected[cat.id]==='string')sel.value=selected[cat.id]||"";
-      sel.onchange=()=>{selected[cat.id]=sel.value||null;dropChildrenSelections(cat.id);renderPreview();};
+      sel.onchange=()=>{
+        selected[cat.id]=sel.value||null;
+        dropChildrenSelections(cat.id);
+        renderPreview();
+      };
       box.appendChild(sel);
     }else{
       const multi=document.createElement('div');multi.className='multi-select';
@@ -325,59 +412,126 @@ function renderPreview(){
       const menu=document.createElement('div');menu.className='multi-select-menu';
       const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
 
-      function updateBtnText(){if(set.size===0){btn.textContent='Выбрать...';}else{const names=items.filter(x=>set.has(x.id)).map(x=>x.name);btn.textContent=names.length<=5?names.join(', '):`Выбрано: ${names.length}`;}}
+      function updateBtnText(){
+        if(set.size===0){btn.textContent='Выбрать...';}
+        else{
+          const names=items.filter(x=>set.has(x.id)).map(x=>x.name);
+          btn.textContent=names.length<=5?names.join(', '):`Выбрано: ${names.length}`;
+        }
+      }
       updateBtnText();
 
-      const actions=document.createElement('div');actions.style.display='flex';actions.style.gap='8px';actions.style.padding='6px';actions.style.borderBottom='1px solid var(--border)';
-      const selAll=document.createElement('button');selAll.textContent='Все';selAll.onclick=()=>{items.forEach(it=>set.add(it.id));selected[cat.id]=set;updateBtnText();renderPreview();};
-      const clr=document.createElement('button');clr.textContent='Очистить';clr.onclick=()=>{set.clear();selected[cat.id]=set;updateBtnText();renderPreview();};
+      const actions=document.createElement('div');
+      actions.style.display='flex';actions.style.gap='8px';
+      actions.style.padding='6px';actions.style.borderBottom='1px solid var(--border)';
+      const selAll=document.createElement('button');selAll.textContent='Все';
+      selAll.onclick=()=>{items.forEach(it=>set.add(it.id));selected[cat.id]=set;updateBtnText();renderPreview();};
+      const clr=document.createElement('button');clr.textContent='Очистить';
+      clr.onclick=()=>{set.clear();selected[cat.id]=set;updateBtnText();renderPreview();};
       actions.append(selAll,clr);menu.appendChild(actions);
 
       items.forEach(it=>{
         const lbl=document.createElement('label');
         const cb=document.createElement('input');cb.type='checkbox';cb.value=it.id;cb.checked=set.has(it.id);
-        cb.onchange=()=>{if(cb.checked)set.add(it.id);else set.delete(it.id);selected[cat.id]=set;updateBtnText();renderPreview();};
-        lbl.append(cb,document.createTextNode(it.name));menu.appendChild(lbl);
+        cb.onchange=()=>{
+          if(cb.checked)set.add(it.id);else set.delete(it.id);
+          selected[cat.id]=set;
+          dropChildrenSelections(cat.id);
+          updateBtnText();
+          renderPreview();
+        };
+        lbl.append(cb,document.createTextNode(it.name));
+        menu.appendChild(lbl);
       });
 
       btn.onclick=()=>{multi.classList.toggle('open');};
       multi.append(btn,menu);box.appendChild(multi);
     }
+
     $cascade.appendChild(box);
   });
 
-  for(const cat of db.categories){const ids=getSelectedIds(cat.id);for(const id of ids){const it=(cat.items||[]).find(x=>x.id===id);if(it&&it.lat!=null&&it.lng!=null)addMarkerForItem(it,cat);}}
+  // финальная отрисовка меток
+  for(const cat of db.categories){
+    const ids=getSelectedIds(cat.id);
+    for(const id of ids){
+      const it=(cat.items||[]).find(x=>x.id===id);
+      if(it&&it.lat!=null&&it.lng!=null)addMarkerForItem(it,cat);
+    }
+  }
 }
-document.addEventListener('click',e=>{document.querySelectorAll('.multi-select.open').forEach(ms=>{if(!ms.contains(e.target))ms.classList.remove('open');});});
+
+document.addEventListener('click', e=>{
+  document.querySelectorAll('.multi-select.open').forEach(ms=>{
+    if(!ms.contains(e.target))ms.classList.remove('open');
+  });
+});
 
 /* ================= GLOBAL SEARCH ================= */
 document.getElementById('globalSearch').oninput=function(){
   const q=this.value.toLowerCase();
-  $cascade.querySelectorAll('label').forEach(lbl=>{lbl.classList.remove('highlight');if(q&&lbl.textContent.toLowerCase().includes(q))lbl.classList.add('highlight');});
-  for(const c of db.categories){const it=(c.items||[]).find(x=>x.name.toLowerCase().includes(q));if(it&&it.lat!=null&&it.lng!=null){map.setView([it.lat,it.lng],14);break;}}
+  $cascade.querySelectorAll('label').forEach(lbl=>{
+    lbl.classList.remove('highlight');
+    if(q&&lbl.textContent.toLowerCase().includes(q))lbl.classList.add('highlight');
+  });
+  for(const c of db.categories){
+    const it=(c.items||[]).find(x=>x.name.toLowerCase().includes(q));
+    if(it&&it.lat!=null&&it.lng!=null){
+      map.setView([it.lat,it.lng],14);
+      break;
+    }
+  }
 };
 /* ================= EXPORT / IMPORT / RESET / TABS ================= */
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dict_v33.json';a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v34.json'; a.click();
 };
-document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+
+document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
-  const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{let obj=JSON.parse(r.result);if(Array.isArray(obj.categories)){}else if(obj&&obj.db&&Array.isArray(obj.db.categories)){obj=obj.db;}else{throw new Error('Нет categories');}normalize(obj);db=obj;save();selected={};renderAll();alert('Импортировано');}catch(err){alert('Ошибка: '+err.message);}};
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      let obj=JSON.parse(r.result);
+      if(Array.isArray(obj.categories)){
+        // ок
+      }else if(obj && obj.db && Array.isArray(obj.db.categories)){
+        obj=obj.db;
+      }else{
+        throw new Error('В файле нет поля categories');
+      }
+      normalize(obj);
+      db=obj; save(); selected={}; renderAll();
+      alert('Импортировано');
+    }catch(err){
+      alert('Ошибка импорта: '+err.message);
+    }
+  };
   r.readAsText(f);
 };
-document.getElementById('btnReset').onclick=()=>{if(confirm('Очистить всё?')){localStorage.removeItem(KEY);location.reload();}};
+
+document.getElementById('btnReset').onclick=()=>{
+  if(confirm('Очистить всё?')){
+    localStorage.removeItem(KEY);
+    location.reload();
+  }
+};
+
 document.querySelectorAll('.tab').forEach(tab=>{
-  tab.onclick=()=>{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');
+  tab.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
     const which=tab.dataset.tab;
-    document.getElementById('editorTab').style.display=which==='editor'?'block':'none';
-    document.getElementById('previewTab').style.display=which==='preview'?'block':'none';};
+    document.getElementById('editorTab').style.display = which==='editor'?'block':'none';
+    document.getElementById('previewTab').style.display = which==='preview'?'block':'none';
+  };
 });
 
 /* ================= INIT ================= */
-function renderAll(){renderEditor();renderPreview();}
+function renderAll(){ renderEditor(); renderPreview(); }
 renderAll();
 </script>
 </body>
