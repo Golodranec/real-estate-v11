@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v22 — каскад + фикс выравнивания чекбоксов</title>
+<title>location_selector_v23 — каскад + чекбоксы слева (как Авито)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
@@ -39,19 +39,41 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
 
-/* селект-чекбокс (галочка строго слева, текст справа) */
+/* селект-чекбокс (кастомные квадраты слева, текст справа) */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left}
 .multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:1000;max-height:260px;overflow:auto;display:none;padding:0}
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{margin:0;flex-shrink:0;position:relative;left:0;transform:none}
+.multi-select-menu input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  width:16px;
+  height:16px;
+  margin:0;
+  flex-shrink:0;
+  border:1px solid var(--border);
+  border-radius:4px;
+  background:#0f1624;
+  cursor:pointer;
+  position:relative;
+}
+.multi-select-menu input[type="checkbox"]:checked::after{
+  content:"";
+  position:absolute;
+  top:2px; left:4px;
+  width:6px; height:10px;
+  border:solid #fff;
+  border-width:0 2px 2px 0;
+  transform:rotate(45deg);
+}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v22</span>
+  <span class="badge">dictionary v23</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -68,7 +90,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
-      <div class="help">Checkbox категории теперь как селект: галочка слева, текст справа (как на Авито).</div>
+      <div class="help">Checkbox категории теперь кастомные: квадрат слева, текст справа (как на Авито).</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
     </div>
   </aside>
@@ -425,7 +447,7 @@ document.addEventListener('click', e=>{
 document.getElementById('btnExport').onclick=()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v22.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v23.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=> document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
