@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v39.0R — Feather, история, экспорт категорий, координаты</title>
+<title>location_selector_v38.7R — сброс, выбрать всё, сортировка, drag-drop</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -11,10 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
-<!-- Feather icons (SVG-библиотека) -->
-<script src="https://unpkg.com/feather-icons"></script>
-
-<!-- localForage -->
+<!-- localForage для IndexedDB -->
 <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js"></script>
 
 <style>
@@ -58,11 +55,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{
-  appearance:none;-webkit-appearance:none;
-  width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
-  background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
-}
+.multi-select-menu input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
 .multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
 .multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
 
@@ -72,9 +65,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .search-results div{padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer}
 .search-results div:hover{background:#1f293d}
 
-/* полигоны */
+/* подсветка активного полигона и поиск по полигонам */
 .item.active{border:1px solid var(--accent);background:#1f2d44}
-#polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 
 /* сворачивание секций */
 .collapse-head{display:flex;align-items:center;gap:8px;cursor:pointer}
@@ -84,23 +76,17 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .section-body{margin-top:8px}
 .collapsed .section-body{display:none}
 
-/* модалка иконок */
-.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:5000}
-.modal-content{background:#1a2234;padding:20px;border-radius:12px;max-width:680px;max-height:80vh;overflow:auto;border:1px solid var(--border)}
-.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,40px);gap:10px}
-.icon-grid div{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;cursor:pointer}
-.icon-grid div:hover{background:#2a334a}
-#iconSearch{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff;margin-bottom:10px}
+/* drag-drop */
+.draggable{cursor:grab}
+.dragging{opacity:.5}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v39.0R</span>
+  <span class="badge">dictionary v38.7R</span>
   <button id="btnExport">Экспорт</button>
-  <button id="btnExportCat">Экспорт категории</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
-  <button id="btnInfo">Инфо</button>
   <button id="btnReset" class="danger">Сброс</button>
 </header>
 
@@ -114,9 +100,13 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
+      <div class="row">
+        <button id="btnSelectAll">Выбрать всё</button>
+        <button id="btnClearAll" class="danger">Сбросить всё</button>
+      </div>
       <input id="globalSearch" placeholder="Поиск по элементам..."/>
       <div id="searchResults" class="search-results"></div>
-      <div class="help">В мультиселектах есть кнопки Выбрать все и Снять все. Маркеры на карте показываются только по выбранным.</div>
+      <div class="help">До 5 названий видно в кнопке, дальше счётчик. Клики по чекбоксам не закрывают меню.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
 
       <div class="sep"></div>
@@ -137,28 +127,16 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <div id="map"></div>
 </main>
 
-<!-- Модалка выбора иконки -->
-<div id="iconModal" class="modal">
-  <div class="modal-content">
-    <input id="iconSearch" placeholder="Поиск иконки..."/>
-    <div id="iconGrid" class="icon-grid"></div>
-    <div style="text-align:right;margin-top:10px">
-      <button id="iconCloseBtn">Закрыть</button>
-    </div>
-  </div>
-</div>
-
-<!-- Leaflet скрипты -->
+<!-- Скрипты карт -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://unpkg.com/leaflet.draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v39_0R";
-const lfIcons=localforage.createInstance({name:"dict_icons_v390R"}); // reserve под внешние иконки, если появятся
-const lfGeo=localforage.createInstance({name:"dict_geo_v390R"});
-const lfHistory=localforage.createInstance({name:"dict_history_v390R"});
+const KEY="dict_v38_7R";
+const lfIcons=localforage.createInstance({name:"dict_icons_v387R"});
+const lfGeo=localforage.createInstance({name:"dict_geo_v387R"});
 
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -173,14 +151,12 @@ function normalize(obj){
     if(!("color" in c))c.color="#3388ff";
     if(!("shape" in c))c.shape="circle";
     if(!("parentCategoryId" in c))c.parentCategoryId=null;
-    if(!("iconSvg" in c))c.iconSvg=null;
     c.items.forEach(it=>{
       if(!("id" in it))it.id=uid();
       if(!("name" in it))it.name="Без имени";
       if(!("lat" in it))it.lat=null;
       if(!("lng" in it))it.lng=null;
       if(!("parentId" in it))it.parentId=null;
-      if(!("iconSvg" in it))it.iconSvg=null;
     });
   });
   obj.polygons.forEach(p=>{
@@ -191,31 +167,38 @@ function normalize(obj){
   });
 }
 
-// история изменений
-async function logHistory(action, details){
-  const rec={time:new Date().toISOString(),action,details};
-  try{
-    let arr=(await lfHistory.getItem("log"))||[];
-    arr.push(rec);
-    await lfHistory.setItem("log",arr);
-  }catch(e){}
-}
-async function getHistoryLog(){ try{return await lfHistory.getItem("log")||[];}catch(e){return [];} }
-
-// сохранение (легкий снимок в LS, тяжелое — в IndexedDB)
+// лёгкий слепок в LS, тяжёлое в IndexedDB
 async function save(obj=db){
   normalize(obj);
   const lite={
     categories:obj.categories.map(c=>({
       id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
-      color:c.color,shape:c.shape,iconSvg:c.iconSvg||null,
-      items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconSvg:it.iconSvg||null}))
+      color:c.color,shape:c.shape,iconKey:c.iconKey||null,
+      items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
     })),
     polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
   };
   localStorage.setItem(KEY,JSON.stringify(lite));
-  // полигоны в IndexedDB
-  for(const p of obj.polygons){ if(p.geojson) await lfGeo.setItem(p.id,p.geojson); }
+
+  // иконки
+  for(const cat of obj.categories){
+    if(cat.iconData){
+      const key=cat.iconKey||`cat_${cat.id}`;
+      await lfIcons.setItem(key,cat.iconData);
+      cat.iconKey=key;
+    }
+    for(const it of (cat.items||[])){
+      if(it.iconData){
+        const key=it.iconKey||`item_${it.id}`;
+        await lfIcons.setItem(key,it.iconData);
+        it.iconKey=key;
+      }
+    }
+  }
+  // полигоны
+  for(const p of obj.polygons){
+    if(p.geojson) await lfGeo.setItem(p.id,p.geojson);
+  }
 }
 
 async function loadDB(){
@@ -223,18 +206,36 @@ async function loadDB(){
   let obj={categories:[],polygons:[]};
   if(raw){try{obj=JSON.parse(raw)||{};}catch(e){}}
   normalize(obj);
-  for(const p of obj.polygons){ if(!p.geojson){ try{p.geojson=await lfGeo.getItem(p.id)||null;}catch(e){} } }
+  // подтянуть иконки
+  for(const cat of obj.categories){
+    if(cat.iconKey&&!cat.iconData){
+      try{cat.iconData=await lfIcons.getItem(cat.iconKey)||null;}catch(e){}
+    }
+    for(const it of (cat.items||[])){
+      if(it.iconKey&&!it.iconData){
+        try{it.iconData=await lfIcons.getItem(it.iconKey)||null;}catch(e){}
+      }
+    }
+  }
+  // подтянуть геометрию
+  for(const p of obj.polygons){
+    if(!p.geojson){
+      try{p.geojson=await lfGeo.getItem(p.id)||null;}catch(e){}
+    }
+  }
   return obj;
 }
+
 /***** SELECTED STATE *****/
 let selected={};
 function saveSelected(){
-  const out={}; for(const [k,v] of Object.entries(selected)){ out[k]=v instanceof Set?Array.from(v):v; }
-  localStorage.setItem('selected_v39',JSON.stringify(out));
+  const out={};
+  for(const [k,v] of Object.entries(selected)){ out[k]=v instanceof Set?Array.from(v):v; }
+  localStorage.setItem('selected_v1',JSON.stringify(out));
 }
 function loadSelected(){
   try{
-    const raw=localStorage.getItem('selected_v39'); if(!raw) return;
+    const raw=localStorage.getItem('selected_v1'); if(!raw) return;
     const obj=JSON.parse(raw)||{}; selected={};
     for(const [k,v] of Object.entries(obj)){
       const cat=(db?.categories||[]).find(c=>c.id===k);
@@ -244,11 +245,11 @@ function loadSelected(){
   }catch(_){selected={};}
 }
 
-/***** COLLAPSE STATE *****/
+/***** COLLAPSE STATE (для полигонов и редактора) *****/
 function getCollapsedSet(key){ try{ return new Set(JSON.parse(localStorage.getItem(key)||"[]")); }catch(_){ return new Set(); } }
 function setCollapsedSet(key, set){ localStorage.setItem(key, JSON.stringify([...set])); }
-const collapsedPolygons = getCollapsedSet('collapsedPolygons_v39');
-const collapsedCats     = getCollapsedSet('collapsedCats_v39');
+const collapsedPolygons = getCollapsedSet('collapsedPolygons_v1');
+const collapsedCats     = getCollapsedSet('collapsedCats_v1');
 
 /***** MAP + MARKERS *****/
 let map=L.map('map').setView([41.3111,69.2797],12);
@@ -258,12 +259,9 @@ let cluster=L.markerClusterGroup();
 map.addLayer(cluster);
 function clearMarkers(){cluster.clearLayers();}
 
-function svgBadge(html, color){
-  return `<div style="width:22px;height:22px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid ${color}">${html}</div>`;
-}
 function markerIcon(cat,it=null){
-  if(it && it.iconSvg) return L.divIcon({className:"custom-svg",html:svgBadge(it.iconSvg,cat.color||'#3388ff'),iconSize:[24,24],iconAnchor:[12,12]});
-  if(cat.iconSvg)    return L.divIcon({className:"custom-svg",html:svgBadge(cat.iconSvg,cat.color||'#3388ff'),iconSize:[24,24],iconAnchor:[12,12]});
+  if(it && it.iconData) return L.icon({iconUrl:it.iconData,iconSize:[24,24],iconAnchor:[12,12]});
+  if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
   const color=cat.color||"#3388ff"; const shape=cat.shape||"circle"; let html="";
   if(shape==="circle") html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
   if(shape==="square") html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
@@ -272,153 +270,234 @@ function markerIcon(cat,it=null){
 }
 function addMarkerForItem(it,cat){
   if(it.lat==null||it.lng==null) return;
-  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it), _itemId: it.id, title: it.name||''});
-  m.bindPopup(`<b>${it.name||'Без имени'}</b><br/>${it.lat?.toFixed?it.lat.toFixed(6):it.lat}, ${it.lng?.toFixed?it.lng.toFixed(6):it.lng}<br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it), _itemId: it.id});
+  m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
   cluster.addLayer(m);
 }
 window.removeMarkerById=function(id){
   for(const c of db.categories){
     const it=(c.items||[]).find(x=>x.id===id);
-    if(it){it.lat=null;it.lng=null;logHistory("Удалена метка", it.name||id);break;}
+    if(it){it.lat=null;it.lng=null;break;}
   }
-  const toRemove=[]; cluster.eachLayer(m=>{ if(m.options?._itemId===id) toRemove.push(m); });
+  // убрать из кластера прямо сейчас
+  const toRemove=[];
+  cluster.eachLayer(m=>{ if(m.options?._itemId===id) toRemove.push(m); });
   toRemove.forEach(m=>cluster.removeLayer(m));
   save(); renderAll();
 };
-
-/***** FEATHER ICONS MODAL *****/
-const $iconModal=document.getElementById('iconModal');
-const $iconGrid=document.getElementById('iconGrid');
-const $iconSearch=document.getElementById('iconSearch');
-const $iconCloseBtn=document.getElementById('iconCloseBtn');
-
-let iconApplyTarget=null; // {type:'category'|'item'|'category_new', catId, itemId}
-function openIconModal(target){
-  iconApplyTarget=target;
-  $iconGrid.innerHTML="";
-  const names=Object.keys(feather.icons);
-  names.forEach(name=>{
-    const wrap=document.createElement('div');
-    wrap.innerHTML=feather.icons[name].toSvg({width:18,height:18,stroke:'#1f2937'});
-    wrap.title=name;
-    wrap.onclick=()=>{
-      const svg=feather.icons[name].toSvg({width:18,height:18,stroke:'#1f2937'});
-      if(target.type==='category'){
-        const cat=db.categories.find(c=>c.id===target.catId);
-        if(cat){cat.iconSvg=svg; save(); logHistory("Иконка категории", `${cat.name} = ${name}`); renderAll();}
-      }else if(target.type==='item'){
-        const cat=db.categories.find(c=>c.id===target.catId);
-        const it=cat?.items.find(i=>i.id===target.itemId);
-        if(it){it.iconSvg=svg; save(); logHistory("Иконка элемента", `${it.name} = ${name}`); renderAll();}
-      }else if(target.type==='category_new'){
-        // временное хранилище заполним через колбэк в create-категории
-        window.__tmpNewCatIconSvg=svg;
-        document.getElementById('newIconPreview').innerHTML=svg;
-      }
-      $iconModal.style.display='none';
-    };
-    $iconGrid.appendChild(wrap);
-  });
-  $iconSearch.value="";
-  $iconSearch.oninput=()=>{
-    const q=$iconSearch.value.trim().toLowerCase();
-    [...$iconGrid.children].forEach(div=>{
-      const title=div.title?.toLowerCase()||"";
-      div.style.display=title.includes(q)?"flex":"none";
-    });
-  };
-  $iconModal.style.display='flex';
-}
-function closeIconModal(){ $iconModal.style.display='none'; }
-$iconCloseBtn.onclick=closeIconModal;
-$iconModal.addEventListener('click',e=>{ if(e.target===$iconModal) closeIconModal(); });
-
 /***** POLYGONS CORE + HISTORY *****/
-const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
+const polyFG=new L.FeatureGroup();
+map.addLayer(polyFG);
 const polyIndex=new Map();
-const historyById=new Map();
-function getPolyHist(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
-function pushPolyHist(p){ const h=getPolyHist(p.id); const snap=JSON.parse(JSON.stringify(p.geojson)); if(h.index<h.stack.length-1) h.stack.splice(h.index+1); h.stack.push(snap); h.index=h.stack.length-1; }
-function applyPolyHist(p,dir){ const h=getPolyHist(p.id); const next=h.index+dir; if(next<0||next>=h.stack.length) return false; h.index=next; const snap=h.stack[h.index]; p.geojson=JSON.parse(JSON.stringify(snap)); const old=polyIndex.get(p.id); if(old) polyFG.removeLayer(old); const l=layerFromGeo(p.geojson,p.color); polyFG.addLayer(l); polyIndex.set(p.id,l); if(p.visible===false) map.removeLayer(l); return true; }
-function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
-function rebuildPolys(){ polyIndex.clear(); polyFG.clearLayers(); for(const p of db.polygons){ if(!p.geojson) continue; const l=layerFromGeo(p.geojson,p.color); if(!l) continue; polyFG.addLayer(l); polyIndex.set(p.id,l); if(p.visible===false) map.removeLayer(l); } updatePolygonVisibility(); }
 
-/***** POLYGON UI *****/
+// история редактирования: id -> {stack: GeoJSON[], index}
+const historyById=new Map();
+function getHistory(id){
+  if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1});
+  return historyById.get(id);
+}
+function pushHistory(p){
+  const h=getHistory(p.id);
+  const snap=JSON.parse(JSON.stringify(p.geojson));
+  if(h.index<h.stack.length-1) h.stack.splice(h.index+1);
+  h.stack.push(snap);
+  h.index=h.stack.length-1;
+}
+function applyHistory(p,dir){ // dir=-1 undo, +1 redo
+  const h=getHistory(p.id);
+  const next=h.index+dir;
+  if(next<0||next>=h.stack.length) return false;
+  h.index=next;
+  const snap=h.stack[h.index];
+  p.geojson=JSON.parse(JSON.stringify(snap));
+  const old=polyIndex.get(p.id);
+  if(old) polyFG.removeLayer(old);
+  const l=layerFromGeo(p.geojson,p.color);
+  polyFG.addLayer(l);
+  polyIndex.set(p.id,l);
+  if(p.visible===false) map.removeLayer(l);
+  return true;
+}
+
+function layerFromGeo(geo,c){
+  let l=null;
+  L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x);
+  return l;
+}
+function rebuildPolys(){
+  polyIndex.clear();
+  polyFG.clearLayers();
+  for(const p of db.polygons){
+    if(!p.geojson) continue;
+    const l=layerFromGeo(p.geojson,p.color);
+    if(!l) continue;
+    polyFG.addLayer(l);
+    polyIndex.set(p.id,l);
+    if(p.visible===false) map.removeLayer(l);
+  }
+  updatePolygonVisibility();
+}
+
+/***** POLYGON UI + EDIT EVENTS *****/
 const $polyList=document.getElementById('polyList');
 const $polyName=document.getElementById('polyName');
 const $polyColor=document.getElementById('polyColor');
 const $polySearch=document.getElementById('polySearch');
 
-document.getElementById('btnPolyNew').onclick=()=>{ new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable(); };
+document.getElementById('btnPolyNew').onclick=()=>{
+  new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
+};
+
 let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
 
-document.getElementById('btnPolyEdit').onclick=()=>{ if(polyEditing) return; polyEditingTargetId=null; localStorage.removeItem('polyEditingId'); polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG}); polyEditToolbar.enable(); polyEditing=true; };
+document.getElementById('btnPolyEdit').onclick=()=>{
+  if(polyEditing) return;
+  polyEditingTargetId=null;
+  localStorage.removeItem('polyEditingId');
+  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+  polyEditToolbar.enable(); polyEditing=true;
+};
 document.getElementById('btnPolyStop').onclick=stopEditing;
-function stopEditing(){ if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); polyEditing=false; map.fire(L.Draw.Event.EDITSTOP);} polyEditingTargetId=null; localStorage.removeItem('polyEditingId'); }
-document.getElementById('btnPolyUndo').onclick=()=>{ if(!polyEditingTargetId) return; const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return; if(applyPolyHist(p,-1)){ save(db); renderPolyList(); updatePolygonVisibility(); } };
-document.getElementById('btnPolyRedo').onclick=()=>{ if(!polyEditingTargetId) return; const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return; if(applyPolyHist(p,+1)){ save(db); renderPolyList(); updatePolygonVisibility(); } };
+
+function stopEditing(){
+  if(polyEditing&&polyEditToolbar){
+    polyEditToolbar.disable(); polyEditing=false; map.fire(L.Draw.Event.EDITSTOP);
+  }
+  polyEditingTargetId=null;
+  localStorage.removeItem('polyEditingId');
+}
+
+document.getElementById('btnPolyUndo').onclick=()=>{
+  if(!polyEditingTargetId) return;
+  const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
+  if(applyHistory(p,-1)){ save(db); renderPolyList(); updatePolygonVisibility(); }
+};
+document.getElementById('btnPolyRedo').onclick=()=>{
+  if(!polyEditingTargetId) return;
+  const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
+  if(applyHistory(p,+1)){ save(db); renderPolyList(); updatePolygonVisibility(); }
+};
 
 map.on(L.Draw.Event.CREATED,async e=>{
   if(!(e.layer instanceof L.Polygon)) return;
   const layer=e.layer;
   layer.setStyle({color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12});
   polyFG.addLayer(layer);
-  const rec={ id:uid(), name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(), color:$polyColor?.value||'#ff4d4f', visible:true, geojson:layer.toGeoJSON() };
+  const rec={
+    id:uid(),
+    name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),
+    color:$polyColor?.value||'#ff4d4f',
+    visible:true,
+    geojson:layer.toGeoJSON()
+  };
   db.polygons.push(rec);
   polyIndex.set(rec.id,layer);
-  pushPolyHist(rec);
+  pushHistory(rec);
   await save(db);
-  await logHistory("Создан полигон", rec.name);
   renderPolyList(); updatePolygonVisibility();
 });
-map.on(L.Draw.Event.EDITSTOP,async ()=>{ for(const p of db.polygons){ const l=polyIndex.get(p.id); if(l) p.geojson=l.toGeoJSON(); } await save(db); renderPolyList(); updatePolygonVisibility(); });
-map.on('draw:editvertex', ()=>{ if(!polyEditingTargetId) return; const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return; const l=polyIndex.get(p.id); if(!l) return; p.geojson=l.toGeoJSON(); pushPolyHist(p); });
 
-function setEditingTarget(id){ polyEditingTargetId=id||null; if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId'); renderPolyList(); updatePolygonVisibility(); }
+// 1) сохраняем геометрию на EDITSTOP
+map.on(L.Draw.Event.EDITSTOP,async ()=>{
+  for(const p of db.polygons){
+    const l=polyIndex.get(p.id);
+    if(l) p.geojson=l.toGeoJSON();
+  }
+  await save(db);
+  renderPolyList(); updatePolygonVisibility();
+});
 
+// 2) шаги истории при ДВИЖЕНИИ вершины (по шагам)
+map.on('draw:editvertex', ()=>{
+  if(!polyEditingTargetId) return;
+  const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
+  const l=polyIndex.get(p.id); if(!l) return;
+  p.geojson=l.toGeoJSON();
+  pushHistory(p);
+  // история сохраняется в памяти; сохранение в IndexedDB — на EDITSTOP
+});
+
+// выбрать один полигон на редактирование (одиночный режим)
+function setEditingTarget(id){
+  polyEditingTargetId=id||null;
+  if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId');
+  renderPolyList();
+  updatePolygonVisibility();
+}
+
+// список + поиск + сворачивание (фиксация scrollTop)
 function renderPolyList(){
   if(!$polyList) return;
   const q=($polySearch?.value||"").trim().toLowerCase();
   const prevScroll=$polyList.scrollTop;
   $polyList.innerHTML='';
 
-  db.polygons.filter(p=>!q || (p.name||'').toLowerCase().includes(q)).forEach(p=>{
-    const wrapper=document.createElement('div'); wrapper.className='item'+(p.id===polyEditingTargetId?' active':''); if(collapsedPolygons.has(p.id)) wrapper.classList.add('collapsed');
-    const head=document.createElement('div'); head.className='collapse-head';
-    const caret=document.createElement('div'); caret.className='caret';
-    const title=document.createElement('div'); title.className='name'; title.textContent=p.name||'Полигон';
-    const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`id: ${p.id}`;
-    head.append(caret,title,meta);
-    head.onclick=()=>{ if(collapsedPolygons.has(p.id)) collapsedPolygons.delete(p.id); else collapsedPolygons.add(p.id); setCollapsedSet('collapsedPolygons_v39',collapsedPolygons); wrapper.classList.toggle('collapsed'); };
-    wrapper.appendChild(head);
+  db.polygons
+    .filter(p=>!q || (p.name||'').toLowerCase().includes(q))
+    .forEach(p=>{
+      const wrapper=document.createElement('div'); wrapper.className='item'+(p.id===polyEditingTargetId?' active':'');
+      if(collapsedPolygons.has(p.id)) wrapper.classList.add('collapsed');
 
-    const body=document.createElement('div'); body.className='section-body';
-    const row1=document.createElement('div'); row1.className='item-row';
-    const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
-    nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await save(db); renderPolyList(); updatePolygonVisibility();};
-    const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
-    color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
-    row1.append(nameInput,color);
+      // шапка
+      const head=document.createElement('div'); head.className='collapse-head';
+      const caret=document.createElement('div'); caret.className='caret';
+      const title=document.createElement('div'); title.className='name'; title.textContent=p.name||'Полигон';
+      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`id: ${p.id}`;
+      head.append(caret,title,meta);
+      head.onclick=()=>{
+        if(collapsedPolygons.has(p.id)) collapsedPolygons.delete(p.id); else collapsedPolygons.add(p.id);
+        setCollapsedSet('collapsedPolygons_v1',collapsedPolygons);
+        wrapper.classList.toggle('collapsed');
+      };
+      wrapper.appendChild(head);
 
-    const row2=document.createElement('div'); row2.className='tools';
-    const toggle=document.createElement('button'); toggle.textContent=p.visible!==false?'Скрыть':'Показать';
-    toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await save(db); renderPolyList(); updatePolygonVisibility();};
-    const focus=document.createElement('button'); focus.textContent='Фокус'; focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
-    const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
-    editBtn.onclick=()=>{const l=polyIndex.get(p.id); if(l){ l.addTo(map); if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); } polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG}); polyEditToolbar.enable(); polyEditing=true; polyFG.eachLayer(x=>{ if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); } else{ if(x.editing && x.editing._enabled) x.editing.disable(); } }); setEditingTarget(p.id); map.fitBounds(l.getBounds()); const h=getPolyHist(p.id); if(h.stack.length===0){ pushPolyHist(p); } } };
-    const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-    del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await save(db); if(polyEditingTargetId===p.id){ setEditingTarget(null);} await logHistory("Удалён полигон", p.name); renderPolyList(); updatePolygonVisibility();};
+      // тело
+      const body=document.createElement('div'); body.className='section-body';
 
-    row2.append(toggle,focus,editBtn,del);
-    body.append(row1,row2);
-    wrapper.appendChild(body);
-    $polyList.appendChild(wrapper);
-  });
+      const row1=document.createElement('div'); row1.className='item-row';
+      const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
+      nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await save(db); renderPolyList(); updatePolygonVisibility();};
+      const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
+      color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
+      row1.append(nameInput,color);
+
+      const row2=document.createElement('div'); row2.className='tools';
+      const toggle=document.createElement('button'); toggle.textContent=p.visible!==false?'Скрыть':'Показать';
+      toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await save(db); renderPolyList(); updatePolygonVisibility();};
+      const focus=document.createElement('button'); focus.textContent='Фокус';
+      focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
+      const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
+      editBtn.onclick=()=>{
+        const l=polyIndex.get(p.id);
+        if(l){
+          l.addTo(map);
+          if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+          polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+          polyEditToolbar.enable(); polyEditing=true;
+          polyFG.eachLayer(x=>{
+            if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
+            else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
+          });
+          setEditingTarget(p.id);
+          map.fitBounds(l.getBounds());
+          const h=getHistory(p.id); if(h.stack.length===0){ pushHistory(p); }
+        }
+      };
+      const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
+      del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await save(db); if(polyEditingTargetId===p.id){ setEditingTarget(null);} renderPolyList(); updatePolygonVisibility();};
+
+      row2.append(toggle,focus,editBtn,del);
+      body.append(row1,row2);
+      wrapper.appendChild(body);
+
+      $polyList.appendChild(wrapper);
+    });
 
   $polyList.scrollTop=prevScroll;
 }
 $polySearch.oninput=renderPolyList;
-/***** ПРЯМАЯ ФИЛЬТРАЦИЯ ПОЛИГОНОВ ПО ВЫБОРУ *****/
+
+/***** VISIBILITY BY SELECTION *****/
 function getSelectedIds(catId){
   const cat=db.categories.find(x=>x.id===catId);
   const v=selected[catId];
@@ -444,17 +523,37 @@ function updatePolygonVisibility(){
   }
 }
 
-/***** EDITOR (категории + элементы) *****/
+/***** EDITOR (категории + элементы) со сворачиванием + сортировка + drag-drop *****/
 const $editor=document.getElementById('editorTab');
+
+function moveArrayItem(arr, fromIdx, toIdx){
+  if(fromIdx===toIdx) return;
+  const item=arr.splice(fromIdx,1)[0];
+  arr.splice(toIdx,0,item);
+}
+
 function renderEditor(){
   $editor.innerHTML="";
 
-  // Новая категория
+  /* Панель шапки редактора: глобальная сортировка категорий A-Z */
+  const headPanel=document.createElement('div'); headPanel.className='panel';
+  const headRow=document.createElement('div'); headRow.className='row';
+  const hTitle=document.createElement('h3'); hTitle.textContent='Категории';
+  const btnSortAZ=document.createElement('button'); btnSortAZ.textContent='Сортировать A→Z';
+  btnSortAZ.onclick=()=>{ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); save(db); renderAll(); };
+  headRow.append(hTitle,btnSortAZ);
+  headPanel.appendChild(headRow);
+  $editor.appendChild(headPanel);
+
+  // новая категория — сворачиваемое тело
   const create=document.createElement('div'); create.className='panel';
+  if(collapsedCats.has('newCat')) create.classList.add('collapsed');
+
   const head=document.createElement('div'); head.className='collapse-head';
   const caret=document.createElement('div'); caret.className='caret';
   const title=document.createElement('h3'); title.textContent='Новая категория';
   head.append(caret,title); create.appendChild(head);
+
   const body=document.createElement('div'); body.className='section-body';
   body.innerHTML=`
     <div class="row">
@@ -469,40 +568,66 @@ function renderEditor(){
       <span class="preview-icon" id="newIconPreview">icon</span>
       <input type="color" id="newCatColor" value="#3388ff"/>
       <select id="newCatShape"><option value="circle">Круг</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option></select>
-      <button id="btnPickLibIcon">🖼 Выбрать иконку</button>
+      <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
       <button id="btnAddCat">+ Добавить</button>
     </div>`;
   create.appendChild(body);
-  head.onclick=()=>{ create.classList.toggle('collapsed'); };
+  head.onclick=()=>{
+    if(collapsedCats.has('newCat')) collapsedCats.delete('newCat'); else collapsedCats.add('newCat');
+    setCollapsedSet('collapsedCats_v1',collapsedCats);
+    create.classList.toggle('collapsed');
+  };
   $editor.appendChild(create);
 
-  window.__tmpNewCatIconSvg=null;
-  body.querySelector('#btnPickLibIcon').onclick=()=>openIconModal({type:'category_new'});
-
+  const newIconInput=body.querySelector('#newCatIcon');
+  const newIconPreview=body.querySelector('#newIconPreview');
+  let newIconData=null;
+  newIconInput.onchange=e=>{
+    const f=e.target.files[0]; if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
+    const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
+  };
   body.querySelector('#btnAddCat').onclick=async()=>{
     const name=body.querySelector('#newCatName').value.trim(); if(!name) return;
     const type=body.querySelector('#newCatType').value;
     const parent=body.querySelector('#newCatParent').value||null;
     const color=body.querySelector('#newCatColor').value;
     const shape=body.querySelector('#newCatShape').value;
-    const cat={id:uid(),name,type,parentCategoryId:parent,color,shape,items:[],iconSvg:window.__tmpNewCatIconSvg||null};
-    db.categories.push(cat); await save(); await logHistory("Добавлена категория", name); renderAll();
+    const cat={id:uid(),name,type,parentCategoryId:parent,color,shape,items:[]};
+    if(newIconData){cat.iconData=newIconData;}
+    db.categories.push(cat); await save(); renderAll();
   };
 
-  // Существующие категории (с dnd и кнопками вверх/вниз)
-  db.categories.forEach((cat)=>{
-    const sec=document.createElement('div'); sec.className='panel'; sec.draggable=true;
+  // категории
+  db.categories.forEach((cat,ci)=>{
+    const sec=document.createElement('div'); sec.className='panel draggable';
+    if(collapsedCats.has(cat.id)) sec.classList.add('collapsed');
+    sec.dataset.index=ci;
 
     const head=document.createElement('div'); head.className='collapse-head';
     const caret=document.createElement('div'); caret.className='caret';
     const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
-    head.append(caret,title); sec.appendChild(head);
+    head.append(caret,title);
+
+    // кнопки порядка категорий
+    const toolsTop=document.createElement('div'); toolsTop.className='tools';
+    const btnUp=document.createElement('button'); btnUp.textContent='▲';
+    btnUp.onclick=()=>{ if(ci>0){ moveArrayItem(db.categories,ci,ci-1); save(db); renderAll(); } };
+    const btnDown=document.createElement('button'); btnDown.textContent='▼';
+    btnDown.onclick=()=>{ if(ci<db.categories.length-1){ moveArrayItem(db.categories,ci,ci+1); save(db); renderAll(); } };
+    const btnSortItemsAZ=document.createElement('button'); btnSortItemsAZ.textContent='A→Z элементы';
+    btnSortItemsAZ.onclick=()=>{ cat.items.sort((a,b)=>a.name.localeCompare(b.name)); save(db); renderAll(); };
+    toolsTop.append(btnUp,btnDown,btnSortItemsAZ);
+
+    const headWrap=document.createElement('div'); headWrap.style.display='flex'; headWrap.style.justifyContent='space-between'; headWrap.style.alignItems='center';
+    headWrap.append(head,toolsTop);
+
+    sec.appendChild(headWrap);
 
     const body=document.createElement('div'); body.className='section-body';
 
     const cfg=document.createElement('div'); cfg.className='row';
     const inpName=document.createElement('input'); inpName.value=cat.name;
-    inpName.onchange=()=>{const old=cat.name; cat.name=inpName.value.trim(); save(); logHistory("Переименована категория", `${old} → ${cat.name}`); renderAll();};
+    inpName.onchange=()=>{cat.name=inpName.value.trim(); save(); renderAll();};
     const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
     selType.onchange=()=>{cat.type=selType.value; save(); renderAll();};
     const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
@@ -510,29 +635,33 @@ function renderEditor(){
     const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; save(); renderAll();};
     const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);});
     shape.onchange=()=>{cat.shape=shape.value; save(); renderAll();};
-    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconSvg?cat.iconSvg:'icon';
-    const btnLibIcon=document.createElement('button'); btnLibIcon.textContent='🖼'; btnLibIcon.onclick=()=>openIconModal({type:'category',catId:cat.id});
-    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка'; btnClearIcon.onclick=()=>{cat.iconSvg=null; iconPrev.textContent='icon'; save(); renderAll();};
-    cfg.append(inpName,selType,selParent,col,shape,iconPrev,btnLibIcon,btnClearIcon);
+    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
+    btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
+
+    // загрузка иконки категории
+    const iconInput=document.createElement('input');
+    iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
+    const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
+    iconBtn.onclick=()=>iconInput.click();
+    iconInput.onchange=e=>{
+      const f=e.target.files[0];
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); renderAll(); return; }
+      const r=new FileReader();
+      r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); renderAll(); };
+      r.readAsDataURL(f);
+    };
+
+    cfg.append(inpName,selType,selParent,col,shape,iconPrev,iconBtn,iconInput,btnClearIcon);
     body.appendChild(cfg);
 
-    // элементы (drag&drop, иконки, координаты)
+    // элементы
     const list=document.createElement('div'); list.className='list';
-    let dragId=null;
-    (cat.items||[]).forEach((it)=>{
-      const line=document.createElement('div'); line.className='item-row'; line.draggable=true;
-      line.addEventListener('dragstart',e=>{dragId=it.id; line.style.opacity=.5;});
-      line.addEventListener('dragend',e=>{dragId=null; line.style.opacity=1;});
-      line.addEventListener('dragover',e=>{
-        e.preventDefault();
-        const fromIdx=cat.items.findIndex(x=>x.id===dragId);
-        const toIdx=cat.items.findIndex(x=>x.id===it.id);
-        if(fromIdx!==-1 && toIdx!==-1 && fromIdx!==toIdx){
-          const moved=cat.items.splice(fromIdx,1)[0];
-          cat.items.splice(toIdx,0,moved);
-          save(); renderAll();
-        }
-      });
+    list.dataset.catIndex=ci;
+
+    (cat.items||[]).forEach((it,ii)=>{
+      const line=document.createElement('div'); line.className='item-row draggable';
+      line.dataset.index=ii;
 
       const left=document.createElement('div'); left.className='left';
       const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
@@ -541,47 +670,35 @@ function renderEditor(){
 
       const tools=document.createElement('div'); tools.className='tools';
       const edit=document.createElement('button'); edit.textContent='✎';
-      edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){const old=it.name; it.name=(nn.trim()||it.name); save(); logHistory("Переименован элемент", `${old} → ${it.name}`); renderAll();}};
-      const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.onclick=()=>openIconModal({type:'item',catId:cat.id,itemId:it.id});
-      const clearIconBtn=document.createElement('button'); clearIconBtn.textContent='✖ иконка'; clearIconBtn.onclick=()=>{it.iconSvg=null; save(); renderAll();};
+      edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){it.name=(nn.trim()||it.name); save(); renderAll();}};
+      const upBtn=document.createElement('button'); upBtn.textContent='▲';
+      upBtn.onclick=()=>{ if(ii>0){ moveArrayItem(cat.items,ii,ii-1); save(); renderAll(); } };
+      const downBtn=document.createElement('button'); downBtn.textContent='▼';
+      downBtn.onclick=()=>{ if(ii<cat.items.length-1){ moveArrayItem(cat.items,ii,ii+1); save(); renderAll(); } };
       const place=document.createElement('button'); place.textContent='📍';
       place.onclick=()=>{
-        const coord=prompt('Введи координаты lat,lng или оставь пусто и кликни по карте', it.lat!=null&&it.lng!=null?`${it.lat},${it.lng}`:'');
-        if(coord && coord.includes(',')){
-          const [a,b]=coord.split(',').map(s=>parseFloat(s.trim()));
-          if(!isNaN(a)&&!isNaN(b)){ it.lat=a; it.lng=b; save(); logHistory("Координаты вручную", `${it.name}: ${a}, ${b}`); renderAll(); map.setView([it.lat,it.lng],14); return; }
-        }
         alert('Кликни по карте для: '+it.name);
         map.once('click', e=>{
           it.lat=e.latlng.lat; it.lng=e.latlng.lng; save();
           meta.textContent=`lat:${it.lat.toFixed(5)} lng:${it.lng.toFixed(5)}`;
           addMarkerForItem(it,cat);
           map.setView([it.lat,it.lng],14);
-          logHistory("Координаты по клику", `${it.name}: ${it.lat}, ${it.lng}`);
         });
       };
       const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка';
-      clearBtn.onclick=()=>{it.lat=null; it.lng=null; save(); logHistory("Сброшены координаты", it.name); renderAll();};
+      clearBtn.onclick=()=>{it.lat=null; it.lng=null; save(); renderAll();};
       const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-      del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items=cat.items.filter(x=>x.id!==it.id); save(); logHistory("Удалён элемент", it.name); renderAll();}};
+      del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items.splice(ii,1); save(); renderAll();}};
 
       line.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ map.setView([it.lat,it.lng],14); } };
-      tools.append(edit,iconBtn,clearIconBtn,place,clearBtn,del);
+      tools.append(edit,upBtn,downBtn,place,clearBtn,del);
       line.append(left,tools); list.appendChild(line);
     });
     body.appendChild(list);
 
-    // добавление элемента (подсказки + ручной ввод координат)
-    const addRow=document.createElement('div'); addRow.className='row'; addRow.style.position='relative';
+    // добавление элемента
+    const addRow=document.createElement('div'); addRow.className='row';
     const inp=document.createElement('input'); inp.placeholder='Новый элемент';
-    const sugg=document.createElement('div'); sugg.className='search-results'; sugg.style.display='none'; sugg.style.position='absolute'; sugg.style.top='38px'; sugg.style.left='0'; sugg.style.right='0'; sugg.style.zIndex='2000';
-    inp.oninput=()=>{
-      const v=inp.value.trim().toLowerCase(); sugg.innerHTML=""; if(!v){sugg.style.display='none';return;}
-      const names=new Set();
-      db.categories.forEach(c=>c.items.forEach(it=>{ if(it.name && it.name.toLowerCase().includes(v) && !names.has(it.name)){ names.add(it.name); const row=document.createElement('div'); row.textContent=it.name; row.onclick=()=>{inp.value=it.name; sugg.style.display='none';}; sugg.appendChild(row);} }));
-      sugg.style.display=sugg.children.length?'block':'none';
-    };
-    const coordInp=document.createElement('input'); coordInp.placeholder='lat,lng';
     const parentPicker=document.createElement('select');
     if(cat.parentCategoryId){
       const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
@@ -590,69 +707,69 @@ function renderEditor(){
       parentPicker.innerHTML=`<option value="">(родитель не задан)</option>`;
     }
     const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
-    addBtn.onclick=()=>{
-      const nm=inp.value.trim()||'Новый'; let lat=null,lng=null;
-      if(coordInp.value && coordInp.value.includes(',')){ const [a,b]=coordInp.value.split(',').map(s=>parseFloat(s.trim())); if(!isNaN(a)&&!isNaN(b)){ lat=a; lng=b; } }
-      cat.items.push({id:uid(),name:nm,lat,lng,parentId:parentPicker.value||null,iconSvg:null});
-      inp.value=''; coordInp.value=''; sugg.style.display='none';
-      save(); logHistory("Добавлен элемент", nm); renderAll();
+    addBtn.onclick=()=>{ const nm=inp.value.trim()||'Новый'; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parentPicker.value||null}); inp.value=''; save(); renderAll(); };
+    addRow.append(inp,parentPicker,addBtn); body.appendChild(addRow);
+
+    sec.appendChild(body);
+    head.onclick=()=>{
+      if(collapsedCats.has(cat.id)) collapsedCats.delete(cat.id); else collapsedCats.add(cat.id);
+      setCollapsedSet('collapsedCats_v1',collapsedCats);
+      sec.classList.toggle('collapsed');
     };
-    addRow.append(inp,coordInp,parentPicker,addBtn, sugg);
-    body.appendChild(addRow);
 
-    // инструменты категории
-    const catTools=document.createElement('div'); catTools.className='tools';
-    const up=document.createElement('button'); up.textContent='▲'; up.title='Вверх';
-    up.onclick=()=>{const i=db.categories.findIndex(x=>x.id===cat.id); if(i>0){const mv=db.categories.splice(i,1)[0]; db.categories.splice(i-1,0,mv); save(); renderAll();}};
-    const down=document.createElement('button'); down.textContent='▼'; down.title='Вниз';
-    down.onclick=()=>{const i=db.categories.findIndex(x=>x.id===cat.id); if(i<db.categories.length-1){const mv=db.categories.splice(i,1)[0]; db.categories.splice(i+1,0,mv); save(); renderAll();}};
-    const delCat=document.createElement('button'); delCat.textContent='Удалить категорию'; delCat.className='danger';
-    delCat.onclick=()=>{ if(confirm('Удалить категорию и все её элементы?')){ db.categories=db.categories.filter(x=>x.id!==cat.id); save(); logHistory("Удалена категория", cat.name); renderAll(); } };
-    const sortAZ=document.createElement('button'); sortAZ.textContent='A→Я'; sortAZ.title='Сортировать элементы по алфавиту';
-    sortAZ.onclick=()=>{ cat.items.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ru',{sensitivity:'base'})); save(); renderAll(); };
-    catTools.append(up,down,sortAZ,delCat);
-    body.appendChild(catTools);
-
-    // dnd категорий
-    sec.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('cid',cat.id); sec.classList.add('dragging');});
+    // drag events для категорий
+    sec.draggable=true;
+    sec.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain',ci.toString()); sec.classList.add('dragging'); });
     sec.addEventListener('dragend',()=>sec.classList.remove('dragging'));
-    sec.addEventListener('dragover',ev=>{
-      ev.preventDefault();
-      const fromId=ev.dataTransfer.getData('cid');
-      const fromIdx=db.categories.findIndex(c=>c.id===fromId);
-      const toIdx=db.categories.findIndex(c=>c.id===cat.id);
-      if(fromIdx!==-1&&toIdx!==-1&&fromIdx!==toIdx){
-        const moved=db.categories.splice(fromIdx,1)[0];
-        db.categories.splice(toIdx,0,moved);
-        save(); renderAll();
+    sec.addEventListener('dragover',e=>{
+      e.preventDefault();
+      const fromIdx=parseInt(e.dataTransfer.getData('text/plain'),10);
+      const toIdx=parseInt(sec.dataset.index,10);
+      if(Number.isInteger(fromIdx) && Number.isInteger(toIdx) && fromIdx!==toIdx){
+        moveArrayItem(db.categories,fromIdx,toIdx);
+        save(db);
+        renderAll();
       }
     });
 
-    sec.appendChild(body);
-    head.onclick=()=>{ if(collapsedCats.has(cat.id)) collapsedCats.delete(cat.id); else collapsedCats.add(cat.id); setCollapsedSet('collapsedCats_v39',collapsedCats); sec.classList.toggle('collapsed'); };
-    if(collapsedCats.has(cat.id)) sec.classList.add('collapsed');
+    // drag items внутри списка
+    [...list.children].forEach(row=>{
+      row.draggable=true;
+      row.addEventListener('dragstart',e=>{
+        e.dataTransfer.setData('text/plain',JSON.stringify({catIndex:ci,from:parseInt(row.dataset.index,10)}));
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend',()=>row.classList.remove('dragging'));
+      row.addEventListener('dragover',e=>{
+        e.preventDefault();
+        const payload=JSON.parse(e.dataTransfer.getData('text/plain')||'{}');
+        if(payload.catIndex!==ci) return;
+        const from=payload.from;
+        const to=parseInt(row.dataset.index,10);
+        if(Number.isInteger(from) && Number.isInteger(to) && from!==to){
+          moveArrayItem(cat.items,from,to);
+          save(db);
+          renderAll();
+        }
+      });
+    });
+
     $editor.appendChild(sec);
   });
 }
 
-/***** PREVIEW (мультиселекты как на Авито + кнопки Все/Снять + фильтрация маркеров) *****/
+/***** PREVIEW *****/
 const $cascade=document.getElementById('cascadeBox');
-function setSelectedForCat(cat, val){
-  if(cat.type==='checkbox'){
-    selected[cat.id]=val instanceof Set?val:new Set(Array.isArray(val)?val:(val?[val]:[]));
-  }else{
-    selected[cat.id]=val||null;
-  }
-  saveSelected();
+let reopenMultiCatId=null;
+
+function dropChildrenSelections(parentCatId){
+  const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
+  for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
 }
+
 function renderPreview(){
   $cascade.innerHTML="";
-  const ctrl=document.createElement('div'); ctrl.className='row';
-  const btnAll=document.createElement('button'); btnAll.textContent='Выбрать всё';
-  btnAll.onclick=()=>{ db.categories.forEach(c=>{ if(c.type==='checkbox'){ setSelectedForCat(c, new Set((c.items||[]).map(i=>i.id))); } else if(c.items[0]) { setSelectedForCat(c, c.items[0].id); } }); renderPreview(); updateMarkers(); updatePolygonVisibility(); };
-  const btnClr=document.createElement('button'); btnClr.textContent='Сбросить всё'; btnClr.className='danger';
-  btnClr.onclick=()=>{ selected={}; saveSelected(); renderPreview(); updateMarkers(); updatePolygonVisibility(); };
-  ctrl.append(btnAll,btnClr); $cascade.appendChild(ctrl);
+  clearMarkers();
 
   db.categories.forEach(cat=>{
     const box=document.createElement('div'); box.className='panel'; box.dataset.catId=cat.id;
@@ -662,7 +779,8 @@ function renderPreview(){
     if(cat.parentCategoryId){
       const parentSelected=getSelectedIds(cat.parentCategoryId);
       if(parentSelected.length===0){
-        const note=document.createElement('div'); note.className='note'; note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');
+        const note=document.createElement('div'); note.className='note';
+        note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');
         box.appendChild(note); $cascade.appendChild(box); return;
       }
       parentIds=parentSelected;
@@ -670,13 +788,16 @@ function renderPreview(){
 
     let items=(cat.items||[]);
     if(parentIds){ items=items.filter(it=>it.parentId && parentIds.includes(it.parentId)); }
-    if(items.length===0){ const note=document.createElement('div'); note.className='note gray'; note.textContent='Нет элементов'; box.appendChild(note); $cascade.appendChild(box); return; }
+    if(items.length===0){
+      const note=document.createElement('div'); note.className='note gray'; note.textContent='Нет элементов';
+      box.appendChild(note); $cascade.appendChild(box); return;
+    }
 
     if(cat.type==='select'){
       const sel=document.createElement('select'); sel.style.width='100%';
       sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
-      const cur=typeof selected[cat.id]==='string'?selected[cat.id]:null; if(cur) sel.value=cur;
-      sel.onchange=()=>{ setSelectedForCat(cat, sel.value||null); renderPreview(); updateMarkers(); updatePolygonVisibility(); };
+      if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
+      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
       box.appendChild(sel);
     }else{
       const multi=document.createElement('div'); multi.className='multi-select';
@@ -693,47 +814,79 @@ function renderPreview(){
       }
       updateBtnText();
 
-      // шапка меню
-      const headTools=document.createElement('div'); headTools.style.display='flex'; headTools.style.gap='6px'; headTools.style.padding='6px 10px'; headTools.style.borderBottom='1px solid #1f2a40';
-      const bAll=document.createElement('button'); bAll.textContent='Все';
-      bAll.onclick=(ev)=>{ev.stopPropagation(); items.forEach(it=>set.add(it.id)); setSelectedForCat(cat,set); updateBtnText(); renderPreview(); updateMarkers(); updatePolygonVisibility();};
-      const bClr=document.createElement('button'); bClr.textContent='Снять'; bClr.onclick=(ev)=>{ev.stopPropagation(); set.clear(); setSelectedForCat(cat,set); updateBtnText(); renderPreview(); updateMarkers(); updatePolygonVisibility();};
-      headTools.append(bAll,bClr); menu.appendChild(headTools);
-
       items.forEach(it=>{
         const lbl=document.createElement('label');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
-        cb.onchange=(ev)=>{ ev.stopPropagation(); if(cb.checked) set.add(it.id); else set.delete(it.id); setSelectedForCat(cat,set); updateBtnText(); updateMarkers(); updatePolygonVisibility(); };
-        lbl.append(cb,document.createTextNode(it.name)); menu.appendChild(lbl);
+        cb.onchange=()=>{
+          if(cb.checked) set.add(it.id); else set.delete(it.id);
+          selected[cat.id]=set;
+          dropChildrenSelections(cat.id);
+          updateBtnText();
+          reopenMultiCatId=cat.id;
+          saveSelected();
+          renderPreview();
+          updatePolygonVisibility();
+        };
+        lbl.append(cb,document.createTextNode(it.name));
+        menu.appendChild(lbl);
       });
 
-      btn.onclick=(ev)=>{ ev.stopPropagation(); document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); }); multi.classList.toggle('open'); };
+      btn.onclick=()=>{
+        document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
+        multi.classList.toggle('open');
+      };
       multi.append(btn,menu); box.appendChild(multi);
     }
 
     $cascade.appendChild(box);
   });
 
-  document.addEventListener('click', e=>{
-    document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(!ms.contains(e.target)) ms.classList.remove('open'); });
-  });
+  // кнопки сброс/выбрать всё
+  const btnClear=document.getElementById('btnClearAll');
+  const btnAll=document.getElementById('btnSelectAll');
+  if(btnClear && !btnClear._wired){
+    btnClear._wired=true;
+    btnClear.onclick=()=>{ selected={}; saveSelected(); renderPreview(); updatePolygonVisibility(); };
+  }
+  if(btnAll && !btnAll._wired){
+    btnAll._wired=true;
+    btnAll.onclick=()=>{
+      for(const cat of db.categories){
+        if(cat.type==='select'){
+          if((cat.items||[]).length) selected[cat.id]=cat.items[0].id;
+        }else{
+          selected[cat.id]=new Set((cat.items||[]).map(it=>it.id));
+        }
+      }
+      saveSelected(); renderPreview(); updatePolygonVisibility();
+    };
+  }
 
-  updateMarkers();
-  updatePolygonVisibility();
-}
-
-/***** МАРКЕРЫ ПО ТЕКУЩЕМУ ФИЛЬТРУ *****/
-function updateMarkers(){
-  clearMarkers();
-  db.categories.forEach(cat=>{
+  // метки по выбранным
+  for(const cat of db.categories){
     const ids=getSelectedIds(cat.id);
-    const idsSet=new Set(ids);
-    (cat.items||[]).forEach(it=>{
-      const allowed = (cat.type==='checkbox') ? idsSet.has(it.id) : (selected[cat.id] ? selected[cat.id]===it.id : false);
-      if(allowed && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
-    });
-  });
+    for(const id of ids){
+      const it=(cat.items||[]).find(x=>x.id===id);
+      if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    }
+  }
+
+  updatePolygonVisibility();
+
+  if(reopenMultiCatId){
+    const panel=$cascade.querySelector(`.panel[data-cat-id="${reopenMultiCatId}"] .multi-select`);
+    if(panel) panel.classList.add('open');
+    reopenMultiCatId=null;
+  }
 }
+
+// клик вне мультиселекта — закрыть
+document.addEventListener('click', e=>{
+  document.querySelectorAll('.multi-select.open').forEach(ms=>{
+    if(!ms.contains(e.target)) ms.classList.remove('open');
+  });
+});
+
 /***** SEARCH (элементы) *****/
 const $search=document.getElementById('globalSearch');
 const $results=document.getElementById('searchResults');
@@ -741,10 +894,13 @@ $search.oninput=()=>{
   const q=$search.value.trim().toLowerCase();
   $results.innerHTML="";
   if(!q) return;
+
   const out=[];
   db.categories.forEach(cat=>{
     (cat.items||[]).forEach(it=>{
-      if((it.name||'').toLowerCase().includes(q)){ out.push({cat,it}); }
+      if(it.name.toLowerCase().includes(q)){
+        out.push({cat,it});
+      }
     });
   });
   out.forEach(r=>{
@@ -756,29 +912,29 @@ $search.oninput=()=>{
         if(!(selected[r.cat.id] instanceof Set)) selected[r.cat.id]=new Set();
         selected[r.cat.id].add(r.it.id);
       }
-      saveSelected(); renderPreview(); updatePolygonVisibility();
+      saveSelected();
+      renderPreview();
+      updatePolygonVisibility();
       if(r.it.lat!=null && r.it.lng!=null) map.setView([r.it.lat,r.it.lng],14);
       $search.value=""; $results.innerHTML="";
     };
     $results.appendChild(row);
   });
 };
-
-/***** EXPORT/IMPORT/INFO *****/
+/***** EXPORT/IMPORT/RESET *****/
 document.getElementById('btnExport').onclick=async ()=>{
   const full=JSON.parse(JSON.stringify(db));
-  for(const p of full.polygons){ if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} } }
+  for(const cat of full.categories){
+    if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
+    for(const it of (cat.items||[])){
+      if(it.iconKey && !it.iconData){ try{ it.iconData=await lfIcons.getItem(it.iconKey)||null; }catch(e){} }
+    }
+  }
+  for(const p of full.polygons){
+    if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
+  }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_0R.json'; a.click();
-};
-
-document.getElementById('btnExportCat').onclick=()=>{
-  const info=db.categories.map(c=>`${c.name} — ${c.id}`).join('\n');
-  const id=prompt(`Введи ID категории для экспорта:\n\n${info}\n\nID:`); if(!id) return;
-  const cat=db.categories.find(c=>c.id===id.trim()); if(!cat){ alert('Категория не найдена'); return; }
-  const data={categories:[cat],polygons:[]};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`category_${cat.name}_v39_0R.json`; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_7R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -791,42 +947,55 @@ document.getElementById('fileImport').onchange=e=>{
       if(obj && obj.db) obj=obj.db;
       if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
       if(!Array.isArray(obj.polygons))   obj.polygons=[];
-      normalize(obj);
-      for(const p of obj.polygons){ if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); } }
-      db=obj;
-      await save(db);
-      await logHistory("Импорт", `Категорий: ${db.categories.length}, полигонов: ${db.polygons.length}`);
+
+      for(const cat of obj.categories){
+        if(!cat.id) cat.id=uid();
+        if(cat.iconData){
+          const key=cat.iconKey||`cat_${cat.id}`;
+          await lfIcons.setItem(key,cat.iconData);
+          cat.iconKey=key;
+        }
+        for(const it of (cat.items||[])){
+          if(!it.id) it.id=uid();
+          if(it.iconData){
+            const key=it.iconKey||`item_${it.id}`;
+            await lfIcons.setItem(key,it.iconData);
+            it.iconKey=key;
+          }
+        }
+      }
+      for(const p of obj.polygons){
+        if(!p.id) p.id=uid();
+        if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
+      }
+
+      localStorage.setItem(KEY, JSON.stringify({
+        categories:obj.categories.map(c=>({
+          id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
+          color:c.color,shape:c.shape,iconKey:c.iconKey||null,
+          items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
+        })),
+        polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
+      }));
+      db = await loadDB();
+
       renderAll();
+      resumeEditingIfNeeded();
+      updatePolygonVisibility();
       alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
   };
   r.readAsText(f);
 };
 
-document.getElementById('btnInfo').onclick=async ()=>{
-  const cats=db.categories.length;
-  const items=db.categories.reduce((acc,c)=>acc+(c.items?c.items.length:0),0);
-  const withGeo=db.categories.reduce((acc,c)=>acc+c.items.filter(i=>i.lat!=null&&i.lng!=null).length,0);
-  const polys=db.polygons.length;
-  const hist=(await getHistoryLog())||[];
-  alert(
-    `Категорий: ${cats}\n`+
-    `Элементов: ${items}\n`+
-    `С координатами: ${withGeo}\n`+
-    `Полигонов: ${polys}\n`+
-    `История изменений: ${hist.length} записей`
-  );
-};
-
-/***** RESET *****/
 document.getElementById('btnReset').onclick=()=>{
   if(confirm('Очистить всё?')){
     localStorage.removeItem(KEY);
-    localStorage.removeItem('selected_v39');
+    localStorage.removeItem('selected_v1');
     localStorage.removeItem('polyEditingId');
-    localStorage.removeItem('collapsedPolygons_v39');
-    localStorage.removeItem('collapsedCats_v39');
-    lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{}); lfHistory.clear().then(()=>{});
+    localStorage.removeItem('collapsedPolygons_v1');
+    localStorage.removeItem('collapsedCats_v1');
+    lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{});
     location.reload();
   }
 };
@@ -848,6 +1017,34 @@ async function renderAll(){
   renderEditor();
   renderPreview();
   renderPolyList();
+
+  clearMarkers();
+  db.categories.forEach(cat=>{
+    (cat.items||[]).forEach(it=>{
+      if(it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    });
+  });
+}
+
+/***** RESUME EDIT MODE — восстановление после перезагрузки *****/
+function resumeEditingIfNeeded(){
+  const id=localStorage.getItem('polyEditingId');
+  if(!id) return;
+  const layer=polyIndex.get(id);
+  if(!layer) return;
+
+  if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+  polyEditToolbar.enable(); polyEditing=true;
+
+  polyFG.eachLayer(x=>{
+    if(x===layer){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
+    else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
+  });
+
+  setEditingTarget(id);
+  layer.addTo(map);
+  map.fitBounds(layer.getBounds());
 }
 
 /***** START *****/
@@ -856,26 +1053,8 @@ let db=null;
   db = await loadDB();
   loadSelected();
   await renderAll();
-
-  // восстановление режима редактирования полигона
-  const id=localStorage.getItem('polyEditingId');
-  if(id){
-    const layer=polyIndex.get(id);
-    if(layer){
-      if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-      polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
-      polyEditToolbar.enable(); polyEditing=true;
-      polyFG.eachLayer(x=>{
-        if(x===layer){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
-        else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
-      });
-      setEditingTarget(id);
-      layer.addTo(map);
-      map.fitBounds(layer.getBounds());
-    }
-  }
+  resumeEditingIfNeeded();
 })();
 </script>
-<script>feather.replace()</script>
 </body>
 </html>
