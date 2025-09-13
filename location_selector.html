@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.7.1R — стабильная база + undo/redo + collapsible + фиксы parent/undo</title>
+<title>location_selector_v38.7.3R — база 38.5.2R + checkbox в предпросмотре + collapsible + undo/redo через latlngs</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -56,15 +56,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{
-  appearance:none;-webkit-appearance:none;
-  width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
-  background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
-}
+.multi-select-menu input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
 .multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
-.multi-select-menu input[type="checkbox"]:checked::after{
-  content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff
-}
+.multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
 
 /* поиск */
 #globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
@@ -78,7 +72,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.7.1R</span>
+  <span class="badge">dictionary v38.7.3R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -125,9 +119,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_7_1R";
-const lfIcons=localforage.createInstance({name:"dict_icons_v3871R"});
-const lfGeo=localforage.createInstance({name:"dict_geo_v3871R"});
+const KEY="dict_v38_7_3R";
+const lfIcons=localforage.createInstance({name:"dict_icons_v3873R"});
+const lfGeo=localforage.createInstance({name:"dict_geo_v3873R"});
 
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -147,7 +141,7 @@ function normalize(obj){
       if(!("name" in it))it.name="Без имени";
       if(!("lat" in it))it.lat=null;
       if(!("lng" in it))it.lng=null;
-      if(!("parentId" in it))it.parentId=null;   /* ВАЖНО: сохраняем привязку к родителю */
+      if(!("parentId" in it))it.parentId=null;
     });
   });
   obj.polygons.forEach(p=>{
@@ -171,7 +165,6 @@ async function save(obj=db){
   };
   localStorage.setItem(KEY,JSON.stringify(lite));
 
-  // media в IndexedDB
   for(const cat of obj.categories){
     if(cat.iconData){
       const key=cat.iconKey||`cat_${cat.id}`;
@@ -249,36 +242,41 @@ const polyFG=new L.FeatureGroup();
 map.addLayer(polyFG);
 const polyIndex=new Map();
 
-/* история undo/redo ТОЛЬКО для активного полигона */
-let history=[], historyIndex=-1;
-function snapshotToHistory(){
+/* undo/redo: храним массивы latlngs для активного полигона */
+let historyLatLngs=[], historyIndex=-1, polyEditing=false, polyEditingTargetId=null;
+
+function deepCloneLatLngs(latlngs){
+  return JSON.parse(JSON.stringify(latlngs));
+}
+function pushHistorySnapshot(){
   if(!polyEditingTargetId) return;
   const l=polyIndex.get(polyEditingTargetId);
   if(!l) return;
-  const geo=l.toGeoJSON();
-  history=history.slice(0,historyIndex+1);
-  history.push(geo);
-  historyIndex=history.length-1;
+  const snap=deepCloneLatLngs(l.getLatLngs());
+  historyLatLngs=historyLatLngs.slice(0,historyIndex+1);
+  historyLatLngs.push(snap);
+  historyIndex=historyLatLngs.length-1;
 }
-function applyHistory(i){
-  if(i<0||i>=history.length) return;
+function applyHistoryAt(i){
+  if(i<0||i>=historyLatLngs.length) return;
   const l=polyIndex.get(polyEditingTargetId);
   if(!l) return;
-  // аккуратно восстанавливаем геометрию: парсим через L.geoJSON и берем первый слой
-  const restored=L.geoJSON(history[i]).getLayers()[0];
-  l.setLatLngs(restored.getLatLngs());
+  l.setLatLngs(historyLatLngs[i]);
   l.redraw();
+  // синхронизируем geojson в db
+  const p=db.polygons.find(x=>x.id===polyEditingTargetId);
+  if(p){ p.geojson=l.toGeoJSON(); save(); }
 }
 
 document.getElementById('btnUndo').onclick=()=>{
   const prevScroll=$polyList?.scrollTop||0;
-  if(historyIndex>0){historyIndex--;applyHistory(historyIndex);}
-  requestAnimationFrame(()=>{$polyList.scrollTop=prevScroll;});
+  if(historyIndex>0){ historyIndex--; applyHistoryAt(historyIndex); }
+  requestAnimationFrame(()=>{ if($polyList) $polyList.scrollTop=prevScroll; });
 };
 document.getElementById('btnRedo').onclick=()=>{
   const prevScroll=$polyList?.scrollTop||0;
-  if(historyIndex<history.length-1){historyIndex++;applyHistory(historyIndex);}
-  requestAnimationFrame(()=>{$polyList.scrollTop=prevScroll;});
+  if(historyIndex<historyLatLngs.length-1){ historyIndex++; applyHistoryAt(historyIndex); }
+  requestAnimationFrame(()=>{ if($polyList) $polyList.scrollTop=prevScroll; });
 };
 
 function layerFromGeo(geo,c){
@@ -306,7 +304,7 @@ const $polyName=document.getElementById('polyName');
 const $polyColor=document.getElementById('polyColor');
 const $polySearch=document.getElementById('polySearch');
 
-let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
+let polyEditToolbar=null;
 
 document.getElementById('btnPolyNew').onclick=()=>{
   new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
@@ -340,7 +338,7 @@ map.on(L.Draw.Event.CREATED,async e=>{
   db.polygons.push(rec);
   polyIndex.set(rec.id,layer);
   setEditingTarget(rec.id);
-  snapshotToHistory();      /* первый снимок */
+  pushHistorySnapshot();      /* первый снимок */
   await save(db);
   renderPolyList(); updatePolygonVisibility();
 });
@@ -350,7 +348,7 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
     const l=polyIndex.get(p.id);
     if(l) p.geojson=l.toGeoJSON();
   }
-  if(polyEditingTargetId) snapshotToHistory();
+  if(polyEditingTargetId) pushHistorySnapshot();
   await save(db);
   renderPolyList(); updatePolygonVisibility();
 });
@@ -358,8 +356,8 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
 function setEditingTarget(id){
   polyEditingTargetId=id||null;
   if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId');
-  history=[];historyIndex=-1;
-  if(id) snapshotToHistory();
+  historyLatLngs=[];historyIndex=-1;
+  if(id) pushHistorySnapshot();
   renderPolyList();
   updatePolygonVisibility();
 }
@@ -367,8 +365,8 @@ function setEditingTarget(id){
 /***** COLLAPSE STATE *****/
 function loadJsonLS(key, def){ try{ return JSON.parse(localStorage.getItem(key)||def);}catch(_){ return JSON.parse(def);} }
 function saveJsonLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-let collapsedPolys = loadJsonLS('collapsed_polys_v3871R', '{}');
-let collapsedCats  = loadJsonLS('collapsed_cats_v3871R',  '{}');
+let collapsedPolys = loadJsonLS('collapsed_polys_v3873R', '{}');
+let collapsedCats  = loadJsonLS('collapsed_cats_v3873R',  '{}');
 
 /***** POLYGON LIST (collapsible + keep scroll) *****/
 function renderPolyList(){
@@ -396,7 +394,7 @@ function renderPolyList(){
       foldBtn.title='Свернуть/развернуть';
       foldBtn.onclick=()=>{
         collapsedPolys[p.id] = !collapsedPolys[p.id];
-        saveJsonLS('collapsed_polys_v3871R', collapsedPolys);
+        saveJsonLS('collapsed_polys_v3873R', collapsedPolys);
         renderPolyList();
       };
 
@@ -429,7 +427,7 @@ function renderPolyList(){
           else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
         });
         setEditingTarget(p.id);
-        snapshotToHistory(); // стартовое состояние в историю
+        pushHistorySnapshot(); // стартовое состояние в историю
         map.fitBounds(l.getBounds());
       };
 
@@ -440,7 +438,7 @@ function renderPolyList(){
         db.polygons=db.polygons.filter(x=>x.id!==p.id);
         try{ await lfGeo.removeItem(p.id); }catch(_){}
         await save(db);
-        delete collapsedPolys[p.id]; saveJsonLS('collapsed_polys_v3871R', collapsedPolys);
+        delete collapsedPolys[p.id]; saveJsonLS('collapsed_polys_v3873R', collapsedPolys);
         if(polyEditingTargetId===p.id){ setEditingTarget(null); }
         renderPolyList(); updatePolygonVisibility();
       };
@@ -457,8 +455,32 @@ $polySearch.oninput=renderPolyList;
 
 /***** SELECTION & VISIBILITY *****/
 let selected={};
-function saveSelected(){localStorage.setItem('selected_v3871R',JSON.stringify(selected));}
-function loadSelected(){try{selected=JSON.parse(localStorage.getItem('selected_v3871R')||'{}');}catch(_){selected={};}}
+function saveSelected(){localStorage.setItem('selected_v3873R',JSON.stringify(serializeSelected()));}
+function loadSelected(){
+  try{
+    const raw=localStorage.getItem('selected_v3873R');
+    if(!raw){ selected={}; return; }
+    const obj=JSON.parse(raw)||{};
+    selected={};
+    Object.entries(obj).forEach(([k,v])=>{
+      const cat=db?.categories?.find(c=>c.id===k);
+      if(cat && cat.type==='checkbox') selected[k]=new Set(Array.isArray(v)?v:[]);
+      else selected[k]=v||null;
+    });
+  }catch(_){selected={};}
+}
+function serializeSelected(){
+  const out={};
+  for(const [k,v] of Object.entries(selected)){ out[k]=v instanceof Set?Array.from(v):v; }
+  return out;
+}
+
+function getSelectedIds(catId){
+  const cat=db.categories.find(x=>x.id===catId);
+  const v=selected[catId];
+  if(!v) return [];
+  return(cat&&cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
+}
 
 function updatePolygonVisibility(){
   for(const p of db.polygons){
@@ -467,7 +489,7 @@ function updatePolygonVisibility(){
     if(force || p.visible!==false){ l.addTo(map); } else { map.removeLayer(l); }
   }
 }
-/***** EDITOR (категории + элементы, collapsible, с родителями) *****/
+/***** EDITОР (категории + элементы, collapsible, с родителями) *****/
 const $editor=document.getElementById('editorTab');
 
 function renderEditor(){
@@ -510,7 +532,7 @@ function renderEditor(){
     const fold=document.createElement('button');
     const isCollapsed = !!collapsedCats[cat.id];
     fold.textContent = isCollapsed ? '▶' : '▼';
-    fold.onclick=()=>{ collapsedCats[cat.id]=!collapsedCats[cat.id]; saveJsonLS('collapsed_cats_v3871R', collapsedCats); renderEditor(); };
+    fold.onclick=()=>{ collapsedCats[cat.id]=!collapsedCats[cat.id]; saveJsonLS('collapsed_cats_v3873R', collapsedCats); renderEditor(); };
     head.append(h, fold);
     sec.appendChild(head);
 
@@ -600,16 +622,10 @@ function renderEditor(){
   requestAnimationFrame(()=>{ $editor.scrollTop = prevScroll; });
 }
 
-/***** PREVIEW (с уважением к родителям) *****/
+/***** PREVIEW (select + checkbox, с родителями) *****/
 const $cascade=document.getElementById('cascadeBox');
 const $preview=document.getElementById('previewTab');
-
-function getSelectedIds(catId){
-  const v=selected[catId];
-  if(!v) return [];
-  // в предпросмотре мы даем только select — вернем одиночный id
-  return v?[v]:[];
-}
+let reopenMultiCatId=null;
 
 function renderPreview(){
   const prevScroll = $preview.scrollTop;
@@ -638,25 +654,74 @@ function renderPreview(){
       box.appendChild(note); $cascade.appendChild(box); return;
     }
 
-    const sel=document.createElement('select'); sel.style.width='100%';
-    sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
-    if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
-    sel.onchange=()=>{ selected[cat.id]=sel.value||null; saveSelected(); renderPreview(); };
-    box.appendChild(sel);
+    if(cat.type==='select'){
+      const sel=document.createElement('select'); sel.style.width='100%';
+      sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      sel.value=(typeof selected[cat.id]==='string')?(selected[cat.id]||""):"";
+      sel.onchange=()=>{ selected[cat.id]=sel.value||null; saveSelected(); renderPreview(); updatePolygonVisibility(); };
+      box.appendChild(sel);
+    } else { // checkbox
+      const multi=document.createElement('div'); multi.className='multi-select';
+      const btn=document.createElement('div'); btn.className='multi-select-btn'; btn.textContent='Выбрать...';
+      const menu=document.createElement('div'); menu.className='multi-select-menu';
+      const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
+
+      function updateBtn(){
+        if(set.size===0) btn.textContent='Выбрать...';
+        else {
+          const names=items.filter(x=>set.has(x.id)).map(x=>x.name);
+          btn.textContent= names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`;
+        }
+      }
+      updateBtn();
+
+      items.forEach(it=>{
+        const lbl=document.createElement('label');
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
+        cb.onchange=()=>{
+          if(cb.checked) set.add(it.id); else set.delete(it.id);
+          selected[cat.id]=set; saveSelected(); updateBtn(); reopenMultiCatId=cat.id; renderPreview(); updatePolygonVisibility();
+        };
+        lbl.append(cb,document.createTextNode(it.name));
+        menu.appendChild(lbl);
+      });
+
+      btn.onclick=()=>{
+        document.querySelectorAll('.multi-select.open').forEach(ms=>{if(ms!==multi)ms.classList.remove('open');});
+        multi.classList.toggle('open');
+      };
+
+      multi.append(btn,menu);
+      box.appendChild(multi);
+    }
 
     $cascade.appendChild(box);
   });
 
-  // маркеры для выбранных
+  // метки
   db.categories.forEach(cat=>{
-    const id=selected[cat.id];
-    if(!id) return;
-    const it=(cat.items||[]).find(x=>x.id===id);
-    if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    const ids=getSelectedIds(cat.id);
+    ids.forEach(id=>{
+      const it=(cat.items||[]).find(x=>x.id===id);
+      if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    });
   });
+
+  if(reopenMultiCatId){
+    const panel=$cascade.querySelector(`.panel[data-cat-id="${reopenMultiCatId}"] .multi-select`);
+    if(panel) panel.classList.add('open');
+    reopenMultiCatId=null;
+  }
 
   requestAnimationFrame(()=>{ $preview.scrollTop = prevScroll; });
 }
+
+// клик вне мультиселекта — закрыть
+document.addEventListener('click', e=>{
+  document.querySelectorAll('.multi-select.open').forEach(ms=>{
+    if(!ms.contains(e.target)) ms.classList.remove('open');
+  });
+});
 
 /***** SEARCH (элементы) *****/
 const $search=document.getElementById('globalSearch');
@@ -672,7 +737,12 @@ $search.oninput=()=>{
         const row=document.createElement('div');
         row.textContent=`${it.name} (${cat.name})`;
         row.onclick=()=>{
-          selected[cat.id]=it.id; saveSelected(); renderPreview();
+          if(cat.type==='select') selected[cat.id]=it.id;
+          else{
+            if(!(selected[cat.id] instanceof Set)) selected[cat.id]=new Set();
+            selected[cat.id].add(it.id);
+          }
+          saveSelected(); renderPreview(); updatePolygonVisibility();
           if(it.lat!=null && it.lng!=null) map.setView([it.lat,it.lng],14);
           $search.value=""; $results.innerHTML="";
         };
@@ -695,7 +765,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(_){ } }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_7_1R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_7_3R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -709,7 +779,6 @@ document.getElementById('fileImport').onchange=e=>{
       if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
       if(!Array.isArray(obj.polygons))   obj.polygons=[];
 
-      // иконки → IndexedDB
       for(const cat of obj.categories){
         if(!cat.id) cat.id=uid();
         if(cat.iconData){
@@ -726,13 +795,11 @@ document.getElementById('fileImport').onchange=e=>{
           }
         }
       }
-      // полигоны → IndexedDB
       for(const p of obj.polygons){
         if(!p.id) p.id=uid();
         if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
       }
 
-      // сохранить лайт и перезагрузить тяжелые
       localStorage.setItem(KEY, JSON.stringify({
         categories:obj.categories.map(c=>({
           id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
@@ -754,10 +821,10 @@ document.getElementById('fileImport').onchange=e=>{
 document.getElementById('btnReset').onclick=()=>{
   if(confirm('Очистить всё?')){
     localStorage.removeItem(KEY);
-    localStorage.removeItem('selected_v3871R');
+    localStorage.removeItem('selected_v3873R');
     localStorage.removeItem('polyEditingId');
-    localStorage.removeItem('collapsed_polys_v3871R');
-    localStorage.removeItem('collapsed_cats_v3871R');
+    localStorage.removeItem('collapsed_polys_v3873R');
+    localStorage.removeItem('collapsed_cats_v3873R');
     try{ lfIcons.clear(); }catch(_){}
     try{ lfGeo.clear(); }catch(_){}
     location.reload();
@@ -809,7 +876,7 @@ function resumeEditingIfNeeded(){
   setEditingTarget(id);
   layer.addTo(map);
   map.fitBounds(layer.getBounds());
-  snapshotToHistory(); // базовый снимок в undo-стек
+  pushHistorySnapshot(); // базовый снимок в undo-стек
 }
 
 /***** START *****/
