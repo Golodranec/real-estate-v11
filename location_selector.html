@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.4R — стабильная база + фиксы редактирования полигонов</title>
+<title>location_selector_v38.4R — стабильная база + полигоны фиксы</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -120,9 +120,10 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_3R"; // оставляем как в базе v38.3R
+const KEY="dict_v38_3R"; // не меняем ключи/базы — совместимость с твоими данными
 const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
+
 function uid(){return Math.random().toString(36).slice(2,9);}
 
 function normalize(obj){
@@ -228,6 +229,7 @@ function loadSelected(){
     }
   }catch(_){selected={};}
 }
+
 /***** MAP + MARKERS *****/
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
@@ -292,14 +294,16 @@ document.getElementById('btnPolyNew').onclick=()=>{
   new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
 };
 
-let polyEditToolbar=null, polyEditing=false;
+let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
+
 document.getElementById('btnPolyEdit').onclick=()=>{
   if(polyEditing) return;
+  polyEditingTargetId=null;
   polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
   polyEditToolbar.enable(); polyEditing=true;
 };
 document.getElementById('btnPolyStop').onclick=()=>{
-  if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();polyEditing=false;map.fire(L.Draw.Event.EDITSTOP);}
+  if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();polyEditing=false;polyEditingTargetId=null;map.fire(L.Draw.Event.EDITSTOP);}
 };
 
 map.on(L.Draw.Event.CREATED,async e=>{
@@ -325,6 +329,7 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
     const l=polyIndex.get(p.id);
     if(l) p.geojson=l.toGeoJSON();
   }
+  polyEditing=false; polyEditingTargetId=null;
   await save(db);
   renderPolyList(); updatePolygonVisibility();
 });
@@ -346,15 +351,19 @@ function renderPolyList(){
     color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
     const toggle=document.createElement('button'); toggle.textContent=p.visible!==false?'Скрыть':'Показать';
     toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await save(db); renderPolyList(); updatePolygonVisibility();};
-    const focus=document.createElement('button'); focus.textContent='Фокус'; focus.onclick=()=>{const l=polyIndex.get(p.id);if(l) map.fitBounds(l.getBounds());};
+    const focus=document.createElement('button'); focus.textContent='Фокус'; focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
     const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
     editBtn.onclick=()=>{
       const l=polyIndex.get(p.id);
       if(l){
-        if(polyEditing&&polyEditToolbar) polyEditToolbar.disable();
-        polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+        l.addTo(map); // показать даже если отфильтрован
+        polyEditingTargetId=p.id;
+        if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+        const fg=new L.FeatureGroup([l]);
+        polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:fg});
         polyEditToolbar.enable(); polyEditing=true;
         map.fitBounds(l.getBounds());
+        updatePolygonVisibility();
       }
     };
     const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
@@ -364,6 +373,7 @@ function renderPolyList(){
     row.append(left,tools); $polyList.appendChild(row);
   });
 }
+
 /***** VISIBILITY BY SELECTION *****/
 function getSelectedIds(catId){
   const cat=db.categories.find(x=>x.id===catId);
@@ -384,34 +394,376 @@ function updatePolygonVisibility(){
   const names=getSelectedItemNames();
   for(const p of db.polygons){
     const layer=polyIndex.get(p.id); if(!layer) continue;
-    const match=(p.visible!==false)&&(names.size?names.has(p.name):true);
-    if(match) layer.addTo(map); else map.removeLayer(layer);
+    const filtered = (p.visible!==false) && (names.size ? names.has(p.name) : true); // если ничего не выбрано — показываем все
+    const forceVisible = (polyEditingTargetId && p.id===polyEditingTargetId);        // редактируемый всегда виден
+    if(filtered || forceVisible) layer.addTo(map); else map.removeLayer(layer);
   }
 }
 
 /***** EDITOR (категории + элементы) *****/
-// (оставляем логику редактора категорий и элементов из v38.3R без изменений)
-
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
   $editor.innerHTML="";
-  // ... полный код редактора категорий и элементов здесь остаётся прежний ...
-  // (ничего не меняли в этой части)
+
+  // новая категория
+  const create=document.createElement('div'); create.className='panel';
+  create.innerHTML=`
+    <h3>Новая категория</h3>
+    <div class="row">
+      <input id="newCatName" placeholder="Название"/>
+      <select id="newCatType"><option value="select">Select</option><option value="checkbox">Checkbox</option></select>
+      <select id="newCatParent">
+        <option value="">(нет родителя)</option>
+        ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="row">
+      <span class="preview-icon" id="newIconPreview">icon</span>
+      <input type="color" id="newCatColor" value="#3388ff"/>
+      <select id="newCatShape"><option value="circle">Круг</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option></select>
+      <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
+      <button id="btnAddCat">+ Добавить</button>
+    </div>`;
+  $editor.appendChild(create);
+
+  const newIconInput=create.querySelector('#newCatIcon');
+  const newIconPreview=create.querySelector('#newIconPreview');
+  let newIconData=null;
+  newIconInput.onchange=e=>{
+    const f=e.target.files[0]; if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
+    const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
+  };
+  create.querySelector('#btnAddCat').onclick=async()=>{
+    const name=document.getElementById('newCatName').value.trim(); if(!name) return;
+    const type=document.getElementById('newCatType').value;
+    const parent=document.getElementById('newCatParent').value||null;
+    const color=document.getElementById('newCatColor').value;
+    const shape=document.getElementById('newCatShape').value;
+    const cat={id:uid(),name,type,parentCategoryId:parent,color,shape,items:[]};
+    if(newIconData){cat.iconData=newIconData;}
+    db.categories.push(cat); await save(); renderAll();
+  };
+
+  // список категорий
+  db.categories.forEach((cat,ci)=>{
+    const sec=document.createElement('div'); sec.className='panel';
+    const header=document.createElement('div'); header.className='row';
+    const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
+    header.append(title); sec.appendChild(header);
+
+    const cfg=document.createElement('div'); cfg.className='row';
+    const inpName=document.createElement('input'); inpName.value=cat.name;
+    inpName.onchange=()=>{cat.name=inpName.value.trim(); save(); renderAll();};
+    const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
+    selType.onchange=()=>{cat.type=selType.value; save(); renderAll();};
+    const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
+    selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; save(); renderAll();};
+    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; save(); renderAll();};
+    const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);});
+    shape.onchange=()=>{cat.shape=shape.value; save(); renderAll();};
+    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
+    btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
+
+    // загрузка иконки категории (кнопка)
+    const iconInput=document.createElement('input');
+    iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
+    const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
+    iconBtn.onclick=()=>iconInput.click();
+    iconInput.onchange=e=>{
+      const f=e.target.files[0];
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; save(); renderAll(); return; }
+      const r=new FileReader();
+      r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; save(); renderAll(); };
+      r.readAsDataURL(f);
+    };
+
+    cfg.append(inpName,selType,selParent,col,shape,iconPrev,iconBtn,iconInput,btnClearIcon);
+    sec.appendChild(cfg);
+
+    // элементы
+    const list=document.createElement('div'); list.className='list';
+    (cat.items||[]).forEach((it,ii)=>{
+      const line=document.createElement('div'); line.className='item';
+      const left=document.createElement('div'); left.className='left';
+      const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
+      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}`;
+      left.append(nm,meta);
+
+      const tools=document.createElement('div'); tools.className='tools';
+      const edit=document.createElement('button'); edit.textContent='✎';
+      edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){it.name=(nn.trim()||it.name); save(); renderAll();}};
+      const place=document.createElement('button'); place.textContent='📍';
+      place.onclick=()=>{
+        alert('Кликни по карте для: '+it.name);
+        map.once('click', e=>{
+          it.lat=e.latlng.lat; it.lng=e.latlng.lng; save();
+          meta.textContent=`lat:${it.lat.toFixed(5)} lng:${it.lng.toFixed(5)}`;
+          addMarkerForItem(it,cat);
+          map.setView([it.lat,it.lng],14);
+        });
+      };
+      const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка';
+      clearBtn.onclick=()=>{it.lat=null; it.lng=null; save(); renderAll();};
+      const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
+      del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items.splice(ii,1); save(); renderAll();}};
+
+      line.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ map.setView([it.lat,it.lng],14); } };
+      tools.append(edit,place,clearBtn,del);
+      line.append(left,tools); list.appendChild(line);
+    });
+    sec.appendChild(list);
+
+    // добавление элемента
+    const addRow=document.createElement('div'); addRow.className='row';
+    const inp=document.createElement('input'); inp.placeholder='Новый элемент';
+    const parentPicker=document.createElement('select');
+    if(cat.parentCategoryId){
+      const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
+      parentPicker.innerHTML=`<option value="">(без родителя)</option>`+(parentCat?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    }else{
+      parentPicker.innerHTML=`<option value="">(родитель не задан)</option>`;
+    }
+    const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
+    addBtn.onclick=()=>{ const nm=inp.value.trim()||'Новый'; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parentPicker.value||null}); inp.value=''; save(); renderAll(); };
+    addRow.append(inp,parentPicker,addBtn); sec.appendChild(addRow);
+
+    $editor.appendChild(sec);
+  });
 }
 
 /***** PREVIEW *****/
-// (оставляем как в v38.3R, тоже без изменений)
-
 const $cascade=document.getElementById('cascadeBox');
 let selected={};
 let reopenMultiCatId=null;
-// ... логика рендера превью категорий и мультиселекта без изменений ...
+
+function getSelectedIds(catId){
+  const cat=db.categories.find(x=>x.id===catId);
+  const v=selected[catId];
+  if(!v) return [];
+  return (cat && cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
+}
+function dropChildrenSelections(parentCatId){
+  const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
+  for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
+}
+
+function renderPreview(){
+  $cascade.innerHTML="";
+  clearMarkers();
+
+  db.categories.forEach(cat=>{
+    const box=document.createElement('div'); box.className='panel'; box.dataset.catId=cat.id;
+    const h=document.createElement('h4'); h.textContent=cat.name; box.appendChild(h);
+
+    let parentIds=null;
+    if(cat.parentCategoryId){
+      const parentSelected=getSelectedIds(cat.parentCategoryId);
+      if(parentSelected.length===0){
+        const note=document.createElement('div'); note.className='note';
+        note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');
+        box.appendChild(note); $cascade.appendChild(box); return;
+      }
+      parentIds=parentSelected;
+    }
+
+    let items=(cat.items||[]);
+    if(parentIds){ items=items.filter(it=>it.parentId && parentIds.includes(it.parentId)); }
+    if(items.length===0){
+      const note=document.createElement('div'); note.className='note gray'; note.textContent='Нет элементов';
+      box.appendChild(note); $cascade.appendChild(box); return;
+    }
+
+    if(cat.type==='select'){
+      const sel=document.createElement('select'); sel.style.width='100%';
+      sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
+      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
+      box.appendChild(sel);
+    }else{
+      const multi=document.createElement('div'); multi.className='multi-select';
+      const btn=document.createElement('div'); btn.className='multi-select-btn'; btn.textContent='Выбрать...';
+      const menu=document.createElement('div'); menu.className='multi-select-menu';
+      const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
+
+      function updateBtnText(){
+        if(set.size===0){ btn.textContent='Выбрать...'; }
+        else{
+          const names=items.filter(x=>set.has(x.id)).map(x=>x.name);
+          btn.textContent = names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`;
+        }
+      }
+      updateBtnText();
+
+      items.forEach(it=>{
+        const lbl=document.createElement('label');
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
+        cb.onchange=()=>{
+          if(cb.checked) set.add(it.id); else set.delete(it.id);
+          selected[cat.id]=set;
+          dropChildrenSelections(cat.id);
+          updateBtnText();
+          reopenMultiCatId=cat.id;
+          saveSelected();
+          renderPreview();
+          updatePolygonVisibility();
+        };
+        lbl.append(cb,document.createTextNode(it.name));
+        menu.appendChild(lbl);
+      });
+
+      // открыть один — закрыть все остальные
+      btn.onclick=()=>{
+        document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
+        multi.classList.toggle('open');
+      };
+      multi.append(btn,menu); box.appendChild(multi);
+    }
+
+    $cascade.appendChild(box);
+  });
+
+  // метки
+  for(const cat of db.categories){
+    const ids=getSelectedIds(cat.id);
+    for(const id of ids){
+      const it=(cat.items||[]).find(x=>x.id===id);
+      if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    }
+  }
+
+  // полигоны по выбору
+  updatePolygonVisibility();
+
+  if(reopenMultiCatId){
+    const panel=$cascade.querySelector(`.panel[data-cat-id="${reopenMultiCatId}"] .multi-select`);
+    if(panel) panel.classList.add('open');
+    reopenMultiCatId=null;
+  }
+}
+
+// клик вне мультиселекта — закрыть
+document.addEventListener('click', e=>{
+  document.querySelectorAll('.multi-select.open').forEach(ms=>{
+    if(!ms.contains(e.target)) ms.classList.remove('open');
+  });
+});
 
 /***** SEARCH *****/
-// (поиск элементов тоже без изменений)
+const $search=document.getElementById('globalSearch');
+const $results=document.getElementById('searchResults');
+$search.oninput=()=>{
+  const q=$search.value.trim().toLowerCase();
+  $results.innerHTML="";
+  if(!q) return;
+
+  const out=[];
+  db.categories.forEach(cat=>{
+    (cat.items||[]).forEach(it=>{
+      if(it.name.toLowerCase().includes(q)){
+        out.push({cat,it});
+      }
+    });
+  });
+  out.forEach(r=>{
+    const row=document.createElement('div');
+    row.textContent=`${r.it.name} (${r.cat.name})`;
+    row.onclick=()=>{
+      if(r.cat.type==='select') selected[r.cat.id]=r.it.id;
+      else{
+        if(!(selected[r.cat.id] instanceof Set)) selected[r.cat.id]=new Set();
+        selected[r.cat.id].add(r.it.id);
+      }
+      saveSelected();
+      renderPreview();
+      updatePolygonVisibility();
+      if(r.it.lat!=null && r.it.lng!=null) map.setView([r.it.lat,r.it.lng],14);
+      $search.value=""; $results.innerHTML="";
+    };
+    $results.appendChild(row);
+  });
+};
 
 /***** EXPORT/IMPORT/RESET *****/
-// (экспорт/импорт/сброс из v38.3R, ключи сохранения те же, чтобы совместимость осталась)
+document.getElementById('btnExport').onclick=async ()=>{
+  // Полный экспорт: подтягиваем iconData и geojson
+  const full=JSON.parse(JSON.stringify(db));
+  for(const cat of full.categories){
+    if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
+    for(const it of (cat.items||[])){
+      if(it.iconKey && !it.iconData){ try{ it.iconData=await lfIcons.getItem(it.iconKey)||null; }catch(e){} }
+    }
+  }
+  for(const p of full.polygons){
+    if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
+  }
+  const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_3R.json'; a.click();
+};
+
+document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async ()=>{
+    try{
+      let obj=JSON.parse(r.result);
+      if(obj && obj.db) obj=obj.db;
+      if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
+      if(!Array.isArray(obj.polygons))   obj.polygons=[];
+
+      // иконки → IndexedDB
+      for(const cat of obj.categories){
+        if(!cat.id) cat.id=uid();
+        if(cat.iconData){
+          const key=cat.iconKey||`cat_${cat.id}`;
+          await lfIcons.setItem(key,cat.iconData);
+          cat.iconKey=key;
+        }
+        for(const it of (cat.items||[])){
+          if(!it.id) it.id=uid();
+          if(it.iconData){
+            const key=it.iconKey||`item_${it.id}`;
+            await lfIcons.setItem(key,it.iconData);
+            it.iconKey=key;
+          }
+        }
+      }
+      // полигоны → IndexedDB
+      for(const p of obj.polygons){
+        if(!p.id) p.id=uid();
+        if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
+      }
+
+      // сохранить лайтовую часть + перезагрузить полные данные
+      localStorage.setItem(KEY, JSON.stringify({
+        categories:obj.categories.map(c=>({
+          id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
+          color:c.color,shape:c.shape,iconKey:c.iconKey||null,
+          items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
+        })),
+        polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
+      }));
+      db = await loadDB();
+
+      // selections сохраняем, чтобы сразу были видны полигоны по совпадению названий
+      renderAll();
+      rebuildPolys();
+      updatePolygonVisibility();
+      alert('Импортировано');
+    }catch(err){ alert('Ошибка импорта: '+err.message); }
+  };
+  r.readAsText(f);
+};
+
+document.getElementById('btnReset').onclick=()=>{
+  if(confirm('Очистить всё?')){
+    localStorage.removeItem(KEY);
+    localStorage.removeItem('selected_v1');
+    lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{});
+    location.reload();
+  }
+};
 
 /***** TABS *****/
 document.querySelectorAll('.tab').forEach(tab=>{
@@ -430,6 +782,7 @@ async function renderAll(){
   renderEditor();
   renderPreview();
   renderPolyList();
+
   clearMarkers();
   db.categories.forEach(cat=>{
     (cat.items||[]).forEach(it=>{
