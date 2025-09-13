@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.7R — сброс, выбрать всё, сортировка, drag-drop</title>
+<title>location_selector_v38.8R — модальный мультиселект (как на Авито) + A→Z + drag&drop</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -15,7 +15,7 @@
 <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js"></script>
 
 <style>
-:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
+:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444;--overlay:rgba(10,14,22,.75);--panel3:#0f1624}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
 header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border)}
@@ -41,23 +41,16 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .item .meta{color:var(--muted);font-size:12px}
 .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .sep{height:1px;background:#243048;margin:8px 0}
-.help{font-size:12px;color:#9fb0c8}
+.help{font-size:12px;color:var(--muted)}
 .note{background:#0e1524;border:1px dashed #32405a;padding:8px;border-radius:8px;color:#9fb0c8}
 .note.gray{opacity:.6}
 #map{width:100%;height:100%}
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
 
-/* мультиселект */
+/* мультиселект (кнопка-тизер) */
 .multi-select{position:relative;width:100%}
 .multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.multi-select-menu{position:absolute;top:100%;left:0;right:0;background:var(--panel2);border:1px solid var(--border);border-radius:12px;z-index:2000;max-height:260px;overflow:auto;display:none;text-align:left}
-.multi-select.open .multi-select-menu{display:block}
-.multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
-.multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
-.multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
-.multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
 
 /* поиск */
 #globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
@@ -79,11 +72,33 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 /* drag-drop */
 .draggable{cursor:grab}
 .dragging{opacity:.5}
+
+/* === МОДАЛЬНЫЙ МУЛЬТИСЕЛЕКТ (как на Авито) === */
+.modal-overlay{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;z-index:5000}
+.modal{width:min(980px,90vw);max-height:85vh;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel3)}
+.modal-title{font-weight:700}
+.modal-close{border:1px solid var(--border);background:#1a2234;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.modal-body{padding:12px 14px;overflow:auto}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--border);background:var(--panel3)}
+.modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+@media (max-width:1024px){.modal-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.modal-grid{grid-template-columns:1fr}}
+.modal-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #1f2a40;border-radius:8px;background:#0f1624}
+.modal-item input[type="checkbox"]{width:18px;height:18px;appearance:none;-webkit-appearance:none;border:2px solid var(--accent);border-radius:4px;background:#0f1624;position:relative;cursor:pointer;flex:0 0 18px}
+.modal-item input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
+.modal-item input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;color:#fff;font-size:14px}
+.modal-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.modal-search{flex:1 1 auto;padding:8px;border-radius:8px;border:1px solid var(--border);background:#0f1624;color:#e7f1ff}
+
+/* мини-бейдж количества выбранных в кнопке мультиселекта */
+.count-badge{display:inline-flex;align-items:center;gap:6px}
+.count-dot{display:inline-flex;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.7R</span>
+  <span class="badge">dictionary v38.8R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -106,7 +121,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       </div>
       <input id="globalSearch" placeholder="Поиск по элементам..."/>
       <div id="searchResults" class="search-results"></div>
-      <div class="help">До 5 названий видно в кнопке, дальше счётчик. Клики по чекбоксам не закрывают меню.</div>
+      <div class="help">Мультиселект открывается в большом окне. До 5 названий видно в кнопке, дальше — счётчик.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
 
       <div class="sep"></div>
@@ -127,6 +142,28 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <div id="map"></div>
 </main>
 
+<!-- Модальное окно мультиселекта -->
+<div id="msOverlay" class="modal-overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="msTitle">
+    <div class="modal-header">
+      <div id="msTitle" class="modal-title">Выбор</div>
+      <div id="msClose" class="modal-close" title="Закрыть">✖</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-toolbar">
+        <input id="msSearch" class="modal-search" placeholder="Поиск по списку..."/>
+        <button id="msSelectAll">Выбрать всё</button>
+        <button id="msClearAll" class="danger">Сбросить всё</button>
+      </div>
+      <div id="msGrid" class="modal-grid"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="msApply">Применить</button>
+      <button id="msCancel" class="danger">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <!-- Скрипты карт -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -134,9 +171,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_7R";
-const lfIcons=localforage.createInstance({name:"dict_icons_v387R"});
-const lfGeo=localforage.createInstance({name:"dict_geo_v387R"});
+const KEY="dict_v38_8R";
+const lfIcons=localforage.createInstance({name:"dict_icons_v388R"});
+const lfGeo=localforage.createInstance({name:"dict_geo_v388R"});
 
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -285,6 +322,8 @@ window.removeMarkerById=function(id){
   toRemove.forEach(m=>cluster.removeLayer(m));
   save(); renderAll();
 };
+</script>
+<script>
 /***** POLYGONS CORE + HISTORY *****/
 const polyFG=new L.FeatureGroup();
 map.addLayer(polyFG);
@@ -397,7 +436,6 @@ map.on(L.Draw.Event.CREATED,async e=>{
   renderPolyList(); updatePolygonVisibility();
 });
 
-// 1) сохраняем геометрию на EDITSTOP
 map.on(L.Draw.Event.EDITSTOP,async ()=>{
   for(const p of db.polygons){
     const l=polyIndex.get(p.id);
@@ -407,14 +445,12 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
   renderPolyList(); updatePolygonVisibility();
 });
 
-// 2) шаги истории при ДВИЖЕНИИ вершины (по шагам)
 map.on('draw:editvertex', ()=>{
   if(!polyEditingTargetId) return;
   const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
   const l=polyIndex.get(p.id); if(!l) return;
   p.geojson=l.toGeoJSON();
   pushHistory(p);
-  // история сохраняется в памяти; сохранение в IndexedDB — на EDITSTOP
 });
 
 // выбрать один полигон на редактирование (одиночный режим)
@@ -438,7 +474,6 @@ function renderPolyList(){
       const wrapper=document.createElement('div'); wrapper.className='item'+(p.id===polyEditingTargetId?' active':'');
       if(collapsedPolygons.has(p.id)) wrapper.classList.add('collapsed');
 
-      // шапка
       const head=document.createElement('div'); head.className='collapse-head';
       const caret=document.createElement('div'); caret.className='caret';
       const title=document.createElement('div'); title.className='name'; title.textContent=p.name||'Полигон';
@@ -451,7 +486,6 @@ function renderPolyList(){
       };
       wrapper.appendChild(head);
 
-      // тело
       const body=document.createElement('div'); body.className='section-body';
 
       const row1=document.createElement('div'); row1.className='item-row';
@@ -523,7 +557,7 @@ function updatePolygonVisibility(){
   }
 }
 
-/***** EDITOR (категории + элементы) со сворачиванием + сортировка + drag-drop *****/
+/***** EDITOR (категории + элементы) со сворачиванием + сортировка + drag&drop *****/
 const $editor=document.getElementById('editorTab');
 
 function moveArrayItem(arr, fromIdx, toIdx){
@@ -532,20 +566,27 @@ function moveArrayItem(arr, fromIdx, toIdx){
   arr.splice(toIdx,0,item);
 }
 
+/* сортировка по алфавиту (для загрузки/рендера) */
+function sortAZ(){
+  db.categories.sort((a,b)=>a.name.localeCompare(b.name));
+  for(const cat of db.categories){
+    if(cat.items) cat.items.sort((a,b)=>a.name.localeCompare(b.name));
+  }
+}
+
 function renderEditor(){
   $editor.innerHTML="";
 
-  /* Панель шапки редактора: глобальная сортировка категорий A-Z */
   const headPanel=document.createElement('div'); headPanel.className='panel';
   const headRow=document.createElement('div'); headRow.className='row';
   const hTitle=document.createElement('h3'); hTitle.textContent='Категории';
   const btnSortAZ=document.createElement('button'); btnSortAZ.textContent='Сортировать A→Z';
-  btnSortAZ.onclick=()=>{ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); save(db); renderAll(); };
+  btnSortAZ.onclick=()=>{ sortAZ(); save(db); renderAll(); };
   headRow.append(hTitle,btnSortAZ);
   headPanel.appendChild(headRow);
   $editor.appendChild(headPanel);
 
-  // новая категория — сворачиваемое тело
+  // новая категория
   const create=document.createElement('div'); create.className='panel';
   if(collapsedCats.has('newCat')) create.classList.add('collapsed');
 
@@ -758,6 +799,66 @@ function renderEditor(){
   });
 }
 
+/***** ===== МОДАЛЬНЫЙ МУЛЬТИСЕЛЕКТ ===== *****/
+const $overlay=document.getElementById('msOverlay');
+const $msTitle=document.getElementById('msTitle');
+const $msClose=document.getElementById('msClose');
+const $msCancel=document.getElementById('msCancel');
+const $msApply=document.getElementById('msApply');
+const $msClearAll=document.getElementById('msClearAll');
+const $msSelectAll=document.getElementById('msSelectAll');
+const $msSearch=document.getElementById('msSearch');
+const $msGrid=document.getElementById('msGrid');
+
+let msCtx=null; // {catId, items:[...], temp:Set<string>}
+
+function openMultiModal(cat){
+  const baseItems=(cat.items||[]);
+  msCtx={catId:cat.id, items:[...baseItems], temp:new Set(selected[cat.id] instanceof Set?selected[cat.id]:[])};
+  $msTitle.textContent=cat.name;
+  $msSearch.value="";
+  renderMsGrid();
+  $overlay.style.display='flex';
+  document.body.style.overflow='hidden';
+  $overlay.setAttribute('aria-hidden','false');
+  $msSearch.focus();
+}
+function closeMultiModal(){
+  msCtx=null;
+  $overlay.style.display='none';
+  document.body.style.overflow='';
+  $overlay.setAttribute('aria-hidden','true');
+}
+function renderMsGrid(){
+  if(!msCtx) return;
+  const q=($msSearch.value||"").trim().toLowerCase();
+  const items = q ? msCtx.items.filter(it=>it.name.toLowerCase().includes(q)) : msCtx.items;
+  $msGrid.innerHTML="";
+  items.forEach(it=>{
+    const row=document.createElement('label'); row.className='modal-item';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=msCtx.temp.has(it.id);
+    cb.onchange=()=>{ if(cb.checked) msCtx.temp.add(it.id); else msCtx.temp.delete(it.id); };
+    const name=document.createElement('div'); name.textContent=it.name;
+    row.append(cb,name);
+    $msGrid.appendChild(row);
+  });
+}
+$msSearch.oninput=renderMsGrid;
+$msSelectAll.onclick=()=>{ if(!msCtx) return; msCtx.temp=new Set(msCtx.items.map(x=>x.id)); renderMsGrid(); };
+$msClearAll.onclick=()=>{ if(!msCtx) return; msCtx.temp.clear(); renderMsGrid(); };
+$msApply.onclick=()=>{
+  if(!msCtx) return;
+  selected[msCtx.catId]=new Set(msCtx.temp);
+  saveSelected();
+  renderPreview();
+  updatePolygonVisibility();
+  closeMultiModal();
+};
+$msCancel.onclick=closeMultiModal;
+$msClose.onclick=closeMultiModal;
+$overlay.addEventListener('click',e=>{ if(e.target===$overlay) closeMultiModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $overlay.style.display==='flex') closeMultiModal(); });
+
 /***** PREVIEW *****/
 const $cascade=document.getElementById('cascadeBox');
 let reopenMultiCatId=null;
@@ -766,7 +867,8 @@ function dropChildrenSelections(parentCatId){
   const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
   for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
 }
-
+</script>
+<script>
 function renderPreview(){
   $cascade.innerHTML="";
   clearMarkers();
@@ -800,48 +902,32 @@ function renderPreview(){
       sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
       box.appendChild(sel);
     }else{
+      // Мультиселект-кнопка -> модальное окно
       const multi=document.createElement('div'); multi.className='multi-select';
-      const btn=document.createElement('div'); btn.className='multi-select-btn'; btn.textContent='Выбрать...';
-      const menu=document.createElement('div'); menu.className='multi-select-menu';
+      const btn=document.createElement('div'); btn.className='multi-select-btn';
       const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
 
       function updateBtnText(){
         if(set.size===0){ btn.textContent='Выбрать...'; }
         else{
           const names=items.filter(x=>set.has(x.id)).map(x=>x.name);
-          btn.textContent = names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`;
+          if(names.length<=5) btn.innerHTML = names.join(', ');
+          else btn.innerHTML = `<span class="count-badge"><span class="count-dot"></span>Выбрано: ${names.length}</span>`;
         }
       }
       updateBtnText();
 
-      items.forEach(it=>{
-        const lbl=document.createElement('label');
-        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
-        cb.onchange=()=>{
-          if(cb.checked) set.add(it.id); else set.delete(it.id);
-          selected[cat.id]=set;
-          dropChildrenSelections(cat.id);
-          updateBtnText();
-          reopenMultiCatId=cat.id;
-          saveSelected();
-          renderPreview();
-          updatePolygonVisibility();
-        };
-        lbl.append(cb,document.createTextNode(it.name));
-        menu.appendChild(lbl);
-      });
-
       btn.onclick=()=>{
-        document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
-        multi.classList.toggle('open');
+        openMultiModal(cat);
       };
-      multi.append(btn,menu); box.appendChild(multi);
+
+      multi.append(btn); box.appendChild(multi);
     }
 
     $cascade.appendChild(box);
   });
 
-  // кнопки сброс/выбрать всё
+  // кнопки сброс/выбрать всё (глобально)
   const btnClear=document.getElementById('btnClearAll');
   const btnAll=document.getElementById('btnSelectAll');
   if(btnClear && !btnClear._wired){
@@ -874,18 +960,12 @@ function renderPreview(){
   updatePolygonVisibility();
 
   if(reopenMultiCatId){
-    const panel=$cascade.querySelector(`.panel[data-cat-id="${reopenMultiCatId}"] .multi-select`);
-    if(panel) panel.classList.add('open');
+    // теперь модалка — кнопка просто показывает текущее число
     reopenMultiCatId=null;
   }
 }
 
-// клик вне мультиселекта — закрыть
-document.addEventListener('click', e=>{
-  document.querySelectorAll('.multi-select.open').forEach(ms=>{
-    if(!ms.contains(e.target)) ms.classList.remove('open');
-  });
-});
+// клик вне открытых дропдаунов ранее не нужен — теперь модалка
 
 /***** SEARCH (элементы) *****/
 const $search=document.getElementById('globalSearch');
@@ -921,6 +1001,7 @@ $search.oninput=()=>{
     $results.appendChild(row);
   });
 };
+
 /***** EXPORT/IMPORT/RESET *****/
 document.getElementById('btnExport').onclick=async ()=>{
   const full=JSON.parse(JSON.stringify(db));
@@ -934,7 +1015,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_7R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_8R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -1013,6 +1094,7 @@ document.querySelectorAll('.tab').forEach(tab=>{
 
 /***** MAIN RENDER *****/
 async function renderAll(){
+  sortAZ();
   rebuildPolys();
   renderEditor();
   renderPreview();
