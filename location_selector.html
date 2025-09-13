@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.6R — полигоны с Undo/Redo</title>
+<title>location_selector_v38.6.1R — Undo/Redo + фикс скролла</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -78,7 +78,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.6R</span>
+  <span class="badge">dictionary v38.6.1R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -123,12 +123,11 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_3R";
+const KEY="dict_v38_3R"; // сохраняем совместимость со стабильной базой
 const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
-const lfHist=localforage.createInstance({name:"dict_geo_hist_v386R"}); // история полигонов (undo/redo)
-
-const HISTORY_LIMIT=20; // глубина истории
+const lfHist=localforage.createInstance({name:"dict_geo_hist_v3861R"}); // история undo/redo
+const HISTORY_LIMIT=20;
 
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -319,9 +318,7 @@ function capStack(h){
   }
 }
 async function pushHistory(p){
-  // добавляем текущее состояние полигона в историю как новый шаг
   const h=await ensureHistWithCurrent(p);
-  // если мы откатывались — обрезаем "вперёд"
   if(h.index<h.stack.length-1){ h.stack=h.stack.slice(0,h.index+1); }
   h.stack.push(p.geojson);
   h.index=h.stack.length-1;
@@ -347,6 +344,7 @@ function replaceLayerFromGeo(p,geo){
   if(p.visible===false) map.removeLayer(l);
   return l;
 }
+let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
 async function applyHistoryIndex(p,newIndex,{keepEditing=false,fit=true}={}){
   const h=await getHist(p.id); if(!h) return;
   if(newIndex<0 || newIndex>=h.stack.length) return;
@@ -355,12 +353,10 @@ async function applyHistoryIndex(p,newIndex,{keepEditing=false,fit=true}={}){
   p.geojson=geo;
   const l=replaceLayerFromGeo(p,geo);
 
-  await lfGeo.setItem(p.id,geo); // синхрон с IndexedDB
-  await save(db); // сохранить лайтовую часть
+  await lfGeo.setItem(p.id,geo);
+  await save(db);
 
-  // если этот полигон редактируется — вернуть редактирование
   if(keepEditing && polyEditingTargetId===p.id){
-    // включаем тулбар на всей группе, а у остальных слоёв редактирование отключаем
     if(polyEditing && polyEditToolbar){ polyEditToolbar.disable(); }
     polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
     polyEditToolbar.enable(); polyEditing=true;
@@ -371,7 +367,7 @@ async function applyHistoryIndex(p,newIndex,{keepEditing=false,fit=true}={}){
   }
   if(fit && l) map.fitBounds(l.getBounds());
   await setHist(p.id,h);
-  renderPolyList(); // обновить актив/кнопки/индикатор
+  renderPolyList();
   updatePolygonVisibility();
 }
 async function undoPolygon(id){
@@ -395,9 +391,6 @@ document.getElementById('btnPolyNew').onclick=()=>{
   new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
 };
 
-let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
-const editDebounceMap=new Map(); // по id — таймер для сглаживания частых событий
-
 function setEditingTarget(id){
   polyEditingTargetId=id||null;
   if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId');
@@ -414,8 +407,7 @@ document.getElementById('btnPolyEdit').onclick=()=>{
 };
 document.getElementById('btnPolyStop').onclick=()=>{
   if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();}
-  polyEditing=false; polyEditingTargetId=null;
-  localStorage.removeItem('polyEditingId');
+  polyEditing=false; setEditingTarget(null);
   map.fire(L.Draw.Event.EDITSTOP);
 };
 
@@ -434,36 +426,18 @@ map.on(L.Draw.Event.CREATED,async e=>{
   db.polygons.push(rec);
   polyIndex.set(rec.id,layer);
   await save(db);
-  // инициализировать историю с первым слотом
   await ensureHistWithCurrent(rec);
-  await pushHistory(rec); // записали текущий geojson как первый шаг
+  await pushHistory(rec);
   renderPolyList(); updatePolygonVisibility();
 });
 
-// фиксация новых координат после режима редактирования (массово)
-map.on(L.Draw.Event.EDITSTOP,async ()=>{
-  for(const p of db.polygons){
-    const l=polyIndex.get(p.id);
-    if(l){
-      p.geojson=l.toGeoJSON();
-      await lfGeo.setItem(p.id,p.geojson);
-      await pushHistory(p); // фиксируем новое состояние в историю
-    }
-  }
-  polyEditing=false;
-  await save(db);
-  renderPolyList(); updatePolygonVisibility();
-});
-
-// мелкие шаги: когда двигаем вершины — дебаунсим и пишем в историю
-map.on(L.Draw.Event.EDITVERTEX, async (e)=>{
-  // найдём активный полигон — он один (polyEditingTargetId)
+const editDebounceMap=new Map();
+map.on(L.Draw.Event.EDITVERTEX, async ()=>{
   const id=polyEditingTargetId;
   if(!id) return;
   const p=db.polygons.find(x=>x.id===id); if(!p) return;
   const l=polyIndex.get(id); if(!l) return;
 
-  // debounce 300ms
   if(editDebounceMap.has(id)){ clearTimeout(editDebounceMap.get(id)); }
   editDebounceMap.set(id, setTimeout(async ()=>{
     p.geojson=l.toGeoJSON();
@@ -474,16 +448,29 @@ map.on(L.Draw.Event.EDITVERTEX, async (e)=>{
   },300));
 });
 
-function nameWithIndicator(p,hasUndo){
-  const n=p.name||'Полигон';
-  return hasUndo ? n+' '+'<span class="hist-indicator">•</span>' : n;
-}
+map.on(L.Draw.Event.EDITSTOP,async ()=>{
+  for(const p of db.polygons){
+    const l=polyIndex.get(p.id);
+    if(l){
+      p.geojson=l.toGeoJSON();
+      await lfGeo.setItem(p.id,p.geojson);
+      await pushHistory(p);
+    }
+  }
+  polyEditing=false;
+  await save(db);
+  renderPolyList(); updatePolygonVisibility();
+});
 
+/***** POLY LIST (с фиксированием скролла) *****/
 function renderPolyList(){
   if(!$polyList) return;
   const q=($polySearch?.value||"").trim().toLowerCase();
+
+  // сохраняем текущую прокрутку
+  const scrollTop = $polyList.scrollTop;
+
   $polyList.innerHTML='';
-  // нужно проверить историю для кнопок
   const checks=Promise.all(db.polygons.map(async p=>{
     const h=await getHist(p.id);
     return {id:p.id, undo:!!(h&&h.index>0), redo:!!(h&&h.index<h.stack.length-1)};
@@ -502,7 +489,6 @@ function renderPolyList(){
         nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await save(db); renderPolyList(); updatePolygonVisibility();};
         const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`id: ${p.id}`;
         left.appendChild(nameInput);
-        // индикатор истории
         if(st.undo){
           const ind=document.createElement('span'); ind.className='hist-indicator'; ind.textContent='•';
           nameInput.insertAdjacentElement('afterend', ind);
@@ -523,16 +509,14 @@ function renderPolyList(){
         editBtn.onclick=async()=>{
           const l=polyIndex.get(p.id);
           if(l){
-            l.addTo(map); // показать даже если отфильтрован
+            l.addTo(map);
             if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-            // включаем общий EditToolbar на polyFG, затем активируем ровно один слой
             polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
             polyEditToolbar.enable(); polyEditing=true;
             polyFG.eachLayer(x=>{
               if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
               else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
             });
-            // убедимся, что история инициализирована
             const h=await ensureHistWithCurrent(p);
             if(h.index<0){ await pushHistory(p); }
             setEditingTarget(p.id);
@@ -545,6 +529,9 @@ function renderPolyList(){
         tools.append(color,toggle,focus,undoBtn,redoBtn,editBtn,del);
         row.append(left,tools); $polyList.appendChild(row);
       });
+
+    // восстановим прокрутку
+    $polyList.scrollTop = scrollTop;
   });
 }
 $polySearch.oninput=renderPolyList;
@@ -640,7 +627,6 @@ function renderEditor(){
     const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
     btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
 
-    // загрузка иконки категории
     const iconInput=document.createElement('input');
     iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
     const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
@@ -712,12 +698,6 @@ const $cascade=document.getElementById('cascadeBox');
 let selected={};
 let reopenMultiCatId=null;
 
-function getSelectedIds(catId){
-  const cat=db.categories.find(x=>x.id===catId);
-  const v=selected[catId];
-  if(!v) return [];
-  return (cat && cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
-}
 function dropChildrenSelections(parentCatId){
   const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
   for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
@@ -787,7 +767,6 @@ function renderPreview(){
         menu.appendChild(lbl);
       });
 
-      // открыть один — закрыть все остальные
       btn.onclick=()=>{
         document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
         multi.classList.toggle('open');
@@ -861,7 +840,6 @@ $search.oninput=()=>{
 
 /***** EXPORT/IMPORT/RESET *****/
 document.getElementById('btnExport').onclick=async ()=>{
-  // Полный экспорт: подтягиваем iconData и geojson
   const full=JSON.parse(JSON.stringify(db));
   for(const cat of full.categories){
     if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
@@ -873,7 +851,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_6R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_6_1R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -908,7 +886,6 @@ document.getElementById('fileImport').onchange=e=>{
       for(const p of obj.polygons){
         if(!p.id) p.id=uid();
         if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
-        // при импорте инициализируем историю начальным состоянием
         await setHist(p.id,{stack:[p.geojson||null].filter(Boolean),index:(p.geojson?0:-1)});
       }
 
@@ -968,12 +945,12 @@ async function renderAll(){
   });
 }
 
-/***** RESUME EDIT MODE (как в v38.5.2R) *****/
+/***** RESUME EDIT MODE *****/
 function resumeEditingIfNeeded(){
   const id=localStorage.getItem('polyEditingId');
   if(!id) return;
   const layer=polyIndex.get(id);
-  if(!layer) return; // например, id устарел или полигон удалён
+  if(!layer) return;
   if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
   polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
   polyEditToolbar.enable(); polyEditing=true;
@@ -992,7 +969,6 @@ let db=null;
   db = await loadDB();
   loadSelected();
   await renderAll();
-  // пробуем восстановить редактирование после полной отрисовки
   resumeEditingIfNeeded();
 })();
 </script>
