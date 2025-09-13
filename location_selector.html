@@ -3,17 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.4 — каркас в LS, тяжёлое в IndexedDB</title>
-
-<!-- Leaflet core + плагины -->
+<title>location_selector_v38.5</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
-
-<!-- localForage для IndexedDB -->
-<script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js"></script>
-
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444}
 *{box-sizing:border-box}
@@ -38,7 +31,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .item .left{display:grid;gap:2px}
 .item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
 .item .meta{color:var(--muted);font-size:12px}
-.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tools{display:flex;gap:6px}
+.drag-handle{cursor:grab;opacity:.8}
+.dragging{opacity:.5;outline:1px dashed var(--accent)}
 .sep{height:1px;background:#243048;margin:8px 0}
 .help{font-size:12px;color:#9fb0c8}
 .note{background:#0e1524;border:1px dashed #32405a;padding:8px;border-radius:8px;color:#9fb0c8}
@@ -54,7 +49,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-/* чекбокс */
+/* кастомный чекбокс */
 .multi-select-menu input[type="checkbox"]{
   appearance:none;-webkit-appearance:none;
   width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
@@ -76,7 +71,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.4</span>
+  <span class="badge">dictionary v38.5</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -97,139 +92,77 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div id="searchResults" class="search-results"></div>
       <div class="help">До 5 названий видно в кнопке, дальше счётчик. Клики по чекбоксам не закрывают меню.</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
-
       <div class="sep"></div>
       <h3>Полигоны</h3>
-      <input id="polyName" placeholder="Название полигона"/>
-      <input type="color" id="polyColor" value="#ff4d4f"/>
-      <div class="row">
-        <button id="btnPolyNew">Новый</button>
-        <button id="btnPolyEdit">Редактировать</button>
-        <button id="btnPolyStop">Стоп</button>
-      </div>
-      <div id="polyList" class="list"></div>
+      <div id="polygonsBox"></div>
     </div>
   </aside>
   <div id="map"></div>
 </main>
 
-<!-- Скрипты карт -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-
 <script>
-/***** STORAGE: localStorage = каркас, IndexedDB = тяжёлое *****/
-const KEY="dict_v38_4";
-const lfIcons=localforage.createInstance({name:"dict_icons_v384"});
-const lfGeo=localforage.createInstance({name:"dict_geo_v384"});
+/***** STORAGE *****/
+const KEY="dict_v38_5";
 
-function uid(){return Math.random().toString(36).slice(2,9);}
+// IndexedDB для тяжёлых данных (иконки, полигоны)
+let idb;
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open("dict_v38_5",1);
+    req.onupgradeneeded=e=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains("icons")) db.createObjectStore("icons");
+      if(!db.objectStoreNames.contains("polys")) db.createObjectStore("polys");
+    };
+    req.onsuccess=()=>{idb=req.result;resolve();};
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbSet(store,key,val){
+  return new Promise((res,rej)=>{
+    const tx=idb.transaction(store,"readwrite"); tx.objectStore(store).put(val,key);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbGet(store,key){
+  return new Promise((res,rej)=>{
+    const tx=idb.transaction(store,"readonly"); const req=tx.objectStore(store).get(key);
+    req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error);
+  });
+}
+async function idbDel(store,key){
+  return new Promise((res,rej)=>{
+    const tx=idb.transaction(store,"readwrite"); tx.objectStore(store).delete(key);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  });
+}
 
-function normalize(obj){
-  if(!obj||typeof obj!=="object")obj={categories:[],polygons:[]};
-  if(!Array.isArray(obj.categories)) obj.categories=[];
-  if(!Array.isArray(obj.polygons)) obj.polygons=[];
+// сохраняем только каркас
+function save(obj=db){
+  const light={categories:[],polygons:[]};
   obj.categories.forEach(c=>{
-    if(!("id" in c))c.id=uid();
-    if(!("type" in c))c.type="select";
-    if(!("items" in c))c.items=[];
-    if(!("color" in c))c.color="#3388ff";
-    if(!("shape" in c))c.shape="circle";
-    if(!("parentCategoryId" in c))c.parentCategoryId=null;
-    c.items.forEach(it=>{
-      if(!("id" in it))it.id=uid();
-      if(!("name" in it))it.name="Без имени";
-      if(!("lat" in it))it.lat=null;
-      if(!("lng" in it))it.lng=null;
-      if(!("parentId" in it))it.parentId=null;
-    });
+    light.categories.push({...c,items:c.items.map(it=>({id:it.id,name:it.name,lat:it.lat,lng:it.lng,parentId:it.parentId}))});
   });
-  obj.polygons.forEach(p=>{
-    if(!("id" in p))p.id=uid();
-    if(!("name" in p))p.name="Полигон";
-    if(!("color" in p))p.color="#ff4d4f";
-    if(!("visible" in p))p.visible=true;
+  obj.polygons?.forEach(p=>{
+    light.polygons.push({id:p.id,name:p.name,color:p.color,visible:p.visible});
   });
+  localStorage.setItem(KEY,JSON.stringify(light));
 }
 
-// сохраняем только каркас в localStorage
-async function save(obj=db){
-  normalize(obj);
-  const lite={
-    categories:obj.categories.map(c=>({
-      id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
-      color:c.color,shape:c.shape,iconKey:c.iconKey||null,
-      items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
-    })),
-    polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
-  };
-  localStorage.setItem(KEY,JSON.stringify(lite));
-
-  // тяжёлое — в IndexedDB
-  for(const cat of obj.categories){
-    if(cat.iconData){
-      const key=cat.iconKey||`cat_${cat.id}`;
-      await lfIcons.setItem(key,cat.iconData);
-      cat.iconKey=key;
-    }
-    for(const it of (cat.items||[])){
-      if(it.iconData){
-        const key=it.iconKey||`item_${it.id}`;
-        await lfIcons.setItem(key,it.iconData);
-        it.iconKey=key;
-      }
-    }
-  }
-  for(const p of obj.polygons){
-    if(p.geojson) await lfGeo.setItem(p.id,p.geojson);
-  }
-}
-
-// загрузка: каркас из LS + подтягивание тяжёлого из IndexedDB
+// загружаем + подтягиваем тяжёлое из IndexedDB
 async function loadDB(){
-  const raw=localStorage.getItem(KEY);
-  let obj={categories:[],polygons:[]};
-  if(raw){try{obj=JSON.parse(raw)||{};}catch(e){}}
-  normalize(obj);
-
-  for(const cat of obj.categories){
-    if(cat.iconKey&&!cat.iconData){
-      try{cat.iconData=await lfIcons.getItem(cat.iconKey)||null;}catch(e){}
-    }
-    for(const it of (cat.items||[])){
-      if(it.iconKey&&!it.iconData){
-        try{it.iconData=await lfIcons.getItem(it.iconKey)||null;}catch(e){}
-      }
-    }
-  }
-  for(const p of obj.polygons){
-    if(!p.geojson){
-      try{p.geojson=await lfGeo.getItem(p.id)||null;}catch(e){}
-    }
-  }
-  return obj;
+  await openDB();
+  let light; try{light=JSON.parse(localStorage.getItem(KEY));}catch(e){}
+  if(!light) light={categories:[],polygons:[]};
+  // нормализация
+  light.categories=Array.isArray(light.categories)?light.categories:[];
+  light.polygons=Array.isArray(light.polygons)?light.polygons:[];
+  return light;
 }
 
-/***** STATE сохранённых выборов *****/
-function saveSelected(){
-  const out={};
-  for(const [k,v] of Object.entries(selected)){ out[k]=v instanceof Set?Array.from(v):v; }
-  localStorage.setItem('selected_v384',JSON.stringify(out));
-}
-function loadSelected(){
-  try{
-    const raw=localStorage.getItem('selected_v384'); if(!raw) return;
-    const obj=JSON.parse(raw)||{}; selected={};
-    for(const [k,v] of Object.entries(obj)){
-      const cat=(db?.categories||[]).find(c=>c.id===k);
-      if(cat&&cat.type==='checkbox') selected[k]=new Set(Array.isArray(v)?v:[]);
-      else selected[k]=v||null;
-    }
-  }catch(_){selected={};}
-}
-
-/***** MAP INIT + MARKERS *****/
+/***** MAP + CLUSTERS *****/
 let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 
@@ -237,9 +170,10 @@ let cluster=L.markerClusterGroup();
 map.addLayer(cluster);
 function clearMarkers(){cluster.clearLayers();}
 
-function markerIcon(cat,it=null){
-  if(it && it.iconData) return L.icon({iconUrl:it.iconData,iconSize:[24,24],iconAnchor:[12,12]});
-  if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
+function markerIcon(cat){
+  if(cat.iconId){
+    return L.icon({iconUrl:cat.iconId,iconSize:[24,24],iconAnchor:[12,12]});
+  }
   const color=cat.color||"#3388ff"; const shape=cat.shape||"circle"; let html="";
   if(shape==="circle") html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
   if(shape==="square") html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
@@ -249,11 +183,10 @@ function markerIcon(cat,it=null){
 
 function addMarkerForItem(it,cat){
   if(it.lat==null||it.lng==null) return;
-  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it)});
+  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat)});
   m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
   cluster.addLayer(m);
 }
-
 window.removeMarkerById=function(id){
   for(const c of db.categories){
     const it=(c.items||[]).find(x=>x.id===id);
@@ -261,38 +194,13 @@ window.removeMarkerById=function(id){
   }
   save(); renderAll();
 };
-
-/***** POLYGON CORE *****/
-const polyFG=new L.FeatureGroup();
-map.addLayer(polyFG);
-const polyIndex=new Map();
-
-function layerFromGeo(geo,c){
-  let l=null;
-  L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x);
-  return l;
-}
-function rebuildPolys(){
-  polyIndex.clear();
-  polyFG.clearLayers();
-  for(const p of db.polygons){
-    if(!p.geojson) continue;
-    const l=layerFromGeo(p.geojson,p.color);
-    if(!l) continue;
-    polyFG.addLayer(l);
-    polyIndex.set(p.id,l);
-    if(p.visible===false) map.removeLayer(l);
-  }
-  updatePolygonVisibility();
-}
 /***** EDITOR *****/
 const $editor=document.getElementById('editorTab');
-
 function renderEditor(){
   $editor.innerHTML="";
 
-  // создание категории
-  const create=document.createElement('div'); create.className='panel';
+  // новая категория
+  const create=document.createElement('div');create.className='panel';
   create.innerHTML=`
     <h3>Новая категория</h3>
     <div class="row">
@@ -305,17 +213,19 @@ function renderEditor(){
     </div>
     <div class="row">
       <span class="preview-icon" id="newIconPreview">icon</span>
+      <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
       <input type="color" id="newCatColor" value="#3388ff"/>
       <select id="newCatShape"><option value="circle">Круг</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option></select>
-      <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
       <button id="btnAddCat">+ Добавить</button>
     </div>`;
   $editor.appendChild(create);
 
   let newIconData=null;
-  create.querySelector('#newCatIcon').onchange=e=>{
-    const f=e.target.files[0]; if(!f){newIconData=null;return;}
-    const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;create.querySelector('#newIconPreview').innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
+  const newIconInput=create.querySelector('#newCatIcon');
+  const newIconPreview=create.querySelector('#newIconPreview');
+  newIconInput.onchange=e=>{
+    const f=e.target.files[0]; if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
+    const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
   };
   create.querySelector('#btnAddCat').onclick=async()=>{
     const name=document.getElementById('newCatName').value.trim(); if(!name) return;
@@ -324,11 +234,11 @@ function renderEditor(){
     const color=document.getElementById('newCatColor').value;
     const shape=document.getElementById('newCatShape').value;
     const cat={id:uid(),name,type,parentCategoryId:parent,color,shape,items:[]};
-    if(newIconData){cat.iconData=newIconData;}
-    db.categories.push(cat); await save(); renderAll();
+    if(newIconData){await idbSet("icons",cat.id,newIconData);cat.iconId=cat.id;}
+    db.categories.push(cat); save(); renderAll();
   };
 
-  // категории
+  // список категорий
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div'); sec.className='panel';
     const header=document.createElement('div'); header.className='row';
@@ -337,18 +247,21 @@ function renderEditor(){
 
     const cfg=document.createElement('div'); cfg.className='row';
     const inpName=document.createElement('input'); inpName.value=cat.name;
+    inpName.onchange=()=>{cat.name=inpName.value.trim();save();};
     const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
+    selType.onchange=()=>{cat.type=selType.value;save();};
     const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
-    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff';
+    selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null;save();};
+    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value;save();};
     const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);});
-    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
-    const btnIcon=document.createElement('input'); btnIcon.type='file'; btnIcon.accept='image/png,image/svg+xml';
-    btnIcon.onchange=e=>{
-      const f=e.target.files[0]; if(!f)return;
-      const r=new FileReader(); r.onload=ev=>{cat.iconData=ev.target.result;iconPrev.innerHTML=`<img src="${cat.iconData}">`;save();}; r.readAsDataURL(f);
-    };
+    shape.onchange=()=>{cat.shape=shape.value;save();};
+    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; 
+    if(cat.iconId){idbGet("icons",cat.iconId).then(data=>{if(data) iconPrev.innerHTML=`<img src="${data}">`;});}
+    else iconPrev.textContent='icon';
+    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
+    btnClearIcon.onclick=()=>{delete cat.iconId; idbDel("icons",cat.id); iconPrev.textContent='icon'; save();};
 
-    cfg.append(inpName,selType,selParent,col,shape,iconPrev,btnIcon);
+    cfg.append(inpName,selType,selParent,col,shape,iconPrev,btnClearIcon);
     sec.appendChild(cfg);
 
     // элементы
@@ -386,70 +299,44 @@ function renderEditor(){
 
     const addRow=document.createElement('div'); addRow.className='row';
     const inp=document.createElement('input'); inp.placeholder='Новый элемент';
-    const parentPicker=document.createElement('select');
-    if(cat.parentCategoryId){
-      const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
-      parentPicker.innerHTML=`<option value="">(без родителя)</option>`+(parentCat?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-    }else parentPicker.innerHTML=`<option value="">(родитель не задан)</option>`;
+    const parentPicker=document.createElement('select'); parentPicker.innerHTML=`<option value="">(нет родителя)</option>`;
     const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
-    addBtn.onclick=()=>{cat.items.push({id:uid(),name:inp.value.trim()||'Новый',lat:null,lng:null,parentId:parentPicker.value||null}); inp.value=''; save(); renderAll();};
+    addBtn.onclick=()=>{const nm=inp.value.trim()||'Новый'; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parentPicker.value||null}); inp.value=''; save(); renderAll();};
     addRow.append(inp,parentPicker,addBtn); sec.appendChild(addRow);
 
     $editor.appendChild(sec);
   });
 }
 
-/***** POLYGONS UI *****/
-let drawControl=null; let activeLayer=null;
-
-function stopDraw(){
-  if(drawControl){map.removeControl(drawControl);drawControl=null;}
-}
-function startDraw(){
-  stopDraw();
-  drawControl=new L.Control.Draw({
-    edit:{featureGroup:polyFG},
-    draw:{marker:false,circle:false,rectangle:false,polyline:false,polygon:{allowIntersection:false,showArea:true}}
-  });
-  map.addControl(drawControl);
-}
-
-map.on(L.Draw.Event.CREATED, async e=>{
-  const l=e.layer;
-  const gj=l.toGeoJSON();
-  const name=document.getElementById('polyName').value.trim()||'Полигон';
-  const color=document.getElementById('polyColor').value;
-  const p={id:uid(),name,color,visible:true,geojson:gj};
-  db.polygons.push(p);
-  await save();
-  rebuildPolys();
-});
-
-map.on(L.Draw.Event.EDITED, async e=>{
-  e.layers.eachLayer(async l=>{
-    const id=[...polyIndex.entries()].find(([pid,ly])=>ly===l)?.[0];
-    if(id){const p=db.polygons.find(x=>x.id===id); if(p){p.geojson=l.toGeoJSON(); await save();}}
-  });
-});
-
-document.getElementById('btnPolyNew').onclick=()=>startDraw();
-document.getElementById('btnPolyEdit').onclick=()=>{if(drawControl)stopDraw();startDraw();};
-document.getElementById('btnPolyStop').onclick=()=>stopDraw();
-
+/***** POLYGONS *****/
+let polyIndex=new Map();
 function renderPolygonsUI(){
-  const box=document.getElementById('polyList'); box.innerHTML="";
-  db.polygons.forEach((p,i)=>{
-    const line=document.createElement('div'); line.className='item';
+  const box=document.getElementById('polygonsBox'); box.innerHTML="";
+  db.polygons=db.polygons||[];
+  db.polygons.forEach(p=>{
+    const row=document.createElement('div'); row.className='item';
     const left=document.createElement('div'); left.className='left';
-    const nm=document.createElement('div'); nm.className='name'; nm.textContent=p.name;
-    left.append(nm);
+    const nm=document.createElement('input'); nm.value=p.name||"Без имени"; nm.onchange=()=>{p.name=nm.value.trim(); save();};
+    const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`id:${p.id}`;
+    left.append(nm,meta);
     const tools=document.createElement('div'); tools.className='tools';
-    const vis=document.createElement('input'); vis.type='checkbox'; vis.checked=p.visible!==false;
-    vis.onchange=()=>{p.visible=vis.checked; save(); rebuildPolys();};
-    const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-    del.onclick=()=>{if(confirm('Удалить полигон?')){db.polygons.splice(i,1); save(); rebuildPolys(); renderPolygonsUI();}};
-    tools.append(vis,del); line.append(left,tools); box.appendChild(line);
+    const col=document.createElement('input'); col.type='color'; col.value=p.color||"#ff0000"; col.onchange=()=>{p.color=col.value; rebuildPolys(); save();};
+    const vis=document.createElement('input'); vis.type='checkbox'; vis.checked=p.visible!==false; vis.onchange=()=>{p.visible=vis.checked; updatePolygonVisibility(); save();};
+    const focus=document.createElement('button'); focus.textContent='Фокус'; focus.onclick=()=>{const l=polyIndex.get(p.id); if(l){map.fitBounds(l.getBounds());}};
+    const del=document.createElement('button'); del.textContent='Удалить'; del.className='danger'; del.onclick=()=>{if(confirm('Удалить полигон?')){polyIndex.get(p.id)?.remove(); db.polygons=db.polygons.filter(x=>x.id!==p.id); idbDel("polys",p.id); save(); renderPolygonsUI();}};
+    tools.append(col,vis,focus,del);
+    row.append(left,tools); box.appendChild(row);
   });
+}
+
+async function rebuildPolys(){
+  for(const [id,l] of polyIndex.entries()){map.removeLayer(l);}
+  polyIndex.clear();
+  for(const p of db.polygons){
+    const gj=await idbGet("polys",p.id); if(!gj) continue;
+    const l=L.geoJSON(gj,{style:{color:p.color||"#f00"}}); polyIndex.set(p.id,l);
+    if(p.visible!==false) l.addTo(map);
+  }
 }
 /***** PREVIEW *****/
 const $cascade=document.getElementById('cascadeBox');
@@ -499,7 +386,7 @@ function renderPreview(){
       const sel=document.createElement('select'); sel.style.width='100%';
       sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
       if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
-      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); };
+      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); save(); renderPreview(); };
       box.appendChild(sel);
     }else{
       const multi=document.createElement('div'); multi.className='multi-select';
@@ -520,12 +407,12 @@ function renderPreview(){
         const lbl=document.createElement('label');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.value=it.id; cb.checked=set.has(it.id);
         cb.onchange=()=>{
-          if(cb.checked) set.add(it.id); else set.delete(it.id);
+          if(cb.checked) set.add(cb.value); else set.delete(cb.value);
           selected[cat.id]=set;
           dropChildrenSelections(cat.id);
           updateBtnText();
           reopenMultiCatId=cat.id;
-          saveSelected();
+          save();
           renderPreview();
         };
         lbl.append(cb,document.createTextNode(it.name));
@@ -568,7 +455,7 @@ function updatePolygonVisibility(){
     let show=false;
     db.categories.forEach(cat=>{
       const ids=getSelectedIds(cat.id);
-      if(ids.length>0){ show=true; }
+      if(ids.length>0) show=true;
     });
     if(show){ if(!map.hasLayer(l)) map.addLayer(l);} else { if(map.hasLayer(l)) map.removeLayer(l);}
   }
@@ -589,7 +476,7 @@ $search.oninput=()=>{
     row.onclick=()=>{
       if(r.cat.type==='select') selected[r.cat.id]=r.it.id;
       else{ if(!(selected[r.cat.id] instanceof Set)) selected[r.cat.id]=new Set(); selected[r.cat.id].add(r.it.id); }
-      saveSelected();
+      save();
       renderPreview();
       if(r.it.lat!=null && r.it.lng!=null) map.setView([r.it.lat,r.it.lng],14);
       $search.value=""; $results.innerHTML="";
@@ -602,7 +489,7 @@ $search.oninput=()=>{
 document.getElementById('btnExport').onclick=async()=>{
   normalize(db);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v38_4.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_v38_5.json'; a.click();
 };
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
 document.getElementById('fileImport').onchange=e=>{
@@ -612,7 +499,13 @@ document.getElementById('fileImport').onchange=e=>{
     try{
       let obj=JSON.parse(r.result);
       if(!obj.categories) throw new Error("Нет категорий");
-      normalize(obj); db=obj; await save(db); selected={}; saveSelected(); renderAll(); alert("Импортировано");
+      db=obj;
+      save(db);
+      selected={};
+      renderAll();
+      await rebuildPolys();
+      updatePolygonVisibility();
+      alert("Импортировано");
     }catch(err){ alert("Ошибка импорта: "+err.message); }
   };
   r.readAsText(f);
@@ -631,13 +524,13 @@ document.querySelectorAll('.tab').forEach(tab=>{
 });
 
 /***** INIT *****/
-let db={};
+let db={categories:[],polygons:[]};
 async function renderAll(){ renderEditor(); renderPreview(); renderPolygonsUI(); }
 (async()=>{
   db=await loadDB();
-  loadSelected();
   renderAll();
-  rebuildPolys();
+  await rebuildPolys();
+  updatePolygonVisibility();
 })();
 </script>
 </body>
