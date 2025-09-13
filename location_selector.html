@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.6.5R — стабильная база + сворачивание + undo/redo + фикс скролла</title>
+<title>location_selector_v38.6.6R — стабильная база + фикс скролла + сворачивание категорий</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -80,7 +80,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.6.5R</span>
+  <span class="badge">dictionary v38.6.6R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -125,11 +125,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_3R"; // совместимость со старой базой
-const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
-const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
-const lfHist=localforage.createInstance({name:"dict_geo_hist_v3865R"}); // история undo/redo
-const HISTORY_LIMIT=20;
+const KEY="dict_v38_6_6R";
+const lfIcons=localforage.createInstance({name:"dict_icons_v3866R"});
+const lfGeo=localforage.createInstance({name:"dict_geo_v3866R"});
 
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -188,7 +186,7 @@ async function save(obj=db){
       }
     }
   }
-  // полигоны геометрия
+  // полигоны
   for(const p of obj.polygons){
     if(p.geojson) await lfGeo.setItem(p.id,p.geojson);
   }
@@ -219,7 +217,7 @@ async function loadDB(){
   return obj;
 }
 
-/***** SELECTED STATE (для предпросмотра) *****/
+/***** SELECTED STATE *****/
 function saveSelected(){
   const out={};
   for(const [k,v] of Object.entries(selected)){ out[k]=v instanceof Set?Array.from(v):v; }
@@ -235,12 +233,6 @@ function loadSelected(){
       else selected[k]=v||null;
     }
   }catch(_){selected={};}
-}
-function getSelectedIds(catId){
-  const cat=db.categories.find(x=>x.id===catId);
-  const v=selected[catId];
-  if(!v) return [];
-  return (cat && cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
 }
 
 /***** MAP + MARKERS *****/
@@ -274,10 +266,35 @@ window.removeMarkerById=function(id){
   save(); renderAll();
 };
 
-/***** POLYGONS CORE *****/
+/***** POLYGONS CORE + UNDO/REDO *****/
 const polyFG=new L.FeatureGroup();
 map.addLayer(polyFG);
 const polyIndex=new Map();
+
+let polyEditing=false, polyEditToolbar=null;
+let activePolyId=null;
+
+let historyStack=[], redoStack=[];
+function pushHistory(){
+  const snap=JSON.stringify(db.polygons);
+  historyStack.push(snap);
+  if(historyStack.length>50) historyStack.shift();
+  redoStack=[];
+}
+function undo(){
+  if(!historyStack.length) return;
+  redoStack.push(JSON.stringify(db.polygons));
+  const prev=historyStack.pop();
+  db.polygons=JSON.parse(prev);
+  save(); renderAll();
+}
+function redo(){
+  if(!redoStack.length) return;
+  historyStack.push(JSON.stringify(db.polygons));
+  db.polygons=JSON.parse(redoStack.pop());
+  save(); renderAll();
+}
+window.undo=undo; window.redo=redo;
 
 function layerFromGeo(geo,c){
   let l=null;
@@ -298,93 +315,10 @@ function rebuildPolys(){
   updatePolygonVisibility();
 }
 
-/***** HISTORY (UNDO/REDO) *****/
-async function getHist(id){ try{ return (await lfHist.getItem(id))||null; }catch(_){ return null; } }
-async function setHist(id,h){ try{ await lfHist.setItem(id,h); }catch(_){ } }
-async function clearHist(id){ try{ await lfHist.removeItem(id); }catch(_){ } }
-function capStack(h){ if(h.stack.length>HISTORY_LIMIT){ const over=h.stack.length-HISTORY_LIMIT; h.stack.splice(0,over); h.index=Math.max(0,h.index-over); } }
-async function ensureHistWithCurrent(p){
-  let h=await getHist(p.id);
-  if(!h){
-    h={stack:[],index:-1};
-    if(p.geojson){ h.stack=[p.geojson]; h.index=0; }
-    await setHist(p.id,h);
-  }
-  return h;
-}
-async function pushHistory(p){
-  const h=await ensureHistWithCurrent(p);
-  if(h.index<h.stack.length-1) h.stack=h.stack.slice(0,h.index+1);
-  h.stack.push(p.geojson);
-  h.index=h.stack.length-1;
-  capStack(h);
-  await setHist(p.id,h);
-}
-async function applyHistoryIndex(p,newIndex,{keepEditing=false,fit=false}={}){
-  const h=await getHist(p.id); if(!h) return;
-  if(newIndex<0 || newIndex>=h.stack.length) return;
-  h.index=newIndex;
-  const geo=h.stack[h.index];
-  p.geojson=geo;
-
-  const old=polyIndex.get(p.id);
-  if(old){ polyFG.removeLayer(old); }
-  const l=layerFromGeo(geo,p.color);
-  polyFG.addLayer(l);
-  polyIndex.set(p.id,l);
-  if(p.visible===false) map.removeLayer(l);
-
-  await lfGeo.setItem(p.id,geo);
-  await setHist(p.id,h);
-  await save(db);
-
-  if(keepEditing){
-    if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-    polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
-    polyEditToolbar.enable(); polyEditing=true;
-    polyFG.eachLayer(x=>{
-      if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
-      else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
-    });
-    setEditingTarget(p.id);
-  }
-  if(fit && l) map.fitBounds(l.getBounds());
-  renderPolyList();
-  updatePolygonVisibility();
-}
-async function undoPolygon(id){
-  const p=db.polygons.find(x=>x.id===id); if(!p) return;
-  const h=await getHist(id); if(!h||h.index<=0) return;
-  await applyHistoryIndex(p,h.index-1,{keepEditing:true,fit:false});
-}
-async function redoPolygon(id){
-  const p=db.polygons.find(x=>x.id===id); if(!p) return;
-  const h=await getHist(id); if(!h||h.index>=h.stack.length-1) return;
-  await applyHistoryIndex(p,h.index+1,{keepEditing:true,fit:false});
-}
-
-/***** UI STATE *****/
-let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
-let collapsedPolygons = {};
-try{ collapsedPolygons = JSON.parse(localStorage.getItem("collapsedPolygons")||"{}")||{}; }catch(_){ collapsedPolygons={}; }
-
-function setEditingTarget(id){
-  polyEditingTargetId=id||null;
-  if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId');
-  renderPolyList();
-  updatePolygonVisibility();
-}
-function toggleCollapse(id){
-  collapsedPolygons[id]=!collapsedPolygons[id];
-  localStorage.setItem("collapsedPolygons",JSON.stringify(collapsedPolygons));
-  renderPolyList();
-}
-
-/***** POLYGON UI + EDIT EVENTS *****/
+/***** POLYGON UI *****/
 const $polyList=document.getElementById('polyList');
 const $polyName=document.getElementById('polyName');
 const $polyColor=document.getElementById('polyColor');
-const $polySearch=document.getElementById('polySearch');
 
 document.getElementById('btnPolyNew').onclick=()=>{
   new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
@@ -395,9 +329,7 @@ document.getElementById('btnPolyEdit').onclick=()=>{
   polyEditToolbar.enable(); polyEditing=true;
 };
 document.getElementById('btnPolyStop').onclick=()=>{
-  if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();}
-  polyEditing=false; setEditingTarget(null);
-  map.fire(L.Draw.Event.EDITSTOP);
+  if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();polyEditing=false;map.fire(L.Draw.Event.EDITSTOP);}
 };
 
 map.on(L.Draw.Event.CREATED,async e=>{
@@ -405,185 +337,63 @@ map.on(L.Draw.Event.CREATED,async e=>{
   const layer=e.layer;
   layer.setStyle({color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12});
   polyFG.addLayer(layer);
-  const rec={
-    id:uid(),
-    name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),
-    color:$polyColor?.value||'#ff4d4f',
-    visible:true,
-    geojson:layer.toGeoJSON()
-  };
+  const rec={id:uid(),name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),color:$polyColor?.value||'#ff4d4f',visible:true,geojson:layer.toGeoJSON()};
   db.polygons.push(rec);
   polyIndex.set(rec.id,layer);
-  await ensureHistWithCurrent(rec);
-  await pushHistory(rec);
-  await save(db);
+  pushHistory(); await save(db);
   renderPolyList(); updatePolygonVisibility();
-});
-
-const editDebounce=new Map();
-map.on(L.Draw.Event.EDITVERTEX, async ()=>{
-  const id=polyEditingTargetId;
-  if(!id) return;
-  const p=db.polygons.find(x=>x.id===id); if(!p) return;
-  const l=polyIndex.get(id); if(!l) return;
-
-  if(editDebounce.has(id)) clearTimeout(editDebounce.get(id));
-  editDebounce.set(id,setTimeout(async ()=>{
-    p.geojson=l.toGeoJSON();
-    await lfGeo.setItem(id,p.geojson);
-    await pushHistory(p);
-    await save(db);
-    renderPolyList();
-  },300));
 });
 
 map.on(L.Draw.Event.EDITSTOP,async ()=>{
   for(const p of db.polygons){
     const l=polyIndex.get(p.id);
-    if(l){
-      p.geojson=l.toGeoJSON();
-      await lfGeo.setItem(p.id,p.geojson);
-      await pushHistory(p);
-    }
+    if(l) p.geojson=l.toGeoJSON();
   }
-  polyEditing=false;
-  await save(db);
+  pushHistory(); await save(db);
   renderPolyList(); updatePolygonVisibility();
 });
 
-/***** POLY LIST (фикс скролла + сворачивание) *****/
+/***** RENDER POLY LIST (сворачивание + подсветка) *****/
+let collapsedPolygons=new Set(JSON.parse(localStorage.getItem("collapsedPolygons")||"[]"));
 function renderPolyList(){
   if(!$polyList) return;
-  const q=($polySearch?.value||"").trim().toLowerCase();
-
-  // сохраняем текущую прокрутку ДО очистки
-  const scrollTop = $polyList.scrollTop;
-
+  const prevScroll=$polyList.scrollTop;
   $polyList.innerHTML='';
-  const checks=Promise.all(db.polygons.map(async p=>{
-    const h=await getHist(p.id);
-    return {id:p.id, undo:!!(h&&h.index>0), redo:!!(h&&h.index<h.stack.length-1)};
-  }));
-  checks.then(states=>{
-    const byId=new Map(states.map(x=>[x.id,x]));
-    db.polygons
-      .filter(p=>!q || (p.name||'').toLowerCase().includes(q))
-      .forEach(p=>{
-        const st=byId.get(p.id)||{undo:false,redo:false};
+  db.polygons.forEach(p=>{
+    const wrap=document.createElement('div'); wrap.className='item'; if(p.id===activePolyId) wrap.classList.add('active'); wrap.dataset.id=p.id;
+    const header=document.createElement('div'); header.className='item-header';
+    const left=document.createElement('div'); left.className='left';
+    const name=document.createElement('div'); name.className='name'; name.textContent=p.name||'Полигон';
+    const idSpan=document.createElement('div'); idSpan.className='id'; idSpan.textContent=p.id;
+    left.append(name,idSpan);
+    const btns=document.createElement('div'); btns.className='btns';
+    const toggle=document.createElement('button'); toggle.textContent=collapsedPolygons.has(p.id)?'▶':'▼';
+    toggle.onclick=()=>{ if(collapsedPolygons.has(p.id))collapsedPolygons.delete(p.id); else collapsedPolygons.add(p.id); localStorage.setItem("collapsedPolygons",JSON.stringify([...collapsedPolygons])); renderPolyList(); };
+    btns.append(toggle); header.append(left,btns);
+    const body=document.createElement('div'); body.className='item-body'; if(!collapsedPolygons.has(p.id)) body.classList.add('open');
 
-        const row=document.createElement('div'); row.className='item'; row.dataset.id=p.id;
-        if(p.id===polyEditingTargetId) row.classList.add('active');
+    const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
+    nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await save(db); renderPolyList(); updatePolygonVisibility();};
+    const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
+    color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
+    const vis=document.createElement('button'); vis.textContent=p.visible!==false?'Скрыть':'Показать';
+    vis.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await save(db); renderPolyList(); updatePolygonVisibility();};
+    const focus=document.createElement('button'); focus.textContent='Фокус';
+    focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){if(p.visible===false){p.visible=true;l.addTo(map);} map.fitBounds(l.getBounds()); renderPolyList();}};
+    const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
+    del.onclick=async()=>{if(!confirm('Удалить?'))return;const l=polyIndex.get(p.id);if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); pushHistory(); await save(db); renderPolyList(); updatePolygonVisibility();};
 
-        // HEADER
-        const header=document.createElement('div'); header.className='item-header';
-        const left=document.createElement('div'); left.className='left';
-        const name=document.createElement('span'); name.className='name'; name.textContent=p.name||'Полигон';
-        const idSpan=document.createElement('span'); idSpan.className='id'; idSpan.textContent=`id: ${p.id}`;
-        left.append(name,idSpan);
-
-        const btns=document.createElement('div'); btns.className='btns';
-        const collapseBtn=document.createElement('button'); collapseBtn.textContent=collapsedPolygons[p.id]?'▶':'▼';
-        collapseBtn.title='Свернуть/развернуть';
-        collapseBtn.onclick=(ev)=>{ ev.stopPropagation(); toggleCollapse(p.id); };
-        const focusHdr=document.createElement('button'); focusHdr.textContent='Фокус';
-        focusHdr.onclick=(ev)=>{ ev.stopPropagation(); const l=polyIndex.get(p.id); if(l){ l.addTo(map); map.fitBounds(l.getBounds()); } };
-        btns.append(collapseBtn,focusHdr);
-
-        header.append(left,btns);
-        header.onclick=()=>toggleCollapse(p.id);
-        row.appendChild(header);
-
-        // BODY
-        const body=document.createElement('div'); body.className='item-body';
-        if(!collapsedPolygons[p.id]) body.classList.add('open');
-
-        // editable name
-        const nameRow=document.createElement('div'); nameRow.className='row';
-        const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
-        nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await save(db); renderPolyList(); updatePolygonVisibility();};
-        nameRow.appendChild(nameInput);
-        body.appendChild(nameRow);
-
-        // tools
-        const tools=document.createElement('div'); tools.className='tools';
-        // color picker
-        const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
-        color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
-        // visible toggle
-        const toggle=document.createElement('button'); toggle.textContent=p.visible!==false?'Скрыть':'Показать';
-        toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await save(db); renderPolyList(); updatePolygonVisibility();};
-        // focus
-        const focus=document.createElement('button'); focus.textContent='Фокус'; focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
-        // undo/redo
-        const undoBtn=document.createElement('button'); undoBtn.textContent='↶ Undo'; if(!st.undo) undoBtn.disabled=true;
-        undoBtn.onclick=()=>undoPolygon(p.id);
-        const redoBtn=document.createElement('button'); redoBtn.textContent='↷ Redo'; if(!st.redo) redoBtn.disabled=true;
-        redoBtn.onclick=()=>redoPolygon(p.id);
-        // edit
-        const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
-        editBtn.onclick=async()=>{
-          const l=polyIndex.get(p.id);
-          if(l){
-            l.addTo(map);
-            if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-            polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
-            polyEditToolbar.enable(); polyEditing=true;
-            polyFG.eachLayer(x=>{
-              if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
-              else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
-            });
-            const h=await ensureHistWithCurrent(p);
-            if(h.index<0){ await pushHistory(p); }
-            setEditingTarget(p.id);
-            map.fitBounds(l.getBounds());
-          }
-        };
-        // delete
-        const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-        del.onclick=async()=>{ if(!confirm('Удалить полигон?')) return;
-          const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id);
-          db.polygons=db.polygons.filter(x=>x.id!==p.id);
-          await lfGeo.removeItem(p.id); await clearHist(p.id); await save(db);
-          if(polyEditingTargetId===p.id){ setEditingTarget(null); }
-          renderPolyList(); updatePolygonVisibility();
-        };
-
-        tools.append(color,toggle,focus,undoBtn,redoBtn,editBtn,del);
-        body.appendChild(tools);
-
-        row.appendChild(body);
-        $polyList.appendChild(row);
-      });
-
-    // восстановим прокрутку (двойной тик, чтобы победить сброс скролла браузером)
-    requestAnimationFrame(()=>{ $polyList.scrollTop = scrollTop; setTimeout(()=>{ $polyList.scrollTop = scrollTop; },0); });
+    body.append(nameInput,color,vis,focus,del);
+    wrap.append(header,body); $polyList.appendChild(wrap);
   });
-}
-$polySearch.oninput=renderPolyList;
-
-/***** VISIBILITY BY SELECTION *****/
-function getSelectedItemNames(){
-  const names=new Set();
-  for(const cat of db.categories){
-    const ids=getSelectedIds(cat.id);
-    if(!ids.length) continue;
-    (cat.items||[]).forEach(it=>{if(ids.includes(it.id)) names.add(it.name);});
-  }
-  return names;
-}
-function updatePolygonVisibility(){
-  const names=getSelectedItemNames();
-  for(const p of db.polygons){
-    const layer=polyIndex.get(p.id); if(!layer) continue;
-    const filtered=(p.visible!==false)&&(names.size?names.has(p.name):true);
-    const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
-    if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
-  }
+  $polyList.scrollTop=prevScroll;
 }
 
-/***** EDITOR (категории + элементы) *****/
+/***** EDITOR (категории + элементы, со сворачиванием) *****/
+let collapsedCategories=new Set(JSON.parse(localStorage.getItem("collapsedCategories")||"[]"));
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
+  const prevScroll=$editor.scrollTop;
   $editor.innerHTML="";
 
   // новая категория
@@ -593,10 +403,7 @@ function renderEditor(){
     <div class="row">
       <input id="newCatName" placeholder="Название"/>
       <select id="newCatType"><option value="select">Select</option><option value="checkbox">Checkbox</option></select>
-      <select id="newCatParent">
-        <option value="">(нет родителя)</option>
-        ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
-      </select>
+      <select id="newCatParent"><option value="">(нет родителя)</option>${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
     </div>
     <div class="row">
       <span class="preview-icon" id="newIconPreview">icon</span>
@@ -606,13 +413,16 @@ function renderEditor(){
       <button id="btnAddCat">+ Добавить</button>
     </div>`;
   $editor.appendChild(create);
-
+  // иконка для новой категории (превью + загрузка)
   const newIconInput=create.querySelector('#newCatIcon');
   const newIconPreview=create.querySelector('#newIconPreview');
   let newIconData=null;
   newIconInput.onchange=e=>{
-    const f=e.target.files[0]; if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
-    const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
+    const f=e.target.files[0];
+    if(!f){ newIconData=null; newIconPreview.textContent='icon'; return; }
+    const r=new FileReader();
+    r.onload=ev=>{ newIconData=ev.target.result; newIconPreview.innerHTML=`<img src="${newIconData}">`; };
+    r.readAsDataURL(f);
   };
   create.querySelector('#btnAddCat').onclick=async()=>{
     const name=document.getElementById('newCatName').value.trim(); if(!name) return;
@@ -625,28 +435,47 @@ function renderEditor(){
     db.categories.push(cat); await save(); renderAll();
   };
 
-  // список категорий
+  // список категорий (со сворачиванием)
   db.categories.forEach((cat,ci)=>{
     const sec=document.createElement('div'); sec.className='panel';
-    const header=document.createElement('div'); header.className='row';
+    const header=document.createElement('div'); header.className='row'; header.style.justifyContent='space-between'; header.style.alignItems='center';
     const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
-    header.append(title); sec.appendChild(header);
+
+    const toggle=document.createElement('button');
+    const collapsed = collapsedCategories.has(cat.id);
+    toggle.textContent = collapsed ? '▶' : '▼';
+    toggle.title = 'Свернуть/развернуть';
+    toggle.onclick=()=>{
+      if(collapsedCategories.has(cat.id)) collapsedCategories.delete(cat.id);
+      else collapsedCategories.add(cat.id);
+      localStorage.setItem("collapsedCategories",JSON.stringify([...collapsedCategories]));
+      renderEditor();
+    };
+
+    header.append(title,toggle); sec.appendChild(header);
+
+    const body=document.createElement('div'); if(collapsed) body.style.display='none';
 
     const cfg=document.createElement('div'); cfg.className='row';
     const inpName=document.createElement('input'); inpName.value=cat.name;
     inpName.onchange=()=>{cat.name=inpName.value.trim(); save(); renderAll();};
+
     const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);});
     selType.onchange=()=>{cat.type=selType.value; save(); renderAll();};
+
     const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join('');
     selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; save(); renderAll();};
+
     const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; save(); renderAll();};
+
     const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);});
     shape.onchange=()=>{cat.shape=shape.value; save(); renderAll();};
+
     const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
     const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
     btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
 
-    // загрузка иконки
+    // загрузка иконки категории
     const iconInput=document.createElement('input');
     iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
     const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
@@ -660,18 +489,19 @@ function renderEditor(){
     };
 
     cfg.append(inpName,selType,selParent,col,shape,iconPrev,iconBtn,iconInput,btnClearIcon);
-    sec.appendChild(cfg);
+    body.appendChild(cfg);
 
-    // элементы
+    // элементы категории
     const list=document.createElement('div'); list.className='list';
     (cat.items||[]).forEach((it,ii)=>{
       const line=document.createElement('div'); line.className='item';
+      const header=document.createElement('div'); header.className='item-header'; header.style.cursor='default';
       const left=document.createElement('div'); left.className='left';
       const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
-      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}`;
+      const meta=document.createElement('div'); meta.className='id'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}`;
       left.append(nm,meta);
 
-      const tools=document.createElement('div'); tools.className='tools';
+      const btns=document.createElement('div'); btns.className='btns';
       const edit=document.createElement('button'); edit.textContent='✎';
       edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){it.name=(nn.trim()||it.name); save(); renderAll();}};
       const place=document.createElement('button'); place.textContent='📍';
@@ -689,11 +519,11 @@ function renderEditor(){
       const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
       del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items.splice(ii,1); save(); renderAll();}};
 
-      line.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ map.setView([it.lat,it.lng],14); } };
-      tools.append(edit,place,clearBtn,del);
-      line.append(left,tools); list.appendChild(line);
+      btns.append(edit,place,clearBtn,del);
+      header.append(left,btns);
+      line.append(header); list.appendChild(line);
     });
-    sec.appendChild(list);
+    body.appendChild(list);
 
     // добавление элемента
     const addRow=document.createElement('div'); addRow.className='row';
@@ -707,23 +537,36 @@ function renderEditor(){
     }
     const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
     addBtn.onclick=()=>{ const nm=inp.value.trim()||'Новый'; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parentPicker.value||null}); inp.value=''; save(); renderAll(); };
-    addRow.append(inp,parentPicker,addBtn); sec.appendChild(addRow);
+    addRow.append(inp,parentPicker,addBtn); body.appendChild(addRow);
 
+    sec.appendChild(body);
     $editor.appendChild(sec);
   });
+
+  // восстановление скролла редактора
+  requestAnimationFrame(()=>{ $editor.scrollTop = prevScroll; setTimeout(()=>{ $editor.scrollTop = prevScroll; },0); });
 }
 
-/***** PREVIEW *****/
+/***** PREVIEW (фикс скролла) *****/
 const $cascade=document.getElementById('cascadeBox');
+const $previewSidebar=document.getElementById('previewTab');
 let selected={};
 let reopenMultiCatId=null;
 
+function getSelectedIds(catId){
+  const cat=db.categories.find(x=>x.id===catId);
+  const v=selected[catId];
+  if(!v) return [];
+  return (cat && cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
+}
 function dropChildrenSelections(parentCatId){
   const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
   for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
 }
 
 function renderPreview(){
+  const prevScroll=$previewSidebar.scrollTop;
+
   $cascade.innerHTML="";
   clearMarkers();
 
@@ -815,6 +658,9 @@ function renderPreview(){
     if(panel) panel.classList.add('open');
     reopenMultiCatId=null;
   }
+
+  // восстановление скролла предпросмотра
+  requestAnimationFrame(()=>{ $previewSidebar.scrollTop = prevScroll; setTimeout(()=>{ $previewSidebar.scrollTop = prevScroll; },0); });
 }
 
 // клик вне мультиселекта — закрыть
@@ -824,7 +670,7 @@ document.addEventListener('click', e=>{
   });
 });
 
-/***** SEARCH (элементы) *****/
+/***** ПОИСК ПО ЭЛЕМЕНТАМ И ПОЛИГОНАМ *****/
 const $search=document.getElementById('globalSearch');
 const $results=document.getElementById('searchResults');
 $search.oninput=()=>{
@@ -835,7 +681,7 @@ $search.oninput=()=>{
   const out=[];
   db.categories.forEach(cat=>{
     (cat.items||[]).forEach(it=>{
-      if(it.name.toLowerCase().includes(q)){
+      if((it.name||'').toLowerCase().includes(q)){
         out.push({cat,it});
       }
     });
@@ -859,21 +705,102 @@ $search.oninput=()=>{
   });
 };
 
-/***** EXPORT/IMPORT/RESET *****/
-document.getElementById('btnExport').onclick=async ()=>{
-  // Полный экспорт: подтягиваем iconData и geojson
-  const full=JSON.parse(JSON.stringify(db));
-  for(const cat of full.categories){
-    if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
-    for(const it of (cat.items||[])){
-      if(it.iconKey && !it.iconData){ try{ it.iconData=await lfIcons.getItem(it.iconKey)||null; }catch(e){} }
-    }
+// поиск по полигонам
+const $polySearch=document.getElementById('polySearch');
+$polySearch.oninput=()=>renderPolyList();
+// переопределим renderPolyList, чтобы поддерживать фильтр (последняя версия заменит предыдущую)
+const _renderPolyListOld = renderPolyList;
+renderPolyList = function(){
+  const prevScroll=$polyList.scrollTop;
+  const q=($polySearch?.value||"").trim().toLowerCase();
+  $polyList.innerHTML='';
+  db.polygons
+    .filter(p=>!q || (p.name||'').toLowerCase().includes(q) || (p.id||'').toLowerCase().includes(q))
+    .forEach(p=>{
+      const wrap=document.createElement('div'); wrap.className='item'; if(p.id===activePolyId) wrap.classList.add('active'); wrap.dataset.id=p.id;
+      const header=document.createElement('div'); header.className='item-header';
+      const left=document.createElement('div'); left.className='left';
+      const name=document.createElement('div'); name.className='name'; name.textContent=p.name||'Полигон';
+      const idSpan=document.createElement('div'); idSpan.className='id'; idSpan.textContent=`id: ${p.id}`;
+      left.append(name,idSpan);
+      const btns=document.createElement('div'); btns.className='btns';
+      const toggle=document.createElement('button'); toggle.textContent=collapsedPolygons.has(p.id)?'▶':'▼';
+      toggle.onclick=()=>{ if(collapsedPolygons.has(p.id))collapsedPolygons.delete(p.id); else collapsedPolygons.add(p.id); localStorage.setItem("collapsedPolygons",JSON.stringify([...collapsedPolygons])); renderPolyList(); };
+      const focusHdr=document.createElement('button'); focusHdr.textContent='Фокус';
+      focusHdr.onclick=(ev)=>{ ev.stopPropagation(); const l=polyIndex.get(p.id); if(l){ if(p.visible===false){p.visible=true;l.addTo(map);} map.fitBounds(l.getBounds()); renderPolyList(); } };
+      btns.append(toggle,focusHdr);
+      header.append(left,btns);
+
+      const body=document.createElement('div'); body.className='item-body'; if(!collapsedPolygons.has(p.id)) body.classList.add('open');
+
+      const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
+      nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await save(db); renderPolyList(); updatePolygonVisibility();};
+      const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
+      color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
+      const vis=document.createElement('button'); vis.textContent=p.visible!==false?'Скрыть':'Показать';
+      vis.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await save(db); renderPolyList(); updatePolygonVisibility();};
+      const focus=document.createElement('button'); focus.textContent='Фокус';
+      focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ if(p.visible===false){p.visible=true;l.addTo(map);} map.fitBounds(l.getBounds()); renderPolyList(); }};
+      const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
+      del.onclick=async()=>{if(!confirm('Удалить?'))return;const l=polyIndex.get(p.id);if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); pushHistory(); await save(db); renderPolyList(); updatePolygonVisibility();};
+
+      const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
+      editBtn.onclick=async()=>{
+        const l=polyIndex.get(p.id);
+        if(l){
+          l.addTo(map);
+          if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+          polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+          polyEditToolbar.enable(); polyEditing=true;
+          polyFG.eachLayer(x=>{
+            if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
+            else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
+          });
+          activePolyId=p.id;
+          localStorage.setItem('polyEditingId',p.id);
+          map.fitBounds(l.getBounds());
+          renderPolyList();
+        }
+      };
+
+      header.onclick=()=>{ if(collapsedPolygons.has(p.id))collapsedPolygons.delete(p.id); else collapsedPolygons.add(p.id); localStorage.setItem("collapsedPolygons",JSON.stringify([...collapsedPolygons])); renderPolyList(); };
+
+      body.append(nameInput,color,vis,focus,editBtn,del);
+      wrap.append(header,body); $polyList.appendChild(wrap);
+    });
+  // восстановить скролл
+  requestAnimationFrame(()=>{ $polyList.scrollTop = prevScroll; setTimeout(()=>{ $polyList.scrollTop = prevScroll; },0); });
+};
+
+/***** ВИДИМОСТЬ ПОЛИГОНОВ ПО ВЫБОРУ *****/
+function getSelectedItemNames(){
+  const names=new Set();
+  for(const cat of db.categories){
+    const ids=getSelectedIds(cat.id);
+    if(!ids.length) continue;
+    (cat.items||[]).forEach(it=>{if(ids.includes(it.id)) names.add(it.name);});
   }
+  return names;
+}
+function updatePolygonVisibility(){
+  const names=getSelectedItemNames();
+  for(const p of db.polygons){
+    const layer=polyIndex.get(p.id); if(!layer) continue;
+    const match=(p.visible!==false)&&(names.size?names.has(p.name):true);
+    const force = (activePolyId && p.id===activePolyId);
+    if(match||force) layer.addTo(map); else map.removeLayer(layer);
+  }
+}
+
+/***** ЭКСПОРТ / ИМПОРТ / СБРОС *****/
+document.getElementById('btnExport').onclick=async ()=>{
+  const full=JSON.parse(JSON.stringify(db));
+  // подтянуть geojson (на случай если где-то ещё не записалось)
   for(const p of full.polygons){
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_6_5R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_6_6R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -887,31 +814,12 @@ document.getElementById('fileImport').onchange=e=>{
       if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
       if(!Array.isArray(obj.polygons))   obj.polygons=[];
 
-      // иконки → IndexedDB
-      for(const cat of obj.categories){
-        if(!cat.id) cat.id=uid();
-        if(cat.iconData){
-          const key=cat.iconKey||`cat_${cat.id}`;
-          await lfIcons.setItem(key,cat.iconData);
-          cat.iconKey=key;
-        }
-        for(const it of (cat.items||[])){
-          if(!it.id) it.id=uid();
-          if(it.iconData){
-            const key=it.iconKey||`item_${it.id}`;
-            await lfIcons.setItem(key,it.iconData);
-            it.iconKey=key;
-          }
-        }
-      }
-      // полигоны → IndexedDB + история
+      // иконки опускаем (в этой версии не тянем iconData обратно), переносим геометрию
       for(const p of obj.polygons){
         if(!p.id) p.id=uid();
         if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
-        await setHist(p.id,{stack:[p.geojson||null].filter(Boolean),index:(p.geojson?0:-1)});
       }
 
-      // сохранить лайтовую часть + перезагрузить полные данные
       localStorage.setItem(KEY, JSON.stringify({
         categories:obj.categories.map(c=>({
           id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
@@ -923,8 +831,9 @@ document.getElementById('fileImport').onchange=e=>{
       db = await loadDB();
 
       renderAll();
-      resumeEditingIfNeeded();
-      updatePolygonVisibility();
+      // восстановить редактирование, если было
+      const eid=localStorage.getItem('polyEditingId');
+      if(eid){ const l=polyIndex.get(eid); if(l){ if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); } polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG}); polyEditToolbar.enable(); polyEditing=true; activePolyId=eid; map.fitBounds(l.getBounds()); } }
       alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
   };
@@ -937,12 +846,12 @@ document.getElementById('btnReset').onclick=()=>{
     localStorage.removeItem('selected_v1');
     localStorage.removeItem('polyEditingId');
     localStorage.removeItem('collapsedPolygons');
-    lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{}); lfHist.clear().then(()=>{});
-    location.reload();
+    localStorage.removeItem('collapsedCategories');
+    lfGeo.clear().then(()=>{ location.reload(); });
   }
 };
 
-/***** TABS *****/
+/***** ВКЛАДКИ *****/
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.onclick=()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -953,14 +862,14 @@ document.querySelectorAll('.tab').forEach(tab=>{
   };
 });
 
-/***** MAIN RENDER *****/
+/***** MAIN RENDER + START *****/
 async function renderAll(){
   rebuildPolys();
   renderEditor();
   renderPreview();
   renderPolyList();
 
-  // метки всех выбранных
+  // перерисовать маркеры по выбранным
   clearMarkers();
   db.categories.forEach(cat=>{
     (cat.items||[]).forEach(it=>{
@@ -969,31 +878,24 @@ async function renderAll(){
   });
 }
 
-/***** RESUME EDIT MODE *****/
-function resumeEditingIfNeeded(){
-  const id=localStorage.getItem('polyEditingId');
-  if(!id) return;
-  const layer=polyIndex.get(id);
-  if(!layer) return;
-  if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
-  polyEditToolbar.enable(); polyEditing=true;
-  polyFG.eachLayer(x=>{
-    if(x===layer){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
-    else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
-  });
-  setEditingTarget(id);
-  layer.addTo(map);
-  map.fitBounds(layer.getBounds());
-}
-
-/***** START *****/
 let db=null;
 (async()=>{
   db = await loadDB();
   loadSelected();
   await renderAll();
-  resumeEditingIfNeeded();
+  // попытка восстановить активное редактирование
+  const eid=localStorage.getItem('polyEditingId');
+  if(eid){
+    const l=polyIndex.get(eid);
+    if(l){
+      if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+      polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+      polyEditToolbar.enable(); polyEditing=true;
+      activePolyId=eid;
+      map.fitBounds(l.getBounds());
+      renderPolyList();
+    }
+  }
 })();
 </script>
 </body>
