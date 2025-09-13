@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.7 — база 38.3R + фикс импорта полигонов</title>
+<title>location_selector_v38.4R — стабильная база + фикс полигонов</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -31,7 +31,7 @@ main{display:grid;grid-template-columns:460px 1fr;height:calc(100vh - 94px)}
 .panel{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
 h3{margin:0 0 8px 0}
 h4{margin:0 0 8px 0}
-input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
+input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:#0f1624;color:#e7f1ff}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .list{display:grid;gap:6px}
 .item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#111a2a}
@@ -76,12 +76,13 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.7</span>
+  <span class="badge">dictionary v38.4R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
   <button id="btnReset" class="danger">Сброс</button>
 </header>
+
 <div class="tabs">
   <div class="tab active" data-tab="editor">Редактор</div>
   <div class="tab" data-tab="preview">Предпросмотр</div>
@@ -119,9 +120,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_7";
-const lfIcons=localforage.createInstance({name:"dict_icons_v387"});
-const lfGeo=localforage.createInstance({name:"dict_geo_v387"});
+const KEY="dict_v38_4R";
+const lfIcons=localforage.createInstance({name:"dict_icons_v384R"});
+const lfGeo=localforage.createInstance({name:"dict_geo_v384R"});
 
 function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -151,7 +152,7 @@ function normalize(obj){
     if(!("visible" in p))p.visible=true;
   });
 }
-// лёгкий слепок в LS, тяжёлое в IndexedDB (иконки/гео)
+// лёгкий слепок в LS, тяжёлое в IndexedDB
 async function save(obj=db){
   normalize(obj);
   const lite={
@@ -282,7 +283,6 @@ function rebuildPolys(){
   }
   updatePolygonVisibility();
 }
-
 /***** POLYGON UI + EDIT EVENTS *****/
 const $polyList=document.getElementById('polyList');
 const $polyName=document.getElementById('polyName');
@@ -379,7 +379,6 @@ function updatePolygonVisibility(){
     if(match) layer.addTo(map); else map.removeLayer(layer);
   }
 }
-
 /***** EDITOR (категории + элементы) *****/
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
@@ -448,7 +447,7 @@ function renderEditor(){
     // загрузка иконки категории
     const iconInput=document.createElement('input');
     iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
-    const iconBtn=document.createElement('button'); iconBtn.textContent='🖼';
+    const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
     iconBtn.onclick=()=>iconInput.click();
     iconInput.onchange=e=>{
       const f=e.target.files[0];
@@ -511,6 +510,7 @@ function renderEditor(){
     $editor.appendChild(sec);
   });
 }
+
 /***** PREVIEW *****/
 const $cascade=document.getElementById('cascadeBox');
 let selected={};
@@ -591,7 +591,7 @@ function renderPreview(){
         menu.appendChild(lbl);
       });
 
-      // открыть один — закрыть остальные
+      // открыть один — закрыть все остальные
       btn.onclick=()=>{
         document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
         multi.classList.toggle('open');
@@ -663,7 +663,7 @@ $search.oninput=()=>{
   });
 };
 
-/***** EXPORT/IMPORT/RESET (фикс импорта полигонов) *****/
+/***** EXPORT/IMPORT/RESET *****/
 document.getElementById('btnExport').onclick=async ()=>{
   // Полный экспорт: подтягиваем iconData и geojson
   const full=JSON.parse(JSON.stringify(db));
@@ -677,7 +677,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_7.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_4R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -714,25 +714,22 @@ document.getElementById('fileImport').onchange=e=>{
         if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
       }
 
-      // сохранить лайтовую часть в LS
+      // сохранить лайтовую часть + перезагрузить полные данные
       localStorage.setItem(KEY, JSON.stringify({
         categories:obj.categories.map(c=>({
           id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
           color:c.color,shape:c.shape,iconKey:c.iconKey||null,
           items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
         })),
-        polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:true})) // видимые по умолчанию
+        polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
       }));
-
-      // перезагружаем полные данные из IndexedDB
       db = await loadDB();
 
-      // КЛЮЧЕВОЙ ФИКС: сразу отрисовать и сделать видимыми
-      rebuildPolys();                         // пересобрать слои
-      db.polygons.forEach(p=>p.visible=true); // включить видимость
-      updatePolygonVisibility();              // показать на карте
-      renderAll();                            // UI и список
-      await save(db);                         // сохранить актуальное состояние
+      // ключевой фикс: сразу построить слои и включить редактирование без поиска
+      rebuildPolys();            // пересобираем polyFG и polyIndex
+      renderPolyList();          // обновляем список
+      updatePolygonVisibility(); // показать на карте
+      renderPreview();           // чтобы UI знал о полигонах сразу
 
       alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
