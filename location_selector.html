@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.5R — стабильная база + сохранение режима редактирования</title>
+<title>location_selector_v38.5.1R — стабильная база + фиксы редактирования и поиска</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -35,7 +35,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .list{display:grid;gap:6px}
 .item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#111a2a}
-.item.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#16233a}
 .item .left{display:grid;gap:2px}
 .item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
 .item .meta{color:var(--muted);font-size:12px}
@@ -57,27 +56,25 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select-menu label:hover{background:#1f293d}
 /* чекбокс */
 .multi-select-menu input[type="checkbox"]{
-  appearance:none;-webkit-appearance:none;
-  width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
-  background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
+  appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
 }
-.multi-select-menu input[type="checkbox"]:checked{
-  background:var(--accent);border-color:var(--accent);
-}
-multi-select-menu input[type="checkbox"]:checked::after{
-  content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff
-}
+.multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
+.multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
 
 /* поиск */
-#globalSearch,#polySearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
+#globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 .search-results{max-height:200px;overflow:auto;margin-top:6px}
 .search-results div{padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer}
 .search-results div:hover{background:#1f293d}
+
+/* v38.5.1R: подсветка активного полигона + поиск по полигонам */
+.item.active{border:1px solid var(--accent);background:#1f2d44}
+#polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.5R</span>
+  <span class="badge">dictionary v38.5.1R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -297,23 +294,19 @@ document.getElementById('btnPolyNew').onclick=()=>{
   new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
 };
 
-let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null; // будет сохраняться в LS
+let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
 
-function setEditingTarget(id){
-  polyEditingTargetId=id||null;
-  localStorage.setItem('polyEditingId_v1', id||'');
-  renderPolyList();
-  updatePolygonVisibility();
-}
 document.getElementById('btnPolyEdit').onclick=()=>{
   if(polyEditing) return;
+  polyEditingTargetId=null;
+  localStorage.removeItem('polyEditingId');
   polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
   polyEditToolbar.enable(); polyEditing=true;
-  setEditingTarget(null); // глобальный режим, без конкретного id
 };
 document.getElementById('btnPolyStop').onclick=()=>{
   if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();}
-  polyEditing=false; setEditingTarget(null);
+  polyEditing=false; polyEditingTargetId=null;
+  localStorage.removeItem('polyEditingId');
   map.fire(L.Draw.Event.EDITSTOP);
 };
 
@@ -345,9 +338,16 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
   renderPolyList(); updatePolygonVisibility();
 });
 
+function setEditingTarget(id){
+  polyEditingTargetId=id||null;
+  if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId');
+  renderPolyList();
+  updatePolygonVisibility();
+}
+
 function renderPolyList(){
   if(!$polyList) return;
-  const q=($polySearch?.value||'').trim().toLowerCase();
+  const q=($polySearch?.value||"").trim().toLowerCase();
   $polyList.innerHTML='';
   db.polygons
     .filter(p=>!q || (p.name||'').toLowerCase().includes(q))
@@ -376,16 +376,14 @@ function renderPolyList(){
           const fg=new L.FeatureGroup([l]);
           polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:fg});
           polyEditToolbar.enable(); polyEditing=true;
+          setEditingTarget(p.id);
           map.fitBounds(l.getBounds());
-          setEditingTarget(p.id); // сохранит в LS и подсветит
         }
       };
-      const stop=document.createElement('button'); stop.textContent='Стоп';
-      stop.onclick=()=>{ if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); } polyEditing=false; setEditingTarget(null); };
       const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-      del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await save(db); renderPolyList(); updatePolygonVisibility();};
+      del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await save(db); if(polyEditingTargetId===p.id){ setEditingTarget(null);} renderPolyList(); updatePolygonVisibility();};
 
-      tools.append(color,toggle,focus,editBtn,stop,del);
+      tools.append(color,toggle,focus,editBtn,del);
       row.append(left,tools); $polyList.appendChild(row);
     });
 }
@@ -411,9 +409,9 @@ function updatePolygonVisibility(){
   const names=getSelectedItemNames();
   for(const p of db.polygons){
     const layer=polyIndex.get(p.id); if(!layer) continue;
-    const filtered=(p.visible!==false) && (names.size ? names.has(p.name) : true);
-    const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
-    if(filtered || forceVisible) layer.addTo(map); else map.removeLayer(layer);
+    const filtered=(p.visible!==false)&&(names.size?names.has(p.name):true); // если ничего не выбрано — показываем все
+    const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);  // редактируемый всегда виден
+    if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
   }
 }
 
@@ -482,7 +480,7 @@ function renderEditor(){
     const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
     btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
 
-    // загрузка иконки категории (кнопка)
+    // загрузка иконки категории
     const iconInput=document.createElement('input');
     iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
     const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
@@ -763,9 +761,9 @@ document.getElementById('fileImport').onchange=e=>{
       }));
       db = await loadDB();
 
-      // не сбрасываем selected
+      // не сбрасываем selected; восстанавливаем отрисовку и режим редактирования
       renderAll();
-      rebuildPolys();
+      resumeEditingIfNeeded();
       updatePolygonVisibility();
       alert('Импортировано');
     }catch(err){ alert('Ошибка импорта: '+err.message); }
@@ -777,7 +775,7 @@ document.getElementById('btnReset').onclick=()=>{
   if(confirm('Очистить всё?')){
     localStorage.removeItem(KEY);
     localStorage.removeItem('selected_v1');
-    localStorage.removeItem('polyEditingId_v1');
+    localStorage.removeItem('polyEditingId');
     lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{});
     location.reload();
   }
@@ -809,30 +807,29 @@ async function renderAll(){
   });
 }
 
+/***** RESUME EDIT MODE (v38.5.1R) *****/
+function resumeEditingIfNeeded(){
+  const id=localStorage.getItem('polyEditingId');
+  if(!id) return;
+  const layer=polyIndex.get(id);
+  if(!layer) return; // например, id устарел или полигон удалён
+  if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+  const fg=new L.FeatureGroup([layer]);
+  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:fg});
+  polyEditToolbar.enable(); polyEditing=true;
+  setEditingTarget(id);
+  layer.addTo(map);
+  map.fitBounds(layer.getBounds());
+}
+
 /***** START *****/
 let db=null;
 (async()=>{
   db = await loadDB();
   loadSelected();
-  renderAll();
-
-  // восстановление режима редактирования, если был
-  const lastId=(localStorage.getItem('polyEditingId_v1')||'').trim();
-  if(lastId){
-    const layer=polyIndex.get(lastId);
-    if(layer){
-      if(polyEditToolbar){ polyEditToolbar.disable(); }
-      const fg=new L.FeatureGroup([layer]);
-      polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:fg});
-      polyEditToolbar.enable(); polyEditing=true;
-      layer.addTo(map);
-      map.fitBounds(layer.getBounds());
-      setEditingTarget(lastId);
-    }else{
-      // если слой ещё не построен по какой-то причине — просто запомним id
-      setEditingTarget(lastId);
-    }
-  }
+  await renderAll();
+  // пробуем восстановить редактирование после полной отрисовки
+  resumeEditingIfNeeded();
 })();
 </script>
 </body>
