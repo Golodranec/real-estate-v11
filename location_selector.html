@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.6.3R — Undo/Redo + фикс скролла + сворачивание полигонов</title>
+<title>location_selector_v38.6.5R — стабильная база + сворачивание + undo/redo + фикс скролла</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -19,7 +19,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
 header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border)}
-button{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
+button{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:#1a2234;color:#d7e2f2;cursor:pointer}
 button:hover{border-color:var(--accent)}
 button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
 button[disabled]{opacity:.5;cursor:not-allowed}
@@ -36,7 +36,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .list{display:grid;gap:6px}
 
-/* карточка полигона с шапкой и телом */
+/* карточка полигона: шапка/тело + подсветка редактируемого */
 .item{border:1px solid var(--border);border-radius:8px;background:#111a2a;overflow:hidden}
 .item.active{border:1px solid var(--accent);background:#1f2d44}
 .item-header{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;cursor:pointer;gap:8px}
@@ -46,22 +46,25 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .item-header .btns{display:flex;gap:6px;align-items:center}
 .item-body{padding:6px 8px;border-top:1px solid var(--border);display:none}
 .item-body.open{display:block}
-
 .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+
 .sep{height:1px;background:#243048;margin:8px 0}
 .help{font-size:12px;color:#9fb0c8}
 .note{background:#0e1524;border:1px dashed #32405a;padding:8px;border-radius:8px;color:#9fb0c8}
 .note.gray{opacity:.6}
-#map{width:100%;height:100%}
-.preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.preview-icon img{max-width:100%;max-height:100%;display:block}
 
-#globalSearch,#polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
+/* поиск по элементам */
+#globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 .search-results{max-height:200px;overflow:auto;margin-top:6px}
 .search-results div{padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer}
 .search-results div:hover{background:#1f293d}
 
-.hist-indicator{color:var(--accent);margin-left:6px}
+/* поиск по полигонам */
+#polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
+
+#map{width:100%;height:100%}
+.preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.preview-icon img{max-width:100%;max-height:100%;display:block}
 
 /* мультиселект */
 .multi-select{position:relative;width:100%}
@@ -70,16 +73,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select.open .multi-select-menu{display:block}
 .multi-select-menu label{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer}
 .multi-select-menu label:hover{background:#1f293d}
-.multi-select-menu input[type="checkbox"]{
-  appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
-}
+.multi-select-menu input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
 .multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
 .multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.6.3R</span>
+  <span class="badge">dictionary v38.6.5R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -124,10 +125,10 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 <script>
 /***** STORAGE + DB *****/
-const KEY="dict_v38_3R"; // совместимость
+const KEY="dict_v38_3R"; // совместимость со старой базой
 const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
-const lfHist=localforage.createInstance({name:"dict_geo_hist_v3863R"}); // история undo/redo
+const lfHist=localforage.createInstance({name:"dict_geo_hist_v3865R"}); // история undo/redo
 const HISTORY_LIMIT=20;
 
 function uid(){return Math.random().toString(36).slice(2,9);}
@@ -187,7 +188,7 @@ async function save(obj=db){
       }
     }
   }
-  // полигоны
+  // полигоны геометрия
   for(const p of obj.polygons){
     if(p.geojson) await lfGeo.setItem(p.id,p.geojson);
   }
@@ -218,7 +219,7 @@ async function loadDB(){
   return obj;
 }
 
-/***** SELECTED STATE *****/
+/***** SELECTED STATE (для предпросмотра) *****/
 function saveSelected(){
   const out={};
   for(const [k,v] of Object.entries(selected)){ out[k]=v instanceof Set?Array.from(v):v; }
@@ -234,6 +235,12 @@ function loadSelected(){
       else selected[k]=v||null;
     }
   }catch(_){selected={};}
+}
+function getSelectedIds(catId){
+  const cat=db.categories.find(x=>x.id===catId);
+  const v=selected[catId];
+  if(!v) return [];
+  return (cat && cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
 }
 
 /***** MAP + MARKERS *****/
@@ -339,6 +346,7 @@ async function applyHistoryIndex(p,newIndex,{keepEditing=false,fit=false}={}){
       if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
       else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
     });
+    setEditingTarget(p.id);
   }
   if(fit && l) map.fitBounds(l.getBounds());
   renderPolyList();
@@ -366,7 +374,6 @@ function setEditingTarget(id){
   renderPolyList();
   updatePolygonVisibility();
 }
-
 function toggleCollapse(id){
   collapsedPolygons[id]=!collapsedPolygons[id];
   localStorage.setItem("collapsedPolygons",JSON.stringify(collapsedPolygons));
@@ -443,7 +450,7 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
   await save(db);
   renderPolyList(); updatePolygonVisibility();
 });
-<script>
+
 /***** POLY LIST (фикс скролла + сворачивание) *****/
 function renderPolyList(){
   if(!$polyList) return;
@@ -544,29 +551,17 @@ function renderPolyList(){
         tools.append(color,toggle,focus,undoBtn,redoBtn,editBtn,del);
         body.appendChild(tools);
 
-        // индикатор истории (•) после инпута имени
-        const hst=byId.get(p.id); if(hst && hst.undo){
-          const dot=document.createElement('span'); dot.className='hist-indicator'; dot.textContent='•';
-          nameInput.insertAdjacentElement('afterend', dot);
-        }
-
         row.appendChild(body);
         $polyList.appendChild(row);
       });
 
-    // восстановим прокрутку с макро-микро тиком на всякий
+    // восстановим прокрутку (двойной тик, чтобы победить сброс скролла браузером)
     requestAnimationFrame(()=>{ $polyList.scrollTop = scrollTop; setTimeout(()=>{ $polyList.scrollTop = scrollTop; },0); });
   });
 }
 $polySearch.oninput=renderPolyList;
 
 /***** VISIBILITY BY SELECTION *****/
-function getSelectedIds(catId){
-  const cat=db.categories.find(x=>x.id===catId);
-  const v=selected[catId];
-  if(!v) return [];
-  return(cat&&cat.type==='checkbox')?Array.from(v):(v?[v]:[]);
-}
 function getSelectedItemNames(){
   const names=new Set();
   for(const cat of db.categories){
@@ -651,7 +646,7 @@ function renderEditor(){
     const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка';
     btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; save();};
 
-    // загрузка иконки категории
+    // загрузка иконки
     const iconInput=document.createElement('input');
     iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
     const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.title='Загрузить иконку категории';
@@ -792,6 +787,7 @@ function renderPreview(){
         menu.appendChild(lbl);
       });
 
+      // открыть один — закрыть остальные
       btn.onclick=()=>{
         document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
         multi.classList.toggle('open');
@@ -865,6 +861,7 @@ $search.oninput=()=>{
 
 /***** EXPORT/IMPORT/RESET *****/
 document.getElementById('btnExport').onclick=async ()=>{
+  // Полный экспорт: подтягиваем iconData и geojson
   const full=JSON.parse(JSON.stringify(db));
   for(const cat of full.categories){
     if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
@@ -876,7 +873,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_6_3R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_6_5R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -963,6 +960,7 @@ async function renderAll(){
   renderPreview();
   renderPolyList();
 
+  // метки всех выбранных
   clearMarkers();
   db.categories.forEach(cat=>{
     (cat.items||[]).forEach(it=>{
