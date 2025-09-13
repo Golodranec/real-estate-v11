@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector_v38.5.1R — стабильная база + фиксы редактирования и поиска</title>
+<title>location_selector_v38.5.2R — стабильная база + авто-возврат редактирования полигона</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -56,10 +56,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select-menu label:hover{background:#1f293d}
 /* чекбокс */
 .multi-select-menu input[type="checkbox"]{
-  appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
+  appearance:none;-webkit-appearance:none;
+  width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
+  background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
 }
 .multi-select-menu input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
-.multi-select-menu input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
+.multi-select-menu input[type="checkbox"]:checked::after{
+  content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff
+}
 
 /* поиск */
 #globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
@@ -67,14 +71,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .search-results div{padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer}
 .search-results div:hover{background:#1f293d}
 
-/* v38.5.1R: подсветка активного полигона + поиск по полигонам */
+/* подсветка активного полигона и поиск по полигонам */
 .item.active{border:1px solid var(--accent);background:#1f2d44}
 #polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v38.5.1R</span>
+  <span class="badge">dictionary v38.5.2R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -304,10 +308,9 @@ document.getElementById('btnPolyEdit').onclick=()=>{
   polyEditToolbar.enable(); polyEditing=true;
 };
 document.getElementById('btnPolyStop').onclick=()=>{
-  if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();}
-  polyEditing=false; polyEditingTargetId=null;
+  if(polyEditing&&polyEditToolbar){polyEditToolbar.disable();polyEditing=false;map.fire(L.Draw.Event.EDITSTOP);}
+  polyEditingTargetId=null;
   localStorage.removeItem('polyEditingId');
-  map.fire(L.Draw.Event.EDITSTOP);
 };
 
 map.on(L.Draw.Event.CREATED,async e=>{
@@ -333,7 +336,6 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
     const l=polyIndex.get(p.id);
     if(l) p.geojson=l.toGeoJSON();
   }
-  polyEditing=false;
   await save(db);
   renderPolyList(); updatePolygonVisibility();
 });
@@ -371,11 +373,16 @@ function renderPolyList(){
       editBtn.onclick=()=>{
         const l=polyIndex.get(p.id);
         if(l){
-          l.addTo(map); // показать даже если отфильтрован
+          l.addTo(map);
           if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-          const fg=new L.FeatureGroup([l]);
-          polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:fg});
+          // включаем общий EditToolbar на polyFG,
+          // а потом выключаем редактирование у всех, кроме выбранного
+          polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
           polyEditToolbar.enable(); polyEditing=true;
+          polyFG.eachLayer(x=>{
+            if(x===l){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
+            else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
+          });
           setEditingTarget(p.id);
           map.fitBounds(l.getBounds());
         }
@@ -409,12 +416,17 @@ function updatePolygonVisibility(){
   const names=getSelectedItemNames();
   for(const p of db.polygons){
     const layer=polyIndex.get(p.id); if(!layer) continue;
-    const filtered=(p.visible!==false)&&(names.size?names.has(p.name):true); // если ничего не выбрано — показываем все
-    const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);  // редактируемый всегда виден
+    const filtered=(p.visible!==false)&&(names.size?names.has(p.name):true);
+    const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
     if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
   }
 }
 
+---
+
+## Часть 2/2 — `location_selector_v38.5.2R.html`
+
+```html
 /***** EDITOR (категории + элементы) *****/
 const $editor=document.getElementById('editorTab');
 function renderEditor(){
@@ -627,7 +639,6 @@ function renderPreview(){
         menu.appendChild(lbl);
       });
 
-      // открыть один — закрыть все остальные
       btn.onclick=()=>{
         document.querySelectorAll('.multi-select.open').forEach(ms=>{ if(ms!==multi) ms.classList.remove('open'); });
         multi.classList.toggle('open');
@@ -638,7 +649,7 @@ function renderPreview(){
     $cascade.appendChild(box);
   });
 
-  // метки
+  // метки по выбранным
   for(const cat of db.categories){
     const ids=getSelectedIds(cat.id);
     for(const id of ids){
@@ -647,7 +658,6 @@ function renderPreview(){
     }
   }
 
-  // полигоны по выбору
   updatePolygonVisibility();
 
   if(reopenMultiCatId){
@@ -664,7 +674,7 @@ document.addEventListener('click', e=>{
   });
 });
 
-/***** SEARCH *****/
+/***** SEARCH (элементы) *****/
 const $search=document.getElementById('globalSearch');
 const $results=document.getElementById('searchResults');
 $search.oninput=()=>{
@@ -701,7 +711,6 @@ $search.oninput=()=>{
 
 /***** EXPORT/IMPORT/RESET *****/
 document.getElementById('btnExport').onclick=async ()=>{
-  // Полный экспорт: подтягиваем iconData и geojson
   const full=JSON.parse(JSON.stringify(db));
   for(const cat of full.categories){
     if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
@@ -727,7 +736,6 @@ document.getElementById('fileImport').onchange=e=>{
       if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
       if(!Array.isArray(obj.polygons))   obj.polygons=[];
 
-      // иконки → IndexedDB
       for(const cat of obj.categories){
         if(!cat.id) cat.id=uid();
         if(cat.iconData){
@@ -744,13 +752,11 @@ document.getElementById('fileImport').onchange=e=>{
           }
         }
       }
-      // полигоны → IndexedDB
       for(const p of obj.polygons){
         if(!p.id) p.id=uid();
         if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); }
       }
 
-      // сохранить лайтовую часть + перезагрузить полные данные
       localStorage.setItem(KEY, JSON.stringify({
         categories:obj.categories.map(c=>({
           id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
@@ -761,7 +767,6 @@ document.getElementById('fileImport').onchange=e=>{
       }));
       db = await loadDB();
 
-      // не сбрасываем selected; восстанавливаем отрисовку и режим редактирования
       renderAll();
       resumeEditingIfNeeded();
       updatePolygonVisibility();
@@ -807,16 +812,24 @@ async function renderAll(){
   });
 }
 
-/***** RESUME EDIT MODE (v38.5.1R) *****/
+/***** RESUME EDIT MODE — КЛЮЧЕВОЙ ФИКС v38.5.2R *****/
 function resumeEditingIfNeeded(){
   const id=localStorage.getItem('polyEditingId');
   if(!id) return;
   const layer=polyIndex.get(id);
-  if(!layer) return; // например, id устарел или полигон удалён
+  if(!layer) return;
+
+  // Включаем общий режим редактирования для polyFG
   if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
-  const fg=new L.FeatureGroup([layer]);
-  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:fg});
+  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
   polyEditToolbar.enable(); polyEditing=true;
+
+  // Оставляем редактирование ТОЛЬКО на целевом слое
+  polyFG.eachLayer(x=>{
+    if(x===layer){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
+    else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
+  });
+
   setEditingTarget(id);
   layer.addTo(map);
   map.fitBounds(layer.getBounds());
@@ -828,7 +841,7 @@ let db=null;
   db = await loadDB();
   loadSelected();
   await renderAll();
-  // пробуем восстановить редактирование после полной отрисовки
+  // после полной отрисовки пробуем восстановить активное редактирование
   resumeEditingIfNeeded();
 })();
 </script>
