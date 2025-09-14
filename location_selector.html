@@ -205,7 +205,6 @@ function normalize(obj){
     if(!("shape" in c))c.shape="circle";
     if(!("parentCategoryId" in c))c.parentCategoryId=null;
 
-Дильшод, [14.09.2025 16:27]
 c.items.forEach(it=>{
       if(!("id" in it))it.id=uid();
       if(!("name" in it))it.name="Без имени";
