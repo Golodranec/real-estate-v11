@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.1R stable — база v38.9R + удаление категорий + экспорт/импорт по категории + временная метка по координатам</title>
+<title>dictionary v38.9R stable — база v38.6R + undo/redo категорий/элементов + массовые действия + подсказки + библиотека иконок + статистика</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -47,13 +47,21 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .preview-icon img{max-width:100%;max-height:100%;display:block}
 
+/* предпросмотр: мультиселект */
+.multi-select{position:relative;width:100%}
+.multi-select-btn{width:100%;padding:6px 8px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 /* поиск по элементам */
 #globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 .search-results{max-height:200px;overflow:auto;margin-top:6px}
 .search-results div{padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer}
 .search-results div:hover{background:#1f293d}
 
-/* collapse */
+/* полигоны */
+.item.active{border:1px solid var(--accent);background:#1f2d44}
+#polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
+
+/* сворачивание секций */
 .collapse-head{display:flex;align-items:center;gap:8px;cursor:pointer}
 .caret{width:22px;height:22px;border:1px solid var(--border);border-radius:6px;background:#1a2234;display:flex;align-items:center;justify-content:center}
 .caret::after{content:"▾";font-size:12px;line-height:1}
@@ -73,9 +81,15 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 @media (max-width:1024px){.modal-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:640px){.modal-grid{grid-template-columns:1fr}}
 .modal-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #1f2a40;border-radius:8px;background:#0f1624}
-.modal-item input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
+.modal-item input[type="checkbox"]{
+  appearance:none;-webkit-appearance:none;
+  width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;
+  background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px
+}
 .modal-item input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
 .modal-item input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
+.modal-head-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.modal-head-row .grow{flex:1}
 
 /* подсказки */
 .suggestions{position:absolute;background:var(--panel2);border:1px solid var(--border);border-radius:8px;z-index:3000;max-height:200px;overflow:auto;width:100%}
@@ -86,22 +100,15 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .draggable{cursor:grab}
 .dragging{opacity:.5}
 .dropzone-hover{outline:2px dashed var(--accent);outline-offset:4px}
-
-/* инструмент координат: плавающая панель на карте */
-.coord-tool{position:absolute;z-index:4000;top:12px;right:12px;display:grid;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px;width:min(340px,35vw)}
-.coord-tool h4{margin:0 0 6px 0}
-.coord-tool .row{display:flex;gap:6px}
-.coord-tool .row input{flex:1}
-.coord-tool .row button{white-space:nowrap}
-.coord-tool .help{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.1R</span>
-  <button id="btnExportFull">Экспорт (всё)</button>
-  <button id="btnImportFull">Импорт (всё)</button>
-  <input type="file" id="fileImportFull" accept=".json,.txt" style="display:none"/>
+  <span class="badge">dictionary v38.9R</span>
+  <button id="btnExport">Экспорт</button>
+  <button id="btnImport">Импорт</button>
+  <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
+  <button id="btnInfo">Инфо</button>
   <button id="btnUndo">Undo</button>
   <button id="btnRedo">Redo</button>
   <button id="btnReset" class="danger">Сброс</button>
@@ -123,7 +130,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
         <button id="btnSelectAll">Выбрать всё</button>
         <button id="btnClearAll" class="danger">Сбросить всё</button>
       </div>
-      <div class="help">Чекбокс-категории открываются в большом списке. Внутри тоже есть «Выбрать всё / Сбросить всё».</div>
+      <div class="help">Чекбокс-категории открываются в большом списке как на Авито. Внутри тоже есть «Выбрать всё / Сбросить всё».</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
 
       <div class="sep"></div>
@@ -141,24 +148,20 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div id="polyList" class="list"></div>
     </div>
   </aside>
-  <div id="map" style="position:relative"></div>
+  <div id="map"></div>
 </main>
 
-<!-- Инструмент координат (временная метка) -->
-<div id="coordTool" class="coord-tool" style="display:none">
-  <h4>Метка по координатам</h4>
+<!-- ПАНЕЛЬ МЕТКИ ДЛЯ ОБЪЯВЛЕНИЯ (новое, не трогает предпросмотр) -->
+<div id="adCoordPanel" class="panel" style="position:fixed;left:10px;bottom:10px;z-index:5000;width:340px">
+  <h3>Метка по координатам</h3>
+  <input type="text" id="coordLat" placeholder="Широта"/>
+  <input type="text" id="coordLng" placeholder="Долгота"/>
   <div class="row">
-    <input id="coordLat" placeholder="Широта (lat)" inputmode="decimal"/>
-    <input id="coordLng" placeholder="Долгота (lng)" inputmode="decimal"/>
+    <button id="coordFind">Найти</button>
+    <button id="coordAdd">Добавить</button>
   </div>
-  <div class="row">
-    <button id="btnCoordFind">Найти</button>
-    <button id="btnCoordAdd">Добавить</button>
-    <button id="btnCoordClear" class="danger">Очистить</button>
-  </div>
-  <div class="help">Найти — показывает временную метку. Добавить — сохранит в выбранную категорию/родителя. В предпросмотр не лезем.</div>
+  <div id="coordInfo" class="help">Введи координаты и нажми «Найти». Панель скрывается на вкладке Предпросмотр.</div>
 </div>
-
 <!-- Модалка мультиселекта -->
 <div id="msOverlay" class="modal-overlay">
   <div class="modal">
@@ -167,7 +170,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div id="msClose" class="modal-close">✖</div>
     </div>
     <div class="modal-body">
-      <div class="row">
+      <div class="modal-head-row">
         <input id="msSearch" class="grow" placeholder="Фильтр по списку..."/>
         <button id="msAll">Выбрать всё</button>
         <button id="msNone" class="danger">Сбросить всё</button>
@@ -196,26 +199,13 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     <div class="modal-body"><div id="infoBox"></div></div>
   </div>
 </div>
-
-<!-- Модалка конфликтов импорта (категории/элементы) -->
-<div id="importDialog" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-header"><div class="modal-title">Конфликт при импорте</div><div id="importClose" class="modal-close">✖</div></div>
-    <div class="modal-body"><div id="importMessage"></div></div>
-    <div class="modal-actions">
-      <button id="btnOverwrite">Перезаписать</button>
-      <button id="btnSkip">Пропустить</button>
-      <button id="btnApplyAll">Применить ко всем</button>
-    </div>
-  </div>
-</div>
 <!-- Скрипты карт -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
-/***** STORAGE + DB (ключи из v38.6R / v38.9R) *****/
+/***** STORAGE + DB (ключи как в v38.6R) *****/
 const KEY="dict_v38_3R";
 const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
@@ -261,19 +251,25 @@ async function save(obj=db){
   };
   localStorage.setItem(KEY,JSON.stringify(lite));
 
+  // иконки
   for(const cat of obj.categories){
     if(cat.iconData){
       const key=cat.iconKey||`cat_${cat.id}`;
-      await lfIcons.setItem(key,cat.iconData); cat.iconKey=key;
+      await lfIcons.setItem(key,cat.iconData);
+      cat.iconKey=key;
     }
     for(const it of (cat.items||[])){
       if(it.iconData){
         const key=it.iconKey||`item_${it.id}`;
-        await lfIcons.setItem(key,it.iconData); it.iconKey=key;
+        await lfIcons.setItem(key,it.iconData);
+        it.iconKey=key;
       }
     }
   }
-  for(const p of obj.polygons){ if(p.geojson) await lfGeo.setItem(p.id,p.geojson); }
+  // полигоны
+  for(const p of obj.polygons){
+    if(p.geojson) await lfGeo.setItem(p.id,p.geojson);
+  }
 }
 
 async function loadDB(){
@@ -281,17 +277,27 @@ async function loadDB(){
   let obj={categories:[],polygons:[]};
   if(raw){try{obj=JSON.parse(raw)||{};}catch(e){}}
   normalize(obj);
+  // подтянуть иконки
   for(const cat of obj.categories){
-    if(cat.iconKey&&!cat.iconData){ try{cat.iconData=await lfIcons.getItem(cat.iconKey)||null;}catch(e){} }
+    if(cat.iconKey&&!cat.iconData){
+      try{cat.iconData=await lfIcons.getItem(cat.iconKey)||null;}catch(e){}
+    }
     for(const it of (cat.items||[])){
-      if(it.iconKey&&!it.iconData){ try{it.iconData=await lfIcons.getItem(it.iconKey)||null;}catch(e){} }
+      if(it.iconKey&&!it.iconData){
+        try{it.iconData=await lfIcons.getItem(it.iconKey)||null;}catch(e){}
+      }
     }
   }
-  for(const p of obj.polygons){ if(!p.geojson){ try{p.geojson=await lfGeo.getItem(p.id)||null;}catch(e){} } }
+  // подтянуть геометрию
+  for(const p of obj.polygons){
+    if(!p.geojson){
+      try{p.geojson=await lfGeo.getItem(p.id)||null;}catch(e){}
+    }
+  }
   return obj;
 }
 
-/***** GLOBAL HISTORY *****/
+/***** GLOBAL HISTORY (undo/redo) *****/
 let historyStack=[],historyIndex=-1,historyLimit=80;
 function pushHistory(){
   const snap=JSON.stringify(db);
@@ -316,7 +322,6 @@ let map=L.map('map').setView([41.3111,69.2797],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
 let cluster=L.markerClusterGroup(); map.addLayer(cluster);
 function clearMarkers(){cluster.clearLayers();}
-
 function markerIcon(cat,it){
   if(it && it.iconData) return L.icon({iconUrl:it.iconData,iconSize:[24,24],iconAnchor:[12,12]});
   if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
@@ -338,11 +343,10 @@ window.removeMarkerById=function(id){
   toRemove.forEach(m=>cluster.removeLayer(m));
   commit();
 };
-
 /***** POLYGONS CORE + HISTORY *****/
 const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
 const polyIndex=new Map();
-const historyById=new Map();
+const historyById=new Map(); // id -> {stack:[],index}
 function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
 function pushHistoryPoly(p){
   const h=getHistoryPoly(p.id);
@@ -496,7 +500,7 @@ function renderPolyList(){
 }
 $polySearch.oninput=renderPolyList;
 
-/***** SELECTED STATE + VISIBILITY *****/
+/***** SELECTED STATE + VISIBILITY (фикс пустой карты) *****/
 let selected={};
 function saveSelected(){
   const out={};
@@ -531,7 +535,8 @@ function updatePolygonVisibility(){
   const names=getSelectedItemNames();
   for(const p of db.polygons){
     const layer=polyIndex.get(p.id); if(!layer) continue;
-    const filtered=(p.visible!==false)&&(names.size?names.has(p.name):true);
+    // ФИКС: если ничего не выбрано — скрываем все полигоны (кроме редактируемого)
+    const filtered=(p.visible!==false) && (names.size>0) && names.has(p.name);
     const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
     if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
   }
@@ -564,11 +569,11 @@ function openIconsLib(onPick){
 function closeIconsLib(){ $iconsOverlay.style.display='none'; document.body.style.overflow=''; }
 $iconsClose.onclick=closeIconsLib;
 
-/***** Статистика (Инфо) — оставлено из v38.9R *****/
+/***** Статистика *****/
 const $infoOverlay=document.getElementById('infoOverlay');
 const $infoClose=document.getElementById('infoClose');
 const $infoBox=document.getElementById('infoBox');
-function refreshInfoBox(){
+document.getElementById('btnInfo').onclick=()=>{
   const cats=db.categories.length;
   let items=0, itemsWithCoords=0;
   db.categories.forEach(c=>{items+=(c.items||[]).length;(c.items||[]).forEach(it=>{ if(it.lat!=null&&it.lng!=null) itemsWithCoords++; });});
@@ -580,11 +585,11 @@ function refreshInfoBox(){
       <div class="item"><div class="item-row"><div class="left"><div class="name">С координатами</div><div class="meta">элементы</div></div><div>${itemsWithCoords}</div></div></div>
       <div class="item"><div class="item-row"><div class="left"><div class="name">Полигонов</div><div class="meta">всего</div></div><div>${polys}</div></div></div>
     </div>`;
-}
+  $infoOverlay.style.display='flex'; document.body.style.overflow='hidden';
+};
 $infoClose.onclick=()=>{$infoOverlay.style.display='none'; document.body.style.overflow='';};
-</script>
-<script>
-/***** Подсказки + мультиселект (из v38.9R) *****/
+
+/***** Подсказки *****/
 function buildAllNamesIndex(){
   const set=new Set(); db.categories.forEach(c=> (c.items||[]).forEach(it=> set.add((it.name||"").trim().toLowerCase()) )); return set;
 }
@@ -601,7 +606,7 @@ function attachSuggestions(input){
   sug.addEventListener('click',e=>{ if(e.target && e.target.tagName==='DIV'){ input.value=e.target.textContent; sug.style.display='none'; } });
   document.addEventListener('click',ev=>{ if(!wrap.contains(ev.target)) sug.style.display='none'; });
 }
-
+/***** PREVIEW — каскад + модальный мультиселект *****/
 const $cascade=document.getElementById('cascadeBox');
 const $msOverlay=document.getElementById('msOverlay');
 const $msTitle=document.getElementById('msTitle');
@@ -618,6 +623,7 @@ function dropChildrenSelections(parentCatId){
   const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
   for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
 }
+
 function openMultiModal(cat,items){
   msCtx={catId:cat.id, items:[...items], temp:new Set(selected[cat.id] instanceof Set?selected[cat.id]:[])};
   $msTitle.textContent=cat.name; $msSearch.value=""; renderMsGrid();
@@ -640,7 +646,6 @@ $msNone.onclick=()=>{ if(!msCtx) return; msCtx.temp.clear(); renderMsGrid(); };
 $msApply.onclick=()=>{ if(!msCtx) return; selected[msCtx.catId]=new Set(msCtx.temp); saveSelected(); renderPreview(); updatePolygonVisibility(); closeMultiModal(); };
 $msCancel.onclick=closeMultiModal; $msClose.onclick=closeMultiModal;
 
-/***** PREVIEW *****/
 function renderPreview(){
   $cascade.innerHTML=""; clearMarkers();
   db.categories.forEach(cat=>{
@@ -681,12 +686,15 @@ function renderPreview(){
     box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed');
   });
 
-  // маркеры — только по выбранным
-  for(const cat of db.categories){
-    const ids=getSelectedIds(cat.id);
-    for(const id of ids){
-      const it=(cat.items||[]).find(x=>x.id===id);
-      if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+  // маркеры только по выбранным (ничего не выбрано — карта пустая)
+  const names=getSelectedItemNames();
+  if(names.size>0){
+    for(const cat of db.categories){
+      const ids=getSelectedIds(cat.id);
+      for(const id of ids){
+        const it=(cat.items||[]).find(x=>x.id===id);
+        if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+      }
     }
   }
   updatePolygonVisibility();
@@ -717,7 +725,7 @@ if($search&&$results){
   };
 }
 
-/***** РЕДАКТОР (категории + элементы) + экспорт/импорт по категории *****/
+/***** РЕДАКТОР (категории + элементы) и прочее остаётся как было *****/
 const $editor=document.getElementById('editorTab');
 function moveArrayItem(arr,fromIdx,toIdx){ if(fromIdx===toIdx) return; const item=arr.splice(fromIdx,1)[0]; arr.splice(toIdx,0,item); }
 function sortAZ(){ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); for(const cat of db.categories){ if(cat.items) cat.items.sort((a,b)=>a.name.localeCompare(b.name)); } }
@@ -725,7 +733,7 @@ function sortAZ(){ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); for(
 function renderEditor(){
   $editor.innerHTML="";
 
-  // Новая категория
+  // блок "Новая категория"
   const create=document.createElement('div'); create.className='panel';
   if(collapsedCats.has('newCat')) create.classList.add('collapsed');
 
@@ -797,14 +805,7 @@ function renderEditor(){
     const btnUp=document.createElement('button'); btnUp.textContent='▲'; btnUp.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx>0){ moveArrayItem(db.categories,idx,idx-1); commit(); }};
     const btnDown=document.createElement('button'); btnDown.textContent='▼'; btnDown.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx<db.categories.length-1){ moveArrayItem(db.categories,idx,idx+1); commit(); }};
     const btnSortItemsAZ=document.createElement('button'); btnSortItemsAZ.textContent='A→Z элементы'; btnSortItemsAZ.onclick=()=>{ cat.items.sort((a,b)=>a.name.localeCompare(b.name)); commit(); };
-    const btnExportCat=document.createElement('button'); btnExportCat.textContent='Экспорт категории';
-    btnExportCat.onclick=()=>exportCategory(cat.id);
-    const btnImportCat=document.createElement('button'); btnImportCat.textContent='Импорт в категорию';
-    btnImportCat.onclick=()=>importIntoCategory(cat.id);
-    const btnDeleteCat=document.createElement('button'); btnDeleteCat.textContent='Удалить категорию'; btnDeleteCat.className='danger';
-    btnDeleteCat.onclick=()=>{ if(confirm(`Удалить категорию "${cat.name}" и все её элементы?`)){ db.categories=db.categories.filter(c=>c.id!==cat.id); // снести дочерние selection
-      dropChildrenSelections(cat.id); commit(); } };
-    toolsTop.append(btnUp,btnDown,btnSortItemsAZ,btnExportCat,btnImportCat,btnDeleteCat);
+    toolsTop.append(btnUp,btnDown,btnSortItemsAZ);
 
     const headWrap=document.createElement('div'); headWrap.style.display='flex'; headWrap.style.justifyContent='space-between'; headWrap.style.alignItems='center';
     headWrap.append(head,toolsTop); sec.appendChild(headWrap);
@@ -911,7 +912,7 @@ function renderEditor(){
       if(fromIdx<0||toIdx<0||fromIdx===toIdx) return; moveArrayItem(db.categories,fromIdx,toIdx); commit();
     });
 
-    // drag&drop элементов
+    // drag&drop элементов внутри категории
     [...list.children].forEach(row=>{
       row.draggable=true;
       row.addEventListener('dragstart',e=>{
@@ -933,17 +934,23 @@ function renderEditor(){
 
     $editor.appendChild(sec);
   });
-
-  // кнопки инфо
-  const infoPanel=document.createElement('div'); infoPanel.className='panel';
-  const infoBtn=document.createElement('button'); infoBtn.textContent='Инфо / статистика';
-  infoBtn.onclick=()=>{ refreshInfoBox(); $infoOverlay.style.display='flex'; document.body.style.overflow='hidden'; };
-  infoPanel.appendChild(infoBtn);
-  $editor.appendChild(infoPanel);
 }
 
-/***** EXPORT/IMPORT ВСЕГО (как в v38.9R) *****/
-document.getElementById('btnExportFull').onclick=async ()=>{
+/***** TABS (скрываем панель координат в предпросмотре) *****/
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    const which=tab.dataset.tab;
+    document.getElementById('editorTab').style.display=which==='editor'?'block':'none';
+    document.getElementById('previewTab').style.display=which==='preview'?'block':'none';
+    const adPanel=document.getElementById('adCoordPanel');
+    if(adPanel) adPanel.style.display = (which==='preview') ? 'none' : 'block';
+  };
+});
+
+/***** EXPORT/IMPORT/RESET (без изменений) *****/
+document.getElementById('btnExport').onclick=async ()=>{
   const full=JSON.parse(JSON.stringify(db));
   for(const cat of full.categories){
     if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
@@ -955,11 +962,11 @@ document.getElementById('btnExportFull').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_1R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v38_9R.json'; a.click();
 };
 
-document.getElementById('btnImportFull').onclick=()=>document.getElementById('fileImportFull').click();
-document.getElementById('fileImportFull').onchange=e=>{
+document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
+document.getElementById('fileImport').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=async ()=>{
@@ -992,161 +999,6 @@ document.getElementById('fileImportFull').onchange=e=>{
   r.readAsText(f);
 };
 
-/***** EXPORT/IMPORT ПО КАТЕГОРИИ *****/
-async function exportCategory(catId){
-  const cat=db.categories.find(c=>c.id===catId); if(!cat) return;
-  // если у категории есть родитель — фильтруем элементы по выбранным в родителе
-  let items=[...(cat.items||[])];
-  if(cat.parentCategoryId){
-    const parentIds=getSelectedIds(cat.parentCategoryId);
-    if(parentIds.length>0) items=items.filter(it=> it.parentId && parentIds.includes(it.parentId));
-  }
-  const pack={category:{ id:cat.id, name:cat.name, type:cat.type, parentCategoryId:cat.parentCategoryId, items:items }};
-  const blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${cat.name}_export.json`; a.click();
-}
-
-let importDialogCtx=null, applyAllMode=null; // null | "overwrite" | "skip"
-function showImportDialog(message,ctx){
-  importDialogCtx=ctx; applyAllMode=null;
-  document.getElementById('importMessage').innerHTML=message;
-  document.getElementById('importDialog').style.display='flex'; document.body.style.overflow='hidden';
-}
-function closeImportDialog(){ importDialogCtx=null; document.getElementById('importDialog').style.display='none'; document.body.style.overflow=''; }
-
-document.getElementById('btnOverwrite').onclick=()=>{
-  if(!importDialogCtx) return;
-  importDialogCtx.resolve('overwrite'); closeImportDialog();
-};
-document.getElementById('btnSkip').onclick=()=>{
-  if(!importDialogCtx) return;
-  importDialogCtx.resolve('skip'); closeImportDialog();
-};
-document.getElementById('btnApplyAll').onclick=()=>{
-  if(!importDialogCtx) return;
-  importDialogCtx.resolve('applyAllOverwrite'); closeImportDialog();
-};
-document.getElementById('importClose').onclick=()=>{ if(importDialogCtx) importDialogCtx.resolve('skip'); closeImportDialog(); };
-
-function askConflict(message){
-  return new Promise(resolve=>{
-    showImportDialog(message,{resolve});
-  });
-}
-
-function importIntoCategory(catId){
-  const input=document.createElement('input'); input.type='file'; input.accept='.json,.txt';
-  input.onchange=e=>{
-    const f=e.target.files[0]; if(!f) return;
-    const r=new FileReader();
-    r.onload=async ()=>{
-      try{
-        const target=db.categories.find(c=>c.id===catId);
-        if(!target) throw new Error('Категория не найдена');
-        let pack=JSON.parse(r.result);
-        let items=[];
-        if(Array.isArray(pack.items)) items=pack.items;
-        else if(pack.category && Array.isArray(pack.category.items)) items=pack.category.items;
-        else if(Array.isArray(pack)) items=pack; // поддержка простого массива
-        else throw new Error('Неверный формат: ожидаются items');
-
-        // если у категории есть родитель, и в pack указан parentId строкой-именем — не трогаем; если id — ок
-        let applyAll=null; // "overwrite" | "skip"
-        for(const incoming of items){
-          // валидация
-          const name=(incoming.name||"").trim(); if(!name) continue;
-          if(!('id' in incoming)) incoming.id=uid();
-          if(!('lat' in incoming)) incoming.lat=null;
-          if(!('lng' in incoming)) incoming.lng=null;
-          if(!('parentId' in incoming)) incoming.parentId=null;
-
-          const exists=target.items.find(x=>x.name===name);
-          if(exists){
-            if(applyAll){ if(applyAll==='overwrite'){ Object.assign(exists, {...incoming, id:exists.id}); } continue; }
-            const choice = applyAllMode==='overwrite' ? 'applyAllOverwrite' : (applyAllMode==='skip' ? 'skip' : await askConflict(`Элемент "<b>${name}</b>" уже существует в категории "<b>${target.name}</b>". Что сделать?`));
-            if(choice==='overwrite'){ Object.assign(exists, {...incoming, id:exists.id}); }
-            else if(choice==='applyAllOverwrite'){ Object.assign(exists, {...incoming, id:exists.id}); applyAll='overwrite'; }
-            // skip — ничего
-          }else{
-            target.items.push({id:incoming.id,name,lat:incoming.lat,lng:incoming.lng,parentId:incoming.parentId});
-          }
-        }
-        await commit(); alert('Импорт категории завершён');
-      }catch(err){ alert('Ошибка импорта в категорию: '+err.message); }
-    };
-    r.readAsText(f);
-  };
-  input.click();
-}
-
-/***** ИНСТРУМЕНТ КООРДИНАТ (временная метка) *****/
-const $coordTool=document.getElementById('coordTool');
-const $coordLat=document.getElementById('coordLat');
-const $coordLng=document.getElementById('coordLng');
-const $btnCoordFind=document.getElementById('btnCoordFind');
-const $btnCoordAdd=document.getElementById('btnCoordAdd');
-const $btnCoordClear=document.getElementById('btnCoordClear');
-let tempMarker=null;
-
-// показываем инструмент всегда в редакторе (можно скрыть, если мешает)
-$coordTool.style.display='grid';
-
-function setTempMarker(lat,lng){
-  if(tempMarker){ map.removeLayer(tempMarker); tempMarker=null; }
-  tempMarker=L.marker([lat,lng],{draggable:true}).addTo(map);
-  tempMarker.on('dragend',()=>{
-    const p=tempMarker.getLatLng(); $coordLat.value=p.lat.toFixed(6); $coordLng.value=p.lng.toFixed(6);
-  });
-  map.setView([lat,lng],15);
-}
-
-$btnCoordFind.onclick=()=>{
-  const lat=parseFloat($coordLat.value), lng=parseFloat($coordLng.value);
-  if(Number.isFinite(lat)&&Number.isFinite(lng)) setTempMarker(lat,lng);
-  else alert('Введи корректные координаты');
-};
-
-$btnCoordClear.onclick=()=>{
-  if(tempMarker){ map.removeLayer(tempMarker); tempMarker=null; }
-  $coordLat.value=''; $coordLng.value='';
-};
-
-$btnCoordAdd.onclick=()=>{
-  if(!tempMarker){ alert('Сначала нажми "Найти"'); return; }
-  // выбор категории и (опционально) родителя
-  const catNames=db.categories.map(c=>c.name).join(', ');
-  const name=prompt('Название метки (элемента):','Новая локация');
-  if(!name) return;
-  const catName=prompt('В какую категорию сохранить? Доступны: '+catNames);
-  const cat=db.categories.find(c=>c.name===catName);
-  if(!cat){ alert('Категория не найдена'); return; }
-  let parentId=null;
-  if(cat.parentCategoryId){
-    const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
-    if(parentCat && (parentCat.items||[]).length){
-      const parentName=prompt(`Выбери родителя из "${parentCat.name}" (точное имя)`, parentCat.items[0].name);
-      const parentItem=parentCat.items.find(i=>i.name===parentName);
-      if(parentItem) parentId=parentItem.id;
-    }
-  }
-  const p=tempMarker.getLatLng();
-  cat.items.push({id:uid(),name:name.trim(),lat:p.lat,lng:p.lng,parentId});
-  commit();
-  alert('Метка добавлена в категорию: '+cat.name);
-};
-
-/***** TABS *****/
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.onclick=()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    const which=tab.dataset.tab;
-    document.getElementById('editorTab').style.display=which==='editor'?'block':'none';
-    document.getElementById('previewTab').style.display=which==='preview'?'block':'none';
-  };
-});
-
-/***** RESET *****/
 document.getElementById('btnReset').onclick=()=>{
   if(confirm('Очистить всё?')){
     localStorage.removeItem(KEY);
@@ -1159,31 +1011,63 @@ document.getElementById('btnReset').onclick=()=>{
   }
 };
 
+/***** ПАНЕЛЬ координат для объявления (временная метка + сохранить) *****/
+let tempAdMarker=null;
+const $coordLat=document.getElementById('coordLat');
+const $coordLng=document.getElementById('coordLng');
+const $coordFind=document.getElementById('coordFind');
+const $coordAdd=document.getElementById('coordAdd');
+const $coordInfo=document.getElementById('coordInfo');
+
+$coordFind.onclick=()=>{
+  const lat=parseFloat($coordLat.value); const lng=parseFloat($coordLng.value);
+  if(Number.isNaN(lat)||Number.isNaN(lng)){ $coordInfo.textContent='Ошибка: координаты некорректные'; return; }
+  if(tempAdMarker){ map.removeLayer(tempAdMarker); }
+  tempAdMarker=L.marker([lat,lng],{draggable:true}).addTo(map).bindPopup('Временная метка').openPopup();
+  map.setView([lat,lng],15);
+  $coordInfo.textContent='Временная метка найдена. Перетащи при необходимости и нажми «Добавить».';
+};
+
+$coordAdd.onclick=()=>{
+  if(!tempAdMarker){ $coordInfo.textContent='Сначала нажми «Найти»'; return; }
+  const pos=tempAdMarker.getLatLng();
+  // сохраняем координаты метки объявления локально (для твоей формы объявления подхватить)
+  localStorage.setItem('ad_last_marker', JSON.stringify({lat:pos.lat,lng:pos.lng,ts:Date.now()}));
+  tempAdMarker.bindPopup('Метка объявления сохранена').openPopup();
+  $coordInfo.textContent=`Метка сохранена: ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}. Данные доступны в localStorage.ad_last_marker`;
+  // Дополнительно можно сгенерить событие
+  window.dispatchEvent(new CustomEvent('adLocationSaved',{detail:{lat:pos.lat,lng:pos.lng}}));
+};
+
 /***** MAIN RENDER *****/
-async function renderAll(){
+function renderAll(){
   rebuildPolys();
   renderEditor();
   renderPreview();
   renderPolyList();
-  refreshInfoBox();
-  // ВАЖНО: никаких «показать все метки», только выбранные в renderPreview
+
+  // ВАЖНО: убрал автодобавление всех маркеров (чтобы карта была пустая, если ничего не выбрано)
+  // Раньше здесь было: clearMarkers(); db.categories.forEach(... addMarkerForItem ...)
 }
 
-/***** RESUME POLY EDIT *****/
+/***** RESUME EDIT MODE *****/
 function resumeEditingIfNeeded(){
   const id=localStorage.getItem('polyEditingId'); if(!id) return;
   const layer=polyIndex.get(id); if(!layer) return;
+
   if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
   polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
   polyEditToolbar.enable(); polyEditing=true;
+
   polyFG.eachLayer(x=>{
     if(x===layer){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
     else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
   });
+
   setEditingTarget(id); layer.addTo(map); map.fitBounds(layer.getBounds());
 }
 
-/***** START *****/
+/***** СТАРТ *****/
 let db=null;
 (async()=>{
   db = await loadDB();
