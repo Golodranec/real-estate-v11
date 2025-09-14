@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>dictionary v39.2R stable — v38.9R + контрол координат на карте + строгий предпросмотр</title>
+<title>dictionary v39.3R stable — v38.9R + временная метка "Найти" + импорт/экспорт по категориям</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -72,11 +72,11 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 /* модалки */
 .modal-overlay{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;z-index:5000}
 .modal{width:min(980px,90vw);max-height:85vh;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel3)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);background:#0f1624}
 .modal-title{font-weight:700}
 .modal-close{border:1px solid var(--border);background:#1a2234;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .modal-body{padding:12px 14px;overflow:auto}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--border);background:var(--panel3)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--border);background:#0f1624}
 .modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 @media (max-width:1024px){.modal-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:640px){.modal-grid{grid-template-columns:1fr}}
@@ -101,7 +101,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .dragging{opacity:.5}
 .dropzone-hover{outline:2px dashed var(--accent);outline-offset:4px}
 
-/* контрол координат на карте */
+/* временная метка: контрол на карте */
 .coord-control{
   background:#1a2234;border:1px solid var(--border);border-radius:8px;
   padding:6px;color:var(--text)
@@ -118,7 +118,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">dictionary v39.2R</span>
+  <span class="badge">dictionary v39.3R</span>
   <button id="btnExport">Экспорт</button>
   <button id="btnImport">Импорт</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -206,9 +206,11 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
 <script>
 /***** STORAGE + DB (ключи из v38.6R чтобы не потерять данные) *****/
 const KEY="dict_v38_3R";
+const KEY_AD="ad_current_v39_3R"; // отдельное хранение координат текущего объявления
 const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
 
@@ -263,7 +265,7 @@ async function save(obj=db){
     for(const it of (cat.items||[])){
       if(it.iconData){
         const key = it.iconKey || `item_${it.id}`;
-        await lfIcons.setItem(key, it.iconData);
+        await lfIcons.setItem(key,it.iconData);
         it.iconKey=key;
       }
     }
@@ -348,6 +350,103 @@ window.removeMarkerById=function(id){
   commit();
 };
 </script>
+
+<script>
+/***** ВРЕМЕННАЯ МЕТКА ДЛЯ ОБЪЯВЛЕНИЯ (НЕ влияет на предпросмотр) *****/
+let tempMarker=null; // временная, крутится только в UI
+let adLocation=null; // сохранённая координата объявления (отдельно от категорий)
+
+function loadAdLocation(){
+  try{ adLocation=JSON.parse(localStorage.getItem(KEY_AD)||"null"); }catch(_){ adLocation=null; }
+}
+function saveAdLocation(){
+  if(adLocation) localStorage.setItem(KEY_AD, JSON.stringify(adLocation));
+  else localStorage.removeItem(KEY_AD);
+}
+
+// Контрол на карте: lat/lng + Найти/Добавить/Убрать
+const AdCoordControl = L.Control.extend({
+  onAdd: function(){
+    const c = L.DomUtil.create("div","coord-control");
+    c.innerHTML = `
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+        <input id="ad-lat" type="number" step="0.000001" placeholder="lat">
+        <input id="ad-lng" type="number" step="0.000001" placeholder="lng">
+        <button id="ad-find">Найти</button>
+        <button id="ad-add">Добавить</button>
+        <button id="ad-clear" class="danger">Убрать</button>
+      </div>
+    `;
+    L.DomEvent.disableClickPropagation(c);
+
+    setTimeout(()=>{
+      const $lat=c.querySelector("#ad-lat");
+      const $lng=c.querySelector("#ad-lng");
+      const $find=c.querySelector("#ad-find");
+      const $add =c.querySelector("#ad-add");
+      const $clear=c.querySelector("#ad-clear");
+
+      // если уже есть сохранённая точка объявления — покажем её
+      if(adLocation && typeof adLocation.lat==="number" && typeof adLocation.lng==="number"){
+        $lat.value=adLocation.lat.toFixed(6);
+        $lng.value=adLocation.lng.toFixed(6);
+        showTempMarker(adLocation.lat, adLocation.lng, true);
+      }
+
+      $find.onclick=()=>{
+        const lat=parseFloat($lat.value), lng=parseFloat($lng.value);
+        if(!isFinite(lat)||!isFinite(lng)){ alert("Введи корректные lat/lng"); return; }
+        showTempMarker(lat,lng,true);
+      };
+
+      $add.onclick=()=>{
+        if(!tempMarker){ alert("Сначала нажми Найти"); return; }
+        const pos=tempMarker.getLatLng();
+        adLocation={lat:pos.lat,lng:pos.lng, ts:Date.now()};
+        saveAdLocation();
+        alert("Локация объявления сохранена");
+      };
+
+      $clear.onclick=()=>{
+        if(tempMarker){ map.removeLayer(tempMarker); tempMarker=null; }
+        adLocation=null; saveAdLocation();
+        $lat.value=""; $lng.value="";
+      };
+    },0);
+    return c;
+  }
+});
+
+// показать/переместить временную метку, центрировать карту
+function showTempMarker(lat,lng,fit=false){
+  if(tempMarker){ tempMarker.setLatLng([lat,lng]); }
+  else{
+    tempMarker=L.marker([lat,lng],{draggable:true});
+    tempMarker.addTo(map);
+    tempMarker.on('dragend',()=>{
+      const p=tempMarker.getLatLng();
+      const box=document.querySelector('.coord-control');
+      if(box){
+        const $lat=box.querySelector('#ad-lat');
+        const $lng=box.querySelector('#ad-lng');
+        if($lat&&$lng){ $lat.value=p.lat.toFixed(6); $lng.value=p.lng.toFixed(6); }
+      }
+    });
+  }
+  if(fit) map.setView([lat,lng],16);
+}
+map.addControl(new AdCoordControl({position:"topleft"}));
+
+/* клик по карте тоже может двигать временную метку (как альтернатива вводу) */
+map.on('click',e=>{
+  const box=document.querySelector('.coord-control'); if(!box) return;
+  const $lat=box.querySelector('#ad-lat'); const $lng=box.querySelector('#ad-lng');
+  const {lat,lng}=e.latlng;
+  $lat.value=lat.toFixed(6); $lng.value=lng.toFixed(6);
+  showTempMarker(lat,lng,false);
+});
+</script>
+
 <script>
 /***** POLYGONS CORE + HISTORY (как в v38.6R) *****/
 const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
@@ -506,6 +605,7 @@ function renderPolyList(){
 }
 $polySearch.oninput=renderPolyList;
 </script>
+
 <script>
 /***** SELECTED STATE + VISIBILITY *****/
 let selected={};
@@ -542,7 +642,6 @@ function updatePolygonVisibility(){
   const names=getSelectedItemNames(); // выбранные элементы из предпросмотра
   for(const p of db.polygons){
     const layer=polyIndex.get(p.id); if(!layer) continue;
-    // показывать только если есть выбор и имя полигона среди выбранных
     const filtered=(p.visible!==false) && (names.size>0) && names.has(p.name);
     const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
     if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
@@ -711,8 +810,9 @@ function renderPreview(){
 document.getElementById('btnSelectAll').onclick=()=>{ db.categories.forEach(cat=>{ if(cat.type==='checkbox'){ const ids=(cat.items||[]).map(i=>i.id); selected[cat.id]=new Set(ids); } }); saveSelected(); renderPreview(); updatePolygonVisibility(); };
 document.getElementById('btnClearAll').onclick=()=>{ db.categories.forEach(cat=>{ if(cat.type==='checkbox'){ selected[cat.id]=new Set(); } if(cat.type==='select'){ selected[cat.id]=null; } }); saveSelected(); renderPreview(); updatePolygonVisibility(); };
 </script>
+
 <script>
-/***** РЕДАКТОР (категории + элементы) + сортировки + drag&drop + массовые действия *****/
+/***** РЕДАКТОР (категории + элементы) + сортировки + drag&drop + массовые действия + экспорт/импорт КАТЕГОРИИ *****/
 const $editor=document.getElementById('editorTab');
 function moveArrayItem(arr,fromIdx,toIdx){ if(fromIdx===toIdx) return; const item=arr.splice(fromIdx,1)[0]; arr.splice(toIdx,0,item); }
 function sortAZ(){ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); for(const cat of db.categories){ if(cat.items) cat.items.sort((a,b)=>a.name.localeCompare(b.name)); } }
@@ -792,7 +892,26 @@ function renderEditor(){
     const btnUp=document.createElement('button'); btnUp.textContent='▲'; btnUp.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx>0){ moveArrayItem(db.categories,idx,idx-1); commit(); }};
     const btnDown=document.createElement('button'); btnDown.textContent='▼'; btnDown.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx<db.categories.length-1){ moveArrayItem(db.categories,idx,idx+1); commit(); }};
     const btnSortItemsAZ=document.createElement('button'); btnSortItemsAZ.textContent='A→Z элементы'; btnSortItemsAZ.onclick=()=>{ cat.items.sort((a,b)=>a.name.localeCompare(b.name)); commit(); };
-    toolsTop.append(btnUp,btnDown,btnSortItemsAZ);
+
+    /* НОВОЕ: изолированный экспорт/импорт ТОЛЬКО этой категории */
+    const btnCatExport=document.createElement('button'); btnCatExport.textContent='Экспорт категории';
+    btnCatExport.onclick=()=>exportCategory(cat);
+
+    const catFile=document.createElement('input'); catFile.type='file'; catFile.accept='application/json'; catFile.style.display='none';
+    const btnCatImport=document.createElement('button'); btnCatImport.textContent='Импорт в категорию';
+    btnCatImport.onclick=()=>catFile.click();
+    catFile.onchange=e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=()=>{ try{
+        const data=JSON.parse(r.result);
+        importIntoCategory(cat, data);
+        alert('Импортировано в категорию: '+cat.name);
+      }catch(err){ alert('Ошибка импорта категории: '+err.message); } };
+      r.readAsText(f);
+    };
+
+    toolsTop.append(btnUp,btnDown,btnSortItemsAZ,btnCatExport,btnCatImport,catFile);
 
     const headWrap=document.createElement('div'); headWrap.style.display='flex'; headWrap.style.justifyContent='space-between'; headWrap.style.alignItems='center';
     headWrap.append(head,toolsTop); sec.appendChild(headWrap);
@@ -922,6 +1041,50 @@ function renderEditor(){
     $editor.appendChild(sec);
   });
 }
+
+/* экспорт одной категории (только её данные) */
+function exportCategory(cat){
+  const payload={
+    kind:"category_dump",
+    version:"v39.3R",
+    category:{
+      id:cat.id,
+      name:cat.name,
+      type:cat.type,
+      parentCategoryId:cat.parentCategoryId||null,
+      color:cat.color, shape:cat.shape,
+      items:(cat.items||[]).map(it=>({
+        id:it.id, name:it.name, parentId:it.parentId||null,
+        lat:it.lat, lng:it.lng, iconKey:it.iconKey||null
+      }))
+    }
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`category_${cat.id}.json`; a.click();
+}
+
+/* импорт в конкретную категорию (изолированно, без контакта с другими) */
+function importIntoCategory(cat, data){
+  // допускаем 2 формата: full payload (kind=category_dump) или сразу массив items
+  let items=[];
+  if(Array.isArray(data)) items=data;
+  else if(data && data.kind==="category_dump" && data.category && Array.isArray(data.category.items)) items=data.category.items;
+  else if(data && Array.isArray(data.items)) items=data.items;
+  else throw new Error("Некорректный формат JSON");
+
+  // создаём новые id, чтобы не конфликтовали
+  const cloned=items.map(it=>({
+    id:uid(),
+    name:it.name??"Без имени",
+    parentId:it.parentId??null,
+    lat:typeof it.lat==="number"?it.lat:null,
+    lng:typeof it.lng==="number"?it.lng:null,
+    iconKey:null
+  }));
+  cat.items.push(...cloned);
+  commit();
+}
 </script>
 
 <script>
@@ -938,7 +1101,7 @@ document.querySelectorAll('.tab').forEach(tab=>{
 </script>
 
 <script>
-/***** EXPORT/IMPORT/RESET *****/
+/***** EXPORT/IMPORT/RESET (глобальные) *****/
 document.getElementById('btnExport').onclick=async ()=>{
   const full=JSON.parse(JSON.stringify(db));
   for(const cat of full.categories){
@@ -951,7 +1114,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_2R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_3R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -993,6 +1156,7 @@ document.getElementById('btnReset').onclick=()=>{
     localStorage.removeItem(KEY);
     localStorage.removeItem('selected_v1');
     localStorage.removeItem('polyEditingId');
+    localStorage.removeItem(KEY_AD);
     localStorage.removeItem('collapsedPolygons_v1');
     localStorage.removeItem('collapsedCats_v1');
     lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{});
@@ -1000,6 +1164,7 @@ document.getElementById('btnReset').onclick=()=>{
   }
 };
 </script>
+
 <script>
 /***** MAIN RENDER *****/
 async function renderAll(){
@@ -1007,7 +1172,7 @@ async function renderAll(){
   renderEditor();
   renderPreview();
   renderPolyList();
-  /* убрали глобальную отрисовку маркеров — только из renderPreview по выбранным */
+  /* никаких глобальных маркеров; маркеры — только выбранные из предпросмотра */
 }
 
 /***** RESUME EDIT MODE *****/
@@ -1026,45 +1191,6 @@ function resumeEditingIfNeeded(){
 
   setEditingTarget(id); layer.addTo(map); map.fitBounds(layer.getBounds());
 }
-
-/***** КОНТРОЛЬ КООРДИНАТ НА КАРТЕ (lat/lng + Добавить) *****/
-function ensureQuickCategory(){
-  let cat = db.categories.find(c=>c.name==="Свободные метки");
-  if(!cat){
-    cat = { id:uid(), name:"Свободные метки", type:"checkbox", parentCategoryId:null, color:"#4aa8ff", shape:"circle", items:[] };
-    db.categories.push(cat);
-  }
-  return cat;
-}
-function addQuickPin(lat,lng){
-  const cat = ensureQuickCategory();
-  const it = { id:uid(), name:`Метка ${cat.items.length+1}`, parentId:null, lat, lng };
-  cat.items.push(it);
-  commit();
-}
-const CoordControl = L.Control.extend({
-  onAdd: function(){
-    const c = L.DomUtil.create("div","coord-control");
-    c.innerHTML = `
-      <input id="qa-lat" type="number" step="0.000001" placeholder="lat">
-      <input id="qa-lng" type="number" step="0.000001" placeholder="lng">
-      <button id="qa-add">Добавить</button>
-    `;
-    L.DomEvent.disableClickPropagation(c);
-    setTimeout(()=>{
-      const btn = c.querySelector("#qa-add");
-      btn.onclick = ()=>{
-        const lat = parseFloat(c.querySelector("#qa-lat").value);
-        const lng = parseFloat(c.querySelector("#qa-lng").value);
-        if(!isFinite(lat)||!isFinite(lng)){ alert("Неверные координаты"); return; }
-        addQuickPin(lat,lng);
-        alert("Метка добавлена. Чтобы увидеть на карте — выбери её в предпросмотре.");
-      };
-    },0);
-    return c;
-  }
-});
-map.addControl(new CoordControl({position:"topleft"}));
 </script>
 
 <script>
@@ -1072,6 +1198,7 @@ map.addControl(new CoordControl({position:"topleft"}));
 let db=null;
 (async()=>{
   db = await loadDB();
+  loadAdLocation();
   loadSelected();
   pushHistory(); // первичный снапшот истории
   await renderAll();
