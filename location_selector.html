@@ -1,4 +1,3 @@
-Дильшод, [14.09.2025 16:27]
 <!doctype html>
 
 <html lang="ru">
@@ -55,7 +54,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .item.active{border:1px solid var(--accent);background:#1f2d44}
 #polySearch{width:100%;padding:6px 8px;margin:8px 0;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
 
-Дильшод, [14.09.2025 16:27]
 /* сворачивание секций */
 .collapse-head{display:flex;align-items:center;gap:8px;cursor:pointer}
 .caret{width:22px;height:22px;border:1px solid var(--border);border-radius:6px;background:#1a2234;display:flex;align-items:center;justify-content:center}
@@ -120,7 +118,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </div><main>
   <aside class="sidebar" id="editorTab"></aside>
 
-Дильшод, [14.09.2025 16:27]
 <aside class="sidebar" id="previewTab" style="display:none">
     <div class="panel">
       <h3>Предпросмотр каскада</h3>
@@ -302,7 +299,6 @@ function markerIcon(cat,it){
   if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
   const color=cat.color"#3388ff",shape=cat.shape"circle";let html="";
 
-Дильшод, [14.09.2025 16:27]
 if(shape==="circle") html=<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>;
   if(shape==="square") html=<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>;
   if(shape==="triangle") html=<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>;
@@ -382,7 +378,6 @@ document.getElementById('btnPolyUndo').onclick=()=>{
   if(!polyEditingTargetId) return;
   const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
 
-Дильшод, [14.09.2025 16:27]
 if(applyHistoryPoly(p,-1)){ save(db).then(()=>{ renderPolyList(); updatePolygonVisibility(); }); }
 };
 document.getElementById('btnPolyRedo').onclick=()=>{
@@ -453,7 +448,6 @@ function renderPolyList(){
     focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
     const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
 
-Дильшод, [14.09.2025 16:27]
 editBtn.onclick=()=>{
       const l=polyIndex.get(p.id);
       if(l){
@@ -533,7 +527,6 @@ const builtinIcons=[
   {name:"Школа",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3l9 5-9 5-9-5 9-5z' fill='#fbbf24'/><path d='M5 12v5l7 4 7-4v-5' stroke='#fbbf24' fill='none'/></svg>"},
   {name:"Парковка",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='4' y='4' width='16' height='16' rx='3' fill='#22d3ee'/><path d='M9 16V8h5a3 3 0 010 6H9z' fill='#0b1020'/></svg>"}
 
-Дильшод, [14.09.2025 16:27]
 ];
 const $iconsOverlay=document.getElementById('iconsOverlay');
 const $iconsClose=document.getElementById('iconsClose');
@@ -598,7 +591,6 @@ const $msOverlay=document.getElementById('msOverlay');
 const $msTitle=document.getElementById('msTitle');
 const $msSearch=document.getElementById('msSearch');
 
-Дильшод, [14.09.2025 16:27]
 const $msGrid=document.getElementById('msGrid');
 const $msApply=document.getElementById('msApply');
 const $msCancel=document.getElementById('msCancel');
@@ -663,7 +655,6 @@ function renderPreview(){
       if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
       sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
 
-Дильшод, [14.09.2025 16:27]
 body.appendChild(sel);
     }else{
       const multi=document.createElement('div'); multi.className='multi-select';
@@ -737,7 +728,6 @@ function renderEditor(){
         <option value="">(нет родителя)</option>
         ${db.categories.map(c=><option value="${c.id}">${c.name}</option>`).join('')}
 
-Дильшод, [14.09.2025 16:27]
 </select>
     </div>
     <div class="row">
@@ -798,7 +788,6 @@ function renderEditor(){
 
     const body=document.createElement('div'); body.className='section-body';
 
-Дильшод, [14.09.2025 16:27]
 const cfg=document.createElement('div'); cfg.className='row';
     const inpName=document.createElement('input'); inpName.value=cat.name; inpName.onchange=()=>{cat.name=inpName.value.trim(); commit();};
     const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);}); selType.onchange=()=>{cat.type=selType.value; commit();};
@@ -836,7 +825,6 @@ const cfg=document.createElement('div'); cfg.className='row';
       const tools=document.createElement('div'); tools.className='tools';
       const selCb=document.createElement('input'); selCb.type='checkbox'; selCb.onchange=()=>{ if(selCb.checked) selectedSet.add(it.id); else selectedSet.delete(it.id); updateMassBar(); };
 
-Дильшод, [14.09.2025 16:27]
 const edit=document.createElement('button'); edit.textContent='✎'; edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){it.name=(nn.trim()||it.name); commit();}};
       const upBtn=document.createElement('button'); upBtn.textContent='▲'; upBtn.onclick=()=>{ const idx=cat.items.findIndex(x=>x.id===it.id); if(idx>0){ moveArrayItem(cat.items,idx,idx-1); commit(); } };
       const downBtn=document.createElement('button'); downBtn.textContent='▼'; downBtn.onclick=()=>{ const idx=cat.items.findIndex(x=>x.id===it.id); if(idx<cat.items.length-1){ moveArrayItem(cat.items,idx,idx+1); commit(); } };
@@ -887,7 +875,6 @@ const edit=document.createElement('button'); edit.textContent='✎'; edit.onclic
     });
     sec.addEventListener('dragend',()=>sec.classList.remove('dragging'));
 
-Дильшод, [14.09.2025 16:27]
 sec.addEventListener('dragover',e=>{ e.preventDefault(); sec.classList.add('dropzone-hover'); });
     sec.addEventListener('dragleave',()=>sec.classList.remove('dropzone-hover'));
     sec.addEventListener('drop',e=>{
@@ -965,7 +952,6 @@ document.getElementById('fileImport').onchange=e=>{
           if(!it.id) it.id=uid();
           if(it.iconData){ const key=it.iconKey||item_${it.id}; await lfIcons.setItem(key,it.iconData); it.iconKey=key; }
 
-Дильшод, [14.09.2025 16:27]
 }
       }
       for(const p of obj.polygons){ if(!p.id) p.id=uid(); if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); } }
@@ -1071,7 +1057,6 @@ function resumeEditingIfNeeded(){
   setEditingTarget(id); layer.addTo(map); map.fitBounds(layer.getBounds());
 }
 
-Дильшод, [14.09.2025 16:27]
 /* КОНТРОЛЬ КООРДИНАТ НА КАРТЕ */
 const CoordControl=L.Control.extend({
   onAdd:function(){
