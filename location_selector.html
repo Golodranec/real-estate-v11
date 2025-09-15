@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.3R fix4 stable — инструменты + площадь в обычном, длины при редактировании, кнопка Выбрать</title>
+<title>location_selector v39.3R stable — база v38.9R + инструменты (линейка/точка/линия) + метрики полигонов + кнопка Выбрать</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -95,17 +95,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .coord-tool .row button{white-space:nowrap}
 .coord-tool .help{font-size:12px;color:var(--muted)}
 
-/* кнопка Выбрать как кнопка */
+/* новая кнопка мультиселекта */
 .multi-select-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
 .multi-select-btn:hover{border-color:var(--accent);background:#212b41}
-
-/* подписи метрик */
-.poly-label{background:rgba(10,14,22,.85);color:#fff;padding:2px 6px;border-radius:6px;font-size:12px;white-space:nowrap}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.3R fix4</span>
+  <span class="badge">location_selector v39.3R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -114,7 +111,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <button id="btnRedo">Redo</button>
   <button id="btnReset" class="danger">Сброс</button>
 
-  <span class="badge" style="margin-left:12px">Инструменты</span>
+  <!-- инструменты карты -->
+  <span style="margin-left:12px" class="badge">Инструменты</span>
   <button id="btnMeasure">Линейка</button>
   <button id="btnDrawPoint">Точка</button>
   <button id="btnDrawLine">Линия</button>
@@ -141,8 +139,10 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
       <div class="sep"></div>
       <h3>Полигоны</h3>
-      <input id="polyName" placeholder="Название полигона"/>
-      <input type="color" id="polyColor" value="#ff4d4f"/>
+      <div class="row">
+        <input id="polyName" placeholder="Название полигона"/>
+        <input type="color" id="polyColor" value="#ff4d4f"/>
+      </div>
       <div class="row">
         <button id="btnPolyNew">Новый</button>
         <button id="btnPolyEdit">Редактировать</button>
@@ -150,6 +150,13 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
         <button id="btnPolyUndo">Undo</button>
         <button id="btnPolyRedo">Redo</button>
       </div>
+
+      <!-- переключатель метрик площадей/периметров -->
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <input type="checkbox" id="chkPolyMetrics" checked/>
+        Показывать площадь и периметр
+      </label>
+
       <input id="polySearch" placeholder="Поиск по полигонам..."/>
       <div id="polyList" class="list"></div>
     </div>
@@ -157,22 +164,81 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <div id="map"></div>
 </main>
 
-<!-- Модалки -->
-<div id="msOverlay" class="modal-overlay">…</div>
-<div id="iconsOverlay" class="modal-overlay">…</div>
-<div id="infoOverlay" class="modal-overlay">…</div>
-<div id="importDialog" class="modal-overlay">…</div>
+<!-- Модалка мультиселекта -->
+<div id="msOverlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div id="msTitle" class="modal-title">Выбор</div>
+      <div id="msClose" class="modal-close">✖</div>
+    </div>
+    <div class="modal-body">
+      <div class="row">
+        <input id="msSearch" class="grow" placeholder="Фильтр по списку..."/>
+        <button id="msAll">Выбрать всё</button>
+        <button id="msNone" class="danger">Сбросить всё</button>
+      </div>
+      <div id="msGrid" class="modal-grid"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="msApply">Применить</button>
+      <button id="msCancel" class="danger">Отмена</button>
+    </div>
+  </div>
+</div>
 
-<!-- Плавающее окно координат -->
-<div id="coordTool" class="coord-tool" style="display:none">…</div>
+<!-- Модалка библиотеки иконок -->
+<div id="iconsOverlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Библиотека иконок</div><div id="iconsClose" class="modal-close">✖</div></div>
+    <div class="modal-body"><div id="iconsGrid" class="modal-grid"></div></div>
+  </div>
+</div>
+
+<!-- Модалка статистики -->
+<div id="infoOverlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Статистика</div><div id="infoClose" class="modal-close">✖</div></div>
+    <div class="modal-body"><div id="infoBox"></div></div>
+  </div>
+</div>
+
+<!-- Модалка конфликтов импорта -->
+<div id="importDialog" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Конфликт при импорте</div><div id="importClose" class="modal-close">✖</div></div>
+    <div class="modal-body"><div id="importMessage"></div></div>
+    <div class="modal-actions">
+      <button id="btnOverwrite">Перезаписать</button>
+      <button id="btnSkip">Пропустить</button>
+      <button id="btnApplyAll">Применить ко всем</button>
+    </div>
+  </div>
+</div>
+
+<!-- Плавающее окно координат: вёрстка заранее (потом переносим внутрь #map) -->
+<div id="coordTool" class="coord-tool" style="display:none">
+  <h4 id="coordDrag">Метка по координатам</h4>
+  <div class="row">
+    <input id="coordLat" placeholder="Широта" inputmode="decimal"/>
+    <input id="coordLng" placeholder="Долгота" inputmode="decimal"/>
+  </div>
+  <div class="row">
+    <button id="btnCoordFind">Найти</button>
+    <button id="btnCoordAdd">Добавить</button>
+    <button id="btnCoordClear" class="danger">Очистить</button>
+  </div>
+  <div class="help">Перетащи окно в удобный угол. Показ — только на карте (в предпросмотр не лезем).</div>
+</div>
 
 <!-- Скрипты карт -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<!-- геометрия для метрик -->
 <script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js"></script>
+
 <script>
-/***** STORAGE + DB (ключи сохранены из v38.6R) *****/
+/***** STORAGE + DB (ключи из v38.6R чтобы не потерять данные) *****/
 const KEY="dict_v38_3R";
 const lfIcons=localforage.createInstance({name:"dict_icons_v383R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v383R"});
@@ -203,7 +269,6 @@ function normalize(obj){
     if(!("name" in p))p.name="Полигон";
     if(!("color" in p))p.color="#ff4d4f";
     if(!("visible" in p))p.visible=true;
-    if(!("metricsEnabled" in p))p.metricsEnabled=true; // индивидуальный переключатель метрик
   });
 }
 
@@ -215,7 +280,7 @@ async function save(obj=db){
       color:c.color,shape:c.shape,iconKey:c.iconKey||null,
       items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
     })),
-    polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible,metricsEnabled:p.metricsEnabled}))
+    polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
   };
   localStorage.setItem(KEY,JSON.stringify(lite));
 
@@ -263,7 +328,7 @@ async function loadDB(){
   return obj;
 }
 
-/***** GLOBAL HISTORY *****/
+/***** GLOBAL HISTORY для категорий/элементов (undo/redo) *****/
 let historyStack=[],historyIndex=-1,historyLimit=80;
 function pushHistory(){
   const snap=JSON.stringify(db);
@@ -299,10 +364,32 @@ function markerIcon(cat,it){
 }
 function addMarkerForItem(it,cat){
   if(it.lat==null||it.lng==null) return;
-  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it),_itemId:it.id});
-  m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it),_itemId:it.id,draggable:true});
+  m.bindPopup(`<b>${it.name}</b><br/>
+    <button onclick="copyCoords('${it.id}')">⎘ Скопировать координаты</button>
+    <br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+  m.on('dragend',()=>{
+    const p=m.getLatLng();
+    for(const c of db.categories){
+      const e=(c.items||[]).find(x=>x.id===it.id);
+      if(e){ e.lat=p.lat; e.lng=p.lng; break; }
+    }
+    save(db);
+  });
   cluster.addLayer(m);
 }
+window.copyCoords=function(itemId){
+  for(const c of db.categories){
+    const it=(c.items||[]).find(x=>x.id===itemId);
+    if(it && it.lat!=null && it.lng!=null){
+      const text=`${it.lat},${it.lng}`;
+      navigator.clipboard?.writeText(text);
+      alert('Координаты скопированы: '+text);
+      return;
+    }
+  }
+};
+
 window.removeMarkerById=function(id){
   for(const c of db.categories){ const it=(c.items||[]).find(x=>x.id===id); if(it){it.lat=null;it.lng=null;break;} }
   const toRemove=[]; cluster.eachLayer(m=>{ if(m.options && m.options._itemId===id) toRemove.push(m); });
@@ -310,12 +397,48 @@ window.removeMarkerById=function(id){
   commit();
 };
 
-/***** POLYGONS CORE + HISTORY + METRICS *****/
+/***** POLYGONS CORE + HISTORY *****/
 const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
 const polyIndex=new Map();
 const historyById=new Map(); // id -> {stack:[],index}
-const polyAreaLabels=new Map();      // id -> L.marker (центр с площадью)
-const polyEdgeLabelGroups=new Map(); // id -> L.LayerGroup (подписи сегментов при редактировании)
+
+/* метки метрик для полигонов */
+const polyMetricLabels=new Map(); // id -> L.marker
+let showPolyMetrics=true;
+document.getElementById('chkPolyMetrics').addEventListener('change',()=>{
+  showPolyMetrics=document.getElementById('chkPolyMetrics').checked;
+  updateAllPolyMetricLabels();
+});
+function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
+function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
+function setPolyMetricLabel(p){
+  const layer=polyIndex.get(p.id); if(!layer || !layer.getBounds) return;
+  const rings=layer.getLatLngs()[0]||[];
+  if(!rings.length) return;
+  const area=L.GeometryUtil.geodesicArea(rings);
+  const per =L.GeometryUtil.length(rings);
+  const txt=`S=${formatArea(area)}, P=${formatLen(per)}`;
+  const pos=layer.getBounds().getCenter();
+  let lbl=polyMetricLabels.get(p.id);
+  if(!showPolyMetrics){
+    if(lbl){ map.removeLayer(lbl); polyMetricLabels.delete(p.id); }
+    return;
+  }
+  if(!lbl){
+    lbl=L.marker(pos,{interactive:false,icon:L.divIcon({className:"",html:`<div style="background:rgba(10,14,22,.8);color:#fff;padding:2px 6px;border-radius:6px;font-size:12px">${txt}</div>`})}).addTo(map);
+    polyMetricLabels.set(p.id,lbl);
+  }else{
+    lbl.setLatLng(pos);
+    if(lbl._icon) lbl._icon.innerHTML=`<div style="background:rgba(10,14,22,.8);color:#fff;padding:2px 6px;border-radius:6px;font-size:12px">${txt}</div>`;
+  }
+}
+function updateAllPolyMetricLabels(){
+  for(const p of db.polygons){
+    const l=polyIndex.get(p.id);
+    if(!l) continue;
+    setPolyMetricLabel(p);
+  }
+}
 
 function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
 function pushHistoryPoly(p){
@@ -332,68 +455,16 @@ function applyHistoryPoly(p,dir){
   const old=polyIndex.get(p.id); if(old) polyFG.removeLayer(old);
   const l=layerFromGeo(p.geojson,p.color); polyFG.addLayer(l); polyIndex.set(p.id,l);
   if(p.visible===false) map.removeLayer(l);
-  refreshPolygonMetrics(p.id);
+  setPolyMetricLabel(p);
   return true;
 }
 function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
-
-function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
-function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
-
-function buildAreaLabel(p){
-  const old=polyAreaLabels.get(p.id);
-  if(old){ map.removeLayer(old); polyAreaLabels.delete(p.id); }
-  if(!p.metricsEnabled) return;
-  const l=polyIndex.get(p.id); if(!l) return;
-  // только первый внешний контур
-  let rings=l.getLatLngs();
-  if(Array.isArray(rings) && Array.isArray(rings[0])) rings=rings[0];
-  if(!rings || rings.length<3) return;
-  const area=L.GeometryUtil.geodesicArea(rings);
-  const pos=l.getBounds().getCenter();
-  const lbl=L.marker(pos,{interactive:false,icon:L.divIcon({className:"",html:`<div class="poly-label">Площадь: ${formatArea(area)}</div>`})});
-  if(map.hasLayer(l)) lbl.addTo(map);
-  polyAreaLabels.set(p.id,lbl);
-}
-
-function buildEdgeLabels(p){
-  const oldGrp=polyEdgeLabelGroups.get(p.id);
-  if(oldGrp){ map.removeLayer(oldGrp); polyEdgeLabelGroups.delete(p.id); }
-  if(!p.metricsEnabled) return;
-  if(polyEditingTargetId!==p.id) return; // длины только при редактировании текущего
-
-  const l=polyIndex.get(p.id); if(!l) return;
-  let rings=l.getLatLngs();
-  if(Array.isArray(rings) && Array.isArray(rings[0])) rings=rings[0];
-  if(!rings || rings.length<2) return;
-
-  const grp=L.layerGroup();
-  for(let i=0;i<rings.length;i++){
-    const a=rings[i], b=rings[(i+1)%rings.length];
-    const mid=L.latLng( (a.lat+b.lat)/2, (a.lng+b.lng)/2 );
-    const segLen=L.GeometryUtil.length([a,b]); // геодезическая длина отрезка
-    const mk=L.marker(mid,{interactive:false,icon:L.divIcon({className:"",html:`<div class="poly-label">${formatLen(segLen)}</div>`})});
-    grp.addLayer(mk);
-  }
-  grp.addTo(map);
-  polyEdgeLabelGroups.set(p.id,grp);
-}
-function clearEdgeLabels(pId){
-  const grp=polyEdgeLabelGroups.get(pId);
-  if(grp){ map.removeLayer(grp); polyEdgeLabelGroups.delete(pId); }
-}
-function refreshPolygonMetrics(pId){
-  const p=db.polygons.find(x=>x.id===pId); if(!p) return;
-  buildAreaLabel(p);       // площадь — всегда в обычном режиме (если включено для полигона)
-  clearEdgeLabels(pId);    // сбросить старые длины
-  buildEdgeLabels(p);      // длины — только при редактировании активного
-}
-
 function rebuildPolys(){
-  for(const [,lbl] of polyAreaLabels){ map.removeLayer(lbl); } polyAreaLabels.clear();
-  for(const [,grp] of polyEdgeLabelGroups){ map.removeLayer(grp); } polyEdgeLabelGroups.clear();
-
   polyIndex.clear(); polyFG.clearLayers();
+  // убрать старые подписи
+  for(const [id, lbl] of polyMetricLabels){ map.removeLayer(lbl); }
+  polyMetricLabels.clear();
+
   for(const p of db.polygons){
     if(!p.geojson) continue;
     const l=layerFromGeo(p.geojson,p.color); if(!l) continue;
@@ -401,7 +472,7 @@ function rebuildPolys(){
     if(p.visible===false) map.removeLayer(l);
   }
   updatePolygonVisibility();
-  for(const p of db.polygons) refreshPolygonMetrics(p.id);
+  updateAllPolyMetricLabels();
 }
 
 /***** POLYGON UI *****/
@@ -425,29 +496,28 @@ document.getElementById('btnPolyEdit').onclick=()=>{
 document.getElementById('btnPolyStop').onclick=stopPolyEditing;
 function stopPolyEditing(){
   if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); polyEditing=false; map.fire(L.Draw.Event.EDITSTOP); }
-  if(polyEditingTargetId){ clearEdgeLabels(polyEditingTargetId); }
   polyEditingTargetId=null; localStorage.removeItem('polyEditingId');
 }
 document.getElementById('btnPolyUndo').onclick=()=>{
   if(!polyEditingTargetId) return;
   const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
-  if(applyHistoryPoly(p,-1)){ save(db).then(()=>{ renderPolyList(); updatePolygonVisibility(); refreshPolygonMetrics(p.id); }); }
+  if(applyHistoryPoly(p,-1)){ save(db).then(()=>{ renderPolyList(); updatePolygonVisibility(); }); }
 };
 document.getElementById('btnPolyRedo').onclick=()=>{
   if(!polyEditingTargetId) return;
   const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
-  if(applyHistoryPoly(p,+1)){ save(db).then(()=>{ renderPolyList(); updatePolygonVisibility(); refreshPolygonMetrics(p.id); }); }
+  if(applyHistoryPoly(p,+1)){ save(db).then(()=>{ renderPolyList(); updatePolygonVisibility(); }); }
 };
 
 map.on(L.Draw.Event.CREATED,async e=>{
   if(e.layerType==="polygon" && (e.layer instanceof L.Polygon)){
     const layer=e.layer; layer.setStyle({color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12});
     polyFG.addLayer(layer);
-    const rec={id:uid(),name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),color:$polyColor?.value||'#ff4d4f',visible:true,metricsEnabled:true,geojson:layer.toGeoJSON()};
+    const rec={id:uid(),name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),color:$polyColor?.value||'#ff4d4f',visible:true,geojson:layer.toGeoJSON()};
     db.polygons.push(rec); polyIndex.set(rec.id,layer); pushHistoryPoly(rec); await commit();
-    refreshPolygonMetrics(rec.id);
+    setPolyMetricLabel(rec);
   } else {
-    // поддержка рисования точки/линии инструментами — просто добавляем на карту
+    // поддержка рисования точки/линии инструментами (без записи в db)
     if(e.layer) e.layer.addTo(map);
   }
 });
@@ -457,7 +527,7 @@ map.on(L.Draw.Event.EDITSTOP,async ()=>{
     const l=polyIndex.get(p.id); if(l) p.geojson=l.toGeoJSON();
   }
   await commit();
-  for(const p of db.polygons) refreshPolygonMetrics(p.id);
+  updateAllPolyMetricLabels();
 });
 
 map.on('draw:editvertex', ()=>{
@@ -465,15 +535,13 @@ map.on('draw:editvertex', ()=>{
   const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
   const l=polyIndex.get(p.id); if(!l) return;
   p.geojson=l.toGeoJSON(); pushHistoryPoly(p);
-  refreshPolygonMetrics(p.id);
+  setPolyMetricLabel(p);
 });
 
 function setEditingTarget(id){
-  if(polyEditingTargetId) clearEdgeLabels(polyEditingTargetId);
   polyEditingTargetId=id||null;
   if(id) localStorage.setItem('polyEditingId',id); else localStorage.removeItem('polyEditingId');
   renderPolyList(); updatePolygonVisibility();
-  if(id){ refreshPolygonMetrics(id); }
 }
 
 function renderPolyList(){
@@ -498,17 +566,16 @@ function renderPolyList(){
     wrapper.appendChild(head);
 
     const body=document.createElement('div'); body.className='section-body';
-
     const row1=document.createElement('div'); row1.className='item-row';
     const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
-    nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await commit(); refreshPolygonMetrics(p.id);};
+    nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await commit(); updateAllPolyMetricLabels();};
     const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
-    color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
+    color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db); updateAllPolyMetricLabels();};
     row1.append(nameInput,color);
 
     const row2=document.createElement('div'); row2.className='tools';
     const toggle=document.createElement('button'); toggle.textContent=p.visible!==false?'Скрыть':'Показать';
-    toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await commit(); refreshPolygonMetrics(p.id);};
+    toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await commit(); updateAllPolyMetricLabels();};
     const focus=document.createElement('button'); focus.textContent='Фокус';
     focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
     const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
@@ -525,18 +592,13 @@ function renderPolyList(){
         });
         setEditingTarget(p.id); map.fitBounds(l.getBounds());
         const h=getHistoryPoly(p.id); if(h.stack.length===0){ pushHistoryPoly(p); }
+        setPolyMetricLabel(p);
       }
     };
-    const metricsCb=document.createElement('input'); metricsCb.type='checkbox'; metricsCb.checked=(p.metricsEnabled!==false);
-    metricsCb.onchange=()=>{ p.metricsEnabled=metricsCb.checked; save(db).then(()=>refreshPolygonMetrics(p.id)); };
-    const metricsLbl=document.createElement('label'); metricsLbl.textContent='Показывать измерения';
     const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-    del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id);
-      const a=polyAreaLabels.get(p.id); if(a){map.removeLayer(a); polyAreaLabels.delete(p.id);}
-      clearEdgeLabels(p.id);
-      await commit(); if(polyEditingTargetId===p.id){ setEditingTarget(null);} };
+    del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await commit(); const lbl=polyMetricLabels.get(p.id); if(lbl){map.removeLayer(lbl); polyMetricLabels.delete(p.id);} if(polyEditingTargetId===p.id){ setEditingTarget(null);} };
 
-    row2.append(toggle,focus,editBtn,metricsCb,metricsLbl,del);
+    row2.append(toggle,focus,editBtn,del);
     body.append(row1,row2);
     wrapper.appendChild(body);
 
@@ -545,6 +607,7 @@ function renderPolyList(){
 
   $polyList.scrollTop=prevScroll;
 }
+$polySearch.oninput=renderPolyList;
 
 /***** SELECTED STATE + VISIBILITY *****/
 let selected={};
@@ -581,35 +644,174 @@ function updatePolygonVisibility(){
   const names=getSelectedItemNames();
   for(const p of db.polygons){
     const layer=polyIndex.get(p.id); if(!layer) continue;
+    // Главное изменение: если ничего не выбрано — ничего не показываем
     const filtered=(p.visible!==false) && (names.size ? names.has(p.name) : false);
     const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
     if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
-    // актуализировать подпись площади по видимости
-    const lbl=polyAreaLabels.get(p.id);
-    if(lbl){
-      if(map.hasLayer(layer) && p.metricsEnabled) lbl.addTo(map); else map.removeLayer(lbl);
-    }
   }
+  updateAllPolyMetricLabels();
 }
+
+/***** БИБЛИОТЕКА ИКОНОК *****/
+const builtinIcons=[
+  {name:"Дом",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='#fff' d='M3 10L12 3l9 7v10H4z'/></svg>"},
+  {name:"Метро",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' fill='#e11d48'/><path d='M7 16l5-9 5 9' stroke='#fff' stroke-width='2' fill='none'/></svg>"},
+  {name:"Офис",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='6' y='3' width='12' height='18' rx='2' fill='#60a5fa'/><path d='M9 7h2M9 11h2M9 15h2M13 7h2M13 11h2M13 15h2' stroke='#0b1020' stroke-width='1.5'/></svg>"},
+  {name:"Школа",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3l9 5-9 5-9-5 9-5z' fill='#fbbf24'/><path d='M5 12v5l7 4 7-4v-5' stroke='#fbbf24' fill='none'/></svg>"},
+  {name:"Парковка",svg:"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='4' y='4' width='16' height='16' rx='3' fill='#22d3ee'/><path d='M9 16V8h5a3 3 0 010 6H9z' fill='#0b1020'/></svg>"}
+];
+const $iconsOverlay=document.getElementById('iconsOverlay');
+const $iconsClose=document.getElementById('iconsClose');
+const $iconsGrid=document.getElementById('iconsGrid');
+function openIconsLib(onPick){
+  $iconsGrid.innerHTML="";
+  builtinIcons.forEach(icon=>{
+    const cell=document.createElement('div'); cell.className='modal-item';
+    const data="data:image/svg+xml;base64,"+btoa(unescape(encodeURIComponent(icon.svg)));
+    const prev=document.createElement('span'); prev.className='preview-icon'; prev.innerHTML=`<img src="${data}">`;
+    const name=document.createElement('div'); name.textContent=icon.name;
+    cell.append(prev,name); cell.style.cursor='pointer';
+    cell.onclick=()=>{ onPick(data); closeIconsLib(); };
+    $iconsGrid.appendChild(cell);
+  });
+  $iconsOverlay.style.display='flex'; document.body.style.overflow='hidden';
+}
+function closeIconsLib(){ $iconsOverlay.style.display='none'; document.body.style.overflow=''; }
+$iconsClose.onclick=closeIconsLib;
+
+/***** Статистика (Инфо) *****/
+const $infoOverlay=document.getElementById('infoOverlay');
+const $infoClose=document.getElementById('infoClose');
+const $infoBox=document.getElementById('infoBox');
+document.getElementById('btnInfo').onclick=()=>{
+  const cats=db.categories.length;
+  let items=0, itemsWithCoords=0;
+  db.categories.forEach(c=>{items+=(c.items||[]).length;(c.items||[]).forEach(it=>{ if(it.lat!=null&&it.lng!=null) itemsWithCoords++; });});
+  const polys=(db.polygons||[]).length;
+  $infoBox.innerHTML=`
+    <div class="list">
+      <div class="item"><div class="item-row"><div class="left"><div class="name">Категорий</div><div class="meta">всего</div></div><div>${cats}</div></div></div>
+      <div class="item"><div class="item-row"><div class="left"><div class="name">Элементов</div><div class="meta">всего</div></div><div>${items}</div></div></div>
+      <div class="item"><div class="item-row"><div class="left"><div class="name">С координатами</div><div class="meta">элементы</div></div><div>${itemsWithCoords}</div></div></div>
+      <div class="item"><div class="item-row"><div class="left"><div class="name">Полигонов</div><div class="meta">всего</div></div><div>${polys}</div></div></div>
+    </div>`;
+  $infoOverlay.style.display='flex'; document.body.style.overflow='hidden';
+};
+$infoClose.onclick=()=>{$infoOverlay.style.display='none'; document.body.style.overflow='';};
 </script>
 <script>
-/***** Select All / Clear All (для чекбокс-категорий) *****/
-document.getElementById('btnSelectAll').onclick=()=>{
+/***** Подсказки + мультиселект *****/
+function buildAllNamesIndex(){
+  const set=new Set(); db.categories.forEach(c=> (c.items||[]).forEach(it=> set.add((it.name||"").trim().toLowerCase()) )); return set;
+}
+function attachSuggestions(input){
+  const wrap=document.createElement('div'); wrap.style.position='relative'; input.parentNode.insertBefore(wrap,input); wrap.appendChild(input);
+  const sug=document.createElement('div'); sug.className='suggestions'; sug.style.display='none'; wrap.appendChild(sug);
+  input.addEventListener('input',()=>{
+    const q=(input.value||"").trim().toLowerCase();
+    if(!q){sug.style.display='none';sug.innerHTML='';return;}
+    const names=[...buildAllNamesIndex()].filter(n=>n.includes(q)).slice(0,30);
+    if(names.length===0){sug.style.display='none';sug.innerHTML='';return;}
+    sug.innerHTML=names.map(n=>`<div>${n}</div>`).join(''); sug.style.display='block';
+  });
+  sug.addEventListener('click',e=>{ if(e.target && e.target.tagName==='DIV'){ input.value=e.target.textContent; sug.style.display='none'; } });
+  document.addEventListener('click',ev=>{ if(!wrap.contains(ev.target)) sug.style.display='none'; });
+}
+
+const $cascade=document.getElementById('cascadeBox');
+const $msOverlay=document.getElementById('msOverlay');
+const $msTitle=document.getElementById('msTitle');
+const $msSearch=document.getElementById('msSearch');
+const $msGrid=document.getElementById('msGrid');
+const $msApply=document.getElementById('msApply');
+const $msCancel=document.getElementById('msCancel');
+const $msClose=document.getElementById('msClose');
+const $msAll=document.getElementById('msAll');
+const $msNone=document.getElementById('msNone');
+let msCtx=null;
+
+function dropChildrenSelections(parentCatId){
+  const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
+  for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
+}
+
+function openMultiModal(cat,items){
+  msCtx={catId:cat.id, items:[...items], temp:new Set(selected[cat.id] instanceof Set?selected[cat.id]:[])};
+  $msTitle.textContent=cat.name; $msSearch.value=""; renderMsGrid();
+  $msOverlay.style.display='flex'; document.body.style.overflow='hidden';
+}
+function closeMultiModal(){ msCtx=null; $msOverlay.style.display='none'; document.body.style.overflow=''; }
+function renderMsGrid(){
+  if(!msCtx) return; const q=($msSearch.value||"").trim().toLowerCase(); $msGrid.innerHTML="";
+  msCtx.items.filter(it=>!q || it.name.toLowerCase().includes(q)).forEach(it=>{
+    const row=document.createElement('label'); row.className='modal-item';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=msCtx.temp.has(it.id);
+    cb.onchange=()=>{ if(cb.checked) msCtx.temp.add(it.id); else msCtx.temp.delete(it.id); };
+    const name=document.createElement('div'); name.textContent=it.name;
+    row.append(cb,name); $msGrid.appendChild(row);
+  });
+}
+$msSearch.oninput=renderMsGrid;
+$msAll.onclick=()=>{ if(!msCtx) return; msCtx.items.forEach(it=>msCtx.temp.add(it.id)); renderMsGrid(); };
+$msNone.onclick=()=>{ if(!msCtx) return; msCtx.temp.clear(); renderMsGrid(); };
+$msApply.onclick=()=>{ if(!msCtx) return; selected[msCtx.catId]=new Set(msCtx.temp); saveSelected(); renderPreview(); updatePolygonVisibility(); closeMultiModal(); };
+$msCancel.onclick=closeMultiModal; $msClose.onclick=closeMultiModal;
+
+/***** PREVIEW — каскад *****/
+function renderPreview(){
+  $cascade.innerHTML=""; clearMarkers();
   db.categories.forEach(cat=>{
-    if(cat.type==='checkbox'){
-      const ids=(cat.items||[]).map(i=>i.id);
-      selected[cat.id]=new Set(ids);
+    const box=document.createElement('div'); box.className='panel'; box.dataset.catId=cat.id;
+    const head=document.createElement('div'); head.className='collapse-head';
+    const caret=document.createElement('div'); caret.className='caret';
+    const h=document.createElement('h4'); h.textContent=cat.name;
+    head.append(caret,h); box.appendChild(head);
+    const body=document.createElement('div'); body.className='section-body';
+
+    let parentIds=null;
+    if(cat.parentCategoryId){
+      const parentSelected=getSelectedIds(cat.parentCategoryId);
+      if(parentSelected.length===0){
+        const note=document.createElement('div'); note.className='note'; note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');
+        body.appendChild(note); box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed'); return;
+      }
+      parentIds=parentSelected;
     }
+
+    let items=(cat.items||[]); if(parentIds){ items=items.filter(it=>it.parentId && parentIds.includes(it.parentId)); }
+    if(items.length===0){ const note=document.createElement('div'); note.className='note gray'; note.textContent='Нет элементов'; body.appendChild(note); box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed'); return; }
+
+    if(cat.type==='select'){
+      const sel=document.createElement('select'); sel.style.width='100%';
+      sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+      if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
+      sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
+      body.appendChild(sel);
+    }else{
+      const multi=document.createElement('div'); multi.className='multi-select';
+      const btn=document.createElement('button'); btn.className='multi-select-btn';
+      const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
+      function txt(){ if(set.size===0) btn.textContent='Выбрать'; else{ const names=items.filter(x=>set.has(x.id)).map(x=>x.name); btn.textContent = names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`; } }
+      txt(); btn.onclick=()=>openMultiModal(cat,items); multi.append(btn); body.appendChild(multi);
+    }
+
+    box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed');
   });
-  saveSelected(); renderPreview(); updatePolygonVisibility();
-};
-document.getElementById('btnClearAll').onclick=()=>{
-  db.categories.forEach(cat=>{
-    if(cat.type==='checkbox'){ selected[cat.id]=new Set(); }
-    if(cat.type==='select'){ selected[cat.id]=null; }
-  });
-  saveSelected(); renderPreview(); updatePolygonVisibility();
-};
+
+  // маркеры по выбранным
+  for(const cat of db.categories){
+    const ids=getSelectedIds(cat.id);
+    for(const id of ids){
+      const it=(cat.items||[]).find(x=>x.id===id);
+      if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+    }
+  }
+  updatePolygonVisibility();
+}
+
+// Select All / Clear All (для чекбокс-категорий)
+document.getElementById('btnSelectAll').onclick=()=>{ db.categories.forEach(cat=>{ if(cat.type==='checkbox'){ const ids=(cat.items||[]).map(i=>i.id); selected[cat.id]=new Set(ids); } }); saveSelected(); renderPreview(); updatePolygonVisibility(); };
+document.getElementById('btnClearAll').onclick=()=>{ db.categories.forEach(cat=>{ if(cat.type==='checkbox'){ selected[cat.id]=new Set(); } if(cat.type==='select'){ selected[cat.id]=null; } }); saveSelected(); renderPreview(); updatePolygonVisibility(); };
 
 /***** GLOBAL SEARCH с зумом *****/
 const $search=document.getElementById('globalSearch');
@@ -617,12 +819,7 @@ const $results=document.getElementById('searchResults');
 if($search&&$results){
   $search.oninput=()=>{
     const q=$search.value.trim().toLowerCase(); $results.innerHTML=""; if(!q) return;
-    const out=[];
-    db.categories.forEach(cat=>{
-      (cat.items||[]).forEach(it=>{
-        if((it.name||'').toLowerCase().includes(q)) out.push({cat,it});
-      });
-    });
+    const out=[]; db.categories.forEach(cat=> (cat.items||[]).forEach(it=>{ if(it.name.toLowerCase().includes(q)) out.push({cat:cat,it:it}); }));
     out.forEach(r=>{
       const row=document.createElement('div'); row.textContent=`${r.it.name} (${r.cat.name})`;
       row.onclick=()=>{
@@ -631,7 +828,7 @@ if($search&&$results){
         saveSelected(); renderPreview(); updatePolygonVisibility();
         if(r.it.lat!=null && r.it.lng!=null){
           map.setView([r.it.lat,r.it.lng],16);
-          setTimeout(()=>map.setView([r.it.lat,r.it.lng],17),180);
+          setTimeout(()=>map.setView([r.it.lat,r.it.lng],17),200);
         }
         $search.value=""; $results.innerHTML="";
       };
@@ -640,226 +837,555 @@ if($search&&$results){
   };
 }
 
-/***** БИБЛИОТЕКА ИКОНОК (мини) *****/
-const $iconsOverlay=document.getElementById('iconsOverlay');
-const $iconsGrid=document.getElementById('iconsGrid');
-document.getElementById('iconsClose').onclick=()=>{$iconsOverlay.style.display='none'; document.body.style.overflow='';};
-function openIconsLib(onPick){
-  $iconsGrid.innerHTML='';
-  // Набросок библиотеки (эмодзи как заглушки и простые svg)
-  const presets=[
-    '📍','🏠','🏭','🏬','🏢','🛠','⚙️','🚩','⭐','🍔','🛒',
-    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="28" fill="%23FF4D4F"/></svg>',
-    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect x="8" y="8" width="48" height="48" fill="%233388FF"/></svg>'
-  ];
-  presets.forEach(src=>{
-    const btn=document.createElement('button');
-    btn.style.padding='6px'; btn.style.border='1px solid #32405a'; btn.style.background='#0f1624'; btn.style.borderRadius='8px';
-    btn.innerHTML = src.startsWith('data:image') ? `<img src="${src}" style="width:28px;height:28px">` : `<span style="font-size:22px">${src}</span>`;
-    btn.onclick=()=>{ onPick(src.startsWith('data:image')?src:svgFromEmoji(src)); $iconsOverlay.style.display='none'; document.body.style.overflow=''; };
-    $iconsGrid.appendChild(btn);
+/***** РЕДАКТОР (категории + элементы) + сортировки + drag&drop + массовые действия *****/
+const $editor=document.getElementById('editorTab');
+function moveArrayItem(arr,fromIdx,toIdx){ if(fromIdx===toIdx) return; const item=arr.splice(fromIdx,1)[0]; arr.splice(toIdx,0,item); }
+function sortAZ(){ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); for(const cat of db.categories){ if(cat.items) cat.items.sort((a,b)=>a.name.localeCompare(b.name)); } }
+
+function renderEditor(){
+  $editor.innerHTML="";
+
+  // блок "Новая категория"
+  const create=document.createElement('div'); create.className='panel';
+  if(collapsedCats.has('newCat')) create.classList.add('collapsed');
+
+  const head=document.createElement('div'); head.className='collapse-head';
+  const caret=document.createElement('div'); caret.className='caret';
+  const title=document.createElement('h3'); title.textContent='Новая категория';
+  head.append(caret,title); create.appendChild(head);
+
+  const body=document.createElement('div'); body.className='section-body';
+  body.innerHTML=`
+    <div class="row">
+      <input id="newCatName" placeholder="Название"/>
+      <select id="newCatType"><option value="select">Select</option><option value="checkbox">Checkbox</option></select>
+      <select id="newCatParent">
+        <option value="">(нет родителя)</option>
+        ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="row">
+      <span class="preview-icon" id="newIconPreview">icon</span>
+      <input type="color" id="newCatColor" value="#3388ff"/>
+      <select id="newCatShape"><option value="circle">Круг</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option></select>
+      <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
+      <button id="btnIconLib">📚</button>
+      <button id="btnAddCat">+ Добавить</button>
+    </div>`;
+  create.appendChild(body);
+  head.onclick=()=>{
+    if(collapsedCats.has('newCat')) collapsedCats.delete('newCat'); else collapsedCats.add('newCat');
+    setCollapsedSet('collapsedCats_v1',collapsedCats); create.classList.toggle('collapsed');
+  };
+  $editor.appendChild(create);
+
+  const newIconInput=body.querySelector('#newCatIcon');
+  const newIconPreview=body.querySelector('#newIconPreview');
+  let newIconData=null;
+  newIconInput.onchange=e=>{
+    const f=e.target.files[0]; if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
+    const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
+  };
+  body.querySelector('#btnIconLib').onclick=()=>openIconsLib(data=>{ newIconData=data; newIconPreview.innerHTML=`<img src="${data}">`; });
+  body.querySelector('#btnAddCat').onclick=async()=>{
+    const name=body.querySelector('#newCatName').value.trim(); if(!name) return;
+    const type=body.querySelector('#newCatType').value;
+    const parent=body.querySelector('#newCatParent').value||null;
+    const color=body.querySelector('#newCatColor').value;
+    const shape=body.querySelector('#newCatShape').value;
+    const cat={id:uid(),name:name,type:type,parentCategoryId:parent,color:color,shape:shape,items:[]};
+    if(newIconData){cat.iconData=newIconData;} db.categories.push(cat); await commit();
+  };
+
+  // панель сортировки
+  const headPanel=document.createElement('div'); headPanel.className='panel';
+  const headRow=document.createElement('div'); headRow.className='row';
+  const hTitle=document.createElement('h3'); hTitle.textContent='Категории';
+  const btnSortAZ=document.createElement('button'); btnSortAZ.textContent='Сортировать A→Z'; btnSortAZ.onclick=()=>{ sortAZ(); commit(); };
+  headRow.append(hTitle,btnSortAZ); headPanel.appendChild(headRow); $editor.appendChild(headPanel);
+
+  // категории
+  db.categories.forEach(cat=>{
+    const sec=document.createElement('div'); sec.className='panel draggable'; if(collapsedCats.has(cat.id)) sec.classList.add('collapsed'); sec.dataset.catId=cat.id;
+
+    const head=document.createElement('div'); head.className='collapse-head';
+    const caret=document.createElement('div'); caret.className='caret';
+    const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
+    head.append(caret,title);
+
+    const toolsTop=document.createElement('div'); toolsTop.className='tools';
+    const btnUp=document.createElement('button'); btnUp.textContent='▲'; btnUp.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx>0){ moveArrayItem(db.categories,idx,idx-1); commit(); }};
+    const btnDown=document.createElement('button'); btnDown.textContent='▼'; btnDown.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx<db.categories.length-1){ moveArrayItem(db.categories,idx,idx+1); commit(); }};
+    const btnSortItemsAZ=document.createElement('button'); btnSortItemsAZ.textContent='A→Z элементы'; btnSortItemsAZ.onclick=()=>{ cat.items.sort((a,b)=>a.name.localeCompare(b.name)); commit(); };
+    const btnExportCat=document.createElement('button'); btnExportCat.textContent='Экспорт категории';
+    btnExportCat.onclick=()=>exportCategory(cat.id);
+    const btnImportCat=document.createElement('button'); btnImportCat.textContent='Импорт в категорию';
+    btnImportCat.onclick=()=>importIntoCategory(cat.id);
+    const btnDeleteCat=document.createElement('button'); btnDeleteCat.textContent='Удалить категорию'; btnDeleteCat.className='danger';
+    btnDeleteCat.onclick=()=>{ if(confirm(`Удалить категорию "${cat.name}" и все её элементы?`)){ db.categories=db.categories.filter(c=>c.id!==cat.id); dropChildrenSelections(cat.id); commit(); } };
+    toolsTop.append(btnUp,btnDown,btnSortItemsAZ,btnExportCat,btnImportCat,btnDeleteCat);
+
+    const headWrap=document.createElement('div'); headWrap.style.display='flex'; headWrap.style.justifyContent='space-between'; headWrap.style.alignItems='center';
+    headWrap.append(head,toolsTop); sec.appendChild(headWrap);
+
+    const body=document.createElement('div'); body.className='section-body';
+
+    const cfg=document.createElement('div'); cfg.className='row';
+    const inpName=document.createElement('input'); inpName.value=cat.name; inpName.onchange=()=>{cat.name=inpName.value.trim(); commit(); updateAllPolyMetricLabels();};
+    const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);}); selType.onchange=()=>{cat.type=selType.value; commit();};
+    const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join(''); selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; commit();};
+    const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; commit();};
+    const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);}); shape.onchange=()=>{cat.shape=shape.value; commit();};
+    const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+    const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
+    const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.onclick=()=>iconInput.click();
+    iconInput.onchange=e=>{
+      const f=e.target.files[0];
+      if(!f){ delete cat.iconData; iconPrev.textContent='icon'; commit(); return; }
+      const r=new FileReader(); r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; commit(); }; r.readAsDataURL(f);
+    };
+    const iconLibBtn=document.createElement('button'); iconLibBtn.textContent='📚'; iconLibBtn.onclick=()=>openIconsLib(data=>{ cat.iconData=data; iconPrev.innerHTML=`<img src="${cat.iconData}">`; commit(); });
+    const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка'; btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; commit();};
+    cfg.append(inpName,selType,selParent,col,shape,iconPrev,iconBtn,iconInput,iconLibBtn,btnClearIcon);
+    body.appendChild(cfg);
+
+    // список элементов + массовые действия
+    const list=document.createElement('div'); list.className='list'; list.dataset.catId=cat.id;
+    const massBar=document.createElement('div'); massBar.className='row'; massBar.style.display='none';
+    const btnMassDelete=document.createElement('button'); btnMassDelete.textContent='Удалить выбранные';
+    const btnMassMove=document.createElement('button'); btnMassMove.textContent='Переместить в...';
+    const btnMassIcon=document.createElement('button'); btnMassIcon.textContent='Назначить иконку';
+    massBar.append(btnMassDelete,btnMassMove,btnMassIcon); body.appendChild(massBar);
+    const selectedSet=new Set(); function updateMassBar(){ massBar.style.display = selectedSet.size>0 ? 'flex' : 'none'; }
+
+    (cat.items||[]).forEach(it=>{
+      const row=document.createElement('div'); row.className='item-row draggable'; row.dataset.itemId=it.id;
+      const left=document.createElement('div'); left.className='left';
+      const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
+      const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}`;
+      left.append(nm,meta);
+
+      const tools=document.createElement('div'); tools.className='tools';
+      const selCb=document.createElement('input'); selCb.type='checkbox'; selCb.onchange=()=>{ if(selCb.checked) selectedSet.add(it.id); else selectedSet.delete(it.id); updateMassBar(); };
+      const edit=document.createElement('button'); edit.textContent='✎'; edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){it.name=(nn.trim()||it.name); commit();}};
+      const upBtn=document.createElement('button'); upBtn.textContent='▲'; upBtn.onclick=()=>{ const idx=cat.items.findIndex(x=>x.id===it.id); if(idx>0){ moveArrayItem(cat.items,idx,idx-1); commit(); } };
+      const downBtn=document.createElement('button'); downBtn.textContent='▼'; downBtn.onclick=()=>{ const idx=cat.items.findIndex(x=>x.id===it.id); if(idx<cat.items.length-1){ moveArrayItem(cat.items,idx,idx+1); commit(); } };
+      const place=document.createElement('button'); place.textContent='📍'; place.onclick=()=>{
+        alert('Кликни по карте для: '+it.name);
+        map.once('click', e=>{
+          it.lat=e.latlng.lat; it.lng=e.latlng.lng; commit(); map.setView([it.lat,it.lng],14);
+        });
+      };
+      const copyBtn=document.createElement('button'); copyBtn.textContent='⎘ копия'; copyBtn.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ const t=`${it.lat},${it.lng}`; navigator.clipboard?.writeText(t); alert('Скопировано: '+t);} else { alert('У элемента нет координат'); } };
+      const pasteBtn=document.createElement('button'); pasteBtn.textContent='⎗ вставить'; pasteBtn.onclick=async()=>{
+        let txt=''; try{ txt=await navigator.clipboard.readText(); }catch(_){}
+        if(!txt){ txt=prompt('Вставь координаты в формате "lat,lng"'); }
+        if(!txt) return;
+        const m=txt.trim().match(/(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)/);
+        if(!m){ alert('Не распознал координаты'); return; }
+        it.lat=parseFloat(m[1]); it.lng=parseFloat(m[3]); commit(); map.setView([it.lat,it.lng],15);
+      };
+      const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка'; clearBtn.onclick=()=>{it.lat=null; it.lng=null; commit();};
+      const del=document.createElement('button'); del.textContent='❌'; del.className='danger'; del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items=cat.items.filter(x=>x.id!==it.id); commit();}};
+
+      row.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ map.setView([it.lat,it.lng],16); } };
+      tools.append(selCb,edit,upBtn,downBtn,place,copyBtn,pasteBtn,clearBtn,del);
+      row.append(left,tools); list.appendChild(row);
+    });
+    body.appendChild(list);
+
+    // массовые действия
+    btnMassDelete.onclick=()=>{ if(selectedSet.size===0) return; if(!confirm(`Удалить выбранные (${selectedSet.size})?`)) return; cat.items=cat.items.filter(it=>!selectedSet.has(it.id)); selectedSet.clear(); commit(); };
+    btnMassMove.onclick=()=>{ if(selectedSet.size===0) return; const destId=prompt('ID категории-назначения:', (db.categories.find(c=>c.id!==cat.id)||{}).id||""); if(!destId) return;
+      const dest=db.categories.find(c=>c.id===destId); if(!dest){alert('Категория не найдена');return;}
+      const moving=cat.items.filter(it=>selectedSet.has(it.id)); cat.items=cat.items.filter(it=>!selectedSet.has(it.id)); dest.items.push(...moving); selectedSet.clear(); commit();
+    };
+    btnMassIcon.onclick=()=>{ if(selectedSet.size===0) return; openIconsLib(data=>{ cat.items.forEach(it=>{ if(selectedSet.has(it.id)) it.iconData=data; }); selectedSet.clear(); commit(); }); };
+
+    // добавление элемента + подсказки
+    const addRow=document.createElement('div'); addRow.className='row';
+    const inp=document.createElement('input'); inp.placeholder='Новый элемент';
+    const parentPicker=document.createElement('select');
+    if(cat.parentCategoryId){
+      const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
+      parentPicker.innerHTML=`<option value="">(без родителя)</option>`+(parentCat?.items||[]).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    }else{ parentPicker.innerHTML=`<option value="">(родитель не задан)</option>`; }
+    const addBtn=document.createElement('button'); addBtn.textContent='+ Добавить';
+    addBtn.onclick=()=>{ const nm=inp.value.trim(); if(!nm) return; cat.items.push({id:uid(),name:nm,lat:null,lng:null,parentId:parentPicker.value||null}); inp.value=''; commit(); };
+    addRow.append(inp,parentPicker,addBtn); body.appendChild(addRow);
+    attachSuggestions(inp);
+
+    sec.appendChild(body);
+    head.onclick=()=>{
+      if(collapsedCats.has(cat.id)) collapsedCats.delete(cat.id); else collapsedCats.add(cat.id);
+      setCollapsedSet('collapsedCats_v1',collapsedCats); sec.classList.toggle('collapsed');
+    };
+
+    // drag&drop категорий
+    sec.draggable=true;
+    sec.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('text/plain', JSON.stringify({type:'cat',catId:cat.id}));
+      sec.classList.add('dragging');
+    });
+    sec.addEventListener('dragend',()=>sec.classList.remove('dragging'));
+    sec.addEventListener('dragover',e=>{ e.preventDefault(); sec.classList.add('dropzone-hover'); });
+    sec.addEventListener('dragleave',()=>sec.classList.remove('dropzone-hover'));
+    sec.addEventListener('drop',e=>{
+      e.preventDefault(); sec.classList.remove('dropzone-hover');
+      let payload={}; try{ payload=JSON.parse(e.dataTransfer.getData('text/plain')||'{}'); }catch(_){}
+      if(payload.type!=='cat') return;
+      const fromIdx=db.categories.findIndex(c=>c.id===payload.catId);
+      const toIdx  =db.categories.findIndex(c=>c.id===sec.dataset.catId);
+      if(fromIdx<0||toIdx<0||fromIdx===toIdx) return; moveArrayItem(db.categories,fromIdx,toIdx); commit();
+    });
+
+    // drag&drop элементов внутри категории
+    [...list.children].forEach(row=>{
+      row.draggable=true;
+      row.addEventListener('dragstart',e=>{
+        e.dataTransfer.setData('text/plain', JSON.stringify({type:'item',catId:cat.id,itemId:row.dataset.itemId}));
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend',()=>row.classList.remove('dragging'));
+      row.addEventListener('dragover',e=>{ e.preventDefault(); row.classList.add('dropzone-hover'); });
+      row.addEventListener('dragleave',()=>row.classList.remove('dropzone-hover'));
+      row.addEventListener('drop',e=>{
+        e.preventDefault(); row.classList.remove('dropzone-hover');
+        let payload={}; try{ payload=JSON.parse(e.dataTransfer.getData('text/plain')||'{}'); }catch(_){}
+        if(payload.type!=='item' || payload.catId!==cat.id) return;
+        const fromIdx=cat.items.findIndex(x=>x.id===payload.itemId);
+        const toIdx  =cat.items.findIndex(x=>x.id===row.dataset.itemId);
+        if(fromIdx<0||toIdx<0||fromIdx===toIdx) return; moveArrayItem(cat.items,fromIdx,toIdx); commit();
+      });
+    });
+
+    $editor.appendChild(sec);
   });
-  $iconsOverlay.style.display='flex'; document.body.style.overflow='hidden';
-}
-function svgFromEmoji(emoji){
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="48">${emoji}</text></svg>`;
-  return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
+
+  // панель инфо
+  const infoPanel=document.createElement('div'); infoPanel.className='panel';
+  const infoBtn=document.createElement('button'); infoBtn.textContent='Инфо / статистика';
+  infoBtn.onclick=()=>{ document.getElementById('btnInfo').click(); };
+  infoPanel.appendChild(infoBtn);
+  $editor.appendChild(infoPanel);
 }
 
-/***** ЭКСПОРТ / ИМПОРТ (всё) *****/
-document.getElementById('btnExport').onclick=async()=>{
-  await save(db);
-  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`location_selector_export_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
+/***** TABS *****/
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    const which=tab.dataset.tab;
+    document.getElementById('editorTab').style.display=which==='editor'?'block':'none';
+    document.getElementById('previewTab').style.display=which==='preview'?'block':'none';
+  };
+});
+
+/***** EXPORT/IMPORT (всё) *****/
+document.getElementById('btnExport').onclick=async ()=>{
+  const full=JSON.parse(JSON.stringify(db));
+  for(const cat of full.categories){
+    if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
+    for(const it of (cat.items||[])){
+      if(it.iconKey && !it.iconData){ try{ it.iconData=await lfIcons.getItem(it.iconKey)||null; }catch(e){} }
+    }
+  }
+  for(const p of (full.polygons||[])){
+    if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
+  }
+  const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_3R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
-document.getElementById('fileImport').onchange=async e=>{
-  const f=e.target.files?.[0]; if(!f) return;
-  try{
-    const text=await f.text();
-    const incoming=JSON.parse(text||'{}');
-    normalize(incoming);
-    db=incoming;
-    await commit();
-    rebuildPolys(); renderPreview(); renderEditor();
-  }catch(err){
-    alert('Не удалось импортировать: '+(err?.message||err));
-  }finally{
-    e.target.value="";
+document.getElementById('fileImport').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async ()=>{
+    try{
+      let obj=JSON.parse(r.result); if(obj && obj.db) obj=obj.db;
+      if(!Array.isArray(obj.categories)) throw new Error('Нет categories');
+      if(!Array.isArray(obj.polygons))   obj.polygons=[];
+      for(const cat of obj.categories){
+        if(!cat.id) cat.id=uid();
+        if(cat.iconData){ const key=cat.iconKey||`cat_${cat.id}`; await lfIcons.setItem(key,cat.iconData); cat.iconKey=key; }
+        for(const it of (cat.items||[])){
+          if(!it.id) it.id=uid();
+          if(it.iconData){ const key=it.iconKey||`item_${it.id}`; await lfIcons.setItem(key,it.iconData); it.iconKey=key; }
+        }
+      }
+      for(const p of obj.polygons){ if(!p.id) p.id=uid(); if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); } }
+      localStorage.setItem(KEY, JSON.stringify({
+        categories:obj.categories.map(c=>({
+          id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId||null,
+          color:c.color,shape:c.shape,iconKey:c.iconKey||null,
+          items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId||null,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
+        })),
+        polygons:(obj.polygons||[]).map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
+      }));
+      db = await loadDB();
+      loadSelected(); pushHistory(); renderAll(); resumeEditingIfNeeded(); updatePolygonVisibility();
+      alert('Импортировано');
+    }catch(err){ alert('Ошибка импорта: '+err.message); }
+  };
+  r.readAsText(f);
+};
+
+/***** EXPORT/IMPORT ПО КАТЕГОРИИ (как было) *****/
+async function exportCategory(catId){
+  const cat=db.categories.find(c=>c.id===catId); if(!cat) return;
+  let items=[...(cat.items||[])];
+  if(cat.parentCategoryId){
+    const parentIds=getSelectedIds(cat.parentCategoryId);
+    if(parentIds.length>0) items=items.filter(it=> it.parentId && parentIds.includes(it.parentId));
   }
-};
+  const pack={category:{ id:cat.id, name:cat.name, type:cat.type, parentCategoryId:cat.parentCategoryId, items:items }};
+  const blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${cat.name}_export.json`; a.click();
+}
 
-/***** ИНФО / СТАТИСТИКА *****/
-const $infoOverlay=document.getElementById('infoOverlay');
-const $infoBox=document.getElementById('infoBox');
-document.getElementById('btnInfo').onclick=()=>{
-  const itemsCount=db.categories.reduce((n,c)=>n+(c.items?.length||0),0);
-  const withCoords=db.categories.reduce((n,c)=>n+(c.items?.filter(i=>i.lat!=null&&i.lng!=null).length||0),0);
-  const polys=db.polygons.length;
-  const visible=db.polygons.filter(p=>p.visible!==false).length;
-  $infoBox.innerHTML=`
-    <div class="panel">
-      <div><b>Категорий:</b> ${db.categories.length}</div>
-      <div><b>Элементов:</b> ${itemsCount}</div>
-      <div><b>С метками:</b> ${withCoords}</div>
-      <div><b>Полигоны:</b> ${polys} (видимых: ${visible})</div>
-      <div class="sep"></div>
-      <div class="help">Площадь показывается всегда (если включена у полигона). Длины сторон показываются <b>только</b> во время редактирования конкретного полигона.</div>
-    </div>`;
-  $infoOverlay.style.display='flex'; document.body.style.overflow='hidden';
-};
-document.getElementById('infoClose').onclick=()=>{$infoOverlay.style.display='none'; document.body.style.overflow='';};
+let importDialogCtx=null;
+function showImportDialog(message,ctx){
+  importDialogCtx=ctx;
+  document.getElementById('importMessage').innerHTML=message;
+  document.getElementById('importDialog').style.display='flex'; document.body.style.overflow='hidden';
+}
+function closeImportDialog(){ importDialogCtx=null; document.getElementById('importDialog').style.display='none'; document.body.style.overflow=''; }
+document.getElementById('btnOverwrite').onclick=()=>{ if(!importDialogCtx) return; importDialogCtx.resolve('overwrite'); closeImportDialog(); };
+document.getElementById('btnSkip').onclick=()=>{ if(!importDialogCtx) return; importDialogCtx.resolve('skip'); closeImportDialog(); };
+document.getElementById('btnApplyAll').onclick=()=>{ if(!importDialogCtx) return; importDialogCtx.resolve('applyAllOverwrite'); closeImportDialog(); };
+document.getElementById('importClose').onclick=()=>{ if(importDialogCtx) importDialogCtx.resolve('skip'); closeImportDialog(); };
+function askConflict(message){ return new Promise(resolve=>{ showImportDialog(message,{resolve}); }); }
 
-/***** RESET *****/
-document.getElementById('btnReset').onclick=async()=>{
-  if(!confirm('Сбросить все данные?')) return;
-  localStorage.clear();
-  try{ await lfIcons.clear(); await lfGeo.clear(); }catch(_){}
-  db={categories:[],polygons:[]}; selected={};
-  historyStack=[]; historyIndex=-1;
-  await commit();
-  rebuildPolys(); renderPreview(); renderEditor();
-};
+function importIntoCategory(catId){
+  const input=document.createElement('input'); input.type='file'; input.accept='.json,.txt';
+  input.onchange=e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=async ()=>{
+      try{
+        const target=db.categories.find(c=>c.id===catId);
+        if(!target) throw new Error('Категория не найдена');
+        let pack=JSON.parse(r.result);
+        let items=[];
+        if(Array.isArray(pack.items)) items=pack.items;
+        else if(pack.category && Array.isArray(pack.category.items)) items=pack.category.items;
+        else if(Array.isArray(pack)) items=pack;
+        else throw new Error('Неверный формат: ожидаются items');
 
-/***** ВКЛАДКИ (Редактор / Предпросмотр) *****/
-const $tabs=[...document.querySelectorAll('.tab')];
-const $editorTab=document.getElementById('editorTab');
-const $previewTab=document.getElementById('previewTab');
-$tabs.forEach(t=>t.onclick=()=>{
-  $tabs.forEach(x=>x.classList.remove('active'));
-  t.classList.add('active');
-  const name=t.dataset.tab;
-  if(name==='editor'){ $editorTab.style.display='block'; $previewTab.style.display='none'; }
-  else { $editorTab.style.display='none'; $previewTab.style.display='block'; }
-});
+        let applyAll=null; // "overwrite" | "skip"
+        for(const incoming of items){
+          const name=(incoming.name||"").trim(); if(!name) continue;
+          if(!('id' in incoming)) incoming.id=uid();
+          if(!('lat' in incoming)) incoming.lat=null;
+          if(!('lng' in incoming)) incoming.lng=null;
+          if(!('parentId' in incoming)) incoming.parentId=null;
 
-/***** ИНСТРУМЕНТЫ: линейка, точка, линия *****/
-let measureActive=false, measureLine=null, measurePts=[];
-const $btnMeasure=document.getElementById('btnMeasure');
-$btnMeasure.onclick=()=>{
-  measureActive=!measureActive;
-  $btnMeasure.style.borderColor=measureActive?'#4aa8ff':'';
-  if(!measureActive){ if(measureLine){ map.removeLayer(measureLine); measureLine=null; } measurePts=[]; map.getContainer().style.cursor=''; return; }
-  map.getContainer().style.cursor='crosshair';
-};
-map.on('click',e=>{
-  if(!measureActive) return;
-  measurePts.push(e.latlng);
-  if(measurePts.length>=2){
-    if(measureLine) map.removeLayer(measureLine);
-    measureLine=L.polyline(measurePts,{color:'#4aa8ff',weight:2}).addTo(map);
-    const len=L.GeometryUtil.length(measurePts);
-    measureLine.bindTooltip(`Длина: ${len>1000?(len/1000).toFixed(2)+' км':Math.round(len)+' м'}`,{permanent:true,offset:[0,-8]}).openTooltip();
-  }
-});
-map.on('contextmenu',()=>{
-  if(!measureActive) return;
-  measureActive=false; $btnMeasure.style.borderColor=''; map.getContainer().style.cursor='';
-});
+          const exists=target.items.find(x=>x.name===name);
+          if(exists){
+            if(applyAll){ if(applyAll==='overwrite'){ Object.assign(exists, {...incoming, id:exists.id}); } continue; }
+            const choice = await askConflict(`Элемент "<b>${name}</b>" уже существует в категории "<b>${target.name}</b>". Что сделать?`);
+            if(choice==='overwrite'){ Object.assign(exists, {...incoming, id:exists.id}); }
+            else if(choice==='applyAllOverwrite'){ Object.assign(exists, {...incoming, id:exists.id}); applyAll='overwrite'; }
+          }else{
+            target.items.push({id:incoming.id,name,lat:incoming.lat,lng:incoming.lng,parentId:incoming.parentId});
+          }
+        }
+        await commit(); alert('Импорт категории завершён');
+      }catch(err){ alert('Ошибка импорта в категорию: '+err.message); }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
 
-document.getElementById('btnDrawPoint').onclick=()=> new L.Draw.Marker(map,{}).enable();
-document.getElementById('btnDrawLine').onclick=()=> new L.Draw.Polyline(map,{shapeOptions:{color:'#4aa8ff',weight:2}}).enable();
-
-/***** ОКНО КООРДИНАТ *****/
+/***** ПЛАВАЮЩЕЕ ОКНО КООРДИНАТ (только карта) *****/
 const $coordTool=document.getElementById('coordTool');
 const $coordLat=document.getElementById('coordLat');
 const $coordLng=document.getElementById('coordLng');
 const $btnCoordFind=document.getElementById('btnCoordFind');
 const $btnCoordAdd=document.getElementById('btnCoordAdd');
 const $btnCoordClear=document.getElementById('btnCoordClear');
+let tempMarker=null;
 
-(function injectCoordTool(){
-  document.body.appendChild($coordTool);
-  $coordTool.style.display='grid';
-  // перетаскивание
-  const drag=$coordTool.querySelector('#coordDrag');
-  let dragging=false, sx=0, sy=0, left=12, top=120;
-  $coordTool.style.left=left+'px'; $coordTool.style.top=top+'px';
-  drag.addEventListener('mousedown',e=>{ dragging=true; sx=e.clientX-left; sy=e.clientY-top; });
-  document.addEventListener('mousemove',e=>{
-    if(!dragging) return;
-    left=e.clientX-sx; top=e.clientY-sy;
-    $coordTool.style.left=left+'px'; $coordTool.style.top=top+'px';
-  });
-  document.addEventListener('mouseup',()=>dragging=false);
+// переносим окно внутрь контейнера карты и показываем
+document.getElementById('map').appendChild($coordTool);
+(function restoreCoordToolPos(){
+  const pos=JSON.parse(localStorage.getItem('coordToolPos')||'null');
+  if(pos){ $coordTool.style.left=pos.left; $coordTool.style.top=pos.top; }
+  else{ $coordTool.style.right='12px'; $coordTool.style.top='12px'; }
 })();
+$coordTool.style.display='grid';
+
+// ограничение перетаскивания границами карты
+(function enableDrag(){
+  const handle=document.getElementById('coordDrag');
+  let sx=0,sy=0,ox=0,oy=0,isDown=false;
+  handle.addEventListener('mousedown',e=>{isDown=true;sx=e.clientX;sy=e.clientY; const r=$coordTool.getBoundingClientRect(); ox=r.left; oy=r.top; e.preventDefault();});
+  document.addEventListener('mousemove',e=>{
+    if(!isDown) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    const mapRect=document.getElementById('map').getBoundingClientRect();
+    let left=ox+dx, top=oy+dy;
+    const toolRect=$coordTool.getBoundingClientRect();
+    const w=toolRect.width, h=toolRect.height;
+    // границы
+    if(left<mapRect.left) left=mapRect.left;
+    if(top<mapRect.top) top=mapRect.top;
+    if(left+w>mapRect.right) left=mapRect.right-w;
+    if(top+h>mapRect.bottom) top=mapRect.bottom-h;
+    $coordTool.style.left=(left-mapRect.left)+'px';
+    $coordTool.style.top =(top -mapRect.top )+'px';
+    $coordTool.style.right='auto';
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!isDown) return; isDown=false;
+    // сохраняем позицию
+    const style=getComputedStyle($coordTool);
+    localStorage.setItem('coordToolPos', JSON.stringify({left:style.left, top:style.top}));
+  });
+})();
+
+function setTempMarker(lat,lng){
+  if(tempMarker){ map.removeLayer(tempMarker); tempMarker=null; }
+  tempMarker=L.marker([lat,lng],{draggable:true}).addTo(map);
+  tempMarker.on('dragend',()=>{
+    const p=tempMarker.getLatLng(); $coordLat.value=p.lat.toFixed(6); $coordLng.value=p.lng.toFixed(6);
+  });
+  map.setView([lat,lng],16);
+}
+
 $btnCoordFind.onclick=()=>{
   const lat=parseFloat($coordLat.value), lng=parseFloat($coordLng.value);
-  if(Number.isFinite(lat)&&Number.isFinite(lng)) map.setView([lat,lng],17);
+  if(Number.isFinite(lat)&&Number.isFinite(lng)) setTempMarker(lat,lng);
+  else alert('Введи корректные координаты');
 };
+
+$btnCoordClear.onclick=()=>{
+  if(tempMarker){ map.removeLayer(tempMarker); tempMarker=null; }
+  $coordLat.value=''; $coordLng.value='';
+};
+
 $btnCoordAdd.onclick=()=>{
-  const lat=parseFloat($coordLat.value), lng=parseFloat($coordLng.value);
-  if(Number.isFinite(lat)&&Number.isFinite(lng)) L.marker([lat,lng]).addTo(map);
+  if(!tempMarker){ alert('Сначала нажми "Найти"'); return; }
+  const name=prompt('Название метки (элемента):','Новая локация'); if(!name) return;
+  const catNames=db.categories.map(c=>c.name).join(', ');
+  const catName=prompt('В какую категорию сохранить? Доступны: '+catNames);
+  const cat=db.categories.find(c=>c.name===catName);
+  if(!cat){ alert('Категория не найдена'); return; }
+  let parentId=null;
+  if(cat.parentCategoryId){
+    const parentCat=db.categories.find(c=>c.id===cat.parentCategoryId);
+    if(parentCat && (parentCat.items||[]).length){
+      const parentName=prompt(`Выбери родителя из "${parentCat.name}" (точное имя)`, parentCat.items[0].name);
+      const parentItem=parentCat.items.find(i=>i.name===parentName);
+      if(parentItem) parentId=parentItem.id;
+    }
+  }
+  const p=tempMarker.getLatLng();
+  cat.items.push({id:uid(),name:name.trim(),lat:p.lat,lng:p.lng,parentId});
+  commit();
+  alert('Метка добавлена в категорию: '+cat.name);
 };
-$btnCoordClear.onclick=()=>{ $coordLat.value=''; $coordLng.value=''; };
 
-/***** КРЮКИ ДЛЯ РЕДАКТОРА (массовые действия – заглушки, чтобы не ломать вызовы) *****/
-async function exportCategory(catId){
-  const cat=db.categories.find(c=>c.id===catId); if(!cat) return;
-  const blob=new Blob([JSON.stringify(cat,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`category_${(cat.name||'cat').replace(/\s+/g,'_')}.json`; document.body.appendChild(a); a.click(); a.remove();
-}
-async function importIntoCategory(catId){
-  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,.txt';
-  inp.onchange=async e=>{
-    const f=e.target.files?.[0]; if(!f) return;
-    try{
-      const src=JSON.parse(await f.text());
-      if(!src || !Array.isArray(src.items)) throw new Error('В файле нет items[]');
-      const cat=db.categories.find(c=>c.id===catId); if(!cat) return;
-      // простое слияние: новые id, перенос базовых полей
-      src.items.forEach(it=>{
-        cat.items.push({
-          id:uid(),
-          name:String(it.name||'Без имени'),
-          parentId:it.parentId||null,
-          lat:('lat' in it && it.lat!=null)?Number(it.lat):null,
-          lng:('lng' in it && it.lng!=null)?Number(it.lng):null,
-          iconData:it.iconData||null
-        });
-      });
-      await commit(); renderPreview();
-    }catch(err){ alert('Импорт не удался: '+(err?.message||err)); }
+/***** ИНСТРУМЕНТЫ КАРТЫ: линейка/точка/линия *****/
+let measureActive=false, drawLineActive=false, drawPointActive=false;
+let measureLayer=null;
+const drawControl=new L.Control.Draw({
+  draw:{
+    polygon:false, rectangle:false, circle:false, circlemarker:false,
+    polyline:true, marker:true
+  },
+  edit:false
+});
+map.addControl(drawControl);
+
+function enableMeasure(){
+  if(measureActive) return;
+  measureActive=true;
+  alert('Режим линейки: ставь точки на карте. Двойной клик — завершить.');
+  const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#4aa8ff',weight:3,dashArray:'6,6'}});
+  drawer.enable();
+  const onCreated=(e)=>{
+    if(measureLayer) map.removeLayer(measureLayer);
+    measureLayer=e.layer.addTo(map);
+    const latlngs=e.layer.getLatLngs();
+    const dist=L.GeometryUtil.length(latlngs);
+    alert('Длина: '+formatLen(dist));
+    map.off(L.Draw.Event.CREATED,onCreated);
+    measureActive=false;
   };
-  inp.click();
+  map.on(L.Draw.Event.CREATED,onCreated);
 }
 
-/***** BOOTSTRAP *****/
-let db={categories:[],polygons:[]};
+document.getElementById('btnMeasure').onclick=()=>enableMeasure();
+document.getElementById('btnDrawLine').onclick=()=>{
+  if(drawLineActive) return;
+  drawLineActive=true;
+  const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#23d1b5',weight:3}});
+  drawer.enable();
+  const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawLineActive=false; };
+  map.on(L.Draw.Event.CREATED,onCreated);
+};
+document.getElementById('btnDrawPoint').onclick=()=>{
+  if(drawPointActive) return;
+  drawPointActive=true;
+  const drawer=new L.Draw.Marker(map,{});
+  drawer.enable();
+  const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawPointActive=false; };
+  map.on(L.Draw.Event.CREATED,onCreated);
+};
 
-function renderAll(){
+/***** RESET *****/
+document.getElementById('btnReset').onclick=()=>{
+  if(confirm('Очистить всё?')){
+    localStorage.removeItem(KEY);
+    localStorage.removeItem('selected_v1');
+    localStorage.removeItem('polyEditingId');
+    localStorage.removeItem('collapsedPolygons_v1');
+    localStorage.removeItem('collapsedCats_v1');
+    localStorage.removeItem('coordToolPos');
+    lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{});
+    location.reload();
+  }
+};
+
+/***** MAIN RENDER *****/
+async function renderAll(){
+  rebuildPolys();
   renderEditor();
   renderPreview();
-  rebuildPolys();
-  // подсказки для поиска по полигонам/названию
-  const $polySearch=document.getElementById('polySearch');
-  if($polySearch && !$polySearch._attached){ attachSuggestions($polySearch); $polySearch._attached=true; }
-  const $polyName=document.getElementById('polyName');
-  if($polyName && !$polyName._attached){ attachSuggestions($polyName); $polyName._attached=true; }
+  renderPolyList();
+  // никаких автопоказов: если не выбрано — на карте пусто
 }
 
-(async function init(){
-  db=await loadDB();
+/***** RESUME EDIT MODE *****/
+function resumeEditingIfNeeded(){
+  const id=localStorage.getItem('polyEditingId'); if(!id) return;
+  const layer=polyIndex.get(id); if(!layer) return;
+
+  if(polyEditing&&polyEditToolbar){ polyEditToolbar.disable(); }
+  polyEditToolbar=new L.EditToolbar.Edit(map,{featureGroup:polyFG});
+  polyEditToolbar.enable(); polyEditing=true;
+
+  polyFG.eachLayer(x=>{
+    if(x===layer){ if(x.editing && !x.editing._enabled) x.editing.enable(); }
+    else{ if(x.editing && x.editing._enabled) x.editing.disable(); }
+  });
+
+  setEditingTarget(id); layer.addTo(map); map.fitBounds(layer.getBounds());
+  updateAllPolyMetricLabels();
+}
+
+/***** СТАРТ *****/
+let db=null;
+(async()=>{
+  db = await loadDB();
   loadSelected();
-  pushHistory(); // начальный снимок всего состояния
-  renderAll();
-
-  // восстановление активного редактируемого полигона (если было)
-  const remembered=localStorage.getItem('polyEditingId');
-  if(remembered && db.polygons.some(p=>p.id===remembered)){
-    setEditingTarget(remembered);
-  }
+  pushHistory(); // первичный снапшот истории
+  await renderAll();
+  resumeEditingIfNeeded();
 })();
-
-/***** Горячие клавиши (ESC — выйти из редактирования/линейки) *****/
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){
-    if(polyEditing) stopPolyEditing();
-    if(measureActive){ measureActive=false; $btnMeasure.style.borderColor=''; map.getContainer().style.cursor=''; if(measureLine){ map.removeLayer(measureLine); measureLine=null; } measurePts=[]; }
-  }
-});
 </script>
+</body>
+</html>
