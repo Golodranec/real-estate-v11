@@ -804,7 +804,14 @@ map.on(L.Draw.Event.CREATED,async e=>{
   if(e.layerType==="polygon" && (e.layer instanceof L.Polygon)){
     const layer=e.layer; layer.setStyle({color:'#ff4d4f',weight:2,fillOpacity:.12});
     polyFG.addLayer(layer);
-    const rec={id:uid(),name:(document.getElementById('polyName')?.value||`Полигон ${db.polygons.length+1}`).trim(),color:(document.getElementById('polyColor')?.value||'#ff4d4f'),visible=true,metricsEnabled:true,geojson:layer.toGeoJSON()};
+const rec = {
+  id: uid(),
+  name: (document.getElementById('polyName')?.value || `Полигон ${db.polygons.length+1}`).trim(),
+  color: (document.getElementById('polyColor')?.value || '#ff4d4f'),
+  visible: true,
+  metricsEnabled: true,
+  geojson: layer.toGeoJSON()
+};
     db.polygons.push(rec); polyIndex.set(rec.id,layer); pushHistoryPoly(rec); await commit();
     refreshPolygonMetrics(rec.id);
   } else {
