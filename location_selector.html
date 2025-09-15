@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.2R stable — база v38.9R + плавающее окно координат + пустая карта при пустом предпросмотре + зум на результат</title>
+<title>location_selector v39.3R stable — база v38.9R + инструменты (линейка/точка/линия) + метрики полигонов + кнопка Выбрать</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -94,11 +94,15 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .coord-tool .row input{flex:1}
 .coord-tool .row button{white-space:nowrap}
 .coord-tool .help{font-size:12px;color:var(--muted)}
+
+/* новая кнопка мультиселекта */
+.multi-select-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
+.multi-select-btn:hover{border-color:var(--accent);background:#212b41}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.2R</span>
+  <span class="badge">location_selector v39.3R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -106,6 +110,12 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <button id="btnUndo">Undo</button>
   <button id="btnRedo">Redo</button>
   <button id="btnReset" class="danger">Сброс</button>
+
+  <!-- инструменты карты -->
+  <span style="margin-left:12px" class="badge">Инструменты</span>
+  <button id="btnMeasure">Линейка</button>
+  <button id="btnDrawPoint">Точка</button>
+  <button id="btnDrawLine">Линия</button>
 </header>
 
 <div class="tabs">
@@ -129,8 +139,10 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
       <div class="sep"></div>
       <h3>Полигоны</h3>
-      <input id="polyName" placeholder="Название полигона"/>
-      <input type="color" id="polyColor" value="#ff4d4f"/>
+      <div class="row">
+        <input id="polyName" placeholder="Название полигона"/>
+        <input type="color" id="polyColor" value="#ff4d4f"/>
+      </div>
       <div class="row">
         <button id="btnPolyNew">Новый</button>
         <button id="btnPolyEdit">Редактировать</button>
@@ -138,6 +150,13 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
         <button id="btnPolyUndo">Undo</button>
         <button id="btnPolyRedo">Redo</button>
       </div>
+
+      <!-- переключатель метрик площадей/периметров -->
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <input type="checkbox" id="chkPolyMetrics" checked/>
+        Показывать площадь и периметр
+      </label>
+
       <input id="polySearch" placeholder="Поиск по полигонам..."/>
       <div id="polyList" class="list"></div>
     </div>
@@ -215,6 +234,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<!-- геометрия для метрик -->
+<script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js"></script>
 
 <script>
 /***** STORAGE + DB (ключи из v38.6R чтобы не потерять данные) *****/
@@ -343,10 +364,32 @@ function markerIcon(cat,it){
 }
 function addMarkerForItem(it,cat){
   if(it.lat==null||it.lng==null) return;
-  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it),_itemId:it.id});
-  m.bindPopup(`<b>${it.name}</b><br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+  const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it),_itemId:it.id,draggable:true});
+  m.bindPopup(`<b>${it.name}</b><br/>
+    <button onclick="copyCoords('${it.id}')">⎘ Скопировать координаты</button>
+    <br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+  m.on('dragend',()=>{
+    const p=m.getLatLng();
+    for(const c of db.categories){
+      const e=(c.items||[]).find(x=>x.id===it.id);
+      if(e){ e.lat=p.lat; e.lng=p.lng; break; }
+    }
+    save(db);
+  });
   cluster.addLayer(m);
 }
+window.copyCoords=function(itemId){
+  for(const c of db.categories){
+    const it=(c.items||[]).find(x=>x.id===itemId);
+    if(it && it.lat!=null && it.lng!=null){
+      const text=`${it.lat},${it.lng}`;
+      navigator.clipboard?.writeText(text);
+      alert('Координаты скопированы: '+text);
+      return;
+    }
+  }
+};
+
 window.removeMarkerById=function(id){
   for(const c of db.categories){ const it=(c.items||[]).find(x=>x.id===id); if(it){it.lat=null;it.lng=null;break;} }
   const toRemove=[]; cluster.eachLayer(m=>{ if(m.options && m.options._itemId===id) toRemove.push(m); });
@@ -358,6 +401,45 @@ window.removeMarkerById=function(id){
 const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
 const polyIndex=new Map();
 const historyById=new Map(); // id -> {stack:[],index}
+
+/* метки метрик для полигонов */
+const polyMetricLabels=new Map(); // id -> L.marker
+let showPolyMetrics=true;
+document.getElementById('chkPolyMetrics').addEventListener('change',()=>{
+  showPolyMetrics=document.getElementById('chkPolyMetrics').checked;
+  updateAllPolyMetricLabels();
+});
+function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
+function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
+function setPolyMetricLabel(p){
+  const layer=polyIndex.get(p.id); if(!layer || !layer.getBounds) return;
+  const rings=layer.getLatLngs()[0]||[];
+  if(!rings.length) return;
+  const area=L.GeometryUtil.geodesicArea(rings);
+  const per =L.GeometryUtil.length(rings);
+  const txt=`S=${formatArea(area)}, P=${formatLen(per)}`;
+  const pos=layer.getBounds().getCenter();
+  let lbl=polyMetricLabels.get(p.id);
+  if(!showPolyMetrics){
+    if(lbl){ map.removeLayer(lbl); polyMetricLabels.delete(p.id); }
+    return;
+  }
+  if(!lbl){
+    lbl=L.marker(pos,{interactive:false,icon:L.divIcon({className:"",html:`<div style="background:rgba(10,14,22,.8);color:#fff;padding:2px 6px;border-radius:6px;font-size:12px">${txt}</div>`})}).addTo(map);
+    polyMetricLabels.set(p.id,lbl);
+  }else{
+    lbl.setLatLng(pos);
+    if(lbl._icon) lbl._icon.innerHTML=`<div style="background:rgba(10,14,22,.8);color:#fff;padding:2px 6px;border-radius:6px;font-size:12px">${txt}</div>`;
+  }
+}
+function updateAllPolyMetricLabels(){
+  for(const p of db.polygons){
+    const l=polyIndex.get(p.id);
+    if(!l) continue;
+    setPolyMetricLabel(p);
+  }
+}
+
 function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
 function pushHistoryPoly(p){
   const h=getHistoryPoly(p.id);
@@ -373,11 +455,16 @@ function applyHistoryPoly(p,dir){
   const old=polyIndex.get(p.id); if(old) polyFG.removeLayer(old);
   const l=layerFromGeo(p.geojson,p.color); polyFG.addLayer(l); polyIndex.set(p.id,l);
   if(p.visible===false) map.removeLayer(l);
+  setPolyMetricLabel(p);
   return true;
 }
 function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
 function rebuildPolys(){
   polyIndex.clear(); polyFG.clearLayers();
+  // убрать старые подписи
+  for(const [id, lbl] of polyMetricLabels){ map.removeLayer(lbl); }
+  polyMetricLabels.clear();
+
   for(const p of db.polygons){
     if(!p.geojson) continue;
     const l=layerFromGeo(p.geojson,p.color); if(!l) continue;
@@ -385,6 +472,7 @@ function rebuildPolys(){
     if(p.visible===false) map.removeLayer(l);
   }
   updatePolygonVisibility();
+  updateAllPolyMetricLabels();
 }
 
 /***** POLYGON UI *****/
@@ -422,16 +510,24 @@ document.getElementById('btnPolyRedo').onclick=()=>{
 };
 
 map.on(L.Draw.Event.CREATED,async e=>{
-  if(!(e.layer instanceof L.Polygon)) return;
-  const layer=e.layer; layer.setStyle({color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12});
-  polyFG.addLayer(layer);
-  const rec={id:uid(),name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),color:$polyColor?.value||'#ff4d4f',visible:true,geojson:layer.toGeoJSON()};
-  db.polygons.push(rec); polyIndex.set(rec.id,layer); pushHistoryPoly(rec); await commit();
+  if(e.layerType==="polygon" && (e.layer instanceof L.Polygon)){
+    const layer=e.layer; layer.setStyle({color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12});
+    polyFG.addLayer(layer);
+    const rec={id:uid(),name:($polyName?.value||`Полигон ${db.polygons.length+1}`).trim(),color:$polyColor?.value||'#ff4d4f',visible:true,geojson:layer.toGeoJSON()};
+    db.polygons.push(rec); polyIndex.set(rec.id,layer); pushHistoryPoly(rec); await commit();
+    setPolyMetricLabel(rec);
+  } else {
+    // поддержка рисования точки/линии инструментами (без записи в db)
+    if(e.layer) e.layer.addTo(map);
+  }
 });
 
 map.on(L.Draw.Event.EDITSTOP,async ()=>{
-  for(const p of db.polygons){ const l=polyIndex.get(p.id); if(l) p.geojson=l.toGeoJSON(); }
+  for(const p of db.polygons){
+    const l=polyIndex.get(p.id); if(l) p.geojson=l.toGeoJSON();
+  }
   await commit();
+  updateAllPolyMetricLabels();
 });
 
 map.on('draw:editvertex', ()=>{
@@ -439,6 +535,7 @@ map.on('draw:editvertex', ()=>{
   const p=db.polygons.find(x=>x.id===polyEditingTargetId); if(!p) return;
   const l=polyIndex.get(p.id); if(!l) return;
   p.geojson=l.toGeoJSON(); pushHistoryPoly(p);
+  setPolyMetricLabel(p);
 });
 
 function setEditingTarget(id){
@@ -471,14 +568,14 @@ function renderPolyList(){
     const body=document.createElement('div'); body.className='section-body';
     const row1=document.createElement('div'); row1.className='item-row';
     const nameInput=document.createElement('input'); nameInput.value=p.name||'Полигон';
-    nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await commit();};
+    nameInput.onchange=async()=>{p.name=nameInput.value.trim()||p.name; await commit(); updateAllPolyMetricLabels();};
     const color=document.createElement('input'); color.type='color'; color.value=p.color||'#ff4d4f';
-    color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db);};
+    color.onchange=async()=>{p.color=color.value;const l=polyIndex.get(p.id);if(l&&l.setStyle) l.setStyle({color:p.color});await save(db); updateAllPolyMetricLabels();};
     row1.append(nameInput,color);
 
     const row2=document.createElement('div'); row2.className='tools';
     const toggle=document.createElement('button'); toggle.textContent=p.visible!==false?'Скрыть':'Показать';
-    toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await commit();};
+    toggle.onclick=async()=>{p.visible=!(p.visible!==false); const l=polyIndex.get(p.id); if(l){ if(p.visible) l.addTo(map); else map.removeLayer(l);} await commit(); updateAllPolyMetricLabels();};
     const focus=document.createElement('button'); focus.textContent='Фокус';
     focus.onclick=()=>{const l=polyIndex.get(p.id);if(l){ l.addTo(map); map.fitBounds(l.getBounds()); }};
     const editBtn=document.createElement('button'); editBtn.textContent='Редактировать';
@@ -495,10 +592,11 @@ function renderPolyList(){
         });
         setEditingTarget(p.id); map.fitBounds(l.getBounds());
         const h=getHistoryPoly(p.id); if(h.stack.length===0){ pushHistoryPoly(p); }
+        setPolyMetricLabel(p);
       }
     };
     const del=document.createElement('button'); del.textContent='❌'; del.className='danger';
-    del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await commit(); if(polyEditingTargetId===p.id){ setEditingTarget(null);} };
+    del.onclick=async()=>{if(!confirm('Удалить полигон?')) return; const l=polyIndex.get(p.id); if(l) polyFG.removeLayer(l); polyIndex.delete(p.id); db.polygons=db.polygons.filter(x=>x.id!==p.id); await lfGeo.removeItem(p.id); await commit(); const lbl=polyMetricLabels.get(p.id); if(lbl){map.removeLayer(lbl); polyMetricLabels.delete(p.id);} if(polyEditingTargetId===p.id){ setEditingTarget(null);} };
 
     row2.append(toggle,focus,editBtn,del);
     body.append(row1,row2);
@@ -551,6 +649,7 @@ function updatePolygonVisibility(){
     const forceVisible=(polyEditingTargetId && p.id===polyEditingTargetId);
     if(filtered||forceVisible) layer.addTo(map); else map.removeLayer(layer);
   }
+  updateAllPolyMetricLabels();
 }
 
 /***** БИБЛИОТЕКА ИКОНОК *****/
@@ -690,9 +789,9 @@ function renderPreview(){
       body.appendChild(sel);
     }else{
       const multi=document.createElement('div'); multi.className='multi-select';
-      const btn=document.createElement('div'); btn.className='multi-select-btn';
+      const btn=document.createElement('button'); btn.className='multi-select-btn';
       const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
-      function txt(){ if(set.size===0) btn.textContent='Выбрать...'; else{ const names=items.filter(x=>set.has(x.id)).map(x=>x.name); btn.textContent = names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`; } }
+      function txt(){ if(set.size===0) btn.textContent='Выбрать'; else{ const names=items.filter(x=>set.has(x.id)).map(x=>x.name); btn.textContent = names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`; } }
       txt(); btn.onclick=()=>openMultiModal(cat,items); multi.append(btn); body.appendChild(multi);
     }
 
@@ -832,7 +931,7 @@ function renderEditor(){
     const body=document.createElement('div'); body.className='section-body';
 
     const cfg=document.createElement('div'); cfg.className='row';
-    const inpName=document.createElement('input'); inpName.value=cat.name; inpName.onchange=()=>{cat.name=inpName.value.trim(); commit();};
+    const inpName=document.createElement('input'); inpName.value=cat.name; inpName.onchange=()=>{cat.name=inpName.value.trim(); commit(); updateAllPolyMetricLabels();};
     const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);}); selType.onchange=()=>{cat.type=selType.value; commit();};
     const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join(''); selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; commit();};
     const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; commit();};
@@ -877,11 +976,20 @@ function renderEditor(){
           it.lat=e.latlng.lat; it.lng=e.latlng.lng; commit(); map.setView([it.lat,it.lng],14);
         });
       };
+      const copyBtn=document.createElement('button'); copyBtn.textContent='⎘ копия'; copyBtn.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ const t=`${it.lat},${it.lng}`; navigator.clipboard?.writeText(t); alert('Скопировано: '+t);} else { alert('У элемента нет координат'); } };
+      const pasteBtn=document.createElement('button'); pasteBtn.textContent='⎗ вставить'; pasteBtn.onclick=async()=>{
+        let txt=''; try{ txt=await navigator.clipboard.readText(); }catch(_){}
+        if(!txt){ txt=prompt('Вставь координаты в формате "lat,lng"'); }
+        if(!txt) return;
+        const m=txt.trim().match(/(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)/);
+        if(!m){ alert('Не распознал координаты'); return; }
+        it.lat=parseFloat(m[1]); it.lng=parseFloat(m[3]); commit(); map.setView([it.lat,it.lng],15);
+      };
       const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка'; clearBtn.onclick=()=>{it.lat=null; it.lng=null; commit();};
       const del=document.createElement('button'); del.textContent='❌'; del.className='danger'; del.onclick=()=>{if(confirm('Удалить "'+it.name+'"?')){cat.items=cat.items.filter(x=>x.id!==it.id); commit();}};
 
       row.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ map.setView([it.lat,it.lng],16); } };
-      tools.append(selCb,edit,upBtn,downBtn,place,clearBtn,del);
+      tools.append(selCb,edit,upBtn,downBtn,place,copyBtn,pasteBtn,clearBtn,del);
       row.append(left,tools); list.appendChild(row);
     });
     body.appendChild(list);
@@ -986,7 +1094,7 @@ document.getElementById('btnExport').onclick=async ()=>{
     if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
   }
   const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_2R.json'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_3R.json'; a.click();
 };
 
 document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -1180,6 +1288,54 @@ $btnCoordAdd.onclick=()=>{
   alert('Метка добавлена в категорию: '+cat.name);
 };
 
+/***** ИНСТРУМЕНТЫ КАРТЫ: линейка/точка/линия *****/
+let measureActive=false, drawLineActive=false, drawPointActive=false;
+let measureLayer=null;
+const drawControl=new L.Control.Draw({
+  draw:{
+    polygon:false, rectangle:false, circle:false, circlemarker:false,
+    polyline:true, marker:true
+  },
+  edit:false
+});
+map.addControl(drawControl);
+
+function enableMeasure(){
+  if(measureActive) return;
+  measureActive=true;
+  alert('Режим линейки: ставь точки на карте. Двойной клик — завершить.');
+  const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#4aa8ff',weight:3,dashArray:'6,6'}});
+  drawer.enable();
+  const onCreated=(e)=>{
+    if(measureLayer) map.removeLayer(measureLayer);
+    measureLayer=e.layer.addTo(map);
+    const latlngs=e.layer.getLatLngs();
+    const dist=L.GeometryUtil.length(latlngs);
+    alert('Длина: '+formatLen(dist));
+    map.off(L.Draw.Event.CREATED,onCreated);
+    measureActive=false;
+  };
+  map.on(L.Draw.Event.CREATED,onCreated);
+}
+
+document.getElementById('btnMeasure').onclick=()=>enableMeasure();
+document.getElementById('btnDrawLine').onclick=()=>{
+  if(drawLineActive) return;
+  drawLineActive=true;
+  const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#23d1b5',weight:3}});
+  drawer.enable();
+  const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawLineActive=false; };
+  map.on(L.Draw.Event.CREATED,onCreated);
+};
+document.getElementById('btnDrawPoint').onclick=()=>{
+  if(drawPointActive) return;
+  drawPointActive=true;
+  const drawer=new L.Draw.Marker(map,{});
+  drawer.enable();
+  const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawPointActive=false; };
+  map.on(L.Draw.Event.CREATED,onCreated);
+};
+
 /***** RESET *****/
 document.getElementById('btnReset').onclick=()=>{
   if(confirm('Очистить всё?')){
@@ -1218,6 +1374,7 @@ function resumeEditingIfNeeded(){
   });
 
   setEditingTarget(id); layer.addTo(map); map.fitBounds(layer.getBounds());
+  updateAllPolyMetricLabels();
 }
 
 /***** СТАРТ *****/
