@@ -669,13 +669,6 @@ function renderPolyList(){
 }
 </script>
 <script>
-/***** ПОДПИСИ МЕТРИК ДЛЯ ПОЛИГОНОВ (площадь всегда; длины рёбер — только при редактировании текущего) *****/
-const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
-const polyIndex=new Map();                    // id -> L.Polygon
-const historyById=new Map();                  // id -> {stack:[], index}
-const polyAreaLabels=new Map();               // id -> L.marker (Площадь)
-const polyEdgeLabelGroups=new Map();          // id -> L.LayerGroup (длины рёбер)
-let polyEditingTargetId=null;                 // активный полигон, для которого показываем длины рёбер
 let polyEditToolbar=null, polyEditing=false;
 
 function getHistoryPoly(id){
