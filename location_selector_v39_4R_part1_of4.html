@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>location_selector v39.4R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+
+<!-- Leaflet + плагины -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+
+<!-- localForage -->
+<script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js"></script>
+
+<style>
+:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--panel3:#0f1624;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444;--overlay:rgba(10,14,22,.75)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border)}
+button{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
+.badge{background:#23314d;border:1px solid #334567;border-radius:8px;padding:3px 8px;font-weight:700}
+.tabs{display:flex;gap:8px;padding:8px;border-bottom:1px solid var(--border);background:#121826}
+.tab{padding:6px 12px;background:#1a2234;border:1px solid var(--border);border-radius:6px;cursor:pointer}
+.tab.active{background:#2160ff;color:#fff}
+main{display:grid;grid-template-columns:460px 1fr;height:calc(100vh - 94px)}
+.sidebar{padding:10px;border-right:1px solid var(--border);background:#121826;overflow:auto}
+.panel{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px}
+h3,h4{margin:0 0 8px 0}
+input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.list{display:grid;gap:6px}
+.item{border:1px solid var(--border);border-radius:8px;padding:10px;background:#111a2a}
+.item-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.item .left{display:grid;gap:2px}
+.item .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.item .meta{color:var(--muted);font-size:12px}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sep{height:1px;background:#243048;margin:8px 0}
+.help{font-size:12px;color:#9fb0c8}
+.note{background:#0e1524;border:1px dashed #32405a;padding:8px;border-radius:8px;color:#9fb0c8}
+.note.gray{opacity:.6}
+#map{width:100%;height:100%;position:relative}
+.preview-icon{width:20px;height:20px;border-radius:4px;border:1px solid #31405a;background:#0f1624;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.preview-icon img{max-width:100%;max-height:100%;display:block}
+
+/* поиск по элементам */
+#globalSearch{width:100%;padding:6px 8px;margin-bottom:8px;border-radius:6px;border:1px solid var(--border);background:#0f1624;color:#fff}
+.search-results{max-height:200px;overflow:auto;margin-top:6px}
+.search-results div{padding:4px 6px;border-bottom:1px solid var(--border);cursor:pointer}
+.search-results div:hover{background:#1f293d}
+
+/* сворачивание секций */
+.collapse-head{display:flex;align-items:center;gap:8px;cursor:pointer}
+.caret{width:22px;height:22px;border:1px solid var(--border);border-radius:6px;background:#1a2234;display:flex;align-items:center;justify-content:center}
+.caret::after{content:"▾";font-size:12px;line-height:1}
+.collapsed .caret::after{content:"▸"}
+.section-body{margin-top:8px}
+.collapsed .section-body{display:none}
+
+/* модалки */
+.modal-overlay{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;z-index:5000}
+.modal{width:min(980px,90vw);max-height:85vh;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel3)}
+.modal-title{font-weight:700}
+.modal-close{border:1px solid var(--border);background:#1a2234;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.modal-body{padding:12px 14px;overflow:auto}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--border);background:var(--panel3)}
+.modal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+@media (max-width:1024px){.modal-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.modal-grid{grid-template-columns:1fr}}
+.modal-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #1f2a40;border-radius:8px;background:#0f1624}
+.modal-item input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:16px;height:16px;border:2px solid var(--accent);border-radius:4px;background:#1a2234;cursor:pointer;position:relative;flex:0 0 16px}
+.modal-item input[type="checkbox"]:checked{background:var(--accent);border-color:var(--accent)}
+.modal-item input[type="checkbox"]:checked::after{content:"✔";position:absolute;top:-2px;left:2px;font-size:14px;color:#fff}
+
+/* подсказки */
+.suggestions{position:absolute;background:var(--panel2);border:1px solid var(--border);border-radius:8px;z-index:3000;max-height:200px;overflow:auto;width:100%}
+.suggestions div{padding:6px 8px;cursor:pointer}
+.suggestions div:hover{background:#1f293d}
+
+/* drag */
+.draggable{cursor:grab}
+.dragging{opacity:.5}
+.dropzone-hover{outline:2px dashed var(--accent);outline-offset:4px}
+
+/* плавающее окно координат */
+.coord-tool{position:absolute;z-index:4000;display:grid;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px;width:260px}
+.coord-tool h4{margin:0 0 6px 0;font-size:14px;cursor:move;user-select:none}
+.coord-tool .row{display:flex;gap:6px}
+.coord-tool .row input{flex:1}
+.coord-tool .row button{white-space:nowrap}
+.coord-tool .help{font-size:12px;color:var(--muted)}
+
+/* новая кнопка мультиселекта */
+.multi-select-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
+.multi-select-btn:hover{border-color:var(--accent);background:#212b41}
+</style>
+</head>
+<body>
+<header>
+  <span class="badge">location_selector v39.4R</span>
+  <button id="btnExport">Экспорт (всё)</button>
+  <button id="btnImport">Импорт (всё)</button>
+  <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
+  <button id="btnInfo">Инфо</button>
+  <button id="btnUndo">Undo</button>
+  <button id="btnRedo">Redo</button>
+  <button id="btnReset" class="danger">Сброс</button>
+
+  <!-- инструменты карты -->
+  <span style="margin-left:12px" class="badge">Инструменты</span>
+  <button id="btnMeasure">Линейка</button>
+  <button id="btnDrawPoint">Точка</button>
+  <button id="btnDrawLine">Линия</button>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="editor">Редактор</div>
+  <div class="tab" data-tab="preview">Предпросмотр</div>
+</div>
+
+<main>
+  <aside class="sidebar" id="editorTab"></aside>
+  <aside class="sidebar" id="previewTab" style="display:none">
+    <div class="panel">
+      <h3>Предпросмотр каскада</h3>
+      <input id="globalSearch" placeholder="Поиск по элементам..."/>
+      <div id="searchResults" class="search-results"></div>
+      <div class="row">
+        <button id="btnSelectAll">Выбрать всё</button>
+        <button id="btnClearAll" class="danger">Сбросить всё</button>
+      </div>
+      <div class="help">Чекбокс-категории открываются в большом списке как на Авито. Внутри тоже есть «Выбрать всё / Сбросить всё».</div>
+      <div id="cascadeBox" style="margin-top:8px"></div>
+
+      <div class="sep"></div>
+      <h3>Полигоны</h3>
+      <div class="row">
+        <input id="polyName" placeholder="Название полигона"/>
+        <input type="color" id="polyColor" value="#ff4d4f"/>
+      </div>
+      <div class="row">
+        <button id="btnPolyNew">Новый</button>
+        <button id="btnPolyEdit">Редактировать</button>
+        <button id="btnPolyStop">Стоп</button>
+        <button id="btnPolyUndo">Undo</button>
+        <button id="btnPolyRedo">Redo</button>
+      </div>
+
+      <input id="polySearch" placeholder="Поиск по полигонам..."/>
+      <div id="polyList" class="list"></div>
+    </div>
+  </aside>
+  <div id="map"></div>
+</main>
+  <!-- Модалка мультиселекта -->
+  <div id="msOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div id="msTitle" class="modal-title">Выбор</div>
+        <div id="msClose" class="modal-close">✖</div>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <input id="msSearch" class="grow" placeholder="Фильтр по списку..."/>
+          <button id="msAll">Выбрать всё</button>
+          <button id="msNone" class="danger">Сбросить всё</button>
+        </div>
+        <div id="msGrid" class="modal-grid"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="msApply">Применить</button>
+        <button id="msCancel" class="danger">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модалка библиотеки иконок -->
+  <div id="iconsOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Библиотека иконок</div><div id="iconsClose" class="modal-close">✖</div></div>
+      <div class="modal-body"><div id="iconsGrid" class="modal-grid"></div></div>
+    </div>
+  </div>
+
+  <!-- Модалка статистики -->
+  <div id="infoOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Статистика</div><div id="infoClose" class="modal-close">✖</div></div>
+      <div class="modal-body"><div id="infoBox"></div></div>
+    </div>
+  </div>
+
+  <!-- Модалка конфликтов импорта -->
+  <div id="importDialog" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Конфликт при импорте</div><div id="importClose" class="modal-close">✖</div></div>
+      <div class="modal-body"><div id="importMessage"></div></div>
+      <div class="modal-actions">
+        <button id="btnOverwrite">Перезаписать</button>
+        <button id="btnSkip">Пропустить</button>
+        <button id="btnApplyAll">Применить ко всем</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Плавающее окно координат -->
+  <div id="coordTool" class="coord-tool" style="display:none">
+    <h4 id="coordDrag">Метка по координатам</h4>
+    <div class="row">
+      <input id="coordLat" placeholder="Широта" inputmode="decimal"/>
+      <input id="coordLng" placeholder="Долгота" inputmode="decimal"/>
+    </div>
+    <div class="row">
+      <button id="btnCoordFind">Найти</button>
+      <button id="btnCoordAdd">Добавить</button>
+      <button id="btnCoordClear" class="danger">Очистить</button>
+    </div>
+    <div class="help">Перетащи окно в удобный угол. Показ — только на карте (в предпросмотр не лезем).</div>
+  </div>
+
+  <!-- Скрипты карт -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js"></script>
+
+  <script>
+  /***** STORAGE + DB *****/
+  const KEY="dict_v39_4R";
+  const lfIcons=localforage.createInstance({name:"dict_icons_v394R"});
+  const lfGeo=localforage.createInstance({name:"dict_geo_v394R"});
+
+  function uid(){return Math.random().toString(36).slice(2,9);}
+
+  function normalize(obj){
+    if(!obj||typeof obj!=="object")obj={categories:[],polygons:[]};
+    if(!Array.isArray(obj.categories)) obj.categories=[];
+    if(!Array.isArray(obj.polygons)) obj.polygons=[];
+    obj.categories.forEach(c=>{
+      if(!("id" in c))c.id=uid();
+      if(!("type" in c))c.type="select";
+      if(!("items" in c))c.items=[];
+      if(!("color" in c))c.color="#3388ff";
+      if(!("shape" in c))c.shape="circle";
+      if(!("parentCategoryId" in c))c.parentCategoryId=null;
+      c.items.forEach(it=>{
+        if(!("id" in it))it.id=uid();
+        if(!("name" in it))it.name="Без имени";
+        if(!("lat" in it))it.lat=null;
+        if(!("lng" in it))it.lng=null;
+        if(!("parentId" in it))it.parentId=null;
+      });
+    });
+    obj.polygons.forEach(p=>{
+      if(!("id" in p))p.id=uid();
+      if(!("name" in p))p.name="Полигон";
+      if(!("color" in p))p.color="#ff4d4f";
+      if(!("visible" in p))p.visible=true;
+    });
+  }
+
+  async function save(obj=db){
+    normalize(obj);
+    const lite={
+      categories:obj.categories.map(c=>({
+        id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId,
+        color:c.color,shape:c.shape,iconKey:c.iconKey||null,
+        items:(c.items||[]).map(it=>({id:it.id,name:it.name,parentId:it.parentId,lat:it.lat,lng:it.lng,iconKey:it.iconKey||null}))
+      })),
+      polygons:obj.polygons.map(p=>({id:p.id,name:p.name,color:p.color,visible:p.visible}))
+    };
+    localStorage.setItem(KEY,JSON.stringify(lite));
+
+    for(const cat of obj.categories){
+      if(cat.iconData){
+        const key=cat.iconKey||`cat_${cat.id}`;
+        await lfIcons.setItem(key,cat.iconData);
+        cat.iconKey=key;
+      }
+      for(const it of (cat.items||[])){
+        if(it.iconData){
+          const key=it.iconKey||`item_${it.id}`;
+          await lfIcons.setItem(key,it.iconData);
+          it.iconKey=key;
+        }
+      }
+    }
+    for(const p of obj.polygons){
+      if(p.geojson) await lfGeo.setItem(p.id,p.geojson);
+    }
+  }
+
+  async function loadDB(){
+    const raw=localStorage.getItem(KEY);
+    let obj={categories:[],polygons:[]};
+    if(raw){try{obj=JSON.parse(raw)||{};}catch(e){}}
+    normalize(obj);
+    for(const cat of obj.categories){
+      if(cat.iconKey&&!cat.iconData){
+        try{cat.iconData=await lfIcons.getItem(cat.iconKey)||null;}catch(e){}
+      }
+      for(const it of (cat.items||[])){
+        if(it.iconKey&&!it.iconData){
+          try{it.iconData=await lfIcons.getItem(it.iconKey)||null;}catch(e){}
+        }
+      }
+    }
+    for(const p of obj.polygons){
+      if(!p.geojson){
+        try{p.geojson=await lfGeo.getItem(p.id)||null;}catch(e){}
+      }
+    }
+    return obj;
+  }
+
+  /***** GLOBAL HISTORY категорий *****/
+  let historyStack=[],historyIndex=-1,historyLimit=80;
+  function pushHistory(){
+    const snap=JSON.stringify(db);
+    if(historyIndex<historyStack.length-1) historyStack.splice(historyIndex+1);
+    historyStack.push(snap);
+    if(historyStack.length>historyLimit){ historyStack.shift(); historyIndex=historyStack.length-1; } else { historyIndex=historyStack.length-1; }
+  }
+  async function commit(){ await save(db); pushHistory(); renderAll(); }
+  function undo(){ if(historyIndex>0){ historyIndex--; db=JSON.parse(historyStack[historyIndex]); renderAll(); } }
+  function redo(){ if(historyIndex<historyStack.length-1){ historyIndex++; db=JSON.parse(historyStack[historyIndex]); renderAll(); } }
+  document.getElementById('btnUndo').onclick=undo;
+  document.getElementById('btnRedo').onclick=redo;
+
+  /***** COLLAPSE STATE *****/
+  function getCollapsedSet(key){ try{ return new Set(JSON.parse(localStorage.getItem(key)||"[]")); }catch(_){ return new Set(); } }
+  function setCollapsedSet(key,set){ localStorage.setItem(key,JSON.stringify([...set])); }
+  const collapsedPolygons=getCollapsedSet('collapsedPolygons_v2');
+  const collapsedCats=getCollapsedSet('collapsedCats_v2');
+
+  /***** MAP + MARKERS *****/
+  let map=L.map('map').setView([41.3111,69.2797],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  let cluster=L.markerClusterGroup(); map.addLayer(cluster);
+  function clearMarkers(){cluster.clearLayers();}
+  function markerIcon(cat,it){
+    if(it && it.iconData) return L.icon({iconUrl:it.iconData,iconSize:[24,24],iconAnchor:[12,12]});
+    if(cat.iconData) return L.icon({iconUrl:cat.iconData,iconSize:[24,24],iconAnchor:[12,12]});
+    const color=cat.color||"#3388ff",shape=cat.shape||"circle";let html="";
+    if(shape==="circle") html=`<div style="background:${color};width:18px;height:18px;border-radius:50%;border:2px solid #fff"></div>`;
+    if(shape==="square") html=`<div style="background:${color};width:18px;height:18px;border:2px solid #fff"></div>`;
+    if(shape==="triangle") html=`<div style="width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${color}"></div>`;
+    return L.divIcon({className:"custom-icon",html:html,iconSize:[20,20],iconAnchor:[10,10]});
+  }
+  function addMarkerForItem(it,cat){
+    if(it.lat==null||it.lng==null) return;
+    const m=L.marker([it.lat,it.lng],{icon:markerIcon(cat,it),_itemId:it.id,draggable:true});
+    m.bindPopup(`<b>${it.name}</b><br/>
+      <button onclick="copyCoords('${it.id}')">⎘ Скопировать координаты</button>
+      <br/><button onclick="removeMarkerById('${it.id}')">🗑 Удалить метку</button>`);
+    m.on('dragend',()=>{
+      const p=m.getLatLng();
+      for(const c of db.categories){
+        const e=(c.items||[]).find(x=>x.id===it.id);
+        if(e){ e.lat=p.lat; e.lng=p.lng; break; }
+      }
+      save(db);
+    });
+    cluster.addLayer(m);
+  }
+  window.copyCoords=function(itemId){
+    for(const c of db.categories){
+      const it=(c.items||[]).find(x=>x.id===itemId);
+      if(it && it.lat!=null && it.lng!=null){
+        const text=`${it.lat},${it.lng}`;
+        navigator.clipboard?.writeText(text);
+        alert('Координаты скопированы: '+text);
+        return;
+      }
+    }
+  };
+  window.removeMarkerById=function(id){
+    for(const c of db.categories){ const it=(c.items||[]).find(x=>x.id===id); if(it){it.lat=null;it.lng=null;break;} }
+    const toRemove=[]; cluster.eachLayer(m=>{ if(m.options && m.options._itemId===id) toRemove.push(m); });
