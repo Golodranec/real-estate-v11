@@ -735,3 +735,259 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   const $msCancel=document.getElementById('msCancel');
   const $msClose=document.getElementById('msClose');
   const $ms
+All=document.getElementById('msAll');
+  const $msNone=document.getElementById('msNone');
+  let msCtx=null;
+
+  function dropChildrenSelections(parentCatId){
+    const children=db.categories.filter(c=>c.parentCategoryId===parentCatId);
+    for(const ch of children){ delete selected[ch.id]; dropChildrenSelections(ch.id); }
+  }
+  function openMultiModal(cat,items){
+    msCtx={catId:cat.id, items:[...items], temp:new Set(selected[cat.id] instanceof Set?selected[cat.id]:[])};
+    $msTitle.textContent=cat.name; $msSearch.value=""; renderMsGrid();
+    $msOverlay.style.display='flex'; document.body.style.overflow='hidden';
+  }
+  function closeMultiModal(){ msCtx=null; $msOverlay.style.display='none'; document.body.style.overflow=''; }
+  function renderMsGrid(){
+    if(!msCtx) return; const q=($msSearch.value||"").trim().toLowerCase(); $msGrid.innerHTML="";
+    msCtx.items.filter(it=>!q || it.name.toLowerCase().includes(q)).forEach(it=>{
+      const row=document.createElement('label'); row.className='modal-item';
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=msCtx.temp.has(it.id);
+      cb.onchange=()=>{ if(cb.checked) msCtx.temp.add(it.id); else msCtx.temp.delete(it.id); };
+      const name=document.createElement('div'); name.textContent=it.name;
+      row.append(cb,name); $msGrid.appendChild(row);
+    });
+  }
+  $msSearch.oninput=renderMsGrid;
+  $msAll.onclick=()=>{ if(!msCtx) return; msCtx.items.forEach(it=>msCtx.temp.add(it.id)); renderMsGrid(); };
+  $msNone.onclick=()=>{ if(!msCtx) return; msCtx.temp.clear(); renderMsGrid(); };
+  $msApply.onclick=()=>{ if(!msCtx) return; selected[msCtx.catId]=new Set(msCtx.temp); saveSelected(); renderPreview(); updatePolygonVisibility(); closeMultiModal(); };
+  $msCancel.onclick=closeMultiModal; $msClose.onclick=closeMultiModal;
+
+  /***** PREVIEW — каскад *****/
+  function renderPreview(){
+    $cascade.innerHTML=""; clearMarkers();
+    db.categories.forEach(cat=>{
+      const box=document.createElement('div'); box.className='panel'; box.dataset.catId=cat.id;
+      const head=document.createElement('div'); head.className='collapse-head';
+      const caret=document.createElement('div'); caret.className='caret';
+      const h=document.createElement('h4'); h.textContent=cat.name;
+      head.append(caret,h); box.appendChild(head);
+      const body=document.createElement('div'); body.className='section-body';
+
+      let parentIds=null;
+      if(cat.parentCategoryId){
+        const parentSelected=getSelectedIds(cat.parentCategoryId);
+        if(parentSelected.length===0){
+          const note=document.createElement('div'); note.className='note'; note.textContent='Сначала выбери: '+(db.categories.find(c=>c.id===cat.parentCategoryId)?.name||'родителя');
+          body.appendChild(note); box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed'); return;
+        }
+        parentIds=parentSelected;
+      }
+
+      let items=(cat.items||[]); if(parentIds){ items=items.filter(it=>it.parentId && parentIds.includes(it.parentId)); }
+      if(items.length===0){ const note=document.createElement('div'); note.className='note gray'; note.textContent='Нет элементов'; body.appendChild(note); box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed'); return; }
+
+      if(cat.type==='select'){
+        const sel=document.createElement('select'); sel.style.width='100%';
+        sel.innerHTML=`<option value="">— выберите —</option>`+items.map(it=>`<option value="${it.id}">${it.name}</option>`).join('');
+        if(typeof selected[cat.id]==='string') sel.value=selected[cat.id]||"";
+        sel.onchange=()=>{ selected[cat.id]=sel.value||null; dropChildrenSelections(cat.id); saveSelected(); renderPreview(); updatePolygonVisibility(); };
+        body.appendChild(sel);
+      }else{
+        const multi=document.createElement('div'); multi.className='multi-select';
+        const btn=document.createElement('button'); btn.className='multi-select-btn';
+        const set=selected[cat.id] instanceof Set?selected[cat.id]:new Set();
+        function txt(){ if(set.size===0) btn.textContent='Выбрать'; else{ const names=items.filter(x=>set.has(x.id)).map(x=>x.name); btn.textContent = names.length<=5 ? names.join(', ') : `Выбрано: ${names.length}`; } }
+        txt(); btn.onclick=()=>openMultiModal(cat,items); multi.append(btn); body.appendChild(multi);
+      }
+
+      box.appendChild(body); $cascade.appendChild(box); head.onclick=()=>box.classList.toggle('collapsed');
+    });
+
+    // маркеры по выбранным
+    for(const cat of db.categories){
+      const ids=getSelectedIds(cat.id);
+      for(const id of ids){
+        const it=(cat.items||[]).find(x=>x.id===id);
+        if(it && it.lat!=null && it.lng!=null) addMarkerForItem(it,cat);
+      }
+    }
+    updatePolygonVisibility();
+  }
+
+  // Select All / Clear All (для чекбокс-категорий)
+  document.getElementById('btnSelectAll').onclick=()=>{ db.categories.forEach(cat=>{ if(cat.type==='checkbox'){ const ids=(cat.items||[]).map(i=>i.id); selected[cat.id]=new Set(ids); } }); saveSelected(); renderPreview(); updatePolygonVisibility(); };
+  document.getElementById('btnClearAll').onclick=()=>{ db.categories.forEach(cat=>{ if(cat.type==='checkbox'){ selected[cat.id]=new Set(); } if(cat.type==='select'){ selected[cat.id]=null; } }); saveSelected(); renderPreview(); updatePolygonVisibility(); };
+
+  /***** GLOBAL SEARCH с зумом *****/
+  const $search=document.getElementById('globalSearch');
+  const $results=document.getElementById('searchResults');
+  if($search&&$results){
+    $search.oninput=()=>{
+      const q=$search.value.trim().toLowerCase(); $results.innerHTML=""; if(!q) return;
+      const out=[]; db.categories.forEach(cat=> (cat.items||[]).forEach(it=>{ if(it.name.toLowerCase().includes(q)) out.push({cat:cat,it:it}); }));
+      out.forEach(r=>{
+        const row=document.createElement('div'); row.textContent=`${r.it.name} (${r.cat.name})`;
+        row.onclick=()=>{
+          if(r.cat.type==='select') selected[r.cat.id]=r.it.id;
+          else{ if(!(selected[r.cat.id] instanceof Set)) selected[r.cat.id]=new Set(); selected[r.cat.id].add(r.it.id); }
+          saveSelected(); renderPreview(); updatePolygonVisibility();
+          if(r.it.lat!=null && r.it.lng!=null){
+            map.setView([r.it.lat,r.it.lng],16);
+            setTimeout(()=>map.setView([r.it.lat,r.it.lng],17),200);
+          }
+          $search.value=""; $results.innerHTML="";
+        };
+        $results.appendChild(row);
+      });
+    };
+  }
+
+  /***** РЕДАКТОР (категории + элементы) *****/
+  const $editor=document.getElementById('editorTab');
+  function moveArrayItem(arr,fromIdx,toIdx){ if(fromIdx===toIdx) return; const item=arr.splice(fromIdx,1)[0]; arr.splice(toIdx,0,item); }
+  function sortAZ(){ db.categories.sort((a,b)=>a.name.localeCompare(b.name)); for(const cat of db.categories){ if(cat.items) cat.items.sort((a,b)=>a.name.localeCompare(b.name)); } }
+
+  function renderEditor(){
+    $editor.innerHTML="";
+
+    // блок "Новая категория"
+    const create=document.createElement('div'); create.className='panel';
+    if(collapsedCats.has('newCat')) create.classList.add('collapsed');
+
+    const head=document.createElement('div'); head.className='collapse-head';
+    const caret=document.createElement('div'); caret.className='caret';
+    const title=document.createElement('h3'); title.textContent='Новая категория';
+    head.append(caret,title); create.appendChild(head);
+
+    const body=document.createElement('div'); body.className='section-body';
+    body.innerHTML=`
+      <div class="row">
+        <input id="newCatName" placeholder="Название"/>
+        <select id="newCatType"><option value="select">Select</option><option value="checkbox">Checkbox</option></select>
+        <select id="newCatParent">
+          <option value="">(нет родителя)</option>
+          ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="row">
+        <span class="preview-icon" id="newIconPreview">icon</span>
+        <input type="color" id="newCatColor" value="#3388ff"/>
+        <select id="newCatShape"><option value="circle">Круг</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option></select>
+        <input type="file" id="newCatIcon" accept="image/png,image/svg+xml"/>
+        <button id="btnIconLib">📚</button>
+        <button id="btnAddCat">+ Добавить</button>
+      </div>`;
+    create.appendChild(body);
+    head.onclick=()=>{
+      if(collapsedCats.has('newCat')) collapsedCats.delete('newCat'); else collapsedCats.add('newCat');
+      setCollapsedSet('collapsedCats_v2',collapsedCats); create.classList.toggle('collapsed');
+    };
+    $editor.appendChild(create);
+
+    const newIconInput=body.querySelector('#newCatIcon');
+    const newIconPreview=body.querySelector('#newIconPreview');
+    let newIconData=null;
+    newIconInput.onchange=e=>{
+      const f=e.target.files[0]; if(!f){newIconData=null;newIconPreview.textContent='icon';return;}
+      const r=new FileReader(); r.onload=ev=>{newIconData=ev.target.result;newIconPreview.innerHTML=`<img src="${newIconData}">`;}; r.readAsDataURL(f);
+    };
+    body.querySelector('#btnIconLib').onclick=()=>openIconsLib(data=>{ newIconData=data; newIconPreview.innerHTML=`<img src="${data}">`; });
+    body.querySelector('#btnAddCat').onclick=async()=>{
+      const name=body.querySelector('#newCatName').value.trim(); if(!name) return;
+      const type=body.querySelector('#newCatType').value;
+      const parent=body.querySelector('#newCatParent').value||null;
+      const color=body.querySelector('#newCatColor').value;
+      const shape=body.querySelector('#newCatShape').value;
+      const cat={id:uid(),name:name,type:type,parentCategoryId:parent,color:color,shape:shape,items:[]};
+      if(newIconData){cat.iconData=newIconData;} db.categories.push(cat); await commit();
+    };
+
+    // панель сортировки
+    const headPanel=document.createElement('div'); headPanel.className='panel';
+    const headRow=document.createElement('div'); headRow.className='row';
+    const hTitle=document.createElement('h3'); hTitle.textContent='Категории';
+    const btnSortAZ=document.createElement('button'); btnSortAZ.textContent='Сортировать A→Z'; btnSortAZ.onclick=()=>{ sortAZ(); commit(); };
+    headRow.append(hTitle,btnSortAZ); headPanel.appendChild(headRow); $editor.appendChild(headPanel);
+
+    // категории
+    db.categories.forEach(cat=>{
+      const sec=document.createElement('div'); sec.className='panel draggable'; if(collapsedCats.has(cat.id)) sec.classList.add('collapsed'); sec.dataset.catId=cat.id;
+
+      const head=document.createElement('div'); head.className='collapse-head';
+      const caret=document.createElement('div'); caret.className='caret';
+      const title=document.createElement('h3'); title.textContent=cat.name+` (${cat.type})`;
+      head.append(caret,title);
+
+      const toolsTop=document.createElement('div'); toolsTop.className='tools';
+      const btnUp=document.createElement('button'); btnUp.textContent='▲'; btnUp.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx>0){ moveArrayItem(db.categories,idx,idx-1); commit(); }};
+      const btnDown=document.createElement('button'); btnDown.textContent='▼'; btnDown.onclick=()=>{const idx=db.categories.findIndex(c=>c.id===cat.id); if(idx<db.categories.length-1){ moveArrayItem(db.categories,idx,idx+1); commit(); }};
+      const btnSortItemsAZ=document.createElement('button'); btnSortItemsAZ.textContent='A→Z элементы'; btnSortItemsAZ.onclick=()=>{ cat.items.sort((a,b)=>a.name.localeCompare(b.name)); commit(); };
+      const btnExportCat=document.createElement('button'); btnExportCat.textContent='Экспорт категории';
+      btnExportCat.onclick=()=>exportCategory(cat.id);
+      const btnImportCat=document.createElement('button'); btnImportCat.textContent='Импорт в категорию';
+      btnImportCat.onclick=()=>importIntoCategory(cat.id);
+      const btnDeleteCat=document.createElement('button'); btnDeleteCat.textContent='Удалить категорию'; btnDeleteCat.className='danger';
+      btnDeleteCat.onclick=()=>{ if(confirm(`Удалить категорию "${cat.name}" и все её элементы?`)){ db.categories=db.categories.filter(c=>c.id!==cat.id); dropChildrenSelections(cat.id); commit(); } };
+      toolsTop.append(btnUp,btnDown,btnSortItemsAZ,btnExportCat,btnImportCat,btnDeleteCat);
+
+      const headWrap=document.createElement('div'); headWrap.style.display='flex'; headWrap.style.justifyContent='space-between'; headWrap.style.alignItems='center';
+      headWrap.append(head,toolsTop); sec.appendChild(headWrap);
+
+      const body=document.createElement('div'); body.className='section-body';
+
+      const cfg=document.createElement('div'); cfg.className='row';
+      const inpName=document.createElement('input'); inpName.value=cat.name; inpName.onchange=()=>{cat.name=inpName.value.trim(); commit();};
+      const selType=document.createElement('select'); ['select','checkbox'].forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(cat.type===t)o.selected=true;selType.appendChild(o);}); selType.onchange=()=>{cat.type=selType.value; commit();};
+      const selParent=document.createElement('select'); selParent.innerHTML=`<option value="">(нет родителя)</option>`+db.categories.map(c=>c.id!==cat.id?`<option value="${c.id}" ${cat.parentCategoryId===c.id?'selected':''}>${c.name}</option>`:'').join(''); selParent.onchange=()=>{cat.parentCategoryId=selParent.value||null; commit();};
+      const col=document.createElement('input'); col.type='color'; col.value=cat.color||'#3388ff'; col.onchange=()=>{cat.color=col.value; commit();};
+      const shape=document.createElement('select'); ['circle','square','triangle'].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;if((cat.shape||'circle')===s)o.selected=true;shape.appendChild(o);}); shape.onchange=()=>{cat.shape=shape.value; commit();};
+      const iconPrev=document.createElement('span'); iconPrev.className='preview-icon'; iconPrev.innerHTML=cat.iconData?`<img src="${cat.iconData}">`:'icon';
+      const iconInput=document.createElement('input'); iconInput.type='file'; iconInput.accept='image/png,image/svg+xml'; iconInput.style.display='none';
+      const iconBtn=document.createElement('button'); iconBtn.textContent='🖼'; iconBtn.onclick=()=>iconInput.click();
+      iconInput.onchange=e=>{
+        const f=e.target.files[0];
+        if(!f){ delete cat.iconData; iconPrev.textContent='icon'; commit(); return; }
+        const r=new FileReader(); r.onload=ev=>{ cat.iconData=ev.target.result; iconPrev.innerHTML=`<img src="${cat.iconData}">`; commit(); }; r.readAsDataURL(f);
+      };
+      const iconLibBtn=document.createElement('button'); iconLibBtn.textContent='📚'; iconLibBtn.onclick=()=>openIconsLib(data=>{ cat.iconData=data; iconPrev.innerHTML=`<img src="${cat.iconData}">`; commit(); });
+      const btnClearIcon=document.createElement('button'); btnClearIcon.textContent='✖ иконка'; btnClearIcon.onclick=()=>{delete cat.iconData; iconPrev.textContent='icon'; commit();};
+      cfg.append(inpName,selType,selParent,col,shape,iconPrev,iconBtn,iconInput,iconLibBtn,btnClearIcon);
+      body.appendChild(cfg);
+
+      // список элементов + массовые действия
+      const list=document.createElement('div'); list.className='list'; list.dataset.catId=cat.id;
+      const massBar=document.createElement('div'); massBar.className='row'; massBar.style.display='none';
+      const btnMassDelete=document.createElement('button'); btnMassDelete.textContent='Удалить выбранные';
+      const btnMassMove=document.createElement('button'); btnMassMove.textContent='Переместить в...';
+      const btnMassIcon=document.createElement('button'); btnMassIcon.textContent='Назначить иконку';
+      massBar.append(btnMassDelete,btnMassMove,btnMassIcon); body.appendChild(massBar);
+      const selectedSet=new Set(); function updateMassBar(){ massBar.style.display = selectedSet.size>0 ? 'flex' : 'none'; }
+
+      (cat.items||[]).forEach(it=>{
+        const row=document.createElement('div'); row.className='item-row draggable'; row.dataset.itemId=it.id;
+        const left=document.createElement('div'); left.className='left';
+        const nm=document.createElement('div'); nm.className='name'; nm.textContent=it.name;
+        const meta=document.createElement('div'); meta.className='meta'; meta.textContent=`lat:${it.lat??'—'} lng:${it.lng??'—'}`;
+        left.append(nm,meta);
+
+        const tools=document.createElement('div'); tools.className='tools';
+        const selCb=document.createElement('input'); selCb.type='checkbox'; selCb.onchange=()=>{ if(selCb.checked) selectedSet.add(it.id); else selectedSet.delete(it.id); updateMassBar(); };
+        const edit=document.createElement('button'); edit.textContent='✎'; edit.onclick=()=>{const nn=prompt('Новое имя',it.name); if(nn!=null){it.name=(nn.trim()||it.name); commit();}};
+        const upBtn=document.createElement('button'); upBtn.textContent='▲'; upBtn.onclick=()=>{ const idx=cat.items.findIndex(x=>x.id===it.id); if(idx>0){ moveArrayItem(cat.items,idx,idx-1); commit(); } };
+        const downBtn=document.createElement('button'); downBtn.textContent='▼'; downBtn.onclick=()=>{ const idx=cat.items.findIndex(x=>x.id===it.id); if(idx<cat.items.length-1){ moveArrayItem(cat.items,idx,idx+1); commit(); } };
+        const place=document.createElement('button'); place.textContent='📍'; place.onclick=()=>{
+          alert('Кликни по карте для: '+it.name);
+          map.once('click', e=>{
+            it.lat=e.latlng.lat; it.lng=e.latlng.lng; commit(); map.setView([it.lat,it.lng],14);
+          });
+        };
+        const copyBtn=document.createElement('button'); copyBtn.textContent='⎘ копия'; copyBtn.onclick=()=>{ if(it.lat!=null&&it.lng!=null){ const t=`${it.lat},${it.lng}`; navigator.clipboard?.writeText(t); alert('Скопировано: '+t);} else { alert('У элемента нет координат'); } };
+        const pasteBtn=document.createElement('button'); pasteBtn.textContent='⎗ вставить'; pasteBtn.onclick=async()=>{
+          let txt=''; try{ txt=await navigator.clipboard.readText(); }catch(_){}
+          if(!txt){ txt=prompt('Вставь координаты в формате "lat,lng"'); }
+          if(!txt) return;
+          const m=txt.trim().match(/(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)/);
+          if(!m
