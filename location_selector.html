@@ -1110,6 +1110,57 @@ document.querySelectorAll('.tab').forEach(tab=>{
 });
 
 /***** MAIN RENDER *****/
+  /***** POLYGON LIST *****/
+function renderPolyList(){
+  const $polyList=document.getElementById('polyList');
+  if(!$polyList) return;
+  $polyList.innerHTML='';
+
+  db.polygons.forEach(p=>{
+    const item=document.createElement('div');
+    item.className='item';
+    const row=document.createElement('div');
+    row.className='item-row';
+
+    const left=document.createElement('div');
+    left.className='left';
+    const name=document.createElement('div');
+    name.className='name';
+    name.textContent=p.name||'Полигон';
+    const meta=document.createElement('div');
+    meta.className='meta';
+    meta.textContent=`id: ${p.id}`;
+    left.append(name,meta);
+
+    const tools=document.createElement('div');
+    tools.className='tools';
+    const btnFocus=document.createElement('button');
+    btnFocus.textContent='Фокус';
+    btnFocus.onclick=()=>{ const l=polyIndex.get(p.id); if(l) map.fitBounds(l.getBounds()); };
+    const btnEdit=document.createElement('button');
+    btnEdit.textContent='Редактировать';
+    btnEdit.onclick=()=>{ /* сюда вставишь свою функцию редактирования */ };
+    const btnDel=document.createElement('button');
+    btnDel.textContent='❌';
+    btnDel.className='danger';
+    btnDel.onclick=async()=>{
+      if(!confirm('Удалить полигон?')) return;
+      const l=polyIndex.get(p.id);
+      if(l) polyFG.removeLayer(l);
+      polyIndex.delete(p.id);
+      db.polygons=db.polygons.filter(x=>x.id!==p.id);
+      await lfGeo.removeItem(p.id);
+      commit();
+      renderPolyList();
+    };
+    tools.append(btnFocus,btnEdit,btnDel);
+
+    row.append(left,tools);
+    item.appendChild(row);
+    $polyList.appendChild(item);
+  });
+}
+
 function renderAll(){
   rebuildPolys();
   renderEditor();
