@@ -245,6 +245,8 @@ const lfIcons=localforage.createInstance({name:"dict_icons_v394R"});
 const lfGeo=localforage.createInstance({name:"dict_geo_v394R"});
 function uid(){return Math.random().toString(36).slice(2,9);}
 
+let db=null;   // <<< сюда вставь
+
 function normalize(obj){
   if(!obj||typeof obj!=="object") obj={categories:[],polygons:[]};
   if(!Array.isArray(obj.categories)) obj.categories=[];
