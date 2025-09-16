@@ -257,6 +257,8 @@ const polyLabels=new Map(); // центр полигона
 const edgeLabels=new Map(); // рёбра
 let showPolyArea=true;
 let showPolyEdges=false;
+let polyEditingTargetId = null; // ID редактируемого полигона, если нет — null
+
 
 document.getElementById('chkPolyArea').addEventListener('change',()=>{
   showPolyArea=document.getElementById('chkPolyArea').checked;
