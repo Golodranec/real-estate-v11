@@ -12,7 +12,26 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
 <!-- localForage -->
-<script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js"></script>
+<script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js">
+// === EDGE LABEL EVENT HOOKS ===
+map.on(L.Draw.Event.CREATED, function(e) {
+  const layer = e.layer;
+  const id = uid();
+  polyIndex.set(id, layer);
+  polyFG.addLayer(layer);
+  updateEdgeLabels(id);
+});
+map.on(L.Draw.Event.EDITED, function(e) {
+  e.layers.eachLayer(layer => {
+    const id = getLayerId(layer);
+    if (id) updateEdgeLabels(id);
+  });
+});
+map.on("zoomend", () => {
+  polyIndex.forEach((layer, id) => updateEdgeLabels(id));
+});
+
+</script>
 
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--panel3:#0f1624;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444;--overlay:rgba(10,14,22,.75)}
