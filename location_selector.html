@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.9R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.10R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -130,7 +130,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.9R</span>
+  <span class="badge">location_selector v39.10R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -464,15 +464,30 @@ function getLayerId(layer) {
   function updateEdgeLabels(id){
   clearEdgeLabels(id);
   if(!(polyEditing && polyEditingTargetId===id)) return;
-  const layer=polyIndex.get(id); if(!layer||!layer.getLatLngs) return;
+  const layer=polyIndex.get(id); 
+  if(!layer||!layer.getLatLngs) return;
   const rings=layer.getLatLngs()[0]||[];
   if(rings.length<2) return;
+
   const labels=[];
   for(let i=0;i<rings.length;i++){
     const a=rings[i], b=rings[(i+1)%rings.length];
     const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
     const dist=map.distance(a,b);
-    const lbl=L.marker(mid,{interactive:false,icon:L.divIcon({className:'',html:`<div class="edge-label">${formatLen(dist)}</div>`})});
+    const lbl=L.marker(mid,{
+      interactive:false,
+      icon:L.divIcon({
+        className:'',
+        html:`<div class="edge-label">${formatLen(dist)}</div>`
+      })
+    });
+    lbl.addTo(map); 
+    labels.push(lbl);
+  }
+
+  edgeLabels.set(id,labels);
+}
+</div>`})});
     lbl.addTo(map); labels.push(lbl);
   }
   edgeLabels.set(id,labels);
@@ -482,7 +497,7 @@ function getLayerId(layer) {
   }
   edgeLabels.set(id,labels);
 }
-  
+
   function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
   function pushHistoryPoly(p){
     const h=getHistoryPoly(p.id);
