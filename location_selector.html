@@ -403,7 +403,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   }
   function updateEdgeLabels(id){
     clearEdgeLabels(id);
-    
+    if(!(polyEditing && polyEditingTargetId===id)) return;
     const layer=polyIndex.get(id); if(!layer||!layer.getLatLngs) return;
     const rings=layer.getLatLngs()[0]||[];
     if(rings.length<2) return;
@@ -989,7 +989,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
           if(!txt){ txt=prompt('Вставь координаты в формате "lat,lng"'); }
           if(!txt) return;
           const m=txt.trim().match(/(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)/);
-          if(!m){ alert('Не распознал координаты'); return; }
+          if(!m
+){ alert('Не распознал координаты'); return; }
           it.lat=parseFloat(m[1]); it.lng=parseFloat(m[3]); commit(); map.setView([it.lat,it.lng],15);
         };
         const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка'; clearBtn.onclick=()=>{it.lat=null; it.lng=null; commit();};
@@ -1302,8 +1303,25 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     };
     map.on(L.Draw.Event.CREATED,onCreated);
   }
-  
-   /***** RESET *****/
+  document.getElementById('btnMeasure').onclick=()=>enableMeasure();
+  document.getElementById('btnDrawLine').onclick=()=>{
+    if(drawLineActive) return;
+    drawLineActive=true;
+    const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#23d1b5',weight:3}});
+    drawer.enable();
+    const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawLineActive=false; };
+    map.on(L.Draw.Event.CREATED,onCreated);
+  };
+  document.getElementById('btnDrawPoint').onclick=()=>{
+    if(drawPointActive) return;
+    drawPointActive=true;
+    const drawer=new L.Draw.Marker(map,{});
+    drawer.enable();
+    const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawPointActive=false; };
+    map.on(L.Draw.Event.CREATED,onCreated);
+  };
+
+  /***** RESET *****/
   document.getElementById('btnReset').onclick=()=>{
     if(confirm('Очистить всё?')){
       localStorage.removeItem(KEY);
