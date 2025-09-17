@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.15R — база v38.9R + читабельные рёбра в редакторе</title>
+<title>location_selector v39.16R — стабильная база + читабельные рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -99,7 +99,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
 .multi-select-btn:hover{border-color:var(--accent);background:#212b41}
 
-/* edge-length labels for polygon editing */
+/* Edge length labels in edit mode */
 .edge-label{
   padding:4px 8px;
   border-radius:6px;
@@ -116,7 +116,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.15R</span>
+  <span class="badge">location_selector v39.16R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -399,39 +399,43 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
   const polyIndex=new Map();
   const historyById=new Map(); // id -> {stack:[],index}
+  // labels for polygon edges
+  const edgeLabels = new Map();
 
   // Метрики формат
   function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
   
 function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
+
 // Лейблы рёбер при редактировании
   const edgeLabels=new Map(); // id -> L.marker[]
-  function clearEdgeLabels(id){
-    const arr=edgeLabels.get(id)||[];
-    arr.forEach(lbl=>{ try{map.removeLayer(lbl);}catch(_){}}); edgeLabels.delete(id);
+  
+function clearEdgeLabels(id){
+  const arr=edgeLabels.get(id)||[];
+  arr.forEach(lbl=>{ try{ map.removeLayer(lbl);}catch(_){}});
+  edgeLabels.delete(id);
+}
+
+catch(_){}}); edgeLabels.delete(id);
   }
   
 function updateEdgeLabels(id){
   clearEdgeLabels(id);
   if(!(polyEditing && polyEditingTargetId===id)) return;
-  const layer = polyIndex.get(id);
-  if(!layer || !layer.getLatLngs) return;
-  const rings = layer.getLatLngs()[0] || [];
+  const layer=polyIndex.get(id); if(!layer||!layer.getLatLngs) return;
+  const rings=layer.getLatLngs()[0]||[];
   if(rings.length<2) return;
   const labels=[];
   for(let i=0;i<rings.length;i++){
     const a=rings[i], b=rings[(i+1)%rings.length];
     const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
     const dist=map.distance(a,b);
-    const lbl=L.marker(mid,{
-      interactive:false,
-      icon:L.divIcon({className:'',html:`<div class="edge-label">${formatLen(dist)}</div>`})
-    });
-    lbl.addTo(map);
-    labels.push(lbl);
+    const lbl=L.marker(mid,{interactive:false,icon:L.divIcon({className:'',html:`<div class="edge-label">${formatLen(dist)}</div>`})});
+    lbl.addTo(map); labels.push(lbl);
   }
   edgeLabels.set(id,labels);
 }
+
 </div>`})});
     lbl.addTo(map); labels.push(lbl);
   }
