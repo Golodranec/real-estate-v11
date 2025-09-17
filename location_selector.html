@@ -403,7 +403,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   }
   function updateEdgeLabels(id){
     clearEdgeLabels(id);
-    if(!(polyEditing && polyEditingTargetId===id)) return;
+    
     const layer=polyIndex.get(id); if(!layer||!layer.getLatLngs) return;
     const rings=layer.getLatLngs()[0]||[];
     if(rings.length<2) return;
@@ -1302,21 +1302,11 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     };
     map.on(L.Draw.Event.CREATED,onCreated);
   }
-  document.getElementById('btnMeasure').onclick=()=>enableMeasure();
-  document.getElementById('btnDrawLine').onclick=()=>{
-    if(drawLineActive) return;
-    drawLineActive=true;
-    const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#23d1b5',weight:3}});
-    drawer.enable();
-    const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawLineActive=false; };
+  
+  
     map.on(L.Draw.Event.CREATED,onCreated);
   };
-  document.getElementById('btnDrawPoint').onclick=()=>{
-    if(drawPointActive) return;
-    drawPointActive=true;
-    const drawer=new L.Draw.Marker(map,{});
-    drawer.enable();
-    const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawPointActive=false; };
+  
     map.on(L.Draw.Event.CREATED,onCreated);
   };
 
