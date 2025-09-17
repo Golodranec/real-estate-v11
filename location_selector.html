@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.10R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.11R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -130,7 +130,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.10R</span>
+  <span class="badge">location_selector v39.11R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -487,17 +487,26 @@ function getLayerId(layer) {
 
   edgeLabels.set(id,labels);
 }
-</div>`})});
-    lbl.addTo(map); labels.push(lbl);
+</div>`
+      })
+    });
+    lbl.addTo(map); 
+    labels.push(lbl);
   }
-  edgeLabels.set(id,labels);
-}
-</div>`})});
-    lbl.addTo(map); labels.push(lbl);
-  }
-  edgeLabels.set(id,labels);
-}
 
+  edgeLabels.set(id,labels);
+}
+</div>`})});
+    lbl.addTo(map); labels.push(lbl);
+  }
+  edgeLabels.set(id,labels);
+}
+</div>`})});
+    lbl.addTo(map); labels.push(lbl);
+  }
+  edgeLabels.set(id,labels);
+}
+  
   function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
   function pushHistoryPoly(p){
     const h=getHistoryPoly(p.id);
