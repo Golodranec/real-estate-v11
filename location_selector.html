@@ -476,9 +476,7 @@ function getLayerId(layer) {
   }
   edgeLabels.set(id,labels);
 }
-    edgeLabels.set(id,labels);
-  }
-
+   
   function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
   function pushHistoryPoly(p){
     const h=getHistoryPoly(p.id);
