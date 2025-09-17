@@ -413,11 +413,15 @@ map.on('zoomend', ()=>{
   const edgeLabels = new Map();
 // id -> L.marker[]
   function clearEdgeLabels(id){
-  const arr=edgeLabels.get(id)||[];
-  arr.forEach(lbl=>{ try{ map.removeLayer(lbl);}catch(_){}});
-  edgeLabels.delete(id);
-}catch(_){}}); edgeLabels.delete(id);
-  }
+    const arr=edgeLabels.get(id)||[];
+    arr.forEach(lbl => { 
+        try { 
+            map.removeLayer(lbl); 
+        } catch (_) {} 
+    });
+    edgeLabels.delete(id);
+}
+
   function updateEdgeLabels(id){
   clearEdgeLabels(id);
   if(!(polyEditing && polyEditingTargetId===id)) return;
