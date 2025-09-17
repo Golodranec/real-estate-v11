@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.12R — база v38.9R + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.13R — исправленный updateEdgeLabels</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -115,7 +115,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.12R</span>
+  <span class="badge">location_selector v39.13R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -124,12 +124,16 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <button id="btnRedo">Redo</button>
   <button id="btnReset" class="danger">Сброс</button>
 
-  <!-- инструменты карты --></header>
+  <!-- инструменты карты -->
+  <span style="margin-left:12px" class="badge">Инструменты</span>
+  
+  
+  
+</header>
 
 <div class="tabs">
   <div class="tab active" data-tab="editor">Редактор</div>
   <div class="tab" data-tab="preview">Предпросмотр</div>
-</div>
 
 <main>
   <aside class="sidebar" id="editorTab"></aside>
@@ -141,7 +145,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div class="row">
         <button id="btnSelectAll">Выбрать всё</button>
         <button id="btnClearAll" class="danger">Сбросить всё</button>
-      </div>
+
       <div class="help">Чекбокс-категории открываются в большом списке как на Авито. Внутри тоже есть «Выбрать всё / Сбросить всё».</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
 
@@ -150,18 +154,17 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div class="row">
         <input id="polyName" placeholder="Название полигона"/>
         <input type="color" id="polyColor" value="#ff4d4f"/>
-      </div>
+
       <div class="row">
         <button id="btnPolyNew">Новый</button>
         <button id="btnPolyEdit">Редактировать</button>
         <button id="btnPolyStop">Стоп</button>
         <button id="btnPolyUndo">Undo</button>
         <button id="btnPolyRedo">Redo</button>
-      </div>
 
       <input id="polySearch" placeholder="Поиск по полигонам..."/>
       <div id="polyList" class="list"></div>
-    </div>
+
   </aside>
   <div id="map"></div>
 </main>
@@ -171,37 +174,34 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div class="modal-header">
         <div id="msTitle" class="modal-title">Выбор</div>
         <div id="msClose" class="modal-close">✖</div>
-      </div>
+
       <div class="modal-body">
         <div class="row">
           <input id="msSearch" class="grow" placeholder="Фильтр по списку..."/>
           <button id="msAll">Выбрать всё</button>
           <button id="msNone" class="danger">Сбросить всё</button>
-        </div>
+
         <div id="msGrid" class="modal-grid"></div>
-      </div>
+
       <div class="modal-actions">
         <button id="msApply">Применить</button>
         <button id="msCancel" class="danger">Отмена</button>
-      </div>
-    </div>
-  </div>
+
+
 
   <!-- Модалка библиотеки иконок -->
   <div id="iconsOverlay" class="modal-overlay">
     <div class="modal">
       <div class="modal-header"><div class="modal-title">Библиотека иконок</div><div id="iconsClose" class="modal-close">✖</div></div>
       <div class="modal-body"><div id="iconsGrid" class="modal-grid"></div></div>
-    </div>
-  </div>
+
 
   <!-- Модалка статистики -->
   <div id="infoOverlay" class="modal-overlay">
     <div class="modal">
       <div class="modal-header"><div class="modal-title">Статистика</div><div id="infoClose" class="modal-close">✖</div></div>
       <div class="modal-body"><div id="infoBox"></div></div>
-    </div>
-  </div>
+
 
   <!-- Модалка конфликтов импорта -->
   <div id="importDialog" class="modal-overlay">
@@ -212,9 +212,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
         <button id="btnOverwrite">Перезаписать</button>
         <button id="btnSkip">Пропустить</button>
         <button id="btnApplyAll">Применить ко всем</button>
-      </div>
-    </div>
-  </div>
+
+
 
   <!-- Плавающее окно координат -->
   <div id="coordTool" class="coord-tool" style="display:none">
@@ -222,14 +221,13 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     <div class="row">
       <input id="coordLat" placeholder="Широта" inputmode="decimal"/>
       <input id="coordLng" placeholder="Долгота" inputmode="decimal"/>
-    </div>
+
     <div class="row">
       <button id="btnCoordFind">Найти</button>
       <button id="btnCoordAdd">Добавить</button>
       <button id="btnCoordClear" class="danger">Очистить</button>
-    </div>
+
     <div class="help">Перетащи окно в удобный угол. Показ — только на карте (в предпросмотр не лезем).</div>
-  </div>
 
   <!-- Скрипты карт -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -239,9 +237,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   <script>
   /***** STORAGE + DB *****/
-  const KEY="dict_v39_12R";
-  const lfIcons=localforage.createInstance({name:"dict_icons_v3912R"});
-  const lfGeo=localforage.createInstance({name:"dict_geo_v3912R"});
+  const KEY="dict_v39_4R";
+  const lfIcons=localforage.createInstance({name:"dict_icons_v394R"});
+  const lfGeo=localforage.createInstance({name:"dict_geo_v394R"});
 
   function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -409,7 +407,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     const arr=edgeLabels.get(id)||[];
     arr.forEach(lbl=>{ try{map.removeLayer(lbl);}catch(_){}}); edgeLabels.delete(id);
   }
-  function updateEdgeLabels(id){
+  
+function updateEdgeLabels(id){
   clearEdgeLabels(id);
   if(!(polyEditing && polyEditingTargetId===id)) return;
 
@@ -439,6 +438,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   edgeLabels.set(id,labels);
 }
+
 </div>`})});
     lbl.addTo(map); labels.push(lbl);
   }
@@ -897,7 +897,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
           <option value="">(нет родителя)</option>
           ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
         </select>
-      </div>
+
       <div class="row">
         <span class="preview-icon" id="newIconPreview">icon</span>
         <input type="color" id="newCatColor" value="#3388ff"/>
@@ -1129,7 +1129,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
     }
     const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_12R.json'; a.click();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_4R.json'; a.click();
   };
 
   document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
