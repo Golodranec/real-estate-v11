@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.11R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.12R — база v38.9R + метрики в списке + рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -12,35 +12,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
 <!-- localForage -->
-<script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js">
-function getLayerId(layer) {
-  return layer._customId || null;
-}
-
-  return null;
-}
-
-
-
-// === EDGE LABEL EVENT HOOKS (v39.6R) ===
-map.on(L.Draw.Event.CREATED, function(e) {
-  const layer = e.layer;
-  const id = uid();
-  layer._customId = id;
-  polyIndex.set(id, layer);
-  polyFG.addLayer(layer);
-  updateEdgeLabels(id);
-});
-map.on(L.Draw.Event.EDITED, function(e) {
-  e.layers.eachLayer(layer => {
-    const id = getLayerId(layer);
-    if (id) updateEdgeLabels(id);
-  });
-});
-map.on("zoomend", () => {
-  polyIndex.forEach((layer, id) => updateEdgeLabels(id));
-});
-</script>
+<script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js"></script>
 
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--panel3:#0f1624;--border:#273248;--text:#d7e2f2;--muted:#9fb0c8;--accent:#4aa8ff;--danger:#ef4444;--overlay:rgba(10,14,22,.75)}
@@ -126,11 +98,24 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 /* новая кнопка мультиселекта */
 .multi-select-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
 .multi-select-btn:hover{border-color:var(--accent);background:#212b41}
+
+/* edge-length labels for polygon editing */
+.edge-label{
+  padding:4px 8px;
+  border-radius:6px;
+  background:rgba(10,14,22,.92);
+  color:#fff;
+  font-weight:700;
+  font-size:14px;
+  line-height:1;
+  text-shadow:0 1px 0 rgba(0,0,0,.6)
+}
+
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.11R</span>
+  <span class="badge">location_selector v39.12R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -139,12 +124,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <button id="btnRedo">Redo</button>
   <button id="btnReset" class="danger">Сброс</button>
 
-  <!-- инструменты карты -->
-  <span style="margin-left:12px" class="badge">Инструменты</span>
-  
-  
-  
-</header>
+  <!-- инструменты карты --></header>
 
 <div class="tabs">
   <div class="tab active" data-tab="editor">Редактор</div>
@@ -252,48 +232,16 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   </div>
 
   <!-- Скрипты карт -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-function getLayerId(layer) {
-  return layer._customId || null;
-}
-
-  return null;
-}
-
-</script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js">
-function getLayerId(layer) {
-  return layer._customId || null;
-}
-
-  return null;
-}
-
-</script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js">
-function getLayerId(layer) {
-  return layer._customId || null;
-}
-
-  return null;
-}
-
-</script>
-  <script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js">
-function getLayerId(layer) {
-  return layer._customId || null;
-}
-
-  return null;
-}
-
-</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js"></script>
 
   <script>
   /***** STORAGE + DB *****/
-  const KEY="dict_v39_4R";
-  const lfIcons=localforage.createInstance({name:"dict_icons_v394R"});
-  const lfGeo=localforage.createInstance({name:"dict_geo_v394R"});
+  const KEY="dict_v39_12R";
+  const lfIcons=localforage.createInstance({name:"dict_icons_v3912R"});
+  const lfGeo=localforage.createInstance({name:"dict_geo_v3912R"});
 
   function uid(){return Math.random().toString(36).slice(2,9);}
 
@@ -464,16 +412,20 @@ function getLayerId(layer) {
   function updateEdgeLabels(id){
   clearEdgeLabels(id);
   if(!(polyEditing && polyEditingTargetId===id)) return;
-  const layer=polyIndex.get(id); 
+
+  const layer=polyIndex.get(id);
   if(!layer||!layer.getLatLngs) return;
+
   const rings=layer.getLatLngs()[0]||[];
   if(rings.length<2) return;
 
   const labels=[];
   for(let i=0;i<rings.length;i++){
-    const a=rings[i], b=rings[(i+1)%rings.length];
+    const a=rings[i];
+    const b=rings[(i+1)%rings.length];
     const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
     const dist=map.distance(a,b);
+
     const lbl=L.marker(mid,{
       interactive:false,
       icon:L.divIcon({
@@ -481,24 +433,10 @@ function getLayerId(layer) {
         html:`<div class="edge-label">${formatLen(dist)}</div>`
       })
     });
-    lbl.addTo(map); 
+    lbl.addTo(map);
     labels.push(lbl);
   }
 
-  edgeLabels.set(id,labels);
-}
-</div>`
-      })
-    });
-    lbl.addTo(map); 
-    labels.push(lbl);
-  }
-
-  edgeLabels.set(id,labels);
-}
-</div>`})});
-    lbl.addTo(map); labels.push(lbl);
-  }
   edgeLabels.set(id,labels);
 }
 </div>`})});
@@ -1191,7 +1129,7 @@ function getLayerId(layer) {
       if(!p.geojson){ try{ p.geojson=await lfGeo.getItem(p.id)||null; }catch(e){} }
     }
     const blob=new Blob([JSON.stringify(full,null,2)],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_4R.json'; a.click();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dict_full_v39_12R.json'; a.click();
   };
 
   document.getElementById('btnImport').onclick=()=>document.getElementById('fileImport').click();
@@ -1415,11 +1353,6 @@ function getLayerId(layer) {
     await renderAll();
     resumeEditingIfNeeded();
   })();
-  
-function getLayerId(layer) {
-  return layer._customId || null;
-}
-
-</script>
+  </script>
 </body>
 </html>
