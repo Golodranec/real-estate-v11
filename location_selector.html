@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.16R — стабильная база + читабельные рёбра в редакторе</title>
+<title>location_selector v39.17R</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -99,7 +99,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
 .multi-select-btn:hover{border-color:var(--accent);background:#212b41}
 
-/* Edge length labels in edit mode */
+/* Edge labels in edit mode */
 .edge-label{
   padding:4px 8px;
   border-radius:6px;
@@ -116,7 +116,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.16R</span>
+  <span class="badge">location_selector v39.17R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -349,6 +349,11 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   /***** MAP + MARKERS *****/
   let map=L.map('map').setView([41.3111,69.2797],12);
+
+map.on('zoomend', ()=>{
+  if(polyEditing && polyEditingTargetId) updateEdgeLabels(polyEditingTargetId);
+});
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
   let cluster=L.markerClusterGroup(); map.addLayer(cluster);
   function clearMarkers(){cluster.clearLayers();}
@@ -399,8 +404,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   const polyFG=new L.FeatureGroup(); map.addLayer(polyFG);
   const polyIndex=new Map();
   const historyById=new Map(); // id -> {stack:[],index}
-  // labels for polygon edges
-  const edgeLabels = new Map();
+const edgeLabels = new Map();
 
   // Метрики формат
   function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
@@ -1351,12 +1355,5 @@ function updateEdgeLabels(id){
     resumeEditingIfNeeded();
   })();
   </script>
-
-<script>
-map.on('zoomend', ()=>{
-  if(polyEditing && polyEditingTargetId) updateEdgeLabels(polyEditingTargetId);
-});
-</script>
-
 </body>
 </html>
