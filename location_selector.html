@@ -417,6 +417,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   }
   edgeLabels.set(id,labels);
 }
+    edgeLabels.set(id,labels);
+  }
 
   function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
   function pushHistoryPoly(p){
@@ -1275,44 +1277,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     cat.items.push({id:uid(),name:name.trim(),lat:p.lat,lng:p.lng,parentId});
     commit();
     alert('Метка добавлена в категорию: '+cat.name);
-  };
-
-  /***** ИНСТРУМЕНТЫ КАРТЫ: линейка/точка/линия *****/
-  let measureActive=false, drawLineActive=false, drawPointActive=false;
-  let measureLayer=null;
-  const drawControl=new L.Control.Draw({
-    draw:{ polygon:false, rectangle:false, circle:false, circlemarker:false, polyline:true, marker:true },
-    edit:false
-  });
-  map.addControl(drawControl);
-
-    if(measureActive) return;
-    measureActive=true;
-    alert('Режим линейки: ставь точки на карте. Двойной клик — завершить.');
-    const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#4aa8ff',weight:3,dashArray:'6,6'}});
-    drawer.enable();
-    const onCreated=(e)=>{
-      if(measureLayer) map.removeLayer(measureLayer);
-      measureLayer=e.layer.addTo(map);
-      const latlngs=e.layer.getLatLngs();
-      const dist=L.GeometryUtil.length(latlngs);
-      alert('Длина: '+formatLen(dist));
-      map.off(L.Draw.Event.CREATED,onCreated);
-      measureActive=false;
-    };
-    map.on(L.Draw.Event.CREATED,onCreated);
-  }
-    if(drawLineActive) return;
-    drawLineActive=true;
-    const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#23d1b5',weight:3}});
-    drawer.enable();
-    const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawLineActive=false; };
-  };
-    if(drawPointActive) return;
-    drawPointActive=true;
-    const drawer=new L.Draw.Marker(map,{});
-    drawer.enable();
-    const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawPointActive=false; };
   };
 
   /***** RESET *****/
