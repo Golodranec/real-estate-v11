@@ -989,7 +989,8 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
           if(!txt){ txt=prompt('Вставь координаты в формате "lat,lng"'); }
           if(!txt) return;
           const m=txt.trim().match(/(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)/);
-          if(!m){ alert('Не распознал координаты'); return; }
+          if(!m
+){ alert('Не распознал координаты'); return; }
           it.lat=parseFloat(m[1]); it.lng=parseFloat(m[3]); commit(); map.setView([it.lat,it.lng],15);
         };
         const clearBtn=document.createElement('button'); clearBtn.textContent='🗑 метка'; clearBtn.onclick=()=>{it.lat=null; it.lng=null; commit();};
