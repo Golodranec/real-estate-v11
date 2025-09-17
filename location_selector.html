@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.7R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.9R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -130,7 +130,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.7R</span>
+  <span class="badge">location_selector v39.9R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -473,6 +473,11 @@ function getLayerId(layer) {
     const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
     const dist=map.distance(a,b);
     const lbl=L.marker(mid,{interactive:false,icon:L.divIcon({className:'',html:`<div class="edge-label">${formatLen(dist)}</div>`})});
+    lbl.addTo(map); labels.push(lbl);
+  }
+  edgeLabels.set(id,labels);
+}
+</div>`})});
     lbl.addTo(map); labels.push(lbl);
   }
   edgeLabels.set(id,labels);
