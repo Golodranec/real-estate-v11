@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.4R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.5R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -13,7 +13,15 @@
 
 <!-- localForage -->
 <script src="https://unpkg.com/localforage@1.10.0/dist/localforage.js">
-// === EDGE LABEL EVENT HOOKS ===
+function getLayerId(layer) {
+  for (let [id, l] of polyIndex.entries()) {
+    if (l === layer) return id;
+  }
+  return null;
+}
+
+
+// === EDGE LABEL EVENT HOOKS (v39.5R) ===
 map.on(L.Draw.Event.CREATED, function(e) {
   const layer = e.layer;
   const id = uid();
@@ -121,7 +129,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.4R</span>
+  <span class="badge">location_selector v39.5R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -243,10 +251,42 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   </div>
 
   <!-- Скрипты карт -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+function getLayerId(layer) {
+  for (let [id, l] of polyIndex.entries()) {
+    if (l === layer) return id;
+  }
+  return null;
+}
+
+</script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js">
+function getLayerId(layer) {
+  for (let [id, l] of polyIndex.entries()) {
+    if (l === layer) return id;
+  }
+  return null;
+}
+
+</script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js">
+function getLayerId(layer) {
+  for (let [id, l] of polyIndex.entries()) {
+    if (l === layer) return id;
+  }
+  return null;
+}
+
+</script>
+  <script src="https://unpkg.com/leaflet-geometryutil@0.10.2/src/leaflet.geometryutil.js">
+function getLayerId(layer) {
+  for (let [id, l] of polyIndex.entries()) {
+    if (l === layer) return id;
+  }
+  return null;
+}
+
+</script>
 
   <script>
   /***** STORAGE + DB *****/
@@ -436,7 +476,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   }
   edgeLabels.set(id,labels);
 }
-  
+    edgeLabels.set(id,labels);
+  }
+
   function getHistoryPoly(id){ if(!historyById.has(id)) historyById.set(id,{stack:[],index:-1}); return historyById.get(id); }
   function pushHistoryPoly(p){
     const h=getHistoryPoly(p.id);
@@ -1345,6 +1387,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     await renderAll();
     resumeEditingIfNeeded();
   })();
-  </script>
+  
+function getLayerId(layer) {
+  for (let [id, l] of polyIndex.entries()) {
+    if (l === layer) return id;
+  }
+  return null;
+}
+
+</script>
 </body>
 </html>
