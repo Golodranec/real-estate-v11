@@ -113,9 +113,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   <!-- инструменты карты -->
   <span style="margin-left:12px" class="badge">Инструменты</span>
-  <button id="btnMeasure">Линейка</button>
-  <button id="btnDrawPoint">Точка</button>
-  <button id="btnDrawLine">Линия</button>
+  
+  
+  
 </header>
 
 <div class="tabs">
@@ -402,19 +402,21 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     arr.forEach(lbl=>{ try{map.removeLayer(lbl);}catch(_){}}); edgeLabels.delete(id);
   }
   function updateEdgeLabels(id){
-    clearEdgeLabels(id);
-    if(!(polyEditing && polyEditingTargetId===id)) return;
-    const layer=polyIndex.get(id); if(!layer||!layer.getLatLngs) return;
-    const rings=layer.getLatLngs()[0]||[];
-    if(rings.length<2) return;
-    const labels=[];
-    for(let i=0;i<rings.length;i++){
-      const a=rings[i], b=rings[(i+1)%rings.length];
-      const mid=L.latLng((a.lat+b.lat)/2, (a.lng+b.lng)/2);
-      const dist=map.distance(a,b);
-      const lbl=L.marker(mid,{interactive:false,icon:L.divIcon({className:"",html:`<div style="background:rgba(10,14,22,.85);color:#fff;padding:2px 6px;border-radius:6px;font-size:12px">${formatLen(dist)}</div>`})});
-      lbl.addTo(map); labels.push(lbl);
-    }
+  clearEdgeLabels(id);
+  if(!(polyEditing && polyEditingTargetId===id)) return;
+  const layer=polyIndex.get(id); if(!layer||!layer.getLatLngs) return;
+  const rings=layer.getLatLngs()[0]||[];
+  if(rings.length<2) return;
+  const labels=[];
+  for(let i=0;i<rings.length;i++){
+    const a=rings[i], b=rings[(i+1)%rings.length];
+    const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
+    const dist=map.distance(a,b);
+    const lbl=L.marker(mid,{interactive:false,icon:L.divIcon({className:'',html:`<div class="edge-label">${formatLen(dist)}</div>`})});
+    lbl.addTo(map); labels.push(lbl);
+  }
+  edgeLabels.set(id,labels);
+}
     edgeLabels.set(id,labels);
   }
 
@@ -1286,7 +1288,6 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   });
   map.addControl(drawControl);
 
-  function enableMeasure(){
     if(measureActive) return;
     measureActive=true;
     alert('Режим линейки: ставь точки на карте. Двойной клик — завершить.');
@@ -1303,22 +1304,17 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     };
     map.on(L.Draw.Event.CREATED,onCreated);
   }
-  document.getElementById('btnMeasure').onclick=()=>enableMeasure();
-  document.getElementById('btnDrawLine').onclick=()=>{
     if(drawLineActive) return;
     drawLineActive=true;
     const drawer=new L.Draw.Polyline(map,{shapeOptions:{color:'#23d1b5',weight:3}});
     drawer.enable();
     const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawLineActive=false; };
-    map.on(L.Draw.Event.CREATED,onCreated);
   };
-  document.getElementById('btnDrawPoint').onclick=()=>{
     if(drawPointActive) return;
     drawPointActive=true;
     const drawer=new L.Draw.Marker(map,{});
     drawer.enable();
     const onCreated=(e)=>{ e.layer.addTo(map); map.off(L.Draw.Event.CREATED,onCreated); drawPointActive=false; };
-    map.on(L.Draw.Event.CREATED,onCreated);
   };
 
   /***** RESET *****/
