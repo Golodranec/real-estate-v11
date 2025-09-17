@@ -412,7 +412,6 @@ const edgeLabels = new Map();
 function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
 
 // Лейблы рёбер при редактировании
-  const edgeLabels=new Map(); // id -> L.marker[]
   
 function clearEdgeLabels(id){
   const arr=edgeLabels.get(id)||[];
