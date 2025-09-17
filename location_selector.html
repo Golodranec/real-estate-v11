@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.14R — FIX без лишних </div></title>
+<title>location_selector v39.15R — база v38.9R + читабельные рёбра в редакторе</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -108,14 +108,15 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   font-weight:700;
   font-size:14px;
   line-height:1;
-  text-shadow:0 1px 0 rgba(0,0,0,.6)
+  text-shadow:0 1px 0 rgba(0,0,0,.6);
+  white-space:nowrap;
 }
 
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.14R</span>
+  <span class="badge">location_selector v39.15R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -124,16 +125,12 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   <button id="btnRedo">Redo</button>
   <button id="btnReset" class="danger">Сброс</button>
 
-  <!-- инструменты карты -->
-  <span style="margin-left:12px" class="badge">Инструменты</span>
-  
-  
-  
-</header>
+  <!-- инструменты карты --></header>
 
 <div class="tabs">
   <div class="tab active" data-tab="editor">Редактор</div>
   <div class="tab" data-tab="preview">Предпросмотр</div>
+</div>
 
 <main>
   <aside class="sidebar" id="editorTab"></aside>
@@ -145,7 +142,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div class="row">
         <button id="btnSelectAll">Выбрать всё</button>
         <button id="btnClearAll" class="danger">Сбросить всё</button>
-
+      </div>
       <div class="help">Чекбокс-категории открываются в большом списке как на Авито. Внутри тоже есть «Выбрать всё / Сбросить всё».</div>
       <div id="cascadeBox" style="margin-top:8px"></div>
 
@@ -154,17 +151,18 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div class="row">
         <input id="polyName" placeholder="Название полигона"/>
         <input type="color" id="polyColor" value="#ff4d4f"/>
-
+      </div>
       <div class="row">
         <button id="btnPolyNew">Новый</button>
         <button id="btnPolyEdit">Редактировать</button>
         <button id="btnPolyStop">Стоп</button>
         <button id="btnPolyUndo">Undo</button>
         <button id="btnPolyRedo">Redo</button>
+      </div>
 
       <input id="polySearch" placeholder="Поиск по полигонам..."/>
       <div id="polyList" class="list"></div>
-
+    </div>
   </aside>
   <div id="map"></div>
 </main>
@@ -174,34 +172,37 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <div class="modal-header">
         <div id="msTitle" class="modal-title">Выбор</div>
         <div id="msClose" class="modal-close">✖</div>
-
+      </div>
       <div class="modal-body">
         <div class="row">
           <input id="msSearch" class="grow" placeholder="Фильтр по списку..."/>
           <button id="msAll">Выбрать всё</button>
           <button id="msNone" class="danger">Сбросить всё</button>
-
+        </div>
         <div id="msGrid" class="modal-grid"></div>
-
+      </div>
       <div class="modal-actions">
         <button id="msApply">Применить</button>
         <button id="msCancel" class="danger">Отмена</button>
-
-
+      </div>
+    </div>
+  </div>
 
   <!-- Модалка библиотеки иконок -->
   <div id="iconsOverlay" class="modal-overlay">
     <div class="modal">
       <div class="modal-header"><div class="modal-title">Библиотека иконок</div><div id="iconsClose" class="modal-close">✖</div></div>
       <div class="modal-body"><div id="iconsGrid" class="modal-grid"></div></div>
-
+    </div>
+  </div>
 
   <!-- Модалка статистики -->
   <div id="infoOverlay" class="modal-overlay">
     <div class="modal">
       <div class="modal-header"><div class="modal-title">Статистика</div><div id="infoClose" class="modal-close">✖</div></div>
       <div class="modal-body"><div id="infoBox"></div></div>
-
+    </div>
+  </div>
 
   <!-- Модалка конфликтов импорта -->
   <div id="importDialog" class="modal-overlay">
@@ -212,8 +213,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
         <button id="btnOverwrite">Перезаписать</button>
         <button id="btnSkip">Пропустить</button>
         <button id="btnApplyAll">Применить ко всем</button>
-
-
+      </div>
+    </div>
+  </div>
 
   <!-- Плавающее окно координат -->
   <div id="coordTool" class="coord-tool" style="display:none">
@@ -221,13 +223,14 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     <div class="row">
       <input id="coordLat" placeholder="Широта" inputmode="decimal"/>
       <input id="coordLng" placeholder="Долгота" inputmode="decimal"/>
-
+    </div>
     <div class="row">
       <button id="btnCoordFind">Найти</button>
       <button id="btnCoordAdd">Добавить</button>
       <button id="btnCoordClear" class="danger">Очистить</button>
-
+    </div>
     <div class="help">Перетащи окно в удобный угол. Показ — только на карте (в предпросмотр не лезем).</div>
+  </div>
 
   <!-- Скрипты карт -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -399,9 +402,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   // Метрики формат
   function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
-  function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
-
-  // Лейблы рёбер при редактировании
+  
+function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
+// Лейблы рёбер при редактировании
   const edgeLabels=new Map(); // id -> L.marker[]
   function clearEdgeLabels(id){
     const arr=edgeLabels.get(id)||[];
@@ -411,34 +414,24 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 function updateEdgeLabels(id){
   clearEdgeLabels(id);
   if(!(polyEditing && polyEditingTargetId===id)) return;
-
-  const layer=polyIndex.get(id);
-  if(!layer||!layer.getLatLngs) return;
-
-  const rings=layer.getLatLngs()[0]||[];
+  const layer = polyIndex.get(id);
+  if(!layer || !layer.getLatLngs) return;
+  const rings = layer.getLatLngs()[0] || [];
   if(rings.length<2) return;
-
   const labels=[];
   for(let i=0;i<rings.length;i++){
-    const a=rings[i];
-    const b=rings[(i+1)%rings.length];
+    const a=rings[i], b=rings[(i+1)%rings.length];
     const mid=L.latLng((a.lat+b.lat)/2,(a.lng+b.lng)/2);
     const dist=map.distance(a,b);
-
     const lbl=L.marker(mid,{
       interactive:false,
-      icon:L.divIcon({
-        className:'',
-        html:`<div class="edge-label">${formatLen(dist)}</div>`
-      })
+      icon:L.divIcon({className:'',html:`<div class="edge-label">${formatLen(dist)}</div>`})
     });
     lbl.addTo(map);
     labels.push(lbl);
   }
-
   edgeLabels.set(id,labels);
 }
-
 </div>`})});
     lbl.addTo(map); labels.push(lbl);
   }
@@ -897,7 +890,7 @@ function updateEdgeLabels(id){
           <option value="">(нет родителя)</option>
           ${db.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
         </select>
-
+      </div>
       <div class="row">
         <span class="preview-icon" id="newIconPreview">icon</span>
         <input type="color" id="newCatColor" value="#3388ff"/>
@@ -1354,5 +1347,12 @@ function updateEdgeLabels(id){
     resumeEditingIfNeeded();
   })();
   </script>
+
+<script>
+map.on('zoomend', ()=>{
+  if(polyEditing && polyEditingTargetId) updateEdgeLabels(polyEditingTargetId);
+});
+</script>
+
 </body>
 </html>
