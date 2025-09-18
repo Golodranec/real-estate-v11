@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.20R stable — база v38.9R + инструменты + метрики в списке + рёбра в редакторе</title>
+<title>location_selector v39.24R</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -100,14 +100,23 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 .multi-select-btn:hover{border-color:var(--accent);background:#212b41}
 
 /* лейбл длин ребер */
-.edge-label{background:rgba(10,14,22,.92);color:#fff;padding:2px 6px;border-radius:6px;
-  font-size:13px;font-weight:700;line-height:1;box-shadow:0 1px 0 rgba(255,255,255,.06),0 2px 8px rgba(0,0,0,.6);
-  text-shadow:0 1px 1px #000;white-space:nowrap;pointer-events:none;border:1px solid rgba(255,255,255,.08)}
+.edge-label{
+  background: rgba(0,0,0,0.75);
+  color:#fff;
+  font-size:16px;
+  font-weight:800;
+  padding:3px 8px;
+  border:1px solid #fff;
+  border-radius:6px;
+  text-shadow:0 0 3px #000, 0 0 6px #000;
+  white-space:nowrap;
+  pointer-events:none;
+}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.20R</span>
+  <span class="badge">location_selector v39.24R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -398,9 +407,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   // Метрики формат
   function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
-  function formatLen(m){ return m>1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }
-
-  // Лейблы рёбер при редактировании
+  function formatLen(m){ return m>=1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }// Лейблы рёбер при редактировании
   const edgeLabels=new Map(); // id -> L.marker[]
   function clearEdgeLabels(id){
     const arr=edgeLabels.get(id)||[];
@@ -441,7 +448,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     updateEdgeLabels(p.id);
     return true;
   }
-  function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
+  function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:4,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
   function rebuildPolys(){
     polyIndex.clear(); polyFG.clearLayers();
     for(const p of db.polygons){
@@ -460,7 +467,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   const $polySearch=document.getElementById('polySearch');
 
   document.getElementById('btnPolyNew').onclick=()=>{
-    new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
+    new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:4,fillOpacity:.12}}).enable();
   };
 
   let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
