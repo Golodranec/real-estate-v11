@@ -2,205 +2,130 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Фильтр v02R — полный</title>
+<title>Fields Preview v01R</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--bg:#0f172a;--side:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
-  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);display:flex;height:100vh}
-  aside{width:300px;background:var(--side);border-right:1px solid var(--line);overflow:auto;padding:10px}
-  main{flex:1;display:flex;flex-direction:column;padding:12px;overflow:auto}
-  h1{margin:0;font-size:16px;padding:10px;background:var(--line)}
-  ul{list-style:none;padding-left:18px;margin:6px 0}
-  li{margin:2px 0}
-  li span{padding:2px 6px;border-radius:6px;cursor:pointer;display:inline-block}
-  li span.active{background:var(--ok);color:#052e16}
-  .editor{background:var(--side);padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:8px;max-width:640px;margin-bottom:16px;border:1px solid var(--line)}
+  body{margin:0;font-family:sans-serif;background:#0f172a;color:#e5e7eb}
+  nav{display:flex;gap:8px;padding:8px;background:#1f2937}
+  nav button{padding:6px 10px;border:none;border-radius:6px;background:#374151;color:#e5e7eb;cursor:pointer}
+  nav button.active{background:#22c55e;color:#052e16}
+  section{padding:12px}
+  .editor,.card{background:#111827;padding:12px;border-radius:8px;margin-bottom:12px}
   input,select,textarea,button{font:inherit}
-  input,select{padding:6px;border-radius:6px;border:1px solid var(--line);background:#0b1220;color:var(--text)}
-  button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
-  button.primary{background:var(--ok);color:#052e16}
-  button.danger{background:var(--err);color:#3b0a0a}
-  textarea{width:100%;height:220px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:13px}
-  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  input,select{padding:6px;border-radius:6px;border:1px solid #374151;background:#0b1220;color:#e5e7eb}
+  button{padding:6px 10px;border-radius:6px;border:1px solid #374151;background:#1f2937;color:#e5e7eb;cursor:pointer}
+  button.primary{background:#22c55e;color:#052e16}
+  button.danger{background:#ef4444;color:#3b0a0a}
+  textarea{width:100%;height:220px;background:#0b1220;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:8px;font-family:monospace;font-size:13px}
+  .row{display:flex;gap:8px;margin:6px 0}
   .sp{flex:1}
-  nav{display:flex;gap:8px;margin:8px 0}
-  nav button.active{background:var(--ok);color:#052e16}
-  .hidden{display:none}
-  .card{background:var(--side);padding:12px;border-radius:10px;border:1px solid var(--line);margin-bottom:16px}
 </style>
 </head>
 <body>
-  <aside>
-    <h1>Элементы</h1>
-    <div class="row">
-      <button id="addBtn">＋ Добавить</button>
-      <button id="clearBtn" class="danger">Очистить всё</button>
+  <nav>
+    <button id="tab-fields" class="active">Поля</button>
+    <button id="tab-json">JSON</button>
+    <button id="tab-preview">Предпросмотр</button>
+  </nav>
+
+  <section id="view-fields">
+    <div class="editor">
+      <h2>Редактор полей</h2>
+      <label>Название <input id="name"></label>
+      <label>Тип поля
+        <select id="fieldType">
+          <option value="text">Текст</option>
+          <option value="number">Число</option>
+          <option value="select">Список</option>
+        </select>
+      </label>
+      <label>Родитель
+        <select id="parent"></select>
+      </label>
+      <div class="row">
+        <button class="primary" id="saveBtn">Сохранить</button>
+        <button class="danger" id="delBtn">Удалить</button>
+        <button id="addBtn">Добавить</button>
+      </div>
     </div>
-    <ul id="tree"></ul>
-  </aside>
+    <ul id="list"></ul>
+  </section>
 
-  <main>
-    <nav>
-      <button id="tab-tree" class="active">Tree</button>
-      <button id="tab-json">JSON</button>
-      <button id="tab-preview">Preview</button>
-    </nav>
-
-    <section id="view-tree">
-      <div class="editor">
-        <h2>Редактор</h2>
-        <label>Название <input id="name"></label>
-        <label>Тип
-          <select id="type">
-            <option value="section">Раздел</option>
-            <option value="category">Категория</option>
-            <option value="subcategory">Подкатегория</option>
-            <option value="field">Поле</option>
-          </select>
-        </label>
-        <label>Родитель
-          <select id="parent"></select>
-        </label>
-        <label id="fieldTypeRow" class="hidden">Тип поля
-          <select id="fieldType">
-            <option value="text">Текст</option>
-            <option value="number">Число</option>
-            <option value="select">Список</option>
-          </select>
-        </label>
-        <div class="row">
-          <button class="primary" id="saveBtn">Сохранить</button>
-          <button class="danger" id="delBtn">Удалить</button>
-          <button id="dupBtn">Дублировать</button>
-        </div>
-        <div class="row">
-          <button id="upBtn">↑ Вверх</button>
-          <button id="downBtn">↓ Вниз</button>
-        </div>
+  <section id="view-json" class="hidden">
+    <div class="card">
+      <h2>JSON</h2>
+      <div class="row">
+        <button id="exportBtn" class="primary">Экспорт</button>
+        <button id="resetBtn" class="danger">Сброс</button>
       </div>
-    </section>
+      <textarea id="jsonArea"></textarea>
+    </div>
+  </section>
 
-    <section id="view-json" class="hidden">
-      <div class="card">
-        <h2>JSON</h2>
-        <textarea id="jsonArea"></textarea>
-      </div>
-    </section>
-
-    <section id="view-preview" class="hidden">
-      <div class="card">
-        <h2>Предпросмотр</h2>
-        <div class="row">
-          <label class="sp">Раздел <select id="prevSection" class="sp"></select></label>
-          <label class="sp">Категория <select id="prevCategory" class="sp"></select></label>
-          <label class="sp">Подкатегория <select id="prevSubcategory" class="sp"></select></label>
-        </div>
-        <div id="fields"></div>
-      </div>
-    </section>
-  </main>
+  <section id="view-preview" class="hidden">
+    <div class="card">
+      <h2>Предпросмотр</h2>
+      <div id="preview"></div>
+    </div>
+  </section>
 
 <script>
 const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
-
 let data={items:[]};
 let selectedId=null;
 
-/* LocalStorage */
-function load(){try{const raw=localStorage.getItem("filter_v02R");if(raw) data=JSON.parse(raw);}catch{}}
-function save(){localStorage.setItem("filter_v02R",JSON.stringify(data));}
+/* Storage */
+function load(){try{const raw=localStorage.getItem("fields_v01R");if(raw)data=JSON.parse(raw)}catch{}}
+function save(){localStorage.setItem("fields_v01R",JSON.stringify(data))}
 
-/* Render Tree */
-function renderTree(){
-  const byParent={};
-  data.items.forEach(it=>{const k=it.parentId??"root";(byParent[k]=byParent[k]||[]).push(it)});
-  tree.innerHTML="";
-  function build(pid,ul){
-    (byParent[pid]||[]).forEach(it=>{
-      const li=el("li");
-      const span=el("span",{textContent:`${it.name} [${it.type}]`});
-      if(it.id===selectedId) span.classList.add("active");
-      span.onclick=()=>select(it.id);
-      li.appendChild(span);
-      const u=el("ul");build(it.id,u);if(u.children.length) li.appendChild(u);
-      ul.appendChild(li);
-    });
-  }
-  build("root",tree);
+/* Render list */
+function renderList(){
+  list.innerHTML="";
+  data.items.forEach(it=>{
+    const li=el("li");
+    const span=el("span",{textContent:`${it.name} (${it.fieldType})`});
+    if(it.id===selectedId)span.style.color="#22c55e";
+    span.onclick=()=>select(it.id);
+    li.appendChild(span);
+    list.appendChild(li);
+  });
   jsonArea.value=JSON.stringify(data,null,2);
   renderParentOptions();
   renderPreview();
 }
-
-/* Parent Options */
 function renderParentOptions(){
   parent.innerHTML="<option value=''>Нет</option>";
-  if(!selectedId){data.items.forEach(it=>parent.appendChild(el("option",{value:it.id,textContent:it.name})));return}
-  const invalid=new Set([selectedId]);
-  function markChildren(id){data.items.filter(x=>x.parentId===id).forEach(ch=>{invalid.add(ch.id);markChildren(ch.id)})}
-  markChildren(selectedId);
-  data.items.forEach(it=>{if(!invalid.has(it.id)) parent.appendChild(el("option",{value:it.id,textContent:it.name}))});
+  data.items.forEach(it=>{if(it.id!==selectedId)parent.appendChild(el("option",{value:it.id,textContent:it.name}))})
 }
-
-/* Select */
-function select(id){
-  selectedId=id;const it=data.items.find(x=>x.id===id);if(!it)return;
-  name.value=it.name;type.value=it.type;parent.value=it.parentId||"";
-  if(it.type==="field"){fieldTypeRow.classList.remove("hidden");fieldType.value=it.fieldType||"text"}else fieldTypeRow.classList.add("hidden");
-  renderTree();
-}
+function select(id){selectedId=id;const it=data.items.find(x=>x.id===id);if(!it)return;name.value=it.name;fieldType.value=it.fieldType;parent.value=it.parentId||"";renderList()}
 
 /* Buttons */
-addBtn.onclick=()=>{const id=uid();data.items.push({id,name:"Новый",parentId:null,type:"section"});select(id);save();renderTree()}
-saveBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);it.name=name.value;it.type=type.value;it.parentId=parent.value||null;if(it.type==="field")it.fieldType=fieldType.value;else delete it.fieldType;save();renderTree()}
-delBtn.onclick=()=>{if(!selectedId)return;const remove=id=>{data.items.filter(x=>x.parentId===id).forEach(ch=>remove(ch.id));data.items=data.items.filter(x=>x.id!==id)};remove(selectedId);selectedId=null;save();renderTree()}
-dupBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);const id=uid();const copy={...it,id,name:it.name+" (копия)"};data.items.push(copy);save();renderTree()}
-upBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);const arr=data.items.filter(x=>(x.parentId||"")===(it.parentId||""));const idx=arr.findIndex(x=>x.id===it.id);if(idx>0){const a=data.items.indexOf(arr[idx-1]);const b=data.items.indexOf(arr[idx]);[data.items[a],data.items[b]]=[data.items[b],data.items[a]];save();renderTree()}}
-downBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);const arr=data.items.filter(x=>(x.parentId||"")===(it.parentId||""));const idx=arr.findIndex(x=>x.id===it.id);if(idx<arr.length-1){const a=data.items.indexOf(arr[idx]);const b=data.items.indexOf(arr[idx+1]);[data.items[a],data.items[b]]=[data.items[b],data.items[a]];save();renderTree()}}
-clearBtn.onclick=()=>{if(confirm("Очистить всё дерево?")){data={items:[]};selectedId=null;save();renderTree()}}
-type.onchange=()=>{if(type.value==="field")fieldTypeRow.classList.remove("hidden");else fieldTypeRow.classList.add("hidden")}
+addBtn.onclick=()=>{const id=uid();data.items.push({id,name:"Новое поле",fieldType:"text",parentId:null});select(id);save();renderList()}
+saveBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);it.name=name.value;it.fieldType=fieldType.value;it.parentId=parent.value||null;save();renderList()}
+delBtn.onclick=()=>{if(!selectedId)return;data.items=data.items.filter(x=>x.id!==selectedId);selectedId=null;save();renderList()}
+exportBtn.onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"fields.json"});a.click()}
+resetBtn.onclick=()=>{if(confirm("Очистить?")){data={items:[]};selectedId=null;save();renderList()}}
 
 /* Preview */
 function renderPreview(){
-  prevSection.innerHTML="<option value=''>--</option>";
-  data.items.filter(x=>x.type==="section").forEach(s=>prevSection.appendChild(el("option",{value:s.id,textContent:s.name})));
-  updatePreview();
-}
-function updatePreview(){
-  prevCategory.innerHTML="<option value=''>--</option>";
-  prevSubcategory.innerHTML="<option value=''>--</option>";
-  fields.innerHTML="";
-  const sec=data.items.find(x=>x.id===prevSection.value);
-  if(sec)data.items.filter(x=>x.parentId===sec.id&&x.type==="category").forEach(c=>prevCategory.appendChild(el("option",{value:c.id,textContent:c.name})));
-  const cat=data.items.find(x=>x.id===prevCategory.value);
-  if(cat)data.items.filter(x=>x.parentId===cat.id&&x.type==="subcategory").forEach(sc=>prevSubcategory.appendChild(el("option",{value:sc.id,textContent:sc.name})));
-  const sub=data.items.find(x=>x.id===prevSubcategory.value);
-  const fieldsArr=[];
-  data.items.forEach(it=>{
-    if(it.type!=="field")return;
-    if(it.parentId===null)fieldsArr.push(it);
-    if(sec&&it.parentId===sec.id)fieldsArr.push(it);
-    if(cat&&it.parentId===cat.id)fieldsArr.push(it);
-    if(sub&&it.parentId===sub.id)fieldsArr.push(it);
-  });
-  if(!fieldsArr.length){fields.textContent="Нет полей";return}
-  fieldsArr.forEach(f=>{
+  preview.innerHTML="";
+  data.items.forEach(f=>{
     const row=el("div",{className:"row"});
-    row.appendChild(el("label",{className:"sp",textContent:`${f.name} (${f.fieldType||"text"})`}));
+    row.appendChild(el("label",{className:"sp",textContent:f.name}));
     let inp;if(f.fieldType==="number")inp=el("input",{type:"number"});else if(f.fieldType==="select")inp=el("select");else inp=el("input",{type:"text"});
-    row.appendChild(inp);fields.appendChild(row);
+    row.appendChild(inp);
+    preview.appendChild(row);
   });
 }
-prevSection.onchange=updatePreview;prevCategory.onchange=updatePreview;prevSubcategory.onchange=updatePreview;
 
 /* Tabs */
-function activate(tab){tabTree.classList.remove("active");tabJson.classList.remove("active");tabPreview.classList.remove("active");viewTree.classList.add("hidden");viewJson.classList.add("hidden");viewPreview.classList.add("hidden");if(tab==="tree"){tabTree.classList.add("active");viewTree.classList.remove("hidden")}if(tab==="json"){tabJson.classList.add("active");viewJson.classList.remove("hidden")}if(tab==="preview"){tabPreview.classList.add("active");viewPreview.classList.remove("hidden")}}
-tabTree.onclick=()=>activate("tree");tabJson.onclick=()=>activate("json");tabPreview.onclick=()=>activate("preview");
+function activate(tab){tabFields.classList.remove("active");tabJson.classList.remove("active");tabPreview.classList.remove("active");viewFields.classList.add("hidden");viewJson.classList.add("hidden");viewPreview.classList.add("hidden");if(tab==="fields"){tabFields.classList.add("active");viewFields.classList.remove("hidden")}if(tab==="json"){tabJson.classList.add("active");viewJson.classList.remove("hidden")}if(tab==="preview"){tabPreview.classList.add("active");viewPreview.classList.remove("hidden")}}
+tabFields.onclick=()=>activate("fields");tabJson.onclick=()=>activate("json");tabPreview.onclick=()=>activate("preview");
 
 /* Init */
-load();if(!data.items.length){data={items:[{id:"realty",name:"Недвижимость",parentId:null,type:"section"}]}};renderTree();
+load();renderList();
 </script>
 </body>
 </html>
