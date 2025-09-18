@@ -2,554 +2,275 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Фильтр v39.29R — редактор как в справочнике</title>
+<title>Фильтр v01R с предпросмотром</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{
-    --bg:#0f172a; --panel:#111827; --muted:#374151; --text:#e5e7eb;
-    --accent:#22c55e; --danger:#ef4444; --warn:#f59e0b; --card:#0b1220;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Arial}
-  header{padding:12px 16px;border-bottom:1px solid #1f2937;background:var(--panel);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  header h1{margin:0;font-size:16px;font-weight:600}
-  header .pill{padding:2px 8px;border:1px solid #1f2937;border-radius:999px;background:#0b1220}
-  .wrap{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 56px)}
-  aside{border-right:1px solid #1f2937;background:var(--panel);padding:12px;display:flex;flex-direction:column;gap:12px}
-  main{padding:16px;display:flex;flex-direction:column;gap:16px}
-  .card{background:var(--card);border:1px solid #1f2937;border-radius:12px;padding:12px}
-  h2{margin:0 0 8px 0;font-size:15px}
-  h3{margin:0 0 8px 0;font-size:14px;color:#cbd5e1}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .col{display:flex;flex-direction:column;gap:6px}
-  input,select,textarea{background:#0a101c;border:1px solid #1f2937;color:var(--text);border-radius:8px;padding:8px;width:100%}
-  textarea{min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:12px}
-  button{border:1px solid #1f2937;background:#0b1220;color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}
-  button.primary{background:var(--accent);color:#052e16;border-color:#16a34a}
-  button.warn{background:var(--warn);color:#3b2200;border-color:#b45309}
-  button.danger{background:var(--danger);color:#3b0a0a;border-color:#b91c1c}
-  button.ghost{background:transparent}
+  body{margin:0;font-family:sans-serif;background:#0f172a;color:#e5e7eb;display:flex;height:100vh}
+  aside{width:300px;background:#111827;border-right:1px solid #1f2937;overflow:auto;padding:10px}
+  main{flex:1;display:flex;flex-direction:column;padding:12px;overflow:auto}
+  h1{margin:0;font-size:16px;padding:10px;background:#1f2937}
+  ul{list-style:none;padding-left:20px}
+  li{margin:4px 0;cursor:pointer}
+  li span{padding:2px 4px;border-radius:4px}
+  li span.active{background:#22c55e;color:#052e16}
+  .editor{background:#111827;padding:12px;border-radius:8px;display:flex;flex-direction:column;gap:8px;max-width:500px;margin-bottom:20px}
+  input,select{padding:6px;border-radius:6px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb}
+  button{padding:6px 10px;border-radius:6px;border:1px solid #1f2937;background:#1f2937;color:#e5e7eb;cursor:pointer}
+  button.primary{background:#22c55e;color:#052e16}
+  button.danger{background:#ef4444;color:#3b0a0a}
+  textarea{width:100%;height:200px;background:#0b1220;color:#e5e7eb;border:1px solid #1f2937;border-radius:6px;padding:8px;font-family:monospace;font-size:13px}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
   .sp{flex:1}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .list{max-height:220px;overflow:auto;border:1px solid #1f2937;border-radius:8px}
-  .list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #111827}
-  .list-item:last-child{border-bottom:none}
-  .muted{color:#9ca3af}
-  .badge{padding:2px 6px;border:1px solid #1f2937;border-radius:6px;background:#0b1220;font-size:12px}
-  .tabs{display:flex;gap:8px}
-  .tabs button.active{outline:2px solid #16a34a}
+  nav{display:flex;gap:6px;margin-bottom:10px}
+  nav button.active{background:#22c55e;color:#052e16}
   .hidden{display:none}
-  .note{font-size:12px;color:#9ca3af}
-  .hr{height:1px;background:#1f2937;margin:8px 0}
+  .card{background:#111827;padding:12px;border-radius:8px;margin-bottom:16px}
 </style>
 </head>
 <body>
-<header>
-  <h1>Фильтр v39.29R</h1>
-  <span class="pill">режим: офлайн / JSON</span>
-  <span class="pill">локальное хранение: localStorage</span>
-  <span class="pill">интерфейс как в «Справочнике»</span>
-</header>
-
-<div class="wrap">
   <aside>
-    <div class="card">
-      <h2>Навигация</h2>
-      <div class="tabs">
-        <button id="tab-ui" class="active">Фильтр</button>
-        <button id="tab-data">Данные</button>
-        <button id="tab-help">Справка</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Разделы</h2>
-      <div class="row">
-        <select id="sectionSelect" class="sp"></select>
-        <button id="addSectionBtn" title="Добавить раздел">＋</button>
-      </div>
-      <div class="row">
-        <input id="sectionName" placeholder="Название раздела">
-        <button id="saveSectionBtn" class="primary">Сохранить</button>
-        <button id="delSectionBtn" class="danger">Удалить</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Категории</h2>
-      <div class="row">
-        <select id="categorySelect" class="sp"></select>
-        <button id="addCategoryBtn" title="Добавить категорию">＋</button>
-      </div>
-      <div class="row">
-        <input id="categoryName" placeholder="Название категории">
-        <button id="saveCategoryBtn" class="primary">Сохранить</button>
-        <button id="delCategoryBtn" class="danger">Удалить</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Подкатегории</h2>
-      <div class="row">
-        <div class="sp"></div>
-        <button id="addSubcategoryBtn" title="Добавить подкатегорию">＋</button>
-      </div>
-      <div class="row">
-        <input id="subcategoryName" class="sp" placeholder="Название подкатегории">
-        <button id="saveSubcategoryBtn" class="primary">Сохранить</button>
-        <button id="delSubcategoryBtn" class="danger">Удалить</button>
-      </div>
-      <div class="list" id="subcategoriesList"></div>
-    </div>
+    <h1>Элементы</h1>
+    <button id="addBtn">Добавить</button>
+    <ul id="tree"></ul>
   </aside>
-
   <main>
-    <section id="uiView" class="card">
-      <h2>Просмотр фильтра</h2>
-      <div class="grid">
-        <div class="col card">
-          <h3>Раздел</h3>
-          <select id="uiSection"></select>
-          <div class="note">Выбор раздела подтягивает категории и подкатегории.</div>
-        </div>
-        <div class="col card">
-          <h3>Категория</h3>
-          <select id="uiCategory"></select>
-          <div class="note">Список зависит от выбранного раздела.</div>
-        </div>
-        <div class="col card">
-          <h3>Подкатегория</h3>
-          <select id="uiSubcategory"></select>
-          <div class="note">Список зависит от выбранной категории.</div>
+    <nav>
+      <button id="tab-tree" class="active">Tree</button>
+      <button id="tab-json">JSON</button>
+      <button id="tab-preview">Preview</button>
+    </nav>
+
+    <section id="view-tree">
+      <div class="editor">
+        <h2>Редактор</h2>
+        <label>Название <input id="name"></label>
+        <label>Тип
+          <select id="type">
+            <option value="section">Раздел</option>
+            <option value="category">Категория</option>
+            <option value="subcategory">Подкатегория</option>
+            <option value="field">Поле</option>
+          </select>
+        </label>
+        <label>Родитель
+          <select id="parent"></select>
+        </label>
+        <label id="fieldTypeRow" style="display:none;">Тип поля
+          <select id="fieldType">
+            <option value="text">Текст</option>
+            <option value="number">Число</option>
+            <option value="select">Список</option>
+          </select>
+        </label>
+        <div class="row">
+          <button class="primary" id="saveBtn">Сохранить</button>
+          <button class="danger" id="delBtn">Удалить</button>
         </div>
       </div>
     </section>
 
-    <section id="dataView" class="card hidden">
-      <h2>Редактор данных (JSON)</h2>
+    <section id="view-json" class="hidden">
+      <h2>JSON</h2>
       <div class="row">
-        <input type="file" id="fileInput" accept=".json,application/json">
-        <button id="importBtn" class="warn">Импорт из файла</button>
-        <button id="exportBtn" class="primary">Экспорт в JSON</button>
-        <button id="resetBtn" class="danger">Сброс к дефолту</button>
+        <button id="exportBtn" class="primary">Экспорт</button>
+        <button id="importBtn">Импорт</button>
+        <button id="resetBtn" class="danger">Сброс</button>
         <span class="sp"></span>
-        <button id="saveLocalBtn">Сохранить в localStorage</button>
-        <button id="loadLocalBtn">Загрузить из localStorage</button>
+        <button id="saveLocalBtn">Сохранить LS</button>
+        <button id="loadLocalBtn">Загрузить LS</button>
       </div>
-      <textarea id="jsonArea" spellcheck="false"></textarea>
-      <div class="note">Правь JSON вручную или используй формы в сайдбаре. При ошибке синтаксиса появится уведомление.</div>
+      <textarea id="jsonArea"></textarea>
     </section>
 
-    <section id="helpView" class="card hidden">
-      <h2>Справка</h2>
-      <div class="hr"></div>
-      <p>Модель данных:</p>
-      <pre style="white-space:pre-wrap;background:#0a101c;border:1px solid #1f2937;padding:10px;border-radius:8px;">
-{
-  "sections": [
-    {
-      "id": "realty",
-      "name": "Недвижимость",
-      "categories": [
-        {
-          "id": "flat",
-          "name": "Квартиры",
-          "subcategories": [
-            {"id": "sale", "name": "Продажа"},
-            {"id": "rent", "name": "Аренда"},
-            {"id": "exchange", "name": "Обмен"}
-          ]
-        }
-      ]
-    }
-  ]
-}
-      </pre>
-      <p class="note">Все операции выполняются в браузере. Данные можно хранить в localStorage или экспортировать в файл.</p>
+    <section id="view-preview" class="hidden">
+      <div class="card">
+        <h2>Предпросмотр фильтра</h2>
+        <div class="row">
+          <label class="sp">Раздел <select id="prevSection" class="sp"></select></label>
+          <label class="sp">Категория <select id="prevCategory" class="sp"></select></label>
+          <label class="sp">Подкатегория <select id="prevSubcategory" class="sp"></select></label>
+        </div>
+        <div id="fields"></div>
+      </div>
     </section>
   </main>
-</div>
 
 <script>
-/** ====== Утилиты ====== */
-const $ = sel => document.querySelector(sel);
-const el = (tag, props={}) => Object.assign(document.createElement(tag), props);
-const uid = () => Math.random().toString(36).slice(2,10);
+const treeEl=document.getElementById("tree");
+const nameEl=document.getElementById("name");
+const typeEl=document.getElementById("type");
+const parentEl=document.getElementById("parent");
+const fieldTypeRow=document.getElementById("fieldTypeRow");
+const fieldTypeEl=document.getElementById("fieldType");
+const jsonArea=document.getElementById("jsonArea");
 
-const DEFAULT_DATA = {
-  sections: [
-    {
-      id: "realty",
-      name: "Недвижимость",
-      categories: [
-        {
-          id: "flat",
-          name: "Квартиры",
-          subcategories: [
-            { id: "sale", name: "Продажа" },
-            { id: "rent", name: "Аренда" },
-            { id: "exchange", name: "Обмен" }
-          ]
-        },
-        {
-          id: "house",
-          name: "Дома",
-          subcategories: [
-            { id: "sale", name: "Продажа" },
-            { id: "rent", name: "Аренда" }
-          ]
-        },
-        {
-          id: "commercial",
-          name: "Коммерческая недвижимость",
-          subcategories: [
-            { id: "office", name: "Офисы" },
-            { id: "retail", name: "Торговые" }
-          ]
-        }
-      ]
-    },
-    {
-      id: "auto",
-      name: "Авто",
-      categories: [
-        {
-          id: "car",
-          name: "Легковые",
-          subcategories: [
-            { id: "sale", name: "Продажа" },
-            { id: "rent", name: "Аренда" }
-          ]
-        },
-        {
-          id: "truck",
-          name: "Грузовые",
-          subcategories: [
-            { id: "sale", name: "Продажа" }
-          ]
-        }
-      ]
-    }
-  ]
+const prevSection=document.getElementById("prevSection");
+const prevCategory=document.getElementById("prevCategory");
+const prevSubcategory=document.getElementById("prevSubcategory");
+const fieldsEl=document.getElementById("fields");
+
+let data={items:[
+  {id:"realty",name:"Недвижимость",parentId:null,type:"section"},
+  {id:"flat",name:"Квартиры",parentId:"realty",type:"category"},
+  {id:"rent",name:"Аренда",parentId:"flat",type:"subcategory"},
+  {id:"price",name:"Цена",parentId:null,type:"field",fieldType:"number"},
+  {id:"floor",name:"Этаж",parentId:"flat",type:"field",fieldType:"number"}
+]};
+
+let selectedId=null;
+function uid(){return Math.random().toString(36).slice(2,9)}
+
+function renderTree(){
+  treeEl.innerHTML="";
+  function build(parentId,ul){
+    data.items.filter(it=>it.parentId===parentId).forEach(it=>{
+      const li=document.createElement("li");
+      const span=document.createElement("span");
+      span.textContent=it.name+" ["+it.type+"]";
+      if(it.id===selectedId) span.classList.add("active");
+      span.onclick=()=>{select(it.id)};
+      li.appendChild(span);
+      const childUl=document.createElement("ul");
+      build(it.id,childUl);
+      li.appendChild(childUl);
+      ul.appendChild(li);
+    });
+  }
+  build(null,treeEl);
+  jsonArea.value=JSON.stringify(data,null,2);
+  renderParentOptions();
+  renderPreview();
+}
+
+function renderParentOptions(){
+  parentEl.innerHTML="<option value=''>Нет</option>";
+  data.items.forEach(it=>{
+    const opt=document.createElement("option");
+    opt.value=it.id; opt.textContent=it.name+" ["+it.type+"]";
+    parentEl.appendChild(opt);
+  });
+}
+
+function select(id){
+  selectedId=id;
+  const it=data.items.find(x=>x.id===id);
+  if(!it) return;
+  nameEl.value=it.name;
+  typeEl.value=it.type;
+  parentEl.value=it.parentId||"";
+  if(it.type==="field"){fieldTypeRow.style.display="block";fieldTypeEl.value=it.fieldType||"text";}
+  else fieldTypeRow.style.display="none";
+  renderTree();
+}
+
+document.getElementById("addBtn").onclick=()=>{
+  const id=uid();
+  data.items.push({id,name:"Новый",parentId:null,type:"section"});
+  select(id);
+  renderTree();
+};
+document.getElementById("saveBtn").onclick=()=>{
+  if(!selectedId) return;
+  const it=data.items.find(x=>x.id===selectedId);
+  it.name=nameEl.value;
+  it.type=typeEl.value;
+  it.parentId=parentEl.value||null;
+  if(it.type==="field"){it.fieldType=fieldTypeEl.value;fieldTypeRow.style.display="block";}
+  else{delete it.fieldType;fieldTypeRow.style.display="none";}
+  renderTree();
+};
+document.getElementById("delBtn").onclick=()=>{
+  if(!selectedId) return;
+  const removeRec=id=>{
+    data.items.filter(x=>x.parentId===id).forEach(ch=>removeRec(ch.id));
+    data.items=data.items.filter(x=>x.id!==id);
+  };
+  removeRec(selectedId);
+  selectedId=null;
+  renderTree();
+};
+typeEl.onchange=()=>{
+  if(typeEl.value==="field") fieldTypeRow.style.display="block"; else fieldTypeRow.style.display="none";
 };
 
-let data = structuredClone(DEFAULT_DATA);
+// JSON buttons
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="filter-data.json";a.click();
+};
+document.getElementById("importBtn").onclick=()=>{
+  try{const json=JSON.parse(jsonArea.value);if(json.items){data=json;renderTree();}}catch(e){alert("Ошибка JSON");}
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm("Сбросить?")){data={items:[]};renderTree();}
+};
+document.getElementById("saveLocalBtn").onclick=()=>{
+  localStorage.setItem("filter_v01R",JSON.stringify(data));alert("Сохранено в LS");
+};
+document.getElementById("loadLocalBtn").onclick=()=>{
+  const raw=localStorage.getItem("filter_v01R");if(raw){data=JSON.parse(raw);renderTree();alert("Загружено");}
+};
 
-/** ====== Навигация по вкладкам ====== */
-const tabs = { ui: $("#tab-ui"), data: $("#tab-data"), help: $("#tab-help") };
-const views = { ui: $("#uiView"), data: $("#dataView"), help: $("#helpView") };
-
-Object.entries(tabs).forEach(([k, btn])=>{
-  btn.addEventListener("click", ()=>{
-    Object.values(tabs).forEach(b=>b.classList.remove("active"));
-    Object.values(views).forEach(v=>v.classList.add("hidden"));
-    btn.classList.add("active");
-    views[k].classList.remove("hidden");
+// Preview rendering
+function renderPreview(){
+  // Sections
+  prevSection.innerHTML="<option value=''>--</option>";
+  data.items.filter(it=>it.type==="section").forEach(s=>{
+    prevSection.append(new Option(s.name,s.id));
   });
-});
-
-/** ====== DOM ссылки ====== */
-const sectionSelect = $("#sectionSelect");
-const categorySelect = $("#categorySelect");
-const subcategoriesList = $("#subcategoriesList");
-
-const sectionName = $("#sectionName");
-const categoryName = $("#categoryName");
-const subcategoryName = $("#subcategoryName");
-
-const addSectionBtn = $("#addSectionBtn");
-const saveSectionBtn = $("#saveSectionBtn");
-const delSectionBtn = $("#delSectionBtn");
-
-const addCategoryBtn = $("#addCategoryBtn");
-const saveCategoryBtn = $("#saveCategoryBtn");
-const delCategoryBtn = $("#delCategoryBtn");
-
-const addSubcategoryBtn = $("#addSubcategoryBtn");
-const saveSubcategoryBtn = $("#saveSubcategoryBtn");
-const delSubcategoryBtn = $("#delSubcategoryBtn");
-
-const uiSection = $("#uiSection");
-const uiCategory = $("#uiCategory");
-const uiSubcategory = $("#uiSubcategory");
-
-const jsonArea = $("#jsonArea");
-const fileInput = $("#fileInput");
-const importBtn = $("#importBtn");
-const exportBtn = $("#exportBtn");
-const resetBtn = $("#resetBtn");
-const saveLocalBtn = $("#saveLocalBtn");
-const loadLocalBtn = $("#loadLocalBtn");
-
-/** ====== Рендер селекторов ====== */
-function renderSections(selectEl){
-  selectEl.innerHTML = "";
-  data.sections.forEach(s=>{
-    const opt = el("option", { value: s.id, textContent: s.name });
-    selectEl.append(opt);
-  });
+  updatePreview();
 }
-
-function findSectionById(id){ return data.sections.find(s=>s.id===id); }
-function findCategory(sec, id){ return sec?.categories.find(c=>c.id===id); }
-
-function renderCategoriesFor(sectionId, selectEl){
-  selectEl.innerHTML = "";
-  const s = findSectionById(sectionId);
-  (s?.categories||[]).forEach(c=>{
-    selectEl.append(el("option",{value:c.id, textContent:c.name}));
-  });
-}
-
-function renderSubcategoriesFor(sectionId, categoryId, selectEl){
-  selectEl.innerHTML = "";
-  const s = findSectionById(sectionId);
-  const c = findCategory(s, categoryId);
-  (c?.subcategories||[]).forEach(sc=>{
-    selectEl.append(el("option", { value: sc.id, textContent: sc.name }));
-  });
-}
-
-function renderSubcategoryList(sectionId, categoryId){
-  subcategoriesList.innerHTML = "";
-  const s = findSectionById(sectionId);
-  const c = findCategory(s, categoryId);
-  (c?.subcategories||[]).forEach(sc=>{
-    const row = el("div",{className:"list-item"});
-    row.append(el("span",{textContent: sc.name, className:"sp"}));
-    const edit = el("button",{textContent:"✎", title:"Переименовать"});
-    const del = el("button",{textContent:"✕", className:"danger", title:"Удалить"});
-    edit.addEventListener("click", ()=>{
-      subcategoryName.value = sc.name;
-      subcategoryName.dataset.editId = sc.id;
+function updatePreview(){
+  prevCategory.innerHTML="<option value=''>--</option>";
+  prevSubcategory.innerHTML="<option value=''>--</option>";
+  fieldsEl.innerHTML="";
+  const sec=data.items.find(x=>x.id===prevSection.value);
+  if(sec){
+    data.items.filter(it=>it.parentId===sec.id && it.type==="category").forEach(c=>{
+      prevCategory.append(new Option(c.name,c.id));
     });
-    del.addEventListener("click", ()=>{
-      c.subcategories = c.subcategories.filter(x=>x.id!==sc.id);
-      syncAfterChange();
+  }
+  const cat=data.items.find(x=>x.id===prevCategory.value);
+  if(cat){
+    data.items.filter(it=>it.parentId===cat.id && it.type==="subcategory").forEach(sc=>{
+      prevSubcategory.append(new Option(sc.name,sc.id));
     });
-    row.append(edit, del);
-    subcategoriesList.append(row);
+  }
+  // collect fields: global + attached to sec/cat/subcat
+  let fields=data.items.filter(it=>it.type==="field" && !it.parentId);
+  if(sec){fields=fields.concat(data.items.filter(it=>it.type==="field"&&it.parentId===sec.id));}
+  if(cat){fields=fields.concat(data.items.filter(it=>it.type==="field"&&it.parentId===cat.id));}
+  const sub=data.items.find(x=>x.id===prevSubcategory.value);
+  if(sub){fields=fields.concat(data.items.filter(it=>it.type==="field"&&it.parentId===sub.id));}
+  fields.forEach(f=>{
+    const div=document.createElement("div");
+    div.textContent=f.name+" ("+(f.fieldType||"text")+")";
+    fieldsEl.appendChild(div);
   });
 }
+prevSection.onchange=updatePreview;
+prevCategory.onchange=updatePreview;
+prevSubcategory.onchange=updatePreview;
 
-/** ====== Синхронизация UI и JSON ====== */
-function syncEditorsFromData(){
-  jsonArea.value = JSON.stringify(data, null, 2);
-  // левый сайдбар
-  renderSections(sectionSelect);
-  const secId = sectionSelect.value || data.sections[0]?.id;
-  sectionSelect.value = secId;
-  renderCategoriesFor(secId, categorySelect);
-  // список подкатегорий
-  const catId = categorySelect.value || findSectionById(secId)?.categories?.[0]?.id;
-  categorySelect.value = catId;
-  renderSubcategoryList(secId, catId);
-  // правый просмотр
-  renderSections(uiSection);
-  uiSection.value = secId;
-  renderCategoriesFor(secId, uiCategory);
-  uiCategory.value = catId;
-  const firstSub = findCategory(findSectionById(secId), catId)?.subcategories?.[0]?.id || "";
-  renderSubcategoriesFor(secId, catId, uiSubcategory);
-  uiSubcategory.value = firstSub;
+// Tabs
+const tabTree=document.getElementById("tab-tree");
+const tabJson=document.getElementById("tab-json");
+const tabPrev=document.getElementById("tab-preview");
+const vTree=document.getElementById("view-tree");
+const vJson=document.getElementById("view-json");
+const vPrev=document.getElementById("view-preview");
+function activate(tab){
+  tabTree.classList.remove("active");tabJson.classList.remove("active");tabPrev.classList.remove("active");
+  vTree.classList.add("hidden");vJson.classList.add("hidden");vPrev.classList.add("hidden");
+  if(tab==="tree"){tabTree.classList.add("active");vTree.classList.remove("hidden");}
+  if(tab==="json"){tabJson.classList.add("active");vJson.classList.remove("hidden");}
+  if(tab==="preview"){tabPrev.classList.add("active");vPrev.classList.remove("hidden");}
 }
+tabTree.onclick=()=>activate("tree");
+tabJson.onclick=()=>activate("json");
+tabPrev.onclick=()=>activate("preview");
 
-function syncAfterChange(){
-  syncEditorsFromData();
-  saveToLocal();
-}
-
-/** ====== Обработчики сайдбара ====== */
-addSectionBtn.addEventListener("click", ()=>{
-  const nid = uid();
-  data.sections.push({ id:nid, name:"Новый раздел", categories:[] });
-  sectionSelect.value = nid;
-  sectionName.value = "Новый раздел";
-  syncAfterChange();
-});
-
-saveSectionBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  if(!sec) return;
-  sec.name = sectionName.value.trim() || sec.name;
-  syncAfterChange();
-});
-
-delSectionBtn.addEventListener("click", ()=>{
-  const id = sectionSelect.value;
-  if(!id) return;
-  data.sections = data.sections.filter(s=>s.id!==id);
-  syncAfterChange();
-});
-
-addCategoryBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  if(!sec) return;
-  const nid = uid();
-  sec.categories = sec.categories||[];
-  sec.categories.push({ id:nid, name:"Новая категория", subcategories:[] });
-  categorySelect.value = nid;
-  categoryName.value = "Новая категория";
-  syncAfterChange();
-});
-
-saveCategoryBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  const cat = findCategory(sec, categorySelect.value);
-  if(!cat) return;
-  cat.name = categoryName.value.trim() || cat.name;
-  syncAfterChange();
-});
-
-delCategoryBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  if(!sec) return;
-  sec.categories = (sec.categories||[]).filter(c=>c.id!==categorySelect.value);
-  syncAfterChange();
-});
-
-addSubcategoryBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  const cat = findCategory(sec, categorySelect.value);
-  if(!cat) return;
-  const nid = uid();
-  cat.subcategories = cat.subcategories||[];
-  cat.subcategories.push({ id:nid, name:"Новая подкатегория" });
-  subcategoryName.value = "Новая подкатегория";
-  subcategoryName.dataset.editId = nid;
-  syncAfterChange();
-});
-
-saveSubcategoryBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  const cat = findCategory(sec, categorySelect.value);
-  if(!cat) return;
-  const id = subcategoryName.dataset.editId;
-  const name = subcategoryName.value.trim();
-  if(!name) return;
-  if(id){
-    const sc = (cat.subcategories||[]).find(x=>x.id===id);
-    if(sc){ sc.name = name; }
-  }else{
-    const nid = uid();
-    cat.subcategories = cat.subcategories||[];
-    cat.subcategories.push({ id:nid, name });
-    subcategoryName.dataset.editId = nid;
-  }
-  syncAfterChange();
-});
-
-delSubcategoryBtn.addEventListener("click", ()=>{
-  const sec = findSectionById(sectionSelect.value);
-  const cat = findCategory(sec, categorySelect.value);
-  if(!cat) return;
-  const id = subcategoryName.dataset.editId;
-  if(!id) return;
-  cat.subcategories = (cat.subcategories||[]).filter(x=>x.id!==id);
-  subcategoryName.value = "";
-  subcategoryName.dataset.editId = "";
-  syncAfterChange();
-});
-
-sectionSelect.addEventListener("change", ()=>{
-  const id = sectionSelect.value;
-  renderCategoriesFor(id, categorySelect);
-  categoryName.value = "";
-  subcategoryName.value = "";
-  renderSubcategoryList(id, categorySelect.value);
-  // правый просмотр
-  uiSection.value = id;
-  renderCategoriesFor(id, uiCategory);
-  uiCategory.value = uiCategory.options[0]?.value||"";
-  renderSubcategoriesFor(id, uiCategory.value, uiSubcategory);
-});
-
-categorySelect.addEventListener("change", ()=>{
-  renderSubcategoryList(sectionSelect.value, categorySelect.value);
-  // правый просмотр
-  uiCategory.value = categorySelect.value;
-  renderSubcategoriesFor(uiSection.value, uiCategory.value, uiSubcategory);
-});
-
-/** ====== Просмотр справа ====== */
-uiSection.addEventListener("change", ()=>{
-  renderCategoriesFor(uiSection.value, uiCategory);
-  uiCategory.value = uiCategory.options[0]?.value||"";
-  renderSubcategoriesFor(uiSection.value, uiCategory.value, uiSubcategory);
-});
-uiCategory.addEventListener("change", ()=>{
-  renderSubcategoriesFor(uiSection.value, uiCategory.value, uiSubcategory);
-});
-
-/** ====== Импорт/Экспорт/LocalStorage ====== */
-function download(filename, text){
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], {type:'application/json'}));
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-importBtn.addEventListener("click", async ()=>{
-  const file = fileInput.files?.[0];
-  if(!file){ alert("Выберите JSON файл"); return; }
-  try{
-    const txt = await file.text();
-    const json = JSON.parse(txt);
-    if(!json.sections) throw new Error("Отсутствует ключ 'sections'");
-    data = json;
-    syncAfterChange();
-    alert("Импорт успешно завершён");
-  }catch(e){
-    alert("Ошибка импорта: " + e.message);
-  }
-});
-
-exportBtn.addEventListener("click", ()=>{
-  try{
-    // если пользователь правил textarea вручную — применим
-    const parsed = JSON.parse(jsonArea.value);
-    data = parsed;
-    syncEditorsFromData();
-  }catch(e){
-    // если JSON невалиден, не затираем data, просто даём скачать текущее
-  }
-  download("filter-data.json", JSON.stringify(data, null, 2));
-});
-
-resetBtn.addEventListener("click", ()=>{
-  if(!confirm("Сбросить к дефолту?")) return;
-  data = structuredClone(DEFAULT_DATA);
-  syncAfterChange();
-});
-
-function saveToLocal(){
-  localStorage.setItem("filter_v39_29R", JSON.stringify(data));
-}
-function loadFromLocal(){
-  const raw = localStorage.getItem("filter_v39_29R");
-  if(!raw) return false;
-  try{
-    const json = JSON.parse(raw);
-    if(json?.sections){ data = json; return true; }
-  }catch{}
-  return false;
-}
-
-saveLocalBtn.addEventListener("click", ()=>{
-  saveToLocal();
-  alert("Сохранено в localStorage");
-});
-loadLocalBtn.addEventListener("click", ()=>{
-  if(loadFromLocal()){ syncEditorsFromData(); alert("Загружено из localStorage"); }
-  else alert("В localStorage нет сохранённых данных");
-});
-
-/** ====== Инициализация ====== */
-(function init(){
-  loadFromLocal(); // если есть локальные — используем их
-  syncEditorsFromData();
-})();
+renderTree();
 </script>
 </body>
 </html>
