@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.21R</title>
+<title>location_selector v39.22R</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -101,20 +101,22 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 /* лейбл длин ребер */
 .edge-label {
-  background: rgba(0,0,0,0.85);
+  background: #000;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   padding: 3px 6px;
+  border: 1px solid #fff;
   border-radius: 6px;
-  text-shadow: 0 0 3px #000, 0 0 5px #000;
+  text-shadow: 0 0 3px #000, 0 0 6px #000;
   white-space: nowrap;
+  pointer-events: none;
 }
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.21R</span>
+  <span class="badge">location_selector v39.22R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -405,11 +407,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   // Метрики формат
   function formatArea(m2){ return m2>1e6 ? (m2/1e6).toFixed(2)+' км²' : Math.round(m2)+' м²'; }
-  function formatLen(m){
-  return m > 1000 ? (m/1000).toFixed(1)+' км' : Math.round(m)+' м';
-}
-
-  // Лейблы рёбер при редактировании
+  function formatLen(m){ return m>=1000 ? (m/1000).toFixed(2)+' км' : Math.round(m)+' м'; }// Лейблы рёбер при редактировании
   const edgeLabels=new Map(); // id -> L.marker[]
   function clearEdgeLabels(id){
     const arr=edgeLabels.get(id)||[];
