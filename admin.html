@@ -3,280 +3,109 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Admin v1 — читает справочник v39.30R</title>
+<title>Admin v2 — синхронизация со справочником</title>
 <style>
 :root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--accent:#4aa8ff;--danger:#ef4444}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
 header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-.badge{background:#23314d;border:1px solid #334567;border-radius:8px;padding:3px 8px;font-weight:700}
-.btn{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
-.btn:hover{border-color:var(--accent)}
-.btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-main{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
-@media (max-width:960px){main{grid-template-columns:1fr}}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+header .tab{padding:6px 10px;border-radius:8px;cursor:pointer}
+header .tab.active{background:var(--accent);color:#fff}
+main{padding:12px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
 h3{margin:0 0 10px 0}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media (max-width:720px){.grid{grid-template-columns:1fr}}
 label{display:block;margin-bottom:4px;color:#cfe0ff}
 select,input{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.note{font-size:12px;color:var(--muted)}
-.ok{color:#34d399}
-.err{color:#fca5a5}
-.sep{height:1px;background:#243048;margin:10px 0}
-.kv{display:grid;grid-template-columns:160px 1fr;gap:6px}
-.kv div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .code{background:#0f1624;border:1px solid #31405a;border-radius:8px;padding:8px;font-family:ui-monospace,Consolas,Monaco,monospace;white-space:pre;overflow:auto;max-height:240px}
 .hidden{display:none}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">admin-v1</span>
-  <span class="badge">source: dict_v39_30R.json</span>
-  <button id="btnReload" class="btn">Обновить из справочника</button>
-  <label class="btn"><input id="filePick" type="file" accept=".json,.txt" style="display:none">Загрузить JSON вручную</label>
-  <button id="btnReset" class="btn danger" title="Очистить кэш и перезагрузить">Сброс</button>
-  <span id="state" class="note" style="margin-left:auto"></span>
+  <div class="tab active" data-tab="dict">Справочник</div>
+  <div class="tab" data-tab="filters">Фильтры</div>
+  <div class="tab" data-tab="fields">Поля</div>
+  <div class="tab" data-tab="layout">Макет</div>
+  <div class="tab" data-tab="preview">Предпросмотр</div>
 </header>
 
 <main>
-  <section class="panel">
-    <h3>Локации</h3>
-    <div class="grid">
-      <div><label for="country">Страна</label><select id="country"><option value="">—</option></select></div>
-      <div><label for="city">Город</label><select id="city"><option value="">—</option></select></div>
-      <div><label for="district">Район</label><select id="district"><option value="">—</option></select></div>
-      <div><label for="street">Улица/Массив</label><select id="street"><option value="">—</option></select></div>
+  <section id="dict" class="tab-page">
+    <h3>Справочник v39.30R</h3>
+    <button id="btnReload" class="btn">Обновить из файла</button>
+    <pre id="dictDump" class="code"></pre>
+  </section>
+
+  <section id="filters" class="tab-page hidden">
+    <h3>Фильтры</h3>
+    <div class="panel">
+      <h4>Локация</h4>
+      <div class="grid">
+        <div><label>Страна</label><select id="country"></select></div>
+        <div><label>Город</label><select id="city"></select></div>
+        <div><label>Район</label><select id="district"></select></div>
+        <div><label>Улица/Массив</label><select id="street"></select></div>
+      </div>
     </div>
-    <div class="sep"></div>
-    <h3>Категории</h3>
-    <div class="grid">
-      <div><label for="category">Категория</label><select id="category"><option value="">—</option></select></div>
-      <div><label for="subcategory">Подкатегория</label><select id="subcategory"><option value="">—</option></select></div>
+    <div class="panel">
+      <h4>Фильтры объекта</h4>
+      <div class="grid">
+        <div><label>Категория</label><select id="category"></select></div>
+        <div><label>Подкатегория</label><select id="subcategory"></select></div>
+        <div><label>Цена от</label><input type="number" placeholder="от"></div>
+        <div><label>Цена до</label><input type="number" placeholder="до"></div>
+        <div><label>Площадь от</label><input type="number" placeholder="от м²"></div>
+        <div><label>Площадь до</label><input type="number" placeholder="до м²"></div>
+      </div>
     </div>
   </section>
 
-  <section class="panel">
-    <h3>Статус источника</h3>
-    <div class="kv">
-      <div>Загрузка:</div><div id="meta-load" class="note">—</div>
-      <div>Версия справочника:</div><div id="meta-ver" class="note">—</div>
-      <div>Страны:</div><div id="meta-countries" class="note">—</div>
-      <div>Города:</div><div id="meta-cities" class="note">—</div>
-      <div>Районы:</div><div id="meta-districts" class="note">—</div>
-      <div>Улицы/массивы:</div><div id="meta-streets" class="note">—</div>
-      <div>Категории:</div><div id="meta-cats" class="note">—</div>
-      <div>Подкатегории:</div><div id="meta-subcats" class="note">—</div>
-    </div>
-    <div class="sep"></div>
-    <details>
-      <summary>Показать исходный JSON</summary>
-      <pre id="dump" class="code"></pre>
-    </details>
+  <section id="fields" class="tab-page hidden">
+    <h3>Поля (доп. параметры)</h3>
+    <p>Здесь можно настраивать параметры, которые не завязаны на справочник: цена, площадь, этаж, комнаты и т.д.</p>
+  </section>
+
+  <section id="layout" class="tab-page hidden">
+    <h3>Макет</h3>
+    <p>Drag&drop редактор для управления окнами интерфейса.</p>
+  </section>
+
+  <section id="preview" class="tab-page hidden">
+    <h3>Предпросмотр</h3>
+    <p>Здесь будет предпросмотр интерфейса (карточки, таблица, карта и т.п.).</p>
   </section>
 </main>
 
 <script>
-/* ========= Константы ========= */
-const CACHE_KEY = "dict_v39_30R_cache";
-const SRC_URL   = "/dict_v39_30R.json"; // можно положить рядом с файлом
-
-/* ========= Утилиты ========= */
-const $ = sel => document.querySelector(sel);
-function setState(msg, ok=true){
-  const s = $("#state"); s.textContent = msg; s.className = "note " + (ok ? "ok":"err");
-}
-function fillOptions(select, arr){
-  const v = select.value;
-  select.innerHTML = '<option value="">—</option>' + (arr||[]).map(x=>`<option>${x}</option>`).join('');
-  if(arr && arr.includes(v)) select.value = v;
-}
-function uniq(arr){ return Array.from(new Set(arr)); }
-function deepGet(obj, path, fallback){ try{ return path.reduce((a,k)=>a?.[k], obj) ?? fallback; }catch(_){ return fallback; }}
-
-/* ========= Адаптер ========= */
-function adaptDictionary(src){
-  const version = deepGet(src, ['meta','version'], 'v39.30R');
-  let countries = [];
-  try{
-    const c = deepGet(src,['locations','country'],null);
-    if(c){
-      const cc = Array.isArray(c)? c : [c];
-      countries = cc.map(co=>({
-        name: co.name || 'Страна',
-        cities: (co.cities||[]).map(ci=>({
-          name: ci.name,
-          districts: (ci.districts||[]).map(di=>({
-            name: di.name,
-            streets: (di.streets||[]).map(st=> (typeof st==='string'? st : (st.name||''))).filter(Boolean)
-          }))
-        }))
-      }));
-    }
-  }catch(_){}
-  if(countries.length===0 && src && Array.isArray(src.categories)){
-    countries = [{
-      name:'Узбекистан',
-      cities:[{name:'Ташкент',districts:[{name:'Юнусабад',streets:['Юнус-1','Юнус-9']},{name:'Чиланзар',streets:['Чиланзар-8','Чиланзар-20']}]}]
-    }];
-  }
-  let cats = [];
-  if(Array.isArray(src?.categories)){
-    cats = src.categories.map(c=>({name:c.name || c.title || '', children: (c.children||c.items||[]).map(x=> (typeof x==='string'? x : (x.name||''))).filter(Boolean)}));
-  }else if(Array.isArray(src?.catalog)){
-    cats = src.catalog.map(c=>({name:c.name || '', children: (c.sub||[]).map(x=>x.name||'').filter(Boolean)}));
-  }else{
-    cats = [
-      {name:'Квартира', children:['Аренда','Продажа']},
-      {name:'Дом', children:['Аренда','Продажа']},
-      {name:'Коммерция', children:['Аренда','Продажа']},
-      {name:'Земля', children:['Продажа']}
-    ];
-  }
-  return { version, countries, cats };
-}
-
-/* ========= Рендер ========= */
-let DICT = null;
-function renderFromDict(){
-  const countries = uniq((DICT.countries||[]).map(c=>c.name).filter(Boolean));
-  fillOptions($("#country"), countries);
-  onCountry();
-  const cats = uniq((DICT.cats||[]).map(c=>c.name).filter(Boolean));
-  fillOptions($("#category"), cats);
-  onCategory();
-  const meta = collectMeta(DICT);
-  $("#meta-ver").textContent       = DICT.version || 'v39.30R';
-  $("#meta-countries").textContent = meta.countries;
-  $("#meta-cities").textContent    = meta.cities;
-  $("#meta-districts").textContent = meta.districts;
-  $("#meta-streets").textContent   = meta.streets;
-  $("#meta-cats").textContent      = meta.cats;
-  $("#meta-subcats").textContent   = meta.subcats;
-  $("#dump").textContent = JSON.stringify(DICT, null, 2);
-}
-function collectMeta(d){
-  let cities=0, districts=0, streets=0;
-  (d.countries||[]).forEach(co=>{
-    (co.cities||[]).forEach(ci=>{
-      cities++;
-      (ci.districts||[]).forEach(di=>{
-        districts++;
-        streets += (di.streets||[]).length;
-      });
-    });
+// Переключение вкладок
+document.querySelectorAll("header .tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll("header .tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".tab-page").forEach(p=>p.classList.add("hidden"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab).classList.remove("hidden");
   });
-  const subcats = (d.cats||[]).reduce((n,c)=>n+(c.children?.length||0),0);
-  return {
-    countries: (d.countries||[]).length,
-    cities, districts, streets,
-    cats: (d.cats||[]).length,
-    subcats
-  };
-}
+});
 
-/* ========= Каскад ========= */
-function onCountry(){
-  const co = $("#country").value;
-  const country = (DICT.countries||[]).find(x=>x.name===co);
-  const cities = uniq((country?.cities||[]).map(x=>x.name).filter(Boolean));
-  fillOptions($("#city"), cities);
-  fillOptions($("#district"), []);
-  fillOptions($("#street"), []);
-}
-function onCity(){
-  const co = $("#country").value;
-  const ci = $("#city").value;
-  const country = (DICT.countries||[]).find(x=>x.name===co);
-  const city = (country?.cities||[]).find(x=>x.name===ci);
-  const districts = uniq((city?.districts||[]).map(x=>x.name).filter(Boolean));
-  fillOptions($("#district"), districts);
-  fillOptions($("#street"), []);
-}
-function onDistrict(){
-  const co = $("#country").value;
-  const ci = $("#city").value;
-  const di = $("#district").value;
-  const country = (DICT.countries||[]).find(x=>x.name===co);
-  const city = (country?.cities||[]).find(x=>x.name===ci);
-  const district = (city?.districts||[]).find(x=>x.name===di);
-  const streets = uniq((district?.streets||[]).filter(Boolean));
-  fillOptions($("#street"), streets);
-}
-function onCategory(){
-  const cat = $("#category").value;
-  const C = (DICT.cats||[]).find(x=>x.name===cat);
-  fillOptions($("#subcategory"), uniq((C?.children||[]).filter(Boolean)));
-}
+// Заглушка справочника
+const dictData = {
+  meta:{version:"v39.30R"},
+  locations:{country:[{name:"Узбекистан",cities:[{name:"Ташкент",districts:[{name:"Юнусабад",streets:["Юнус-1","Юнус-9"]}]}]}]},
+  categories:[{name:"Квартира",children:["Аренда","Продажа"]},{name:"Дом",children:["Аренда","Продажа"]}]
+};
 
-/* ========= Загрузка ========= */
-async function fetchDict(){
-  $("#meta-load").textContent = "загрузка...";
-  try{
-    const res = await fetch(SRC_URL, {cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const raw = await res.json();
-    const adapted = adaptDictionary(raw);
-    localStorage.setItem(CACHE_KEY, JSON.stringify(adapted));
-    $("#meta-load").textContent = "из файла " + SRC_URL;
-    setState("загружено из справочника", true);
-    return adapted;
-  }catch(e){
-    let cached=null;
-    try{ cached = JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); }catch(_){}
-    if(cached){
-      $("#meta-load").textContent = "из кэша (offline)";
-      setState("офлайн: кэш", true);
-      return cached;
-    }
-    $("#meta-load").textContent = "встроенные демо-данные";
-    setState("демо-данные", false);
-    return adaptDictionary({
-      meta:{version:"v39.30R-demo"},
-      locations:{country:{name:"Узбекистан",cities:[
-        {name:"Ташкент",districts:[{name:"Юнусабад",streets:["Юнус-1","Юнус-9"]},{name:"Чиланзар",streets:["Чиланзар-8","Чиланзар-20"]}]},
-        {name:"Самарканд",districts:[{name:"Сиаб",streets:["Газар","Саховат"]}]}
-      ]}},
-      categories:[{name:"Квартира",children:["Аренда","Продажа"]},{name:"Дом",children:["Аренда","Продажа"]},{name:"Коммерция",children:["Аренда","Продажа"]},{name:"Земля",children:["Продажа"]}]
-    });
-  }
-}
+document.getElementById("dictDump").textContent = JSON.stringify(dictData,null,2);
 
-/* ========= Импорт ручного JSON ========= */
-function readFileAsJSON(file){
-  return new Promise((resolve,reject)=>{
-    const r=new FileReader();
-    r.onload=()=>{ try{ resolve(JSON.parse(r.result)); }catch(e){ reject(e); } };
-    r.onerror=()=>reject(r.error);
-    r.readAsText(file);
-  });
-}
-
-/* ========= Инициализация ========= */
-async function boot(){
-  $("#country").addEventListener("change", onCountry);
-  $("#city").addEventListener("change", onCity);
-  $("#district").addEventListener("change", onDistrict);
-  $("#category").addEventListener("change", onCategory);
-  $("#btnReload").addEventListener("click", async()=>{ DICT = await fetchDict(); renderFromDict(); });
-  $("#btnReset").addEventListener("click", ()=>{ localStorage.removeItem(CACHE_KEY); location.reload(); });
-  $("#filePick").addEventListener("change", async(e)=>{
-    const f=e.target.files[0]; if(!f) return;
-    try{
-      const raw = await readFileAsJSON(f);
-      const adapted = adaptDictionary(raw);
-      localStorage.setItem(CACHE_KEY, JSON.stringify(adapted));
-      DICT = adapted; $("#meta-load").textContent = "из файла (ручной импорт)"; setState("импорт вручную", true);
-      renderFromDict();
-    }catch(err){ setState("ошибка импорта файла", false); alert("Ошибка импорта JSON"); }
-  });
-  DICT = await fetchDict();
-  renderFromDict();
-}
-boot();
+// Простая подгрузка фильтров
+function fillOptions(sel,arr){ sel.innerHTML = (arr||[]).map(v=>`<option>${v}</option>`).join(""); }
+fillOptions(document.getElementById("country"),["Узбекистан"]);
+fillOptions(document.getElementById("city"),["Ташкент"]);
+fillOptions(document.getElementById("district"),["Юнусабад"]);
+fillOptions(document.getElementById("street"),["Юнус-1","Юнус-9"]);
+fillOptions(document.getElementById("category"),["Квартира","Дом"]);
+fillOptions(document.getElementById("subcategory"),["Аренда","Продажа"]);
 </script>
 </body>
 </html>
