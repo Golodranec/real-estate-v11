@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Фильтр</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f5f5f5; }
+    h1 { margin-top:0; }
+    .block { background:#fff; border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:6px; }
+    label { display:block; margin:8px 0; }
+    select { width:100%; padding:6px; }
+  </style>
+</head>
+<body>
+  <h1>Фильтр</h1>
+
+  <div class="block">
+    <h2>Раздел</h2>
+    <select id="section">
+      <option value="realty">Недвижимость</option>
+      <option value="auto">Авто</option>
+    </select>
+  </div>
+
+  <div class="block">
+    <h2>Категории</h2>
+    <select id="category">
+      <option value="flat">Квартиры</option>
+      <option value="house">Дома</option>
+      <option value="land">Участки</option>
+      <option value="commercial">Коммерческая недвижимость</option>
+    </select>
+  </div>
+
+  <div class="block">
+    <h2>Подкатегории</h2>
+    <select id="subcategory">
+      <option value="sale">Продажа</option>
+      <option value="rent">Аренда</option>
+      <option value="exchange">Обмен</option>
+    </select>
+  </div>
+
+  <script>
+    const section = document.getElementById('section');
+    const category = document.getElementById('category');
+    const subcategory = document.getElementById('subcategory');
+
+    section.addEventListener('change', () => {
+      if (section.value === 'auto') {
+        category.innerHTML = '<option value="car">Легковые</option><option value="truck">Грузовые</option><option value="moto">Мото</option>';
+        subcategory.innerHTML = '<option value="sale">Продажа</option><option value="rent">Аренда</option>';
+      } else {
+        category.innerHTML = '<option value="flat">Квартиры</option><option value="house">Дома</option><option value="land">Участки</option><option value="commercial">Коммерческая недвижимость</option>';
+        subcategory.innerHTML = '<option value="sale">Продажа</option><option value="rent">Аренда</option><option value="exchange">Обмен</option>';
+      }
+    });
+  </script>
+</body>
+</html>
