@@ -2,706 +2,281 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Admin Builder — Cascade Filters v13.9.6</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin v1 — читает справочник v39.30R</title>
 <style>
-:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--accent:#4aa8ff;--danger:#ef4444;--warn:#f59e0b;}
+:root{--bg:#0b0f16;--panel:#121826;--panel2:#172133;--text:#d7e2f2;--muted:#9fb0c8;--border:#273248;--accent:#4aa8ff;--danger:#ef4444}
 *{box-sizing:border-box}
-body{margin:0;background:#0b0f16;color:#d7e2f2;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:#0e1420;position:sticky;top:0;z-index:10}
-.badge{padding:3px 8px;border-radius:8px;background:#6d28d9;font-weight:700}
-.tabs{display:flex;gap:8px;margin-left:8px}
-.tab{background:#1a2234;border:1px solid var(--border);padding:6px 10px;border-radius:8px;color:#cfe0ff;cursor:pointer}
-.tab.active{background:#2160ff;color:#fff}
-main{padding:12px;display:grid;gap:12px}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
-h3{margin:0 0 10px 0;color:#cfe0ff}
-.btn{background:#1e293b;border:1px solid var(--border);color:#dbe8ff;padding:6px 10px;border-radius:8px;cursor:pointer}
-.btn:hover{border-color:#3a4c6b}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+header{display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0e1420;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.badge{background:#23314d;border:1px solid #334567;border-radius:8px;padding:3px 8px;font-weight:700}
+.btn{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#1a2234;color:var(--text);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
 .btn.danger{background:#3a0f15;border-color:#7f1d1d;color:#fecaca}
-.btn.warn{background:#3a2a0f;border-color:#7c5a10;color:#fde68a}
+main{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
+@media (max-width:960px){main{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+h3{margin:0 0 10px 0}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+label{display:block;margin-bottom:4px;color:#cfe0ff}
+select,input{width:100%;padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.grid{display:grid;gap:10px}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #31405a;background:#0f1624;color:#e7f1ff;width:100%}
-label{display:block;opacity:.9;margin-bottom:6px}
-small.muted{color:#9fb0c8}
-.list{display:grid;gap:10px}
-.card{background:#172133;border:1px solid var(--border);border-radius:10px;padding:10px}
-.card .title-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
-.card h3{margin:0}
-footer{padding:8px 12px;color:#9fb0c8;font-size:12px;border-top:1px solid var(--border)}
-.canvas-wrap{border:1px solid var(--border);border-radius:12px;background:#0d121e;padding:6px;overflow:auto;height:62vh}
-.canvas,.preview-grid{position:relative;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:90px;gap:6px}
-.block,.preview-card{background:#111827;border:1px solid #2b3a5a;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;position:relative}
-.block header{display:flex;align-items:center;justify-content:space-between;background:#0f172a;color:#dbe8ff;padding:8px 10px;border-bottom:1px solid #2b3a5a;cursor:grab}
-.block header:active{cursor:grabbing}
-.block .body{padding:10px;flex:1}
-.block .x{background:var(--danger);border:none;color:#fff;border-radius:50%;width:22px;height:22px;line-height:22px;text-align:center;cursor:pointer}
-.block .resize{position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-right:3px solid #446;border-bottom:3px solid #446;cursor:nwse-resize;opacity:.8}
-.block .title{font-weight:600}
-.preview-card{border-color:#3a4c6b}
-.p-group{border:1px solid #2a3140;border-radius:10px;padding:12px;margin-bottom:12px;background:#17202c;width:100%}
-.p-title{font-size:13px;font-weight:600;margin-bottom:10px;color:#cfe0ff}
-.p-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%}
-.p-field{min-width:0;width:100%}
-.p-field>div{display:flex;gap:8px}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--border);padding:6px 8px;border-radius:8px;background:#0f1624;margin:4px}
-.chip .grab{cursor:grab;font-size:12px;opacity:.7}
-.chip.dragging{opacity:.5;border-style:dashed}
-.dropzone{min-height:38px;border:1px dashed #334;border-radius:8px;padding:8px;background:#0c1220}
-.inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:900px){.p-row{grid-template-columns:repeat(2,1fr)}.inline{grid-template-columns:1fr}}
-.errorBox{background:#3a0f15;border:1px solid #7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin:10px 0}
-.preview-section{padding:10px}
-.preview-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.preview-card-item{background:#0f1624;border:1px solid #31405a;border-radius:10px;overflow:hidden}
-.preview-card-item img{width:100%;height:120px;object-fit:cover;display:block;background:#223}
-.preview-card-item .pc-body{padding:10px}
-.preview-card-item .pc-title{font-weight:700;margin-bottom:6px}
-.preview-table{width:100%;border-collapse:collapse}
-.preview-table th,.preview-table td{border:1px solid #31405a;padding:8px;text-align:left}
-.preview-map{display:flex;align-items:center;justify-content:center;background:#0f1624;border:1px dashed #3a4c6b;border-radius:10px;height:100%}
-.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-/* форма объектов */
-.of-card{border:1px solid var(--border);background:#121a2a;border-radius:10px;padding:10px}
-.of-card.dragging{opacity:.6;border-style:dashed}
-.of-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.of-hint{color:#9fb0c8;font-size:12px}
+.note{font-size:12px;color:var(--muted)}
+.ok{color:#34d399}
+.err{color:#fca5a5}
+.sep{height:1px;background:#243048;margin:10px 0}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:6px}
+.kv div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.code{background:#0f1624;border:1px solid #31405a;border-radius:8px;padding:8px;font-family:ui-monospace,Consolas,Monaco,monospace;white-space:pre;overflow:auto;max-height:240px}
+.hidden{display:none}
 </style>
 </head>
 <body>
 <header>
-  <span id="ver" class="badge">cascade-v13.9.6</span>
-  <div class="tabs">
-    <button class="tab active" data-tab="filters">Фильтры</button>
-    <button class="tab" data-tab="fields">Поля</button>
-    <button class="tab" data-tab="layout">Макет</button>
-    <button class="tab" data-tab="preview">Предпросмотр</button>
-    <button class="tab" data-tab="objform">Форма объектов</button>
-  </div>
-  <div style="margin-left:auto" class="row">
-    <button id="btnExport" class="btn">Экспорт</button>
-    <label class="btn"><input id="fileImport" type="file" accept=".json,.txt" style="display:none">Импорт</label>
-    <button id="btnReset" class="btn danger" title="Очистить сохранённые настройки и перезапустить">Сброс</button>
-  </div>
+  <span class="badge">admin-v1</span>
+  <span class="badge">source: dict_v39_30R.json</span>
+  <button id="btnReload" class="btn">Обновить из справочника</button>
+  <label class="btn"><input id="filePick" type="file" accept=".json,.txt" style="display:none">Загрузить JSON вручную</label>
+  <button id="btnReset" class="btn danger" title="Очистить кэш и перезагрузить">Сброс</button>
+  <span id="state" class="note" style="margin-left:auto"></span>
 </header>
 
 <main>
-  <section id="tab-filters" class="panel"></section>
-  <section id="tab-fields" class="panel" style="display:none"></section>
-  <section id="tab-layout" class="panel" style="display:none"></section>
-  <section id="tab-preview" class="panel" style="display:none">
-    <div class="canvas-wrap"><div id="preview" class="preview-grid"></div></div>
+  <section class="panel">
+    <h3>Локации</h3>
+    <div class="grid">
+      <div><label for="country">Страна</label><select id="country"><option value="">—</option></select></div>
+      <div><label for="city">Город</label><select id="city"><option value="">—</option></select></div>
+      <div><label for="district">Район</label><select id="district"><option value="">—</option></select></div>
+      <div><label for="street">Улица/Массив</label><select id="street"><option value="">—</option></select></div>
+    </div>
+    <div class="sep"></div>
+    <h3>Категории</h3>
+    <div class="grid">
+      <div><label for="category">Категория</label><select id="category"><option value="">—</option></select></div>
+      <div><label for="subcategory">Подкатегория</label><select id="subcategory"><option value="">—</option></select></div>
+    </div>
   </section>
-  <section id="tab-objform" class="panel" style="display:none">
-    <div class="row" style="justify-content:space-between;margin-bottom:8px">
-      <h3>Форма объектов — настройка полей</h3>
-      <small class="of-hint">Конфиг хранится в localStorage (<b>objectFormConfig</b>)</small>
+
+  <section class="panel">
+    <h3>Статус источника</h3>
+    <div class="kv">
+      <div>Загрузка:</div><div id="meta-load" class="note">—</div>
+      <div>Версия справочника:</div><div id="meta-ver" class="note">—</div>
+      <div>Страны:</div><div id="meta-countries" class="note">—</div>
+      <div>Города:</div><div id="meta-cities" class="note">—</div>
+      <div>Районы:</div><div id="meta-districts" class="note">—</div>
+      <div>Улицы/массивы:</div><div id="meta-streets" class="note">—</div>
+      <div>Категории:</div><div id="meta-cats" class="note">—</div>
+      <div>Подкатегории:</div><div id="meta-subcats" class="note">—</div>
     </div>
-    <div class="row">
-      <button id="ofAdd" class="btn">+ Поле</button>
-      <button id="ofReset" class="btn warn">Сбросить к стандартным</button>
-      <button id="ofExport" class="btn">Экспорт JSON</button>
-      <label class="btn"><input id="ofImport" type="file" accept=".json" style="display:none">Импорт JSON</label>
-    </div>
-    <div id="ofList" class="list" style="margin-top:12px"></div>
-    <div class="card" style="margin-top:12px">
-      <div class="title-row">
-        <h3>Мини-предпросмотр формы «Добавить объект»</h3>
-      </div>
-      <div id="ofPreview" class="grid" style="grid-template-columns:repeat(3,1fr)"></div>
-    </div>
+    <div class="sep"></div>
+    <details>
+      <summary>Показать исходный JSON</summary>
+      <pre id="dump" class="code"></pre>
+    </details>
   </section>
 </main>
 
-<footer>build: admin_cascade_v13.9.6</footer>
 <script>
-/* Глобальная ловушка ошибок */
-window.addEventListener('error', function(e){
-  var box=document.createElement('div');
-  box.className='errorBox';
-  box.textContent='Ошибка JS: '+e.message;
-  var host=document.getElementById('tab-filters');
-  if(host) host.prepend(box);
-});
+/* ========= Константы ========= */
+const CACHE_KEY = "dict_v39_30R_cache";
+const SRC_URL   = "/dict_v39_30R.json"; // можно положить рядом с файлом
 
-/* ================= DATA ================ */
-const KEY="admin_cascade_v13_9_6_full";
-let data={
-  fields:[
-    {label:"Страна",field:"country",type:"select",options:["Узбекистан"]},
-    {label:"Город",field:"city",type:"select",parent:"country",dict:{"Узбекистан":["Ташкент","Самарканд"]}},
-    {label:"Район",field:"district",type:"select",parent:"city",dict:{"Ташкент":["Мирзо-Улугбек","Юнусабад"],"Самарканд":["Центр","Сиаб"]}},
-    {label:"Улица/Массив",field:"street",type:"select",parent:"district",dict:{
-      "Мирзо-Улугбек":["Амира Темура","Буюк Ипак"],"Юнусабад":["Юнус-1","Юнус-9"],"Центр":["Регистан","Навои"],"Сиаб":["Газар","Саховат"]
-    }},
-    {label:"Категория",field:"category",type:"select",options:["Квартира","Дом","Коммерция","Земля"]},
-    {label:"Подкатегория",field:"subcategory",type:"select",parent:"category",dict:{"Квартира":["Аренда","Продажа"],"Дом":["Аренда","Продажа"],"Коммерция":["Аренда","Продажа"],"Земля":["Продажа"]}},
-    {label:"Количество комнат",field:"rooms",type:"number",visibleWhen:{category:["Квартира","Дом","Коммерция"]}},
-    {label:"Тип жилья",field:"apartment_type",type:"select",parent:"subcategory",
-      dict:{"Аренда":["Вторичка","Новостройка"],"Продажа":["Вторичка","Новостройка"]},
-      visibleWhen:{category:"Квартира"}},
-    {label:"Тип недвижимости",field:"commercial_type",type:"select",parent:"subcategory",
-      dict:{"Аренда":["Офис","Склад"],"Продажа":["Магазин","Офис"]},
-      visibleWhen:{category:"Коммерция"}},
-    {label:"Цена",field:"price",type:"range",rangeLabels:["от","до"]},
-    {label:"Площадь",field:"area",type:"range",rangeLabels:["от м²","до м²"]}
-  ],
-  groups:[
-    {name:"Локация",desc:"Страна → Город → Район → Улица",filters:["country","city","district","street"]},
-    {name:"Фильтры объекта",desc:"Категория, параметры",filters:["category","subcategory","rooms","apartment_type","commercial_type","price","area"]}
-  ],
-  layout:[
-    {id:1,type:"filters",title:"Фильтры",x:1,y:1,w:12,h:5},
-    {id:2,type:"form",title:"Форма",x:1,y:6,w:6,h:5},
-    {id:3,type:"cards",title:"Карточки",x:7,y:6,w:6,h:5},
-    {id:4,type:"table",title:"Таблица",x:1,y:11,w:12,h:5},
-    {id:5,type:"map",title:"Карта",x:1,y:16,w:12,h:6}
-  ]
-};
-
-/* Демо-данные */
-var demoItems=[
-  {category:"Квартира", rooms:3, district:"Юнусабад", price:"$120 000", area:"85 м²", title:"Квартира, Юнусабад", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23223'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
-  {category:"Дом", rooms:5, district:"Чиланзар", price:"$250 000", area:"210 м²", title:"Дом, Чиланзар", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%23333'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"},
-  {category:"Коммерция", rooms:"офис", district:"Мирзо-Улугбек", price:"$1 200/мес", area:"120 м²", title:"Офис, М.Улугбек", img:"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='%232a2a55'/><text x='50%' y='50%' fill='%23fff' font-size='28' text-anchor='middle' dominant-baseline='middle'>Фото</text></svg>"}
-];
-
-/* Состояние */
-let previewState = {};
-try{
-  var saved=localStorage.getItem(KEY);
-  if(saved){
-    try{ var obj=JSON.parse(saved); if(obj && typeof obj==='object') data=Object.assign(data, obj); }catch(e){}
-  }
-}catch(e){}
-
-/* HELPERS */
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
-function byField(name){ return data.fields.find(f=>f.field===name); }
-function normalize(){
-  data.fields.forEach(f=>{
-    if(!f.options) f.options=[];
-    if(f.type==="range" && !f.rangeLabels) f.rangeLabels=["от","до"];
-    if(f.type==="select"){ if(!f.dict) f.dict={}; if(!f.parent) f.parent=""; }
-    if(!("desc" in f)) f.desc="";
-  });
-  data.groups.forEach(g=>{ if(!g.desc) g.desc=""; if(!g.filters) g.filters=[]; });
+/* ========= Утилиты ========= */
+const $ = sel => document.querySelector(sel);
+function setState(msg, ok=true){
+  const s = $("#state"); s.textContent = msg; s.className = "note " + (ok ? "ok":"err");
 }
-function buildChildrenMap(){
-  const children={};
-  data.fields.forEach(f=>{
-    if(f.parent){
-      if(!children[f.parent]) children[f.parent]=[];
-      children[f.parent].push(f.field);
+function fillOptions(select, arr){
+  const v = select.value;
+  select.innerHTML = '<option value="">—</option>' + (arr||[]).map(x=>`<option>${x}</option>`).join('');
+  if(arr && arr.includes(v)) select.value = v;
+}
+function uniq(arr){ return Array.from(new Set(arr)); }
+function deepGet(obj, path, fallback){ try{ return path.reduce((a,k)=>a?.[k], obj) ?? fallback; }catch(_){ return fallback; }}
+
+/* ========= Адаптер ========= */
+function adaptDictionary(src){
+  const version = deepGet(src, ['meta','version'], 'v39.30R');
+  let countries = [];
+  try{
+    const c = deepGet(src,['locations','country'],null);
+    if(c){
+      const cc = Array.isArray(c)? c : [c];
+      countries = cc.map(co=>({
+        name: co.name || 'Страна',
+        cities: (co.cities||[]).map(ci=>({
+          name: ci.name,
+          districts: (ci.districts||[]).map(di=>({
+            name: di.name,
+            streets: (di.streets||[]).map(st=> (typeof st==='string'? st : (st.name||''))).filter(Boolean)
+          }))
+        }))
+      }));
     }
-  });
-  return children;
-}
-function computeOptionsFor(f){
-  if(f.type!=='select') return [];
-  if(f.parent){
-    const pv=previewState[f.parent]||'';
-    return (f.dict && f.dict[pv]) ? f.dict[pv] : [];
+  }catch(_){}
+  if(countries.length===0 && src && Array.isArray(src.categories)){
+    countries = [{
+      name:'Узбекистан',
+      cities:[{name:'Ташкент',districts:[{name:'Юнусабад',streets:['Юнус-1','Юнус-9']},{name:'Чиланзар',streets:['Чиланзар-8','Чиланзар-20']}]}]
+    }];
   }
-  return Array.isArray(f.options)?f.options:[];
-}
-function visibleFor(f){
-  if(!f.visibleWhen) return true;
-  let k=null,v=null;
-  for(const kk in f.visibleWhen){ k=kk; v=f.visibleWhen[kk]; break; }
-  if(!k) return true;
-  if(!(k in previewState) || !previewState[k]) return false;
-  if(Array.isArray(v)) return v.includes(previewState[k]);
-  return previewState[k]===v;
-}
-function clearDescendants(parentField, childrenMap){
-  if(!childrenMap[parentField]) return;
-  childrenMap[parentField].forEach(ch=>{
-    if(previewState[ch]) delete previewState[ch];
-    clearDescendants(ch, childrenMap);
-  });
+  let cats = [];
+  if(Array.isArray(src?.categories)){
+    cats = src.categories.map(c=>({name:c.name || c.title || '', children: (c.children||c.items||[]).map(x=> (typeof x==='string'? x : (x.name||''))).filter(Boolean)}));
+  }else if(Array.isArray(src?.catalog)){
+    cats = src.catalog.map(c=>({name:c.name || '', children: (c.sub||[]).map(x=>x.name||'').filter(Boolean)}));
+  }else{
+    cats = [
+      {name:'Квартира', children:['Аренда','Продажа']},
+      {name:'Дом', children:['Аренда','Продажа']},
+      {name:'Коммерция', children:['Аренда','Продажа']},
+      {name:'Земля', children:['Продажа']}
+    ];
+  }
+  return { version, countries, cats };
 }
 
-/* TABS */
-Array.from(document.querySelectorAll('.tab')).forEach(btn=>{
-  btn.onclick=function(){
-    Array.from(document.querySelectorAll('.tab')).forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab=btn.getAttribute('data-tab');
-    ['filters','fields','layout','preview','objform'].forEach(id=>{
-      document.getElementById('tab-'+id).style.display = (id===tab)?'block':'none';
+/* ========= Рендер ========= */
+let DICT = null;
+function renderFromDict(){
+  const countries = uniq((DICT.countries||[]).map(c=>c.name).filter(Boolean));
+  fillOptions($("#country"), countries);
+  onCountry();
+  const cats = uniq((DICT.cats||[]).map(c=>c.name).filter(Boolean));
+  fillOptions($("#category"), cats);
+  onCategory();
+  const meta = collectMeta(DICT);
+  $("#meta-ver").textContent       = DICT.version || 'v39.30R';
+  $("#meta-countries").textContent = meta.countries;
+  $("#meta-cities").textContent    = meta.cities;
+  $("#meta-districts").textContent = meta.districts;
+  $("#meta-streets").textContent   = meta.streets;
+  $("#meta-cats").textContent      = meta.cats;
+  $("#meta-subcats").textContent   = meta.subcats;
+  $("#dump").textContent = JSON.stringify(DICT, null, 2);
+}
+function collectMeta(d){
+  let cities=0, districts=0, streets=0;
+  (d.countries||[]).forEach(co=>{
+    (co.cities||[]).forEach(ci=>{
+      cities++;
+      (ci.districts||[]).forEach(di=>{
+        districts++;
+        streets += (di.streets||[]).length;
+      });
     });
-    if(tab==='filters') renderGroups();
-    if(tab==='fields')  renderFields();
-    if(tab==='layout')  renderLayout();
-    if(tab==='preview') renderPreview();
-    if(tab==='objform') renderObjForm();
+  });
+  const subcats = (d.cats||[]).reduce((n,c)=>n+(c.children?.length||0),0);
+  return {
+    countries: (d.countries||[]).length,
+    cities, districts, streets,
+    cats: (d.cats||[]).length,
+    subcats
   };
-});
+}
 
-/* FILTER GROUPS */
-function addGroup(){ data.groups.push({name:'Новая линия',desc:'',filters:[]}); save(); renderGroups(); renderPreview(); }
-function removeGroup(i){ data.groups.splice(i,1); save(); renderGroups(); renderPreview(); }
-function addFieldToGroup(gi, fieldName){
-  if(data.groups[gi].filters.indexOf(fieldName)===-1){
-    data.groups[gi].filters.push(fieldName); save(); renderGroups(); renderPreview();
+/* ========= Каскад ========= */
+function onCountry(){
+  const co = $("#country").value;
+  const country = (DICT.countries||[]).find(x=>x.name===co);
+  const cities = uniq((country?.cities||[]).map(x=>x.name).filter(Boolean));
+  fillOptions($("#city"), cities);
+  fillOptions($("#district"), []);
+  fillOptions($("#street"), []);
+}
+function onCity(){
+  const co = $("#country").value;
+  const ci = $("#city").value;
+  const country = (DICT.countries||[]).find(x=>x.name===co);
+  const city = (country?.cities||[]).find(x=>x.name===ci);
+  const districts = uniq((city?.districts||[]).map(x=>x.name).filter(Boolean));
+  fillOptions($("#district"), districts);
+  fillOptions($("#street"), []);
+}
+function onDistrict(){
+  const co = $("#country").value;
+  const ci = $("#city").value;
+  const di = $("#district").value;
+  const country = (DICT.countries||[]).find(x=>x.name===co);
+  const city = (country?.cities||[]).find(x=>x.name===ci);
+  const district = (city?.districts||[]).find(x=>x.name===di);
+  const streets = uniq((district?.streets||[]).filter(Boolean));
+  fillOptions($("#street"), streets);
+}
+function onCategory(){
+  const cat = $("#category").value;
+  const C = (DICT.cats||[]).find(x=>x.name===cat);
+  fillOptions($("#subcategory"), uniq((C?.children||[]).filter(Boolean)));
+}
+
+/* ========= Загрузка ========= */
+async function fetchDict(){
+  $("#meta-load").textContent = "загрузка...";
+  try{
+    const res = await fetch(SRC_URL, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const raw = await res.json();
+    const adapted = adaptDictionary(raw);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(adapted));
+    $("#meta-load").textContent = "из файла " + SRC_URL;
+    setState("загружено из справочника", true);
+    return adapted;
+  }catch(e){
+    let cached=null;
+    try{ cached = JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); }catch(_){}
+    if(cached){
+      $("#meta-load").textContent = "из кэша (offline)";
+      setState("офлайн: кэш", true);
+      return cached;
+    }
+    $("#meta-load").textContent = "встроенные демо-данные";
+    setState("демо-данные", false);
+    return adaptDictionary({
+      meta:{version:"v39.30R-demo"},
+      locations:{country:{name:"Узбекистан",cities:[
+        {name:"Ташкент",districts:[{name:"Юнусабад",streets:["Юнус-1","Юнус-9"]},{name:"Чиланзар",streets:["Чиланзар-8","Чиланзар-20"]}]},
+        {name:"Самарканд",districts:[{name:"Сиаб",streets:["Газар","Саховат"]}]}
+      ]}},
+      categories:[{name:"Квартира",children:["Аренда","Продажа"]},{name:"Дом",children:["Аренда","Продажа"]},{name:"Коммерция",children:["Аренда","Продажа"]},{name:"Земля",children:["Продажа"]}]
+    });
   }
 }
-function removeFilter(gIndex, fIndex){ data.groups[gIndex].filters.splice(fIndex,1); save(); renderGroups(); renderPreview(); }
-let dragChip=null;
-function renderGroups(){
-  const box=document.getElementById('tab-filters'); box.innerHTML='';
-  const top=document.createElement('div'); top.className='row'; top.style.marginBottom='10px';
-  const bAdd=document.createElement('button'); bAdd.className='btn'; bAdd.textContent='+ Ряд'; bAdd.onclick=addGroup; top.appendChild(bAdd);
-  box.appendChild(top);
 
-  const list=document.createElement('div'); list.className='list';
-  data.groups.forEach((g,gi)=>{
-    const card=document.createElement('div'); card.className='card';
-
-    const head=document.createElement('div'); head.className='title-row';
-    const left=document.createElement('div'); left.className='row';
-    const h=document.createElement('h3'); h.textContent=g.name||( 'Линия '+(gi+1) ); left.appendChild(h);
-    const meta=document.createElement('small'); meta.className='muted'; meta.textContent=g.desc||''; left.appendChild(meta);
-    head.appendChild(left);
-
-    const right=document.createElement('div'); right.className='row';
-    const sel=document.createElement('select'); const o0=document.createElement('option'); o0.value=''; o0.textContent='Добавить поле…'; sel.appendChild(o0);
-    data.fields.forEach(ff=>{ const o=document.createElement('option'); o.value=ff.field; o.textContent=ff.label+' ('+ff.field+')'; sel.appendChild(o); });
-    sel.onchange=e=>{ if(e.target.value){ addFieldToGroup(gi, e.target.value); e.target.value=''; } };
-    const del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить ряд'; del.onclick=()=>removeGroup(gi);
-    right.appendChild(sel); right.appendChild(del);
-    head.appendChild(right);
-    card.appendChild(head);
-
-    const editors=document.createElement('div'); editors.className='inline'; editors.style.margin='8px 0';
-    let w1=document.createElement('div'); w1.innerHTML='<label>Заголовок</label>'; let i1=document.createElement('input'); i1.value=g.name||''; i1.oninput=e=>{ data.groups[gi].name=e.target.value; save(); renderPreview(); }; w1.appendChild(i1);
-    let w2=document.createElement('div'); w2.innerHTML='<label>Описание</label>'; let i2=document.createElement('input'); i2.value=g.desc||''; i2.oninput=e=>{ data.groups[gi].desc=e.target.value; save(); renderPreview(); }; w2.appendChild(i2);
-    editors.appendChild(w1); editors.appendChild(w2); card.appendChild(editors);
-
-    const row=document.createElement('div'); row.className='chips dropzone'; row.setAttribute('data-group', gi);
-    (g.filters||[]).forEach((fname,fi)=>{
-      const f=byField(fname); const chip=document.createElement('div'); chip.className='chip'; chip.draggable=true; chip.setAttribute('data-name', fname);
-      chip.innerHTML='<span class="grab">↕</span><small>'+(f ? (f.label||fname) : fname)+'</small>';
-      const x=document.createElement('button'); x.className='btn danger'; x.textContent='x'; x.style.padding='2px 6px'; x.onclick=()=>removeFilter(gi,fi);
-      chip.appendChild(x);
-      chip.addEventListener('dragstart', ()=>{ dragChip={name:fname, fromG:gi, fromIndex:fi}; chip.classList.add('dragging'); });
-      chip.addEventListener('dragend', ()=>{ chip.classList.remove('dragging'); dragChip=null; });
-      row.appendChild(chip);
-    });
-    row.addEventListener('dragover', e=>{ e.preventDefault(); });
-    row.addEventListener('drop', e=>{
-      e.preventDefault(); const toG=parseInt(row.getAttribute('data-group'),10); if(!dragChip) return;
-      const arr=data.groups[dragChip.fromG].filters; const idx=arr.indexOf(dragChip.name); if(idx>-1) arr.splice(idx,1);
-      data.groups[toG].filters.push(dragChip.name); save(); renderGroups(); renderPreview();
-    });
-    card.appendChild(row);
-    list.appendChild(card);
-  });
-  box.appendChild(list);
-}
-
-/* FIELDS */
-function addField(){
-  const n=data.fields.length+1; data.fields.push({label:'Поле '+n, field:'field_'+n, type:'text', desc:''});
-  save(); renderFields(); renderPreview();
-}
-function removeField(i){
-  const name=data.fields[i].field;
-  data.groups.forEach(g=>{ g.filters = (g.filters||[]).filter(n=>n!==name); });
-  data.fields.splice(i,1); save(); renderFields(); renderGroups(); renderPreview();
-}
-function renderFields(){
-  const box=document.getElementById('tab-fields'); box.innerHTML='';
-  const top=document.createElement('div'); top.className='row'; top.style.justifyContent='space-between'; top.style.marginBottom='8px';
-  const h=document.createElement('h3'); h.textContent='Все поля'; top.appendChild(h);
-  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Поле'; add.onclick=addField; top.appendChild(add);
-  box.appendChild(top);
-
-  const list=document.createElement('div'); list.className='list';
-  const fieldNames=data.fields.map(f=>f.field);
-
-  data.fields.forEach((f,i)=>{
-    const card=document.createElement('div'); card.className='card';
-    const head=document.createElement('div'); head.className='title-row';
-    const left=document.createElement('div'); left.className='row';
-    const t=document.createElement('h3'); t.textContent=f.label||f.field; left.appendChild(t);
-    const meta=document.createElement('small'); meta.className='muted'; meta.textContent=' ('+f.field+')'; left.appendChild(meta);
-    head.appendChild(left);
-    const r=document.createElement('div'); r.className='row';
-    const del=document.createElement('button'); del.className='btn danger'; del.textContent='Удалить'; del.onclick=()=>removeField(i);
-    r.appendChild(del); head.appendChild(r); card.appendChild(head);
-
-    const grid=document.createElement('div'); grid.className='grid'; grid.style.gridTemplateColumns='repeat(2,1fr)'; grid.style.gap='10px';
-
-    let w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
-    let inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=e=>{ data.fields[i].label=e.target.value; save(); renderGroups(); renderPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Имя</label>';
-    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=e=>{ data.fields[i].field=e.target.value; save(); renderGroups(); renderPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
-    const selType=document.createElement('select');
-    ['text','number','select','range'].forEach(tt=>{ const o=document.createElement('option'); o.value=tt; o.textContent=tt; if(f.type===tt) o.selected=true; selType.appendChild(o); });
-    selType.onchange=e=>{ data.fields[i].type=e.target.value; if(e.target.value!=='select'){ data.fields[i].parent=''; data.fields[i].dict={}; } save(); renderPreview(); renderFields(); };
-    w.appendChild(selType); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Описание</label>';
-    inp=document.createElement('input'); inp.placeholder='подпись/подсказка'; inp.value=f.desc||''; inp.oninput=e=>{ data.fields[i].desc=e.target.value; save(); renderPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    const wp=document.createElement('div'); wp.innerHTML='<label>Родитель (для каскада)</label>';
-    const selP=document.createElement('select');
-    const parOpts=[''].concat( fieldNames.filter(n=> n!==f.field && (byField(n)&&byField(n).type==='select') ) );
-    parOpts.forEach(nm=>{ const o=document.createElement('option'); o.value=nm; o.textContent=nm===''?'(нет)':nm; if((f.parent||'')===nm) o.selected=true; selP.appendChild(o); });
-    selP.onchange=e=>{ data.fields[i].parent=e.target.value||''; save(); renderPreview(); renderFields(); };
-    wp.appendChild(selP); grid.appendChild(wp);
-
-    let wOD=document.createElement('div');
-    if(f.type==='select'){
-      if(f.parent){
-        wOD.innerHTML='<label>Карта опций (parent=опция1, опция2)</label>';
-        let ta=document.createElement('textarea'); ta.rows=5;
-        let lines=Object.keys(f.dict||{}).map(pk=> pk+'='+(f.dict[pk]||[]).join(', ') );
-        ta.value=lines.join('\n');
-        ta.oninput=e=>{
-          let map={};
-          e.target.value.split('\n').forEach(line=>{
-            let t=line.trim(); if(!t) return;
-            let parts=t.split('='); let k=parts[0]; let rest=parts.slice(1).join('=');
-            map[k.trim()]=(rest||'').split(',').map(s=>s.trim()).filter(Boolean);
-          });
-          data.fields[i].dict=map; save(); renderPreview();
-        };
-        wOD.appendChild(ta);
-      }else{
-        wOD.innerHTML='<label>Опции (через запятую)</label>';
-        let ta2=document.createElement('textarea'); ta2.rows=3; ta2.value=Array.isArray(f.options)?f.options.join(', '):'';
-        ta2.oninput=e=>{ data.fields[i].options=e.target.value.split(',').map(s=>s.trim()).filter(Boolean); save(); renderPreview(); };
-        wOD.appendChild(ta2);
-      }
-    }else if(f.type==='range'){
-      wOD.innerHTML='<label>Подписи диапазона (левая, правая)</label>';
-      const rlab=document.createElement('input'); const L=(f.rangeLabels&&f.rangeLabels[0])||'от'; const R=(f.rangeLabels&&f.rangeLabels[1])||'до';
-      rlab.value=L+', '+R; rlab.oninput=e=>{ const p=e.target.value.split(',').map(s=>s.trim()); data.fields[i].rangeLabels=[p[0]||'от', p[1]||'до']; save(); renderPreview(); };
-      wOD.appendChild(rlab);
-    }else{
-      wOD.innerHTML='<label>&nbsp;</label><div class="muted">Для этого типа настроек нет</div>';
-    }
-    grid.appendChild(wOD);
-
-    const wVW=document.createElement('div'); wVW.innerHTML='<label>Условие отображения (ключ=значение или ключ=знач1|знач2)</label>';
-    const vin=document.createElement('input'); vin.placeholder='например: category=Квартира|Дом|Коммерция';
-    if(f.visibleWhen){
-      let k0=null,v0=null; for(const kk in f.visibleWhen){ k0=kk; v0=f.visibleWhen[kk]; break; }
-      if(k0){ vin.value=Array.isArray(v0)? (k0+'='+v0.join('|')) : (k0+'='+v0); }
-    }
-    vin.oninput=e=>{
-      const v=e.target.value.trim();
-      if(!v){ data.fields[i].visibleWhen=null; save(); renderPreview(); return; }
-      const parts=v.split('='); const k=parts[0]; const rest=parts.slice(1).join('=');
-      if(rest.indexOf('|')>-1){
-        data.fields[i].visibleWhen=((() => { const o={}; o[k.trim()]=rest.split('|').map(s=>s.trim()).filter(Boolean); return o; })());
-      }else{
-        data.fields[i].visibleWhen=((() => { const o={}; o[k.trim()]=(rest||'').trim(); return o; })());
-      }
-      save(); renderPreview();
-    };
-    wVW.appendChild(vin); grid.appendChild(wVW);
-
-    card.appendChild(grid); list.appendChild(card);
-  });
-  box.appendChild(list);
-}
-/* LAYOUT */
-let nextId=100, dragState=null, resizeState=null;
-function addBlock(type){
-  const id=++nextId; data.layout.push({id:id,type:type,title:(type==='filters'?'Фильтры':type.toUpperCase()),x:1,y:1,w:6,h:4});
-  save(); renderLayout(); renderPreview();
-}
-function removeBlock(id){ const i=data.layout.findIndex(b=>b.id===id); if(i>-1){ data.layout.splice(i,1); save(); renderLayout(); renderPreview(); } }
-function clearLayout(){ data.layout=[]; save(); renderLayout(); renderPreview(); }
-function autoLayout(){ let col=1,row=1; data.layout.forEach(b=>{ b.w=6;b.h=4;b.x=col;b.y=row; col=(col===1)?7:1; if(col===1) row+=4; }); save(); renderLayout(); renderPreview(); }
-function clamp(v,min,max){ return Math.max(min, Math.min(max,v)); }
-
-function renderLayout(){
-  const box=document.getElementById('tab-layout'); box.innerHTML='';
-  const bar=document.createElement('div'); bar.className='row'; bar.style.marginBottom='10px';
-  ['filters','form','cards','table','map'].forEach(t=>{ const b=document.createElement('button'); b.className='btn'; b.textContent='+ '+(t==='filters'?'Фильтры':t.toUpperCase()); b.onclick=()=>addBlock(t); bar.appendChild(b); });
-  const bAuto=document.createElement('button'); bAuto.className='btn warn'; bAuto.textContent='Авторасстановка'; bAuto.onclick=autoLayout; bar.appendChild(bAuto);
-  const bClr=document.createElement('button'); bClr.className='btn danger'; bClr.textContent='Очистить'; bClr.onclick=clearLayout; bar.appendChild(bClr);
-  box.appendChild(bar);
-
-  const wrap=document.createElement('div'); wrap.className='canvas-wrap';
-  const grid=document.createElement('div'); grid.className='canvas'; wrap.appendChild(grid); box.appendChild(wrap);
-
-  const rows = data.layout.length ? Math.max(...data.layout.map(b=> b.y+b.h-1 )) : 1;
-  grid.style.minHeight=(rows*90 + (rows-1)*6) + 'px';
-
-  data.layout.forEach(b=>{
-    const card=document.createElement('div'); card.className='block'; card.setAttribute('data-id', b.id);
-    card.style.gridColumn=b.x+'/span '+b.w; card.style.gridRow=b.y+'/span '+b.h;
-    const head=document.createElement('header');
-    const title=document.createElement('span'); title.className='title'; title.textContent=b.title||b.type;
-    title.ondblclick=function(){ const t=prompt('Название блока:', b.title||b.type); if(t!=null){ b.title=t; save(); renderLayout(); renderPreview(); } };
-    const rm=document.createElement('button'); rm.className='x'; rm.textContent='x'; rm.onclick=()=>removeBlock(b.id);
-    head.appendChild(title); head.appendChild(rm);
-    head.addEventListener('mousedown', function(e){
-      const rect=grid.getBoundingClientRect(); const colW=rect.width/12; const rowH=96;
-      dragState={id:b.id, startX:e.clientX, startY:e.clientY, baseX:b.x, baseY:b.y, colW:colW, rowH:rowH};
-      document.addEventListener('mousemove', onDragMove); document.addEventListener('mouseup', onDragEnd, {once:true});
-    });
-    const body=document.createElement('div'); body.className='body'; body.textContent='Секция макета';
-    const res=document.createElement('div'); res.className='resize';
-    res.addEventListener('mousedown', function(e){
-      e.stopPropagation(); const rect=grid.getBoundingClientRect(); const colW=rect.width/12; const rowH=96;
-      resizeState={id:b.id, startX:e.clientX, startY:e.clientY, baseW:b.w, baseH:b.h, colW:colW, rowH:rowH};
-      document.addEventListener('mousemove', onResizeMove); document.addEventListener('mouseup', onResizeEnd, {once:true});
-    });
-    card.appendChild(head); card.appendChild(body); card.appendChild(res); grid.appendChild(card);
-  });
-
-  function onDragMove(e){
-    if(!dragState) return; const b=data.layout.find(x=>x.id===dragState.id); if(!b) return;
-    const dx=e.clientX-dragState.startX; const dy=e.clientY-dragState.startY;
-    let gx=Math.round(dragState.baseX + dx/dragState.colW);
-    let gy=Math.round(dragState.baseY + dy/dragState.rowH);
-    gx=clamp(gx,1,12-(b.w-1)); gy=clamp(gy,1,Math.max(1,gy)); b.x=gx; b.y=gy; renderLayout();
-  }
-  function onDragEnd(){ if(dragState){ save(); dragState=null; } document.removeEventListener('mousemove', onDragMove); }
-  function onResizeMove(e){
-    if(!resizeState) return; const b=data.layout.find(x=>x.id===resizeState.id); if(!b) return;
-    const dx=e.clientX-resizeState.startX; const dy=e.clientY-resizeState.startY;
-    let gw=Math.round(resizeState.baseW + dx/resizestate.colW);
-  }
-  function onResizeEnd(){ if(resizeState){ save(); resizeState=null; } document.removeEventListener('mousemove', onResizeMove); }
-}
-
-/* PREVIEW */
-function renderPreview(){
-  const grid=document.getElementById('preview'); grid.innerHTML='';
-  const rows = data.layout.length ? Math.max(...data.layout.map(b=> b.y+b.h-1 )) : 1;
-  grid.style.minHeight = (rows*90 + (rows-1)*6) + 'px';
-
-  const children=buildChildrenMap();
-
-  data.layout.forEach(b=>{
-    const card=document.createElement('div'); card.className='preview-card';
-    card.style.gridColumn=b.x+' / span '+b.w; card.style.gridRow=b.y+' / span '+b.h;
-    const section=document.createElement('div'); section.className='preview-section';
-
-    if(b.type==='filters'){
-      data.groups.forEach((g,gi)=>{
-        const group=document.createElement('div'); group.className='p-group';
-        const title=document.createElement('div'); title.className='p-title';
-        title.textContent = g.name || (gi===0?'Верхняя линия':'Линия '+(gi+1));
-        group.appendChild(title);
-        if(g.desc){ const d=document.createElement('div'); d.className='muted'; d.style.marginBottom='8px'; d.textContent=g.desc; group.appendChild(d); }
-        const row=document.createElement('div'); row.className='p-row';
-
-        (g.filters||[]).forEach(name=>{
-          const f=byField(name); if(!f) return;
-          const box=document.createElement('div'); box.className='p-field'; box.style.display=visibleFor(f)?'':'none';
-          const lab=document.createElement('label'); lab.textContent=(f.label && f.label.trim()) || f.field || 'Без названия'; box.appendChild(lab);
-
-          if(f.type==='select'){
-            const sel=document.createElement('select');
-            const opts = computeOptionsFor(f);
-            sel.innerHTML = '<option value="">—</option>' + opts.map(o=> '<option>'+o+'</option>').join('');
-            if(previewState[f.field] && opts.indexOf(previewState[f.field])>-1) sel.value=previewState[f.field];
-            sel.addEventListener('change', function(){
-              previewState[f.field]=sel.value;
-              clearDescendants(f.field, children);
-              renderPreview();
-            });
-            box.appendChild(sel);
-          }else if(f.type==='range'){
-            const div=document.createElement('div'); div.className='row';
-            const a=document.createElement('input'); a.placeholder=(f.rangeLabels && f.rangeLabels[0]) || 'от'; a.value = previewState[f.field+'_min']||'';
-            const bb=document.createElement('input'); bb.placeholder=(f.rangeLabels && f.rangeLabels[1]) || 'до'; bb.value = previewState[f.field+'_max']||'';
-            a.addEventListener('input', function(){ previewState[f.field+'_min']=a.value; });
-            bb.addEventListener('input', function(){ previewState[f.field+'_max']=bb.value; });
-            div.appendChild(a); div.appendChild(bb); box.appendChild(div);
-          }else if(f.type==='number'){
-            const num=document.createElement('input'); num.type='number'; num.value = previewState[f.field]||'';
-            num.addEventListener('input', function(){ previewState[f.field]=num.value; });
-            box.appendChild(num);
-          }else{
-            const t=document.createElement('input'); t.type='text'; t.value = previewState[f.field]||''; t.addEventListener('input', function(){ previewState[f.field]=t.value; });
-            box.appendChild(t);
-          }
-          row.appendChild(box);
-        });
-
-        group.appendChild(row); section.appendChild(group);
-      });
-    } else if(b.type==='form'){
-      const fg=document.createElement('div'); fg.className='form-grid';
-      ['Имя','Телефон','Email','Комментарий'].forEach((lbl,idx)=>{
-        const wrap=document.createElement('div');
-        const lab=document.createElement('label'); lab.textContent=lbl; wrap.appendChild(lab);
-        const input = (idx===3)? document.createElement('textarea') : document.createElement('input');
-        if(idx===1) input.type='tel';
-        if(idx===2) input.type='email';
-        input.placeholder = lbl;
-        wrap.appendChild(input);
-        fg.appendChild(wrap);
-      });
-      section.appendChild(fg);
-    } else if(b.type==='cards'){
-      const gridCards=document.createElement('div'); gridCards.className='preview-cards';
-      demoItems.forEach(it=>{
-        const ci=document.createElement('div'); ci.className='preview-card-item';
-        const img=document.createElement('img'); img.src=it.img; ci.appendChild(img);
-        const body=document.createElement('div'); body.className='pc-body';
-        const ttl=document.createElement('div'); ttl.className='pc-title'; ttl.textContent=it.title; body.appendChild(ttl);
-        const adr=document.createElement('div'); adr.textContent='Район: '+it.district; body.appendChild(adr);
-        const r=document.createElement('div'); r.textContent='Комнат: '+it.rooms; body.appendChild(r);
-        const pr=document.createElement('div'); pr.textContent='Цена: '+it.price+' ('+it.area+')'; body.appendChild(pr);
-        ci.appendChild(body); gridCards.appendChild(ci);
-      });
-      section.appendChild(gridCards);
-    } else if(b.type==='table'){
-      const table=document.createElement('table'); table.className='preview-table';
-      const thead=document.createElement('thead'); thead.innerHTML='<tr><th>Категория</th><th>Район</th><th>Комнат</th><th>Площадь</th><th>Цена</th></tr>'; table.appendChild(thead);
-      const tbody=document.createElement('tbody');
-      demoItems.forEach(it=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML='<td>'+it.category+'</td><td>'+it.district+'</td><td>'+it.rooms+'</td><td>'+it.area+'</td><td>'+it.price+'</td>';
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody); section.appendChild(table);
-    } else if(b.type==='map'){
-      const m=document.createElement('div'); m.className='preview-map'; m.textContent='MAP (placeholder)';
-      section.appendChild(m);
-    }
-
-    card.appendChild(section);
-    grid.appendChild(card);
+/* ========= Импорт ручного JSON ========= */
+function readFileAsJSON(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>{ try{ resolve(JSON.parse(r.result)); }catch(e){ reject(e); } };
+    r.onerror=()=>reject(r.error);
+    r.readAsText(file);
   });
 }
-/* EXPORT / IMPORT / RESET */
-document.getElementById('btnExport').onclick=function(){
-  normalize();
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admin-cascade-v13_9_6.json'; a.click();
-};
-document.getElementById('fileImport').onchange=function(e){
-  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
-  r.onload=function(){ try{
-      const obj=JSON.parse(r.result);
-      if(obj.fields) data.fields=obj.fields;
-      if(obj.groups) data.groups=obj.groups;
-      if(obj.layout) data.layout=obj.layout;
-      normalize(); save();
-      previewState={};
-      renderGroups(); renderFields(); renderLayout(); renderPreview();
-      alert('Импорт выполнен');
-    }catch(err){ console.error(err); alert('Ошибка импорта'); }
-  };
-  r.readAsText(f);
-};
-document.getElementById('btnReset').onclick=function(){
-  try{ localStorage.removeItem(KEY); }catch(e){}
-  location.reload();
-};
 
-/* ====== ФОРМА ОБЪЕКТОВ (админ-конструктор) ====== */
-const OBJFORM_KEY="objectFormConfig";
-let objFormConfig = JSON.parse(localStorage.getItem(OBJFORM_KEY) || "[]");
-function saveObjForm(){ localStorage.setItem(OBJFORM_KEY, JSON.stringify(objFormConfig)); }
-function renderObjForm(){
-  const box=document.getElementById('ofList'); if(!box) return; box.innerHTML='';
-  objFormConfig.forEach((f,i)=>{
-    const card=document.createElement('div'); card.className='of-card';
-    card.innerHTML=`<div class="title-row"><h3>${f.label||'Поле '+(i+1)}</h3>
-      <button class="btn danger">Удалить</button></div>`;
-    card.querySelector('.btn.danger').onclick=()=>{ objFormConfig.splice(i,1); saveObjForm(); renderObjForm(); };
-    const grid=document.createElement('div'); grid.className='of-grid';
-
-    let w=document.createElement('div'); w.innerHTML='<label>Заголовок</label>';
-    let inp=document.createElement('input'); inp.value=f.label||''; inp.oninput=e=>{ f.label=e.target.value; saveObjForm(); renderObjFormPreview(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Имя поля</label>';
-    inp=document.createElement('input'); inp.value=f.field||''; inp.oninput=e=>{ f.field=e.target.value; saveObjForm(); };
-    w.appendChild(inp); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Тип</label>';
-    const sel=document.createElement('select');
-    ['text','number','select','range','images','coords'].forEach(t=>{
-      const o=document.createElement('option'); o.value=t; o.textContent=t; if(f.type===t) o.selected=true; sel.appendChild(o);
-    });
-    sel.onchange=e=>{ f.type=e.target.value; saveObjForm(); renderObjFormPreview(); };
-    w.appendChild(sel); grid.appendChild(w);
-
-    w=document.createElement('div'); w.innerHTML='<label>Обязательное</label>';
-    const chk=document.createElement('input'); chk.type='checkbox'; chk.checked=!!f.required; chk.onchange=()=>{ f.required=chk.checked; saveObjForm(); };
-    w.appendChild(chk); grid.appendChild(w);
-
-    if(f.type==='select'){
-      let wOpt=document.createElement('div'); wOpt.innerHTML='<label>Опции (через запятую)</label>';
-      let ta=document.createElement('textarea'); ta.rows=3; ta.value=Array.isArray(f.options)?f.options.join(', '):'';
-      ta.oninput=e=>{ f.options=e.target.value.split(',').map(s=>s.trim()).filter(Boolean); saveObjForm(); renderObjFormPreview(); };
-      wOpt.appendChild(ta); grid.appendChild(wOpt);
-    }else if(f.type==='range'){
-      let wR=document.createElement('div'); wR.innerHTML='<label>Подписи диапазона (левая, правая)</label>';
-      const rlab=document.createElement('input'); const L=(f.rangeLabels&&f.rangeLabels[0])||'от'; const R=(f.rangeLabels&&f.rangeLabels[1])||'до';
-      rlab.value=L+', '+R; rlab.oninput=e=>{ const p=e.target.value.split(',').map(s=>s.trim()); f.rangeLabels=[p[0]||'от', p[1]||'до']; saveObjForm(); renderObjFormPreview(); };
-      wR.appendChild(rlab); grid.appendChild(wR);
-    }
-
-    card.appendChild(grid); box.appendChild(card);
+/* ========= Инициализация ========= */
+async function boot(){
+  $("#country").addEventListener("change", onCountry);
+  $("#city").addEventListener("change", onCity);
+  $("#district").addEventListener("change", onDistrict);
+  $("#category").addEventListener("change", onCategory);
+  $("#btnReload").addEventListener("click", async()=>{ DICT = await fetchDict(); renderFromDict(); });
+  $("#btnReset").addEventListener("click", ()=>{ localStorage.removeItem(CACHE_KEY); location.reload(); });
+  $("#filePick").addEventListener("change", async(e)=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const raw = await readFileAsJSON(f);
+      const adapted = adaptDictionary(raw);
+      localStorage.setItem(CACHE_KEY, JSON.stringify(adapted));
+      DICT = adapted; $("#meta-load").textContent = "из файла (ручной импорт)"; setState("импорт вручную", true);
+      renderFromDict();
+    }catch(err){ setState("ошибка импорта файла", false); alert("Ошибка импорта JSON"); }
   });
-
-  renderObjFormPreview();
+  DICT = await fetchDict();
+  renderFromDict();
 }
-function renderObjFormPreview(){
-  const prev=document.getElementById('ofPreview'); if(!prev) return; prev.innerHTML='';
-  objFormConfig.forEach(f=>{
-    const wrap=document.createElement('div');
-    const lab=document.createElement('label'); lab.textContent=f.label||f.field; wrap.appendChild(lab);
-    if(f.type==='select'){
-      const sel=document.createElement('select');
-      (f.options||[]).forEach(o=>{ const op=document.createElement('option'); op.textContent=o; sel.appendChild(op); });
-      wrap.appendChild(sel);
-    }else if(f.type==='range'){
-      const row=document.createElement('div'); row.className='row';
-      const a=document.createElement('input'); a.placeholder=(f.rangeLabels&&f.rangeLabels[0])||'от';
-      const b=document.createElement('input'); b.placeholder=(f.rangeLabels&&f.rangeLabels[1])||'до';
-      row.appendChild(a); row.appendChild(b); wrap.appendChild(row);
-    }else if(f.type==='images'){
-      const p=document.createElement('div'); p.className='muted'; p.textContent='Поле загрузки фото (предпросмотр)'; wrap.appendChild(p);
-    }else if(f.type==='coords'){
-      const p=document.createElement('div'); p.className='muted'; p.textContent='Поле координат (предпросмотр)'; wrap.appendChild(p);
-    }else{
-      const inp=document.createElement('input'); inp.placeholder=f.label||f.field; wrap.appendChild(inp);
-    }
-    prev.appendChild(wrap);
-  });
-}
-document.getElementById('ofAdd').onclick=()=>{ objFormConfig.push({label:'Новое поле',field:'field_'+(objFormConfig.length+1),type:'text'}); saveObjForm(); renderObjForm(); };
-document.getElementById('ofReset').onclick=()=>{ objFormConfig=[
-  {label:'Заголовок',field:'title',type:'text',required:true},
-  {label:'Цена',field:'price',type:'number',required:true},
-  {label:'Адрес',field:'address',type:'text'},
-  {label:'Фото',field:'images',type:'images'},
-  {label:'Координаты',field:'coords',type:'coords'}
-]; saveObjForm(); renderObjForm(); };
-document.getElementById('ofExport').onclick=()=>{ const blob=new Blob([JSON.stringify(objFormConfig,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='objectFormConfig.json'; a.click(); };
-document.getElementById('ofImport').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ objFormConfig=JSON.parse(r.result); saveObjForm(); renderObjForm(); }catch(err){alert('Ошибка импорта')} }; r.readAsText(f); };
-/* INIT */
-try{
-  normalize();
-  renderGroups(); renderFields(); renderLayout(); renderPreview();
-  renderObjForm();
-}catch(e){
-  console.error(e);
-}
+boot();
 </script>
 </body>
 </html>
