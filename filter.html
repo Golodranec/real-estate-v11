@@ -2,517 +2,248 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Фильтр v06R — полный рабочий файл</title>
+<title>filter_v08R — редактор фильтров (карточки)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--bg:#0f172a;--side:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444;--warn:#f59e0b}
+  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444;--warn:#f59e0b}
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);display:flex;height:100vh}
-  aside{width:340px;background:var(--side);border-right:1px solid var(--line);overflow:auto;padding:10px}
-  main{flex:1;display:flex;flex-direction:column;padding:12px;overflow:auto}
-  h1{margin:0;font-size:16px;padding:10px;background:#0b1220;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Arial}
+  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
+  .left, .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#0b1220;font-size:12px}
-  ul{list-style:none;padding-left:18px;margin:6px 0}
-  li{margin:2px 0}
-  li .row{display:flex;gap:6px;align-items:center}
-  .node{padding:2px 6px;border-radius:6px;cursor:pointer;display:inline-block}
-  .node.active{background:var(--ok);color:#052e16}
-  .editor{background:var(--side);padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:8px;max-width:820px;margin-bottom:16px;border:1px solid var(--line)}
-  input,select,textarea,button{font:inherit}
-  input,select{padding:8px;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:var(--text)}
+  main{padding:12px;max-width:1100px;margin:0 auto}
   button{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
   button.primary{background:var(--ok);color:#052e16}
   button.danger{background:var(--err);color:#3b0a0a}
-  button.warn{background:var(--warn);color:#3b2200}
-  textarea{width:100%;height:260px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:13px}
-  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
-  .sp{flex:1}
-  nav{display:flex;gap:8px;margin:8px 0}
-  nav button.active{background:var(--ok);color:#052e16}
-  .hidden{display:none}
-  .card{background:var(--side);padding:12px;border-radius:10px;border:1px solid var(--line);margin-bottom:16px}
-  .hr{height:1px;background:var(--line);margin:8px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;box-shadow:0 0 0 1px rgba(0,0,0,.05) inset}
+  .card h3{margin:0 0 6px 0;display:flex;gap:10px;align-items:center}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+  label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
+  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:var(--text);font:inherit}
+  textarea{min-height:80px}
+  .mini{font-size:12px;opacity:.75}
+  .ghost{opacity:.7}
+  .top-actions{display:flex;gap:8px;align-items:center}
 </style>
 </head>
 <body>
-  <aside>
-    <h1>Фильтры <span class="badge">v06R</span> <span id="sizeBadge" class="badge">Размер: …</span></h1>
-    <div class="row">
-      <button id="addBtn">＋ Фильтр</button>
-      <button id="addChildBtn">＋ Дочерний фильтр</button>
+  <header>
+    <div class="left">
+      <strong>Редактор фильтров</strong>
+      <span class="badge">v08R</span>
+      <span id="sizeBadge" class="badge">Размер: …</span>
+    </div>
+    <div class="right top-actions">
+      <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+      <button id="importBtn">Импорт</button>
+      <button id="exportBtn" class="primary">Экспорт</button>
+      <button id="addBtn">+ Фильтр</button>
       <button id="clearBtn" class="danger">Очистить</button>
     </div>
-    <div class="row">
-      <button id="undoBtn">↶ Undo</button>
-      <button id="redoBtn">↷ Redo</button>
-      <span class="sp"></span>
-      <button id="expandAllBtn">▾ Все</button>
-      <button id="collapseAllBtn">▸ Все</button>
-    </div>
-    <ul id="tree"></ul>
-  </aside>
+  </header>
 
   <main>
-    <nav>
-      <button id="tab-tree" class="active">Tree</button>
-      <button id="tab-json">JSON</button>
-      <button id="tab-preview">Preview</button>
-    </nav>
-
-    <section id="view-tree">
-      <div class="editor">
-        <h2>Редактор фильтра</h2>
-        <label>Название фильтра <input id="name" placeholder="Например: Квартиры"></label>
-        <label>Тип фильтра
-          <select id="type">
-            <option value="section">Фильтр: Раздел</option>
-            <option value="category">Фильтр: Категория</option>
-            <option value="subcategory">Фильтр: Подкатегория</option>
-            <option value="field">Фильтр: Поле</option>
-          </select>
-        </label>
-        <label>Родительский фильтр
-          <select id="parent"></select>
-        </label>
-        <label id="fieldTypeRow" class="hidden">Тип данных фильтра
-          <select id="fieldType">
-            <option value="text">Текст</option>
-            <option value="number">Число</option>
-            <option value="select">Список</option>
-          </select>
-        </label>
-        <div class="row">
-          <button class="primary" id="saveBtn">Сохранить</button>
-          <button class="danger" id="delBtn">Удалить</button>
-          <button id="dupBtn">Дублировать</button>
-          <button id="dupSubBtn">Дублировать ветку</button>
-        </div>
-        <div class="row">
-          <button id="upBtn">↑ Вверх</button>
-          <button id="downBtn">↓ Вниз</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="view-json" class="hidden">
-      <div class="card">
-        <h2>JSON фильтров</h2>
-        <div class="row">
-          <input type="file" id="fileInput" accept=".json,application/json">
-          <button id="importFileBtn">Импорт файла</button>
-          <button id="applyJsonBtn" class="warn">Применить из textarea</button>
-          <button id="downloadBtn" class="primary">Скачать JSON</button>
-          <button id="resetDefaultsBtn" class="danger">Сброс к демо</button>
-          <span class="sp"></span>
-          <button id="saveLocalBtn">Сохранить LS</button>
-          <button id="loadLocalBtn">Загрузить LS</button>
-        </div>
-        <textarea id="jsonArea"></textarea>
-      </div>
-    </section>
-
-    <section id="view-preview" class="hidden">
-      <div class="card">
-        <h2>Предпросмотр фильтров</h2>
-        <div class="row">
-          <label class="sp">Фильтр: Раздел <select id="prevSection" class="sp"></select></label>
-          <label class="sp">Фильтр: Категория <select id="prevCategory" class="sp"></select></label>
-          <label class="sp">Фильтр: Подкатегория <select id="prevSubcategory" class="sp"></select></label>
-        </div>
-        <div class="hr"></div>
-        <div id="fields"></div>
-      </div>
-    </section>
+    <div id="list"></div>
   </main>
 
 <script>
-/* ===== Утилиты ===== */
+// ===== helpers =====
 const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
-const clone=obj=>JSON.parse(JSON.stringify(obj));
+const clone=o=>JSON.parse(JSON.stringify(o));
 
-/* ===== Состояние ===== */
-let expanded=new Set();
-let data={items:[]};
-let selectedId=null;
-let historyStack=[];
-let futureStack=[];
+// ===== storage =====
+const LS_KEY="filter_v08R_data";
+let data={filters:[]};
 
-/* ===== DOM ===== */
-const tree=$("#tree");
-const addBtn=$("#addBtn");
-const addChildBtn=$("#addChildBtn");
-const clearBtn=$("#clearBtn");
-const undoBtn=$("#undoBtn");
-const redoBtn=$("#redoBtn");
-const expandAllBtn=$("#expandAllBtn");
-const collapseAllBtn=$("#collapseAllBtn");
+function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
 
-const nameEl=$("#name");
-const typeEl=$("#type");
-const parentEl=$("#parent");
-const fieldTypeRow=$("#fieldTypeRow");
-const fieldTypeEl=$("#fieldType");
+// ===== rendering =====
+const listEl=$("#list");
 
-const tabTree=$("#tab-tree"), tabJson=$("#tab-json"), tabPrev=$("#tab-preview");
-const viewTree=$("#view-tree"), viewJson=$("#view-json"), viewPrev=$("#view-preview");
+function render(){
+  listEl.innerHTML="";
+  // parent options depend on existing filters
+  const parentOptions=(currentId=null)=>{
+    // cannot choose self or descendants
+    const invalid=new Set();
+    if(currentId){
+      invalid.add(currentId);
+      (function markChildren(id){
+        data.filters.filter(f=>f.parentId===id).forEach(ch=>{invalid.add(ch.id);markChildren(ch.id)});
+      })(currentId);
+    }
+    const opts=[{id:"", name:"(нет)"}].concat(
+      data.filters.filter(f=>!invalid.has(f.id)).map(f=>({id:f.id,name:`${f.title||f.name||f.id} (${f.name||""})`}))
+    );
+    return opts;
+  };
 
-const jsonArea=$("#jsonArea");
-const fileInput=$("#fileInput");
-const importFileBtn=$("#importFileBtn");
-const downloadBtn=$("#downloadBtn");
-const applyJsonBtn=$("#applyJsonBtn");
-const resetDefaultsBtn=$("#resetDefaultsBtn");
-const saveLocalBtn=$("#saveLocalBtn");
-const loadLocalBtn=$("#loadLocalBtn");
+  data.filters.forEach(f=>{
+    const c=el("div",{className:"card"});
+    const h=el("h3");
+    h.append(
+      el("span",{textContent:f.title||"Без заголовка"}),
+      el("span",{className:"mini ghost",textContent:`(${f.name||f.id})`})
+    );
+    const delBtn=el("button",{className:"danger",textContent:"Удалить"});
+    delBtn.onclick=()=>{ if(!confirm("Удалить фильтр?")) return; removeFilter(f.id); };
+    h.append(el("span",{className:"sp"}), delBtn);
+    c.appendChild(h);
 
-const prevSection=$("#prevSection");
-const prevCategory=$("#prevCategory");
-const prevSubcategory=$("#prevSubcategory");
-const fieldsEl=$("#fields");
-const sizeBadge=$("#sizeBadge");
+    // row 1: title, name
+    const r1=el("div",{className:"row"});
+    r1.append(
+      wrap("Заголовок", el("input",{value:f.title||"", oninput:e=>{f.title=e.target.value; save(); h.firstChild.textContent=f.title||"Без заголовка";}})),
+      wrap("Имя (ключ)", el("input",{value:f.name||"", oninput:e=>{f.name=e.target.value; h.children[1].textContent=`(${f.name||f.id})`; save();}}))
+    );
+    c.appendChild(r1);
 
-/* ===== LocalStorage ===== */
-function load(){try{const raw=localStorage.getItem("filter_v06R");if(raw) data=JSON.parse(raw);}catch{}}
-function save(){localStorage.setItem("filter_v06R",JSON.stringify(data));}
+    // row 2: type, hint
+    const r2=el("div",{className:"row"});
+    const typeSelect=el("select",{onchange:e=>{f.type=e.target.value; save();}});
+    ["text","number","select","checkbox","date"].forEach(t=>{
+      typeSelect.append(el("option",{value:t,textContent:t,selected:f.type===t}));
+    });
+    r2.append(
+      wrap("Тип", typeSelect),
+      wrap("Описание", el("input",{placeholder:"подпись/подсказка", value:f.hint||"", oninput:e=>{f.hint=e.target.value; save();}}))
+    );
+    c.appendChild(r2);
 
-/* ===== История ===== */
-function pushHistory(){historyStack.push(clone(data));if(historyStack.length>100) historyStack.shift();futureStack=[];}
-undoBtn.onclick=()=>{if(!historyStack.length) return;futureStack.push(clone(data));data=historyStack.pop();save();renderAll();};
-redoBtn.onclick=()=>{if(!futureStack.length) return;historyStack.push(clone(data));data=futureStack.pop();save();renderAll();};
+    // row 3: parent, condition
+    const r3=el("div",{className:"row"});
+    const pSel=el("select",{onchange:e=>{ f.parentId=e.target.value||null; save(); render(); }});
+    parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id, textContent:o.name, selected:(f.parentId||"")===(o.id||"")})) );
+    r3.append(
+      wrap("Родитель (для каскада)", pSel),
+      wrap("Условие отображения (ключ=значение или ключ=знач1|знач2)", el("input",{
+        placeholder:"например: category=Квартира|Дом|Коммерция",
+        value:f.showIf||"",
+        oninput:e=>{f.showIf=e.target.value; save();}
+      }))
+    );
+    c.appendChild(r3);
 
-/* ===== Порядок ===== */
-function siblings(pid){
-  const arr=data.items.filter(x=>(x.parentId||"")===(pid||""));
-  arr.sort((a,b)=>{
+    // row 4: options and map
+    const r4=el("div",{className:"row"});
+    r4.append(
+      wrap("Опции (через запятую) — для select", el("textarea",{value:(f.options||[]).join(", "), oninput:e=>{
+        f.options=e.target.value.split(",").map(x=>x.trim()).filter(Boolean); save();
+      }})),
+      wrap("Карта опций (parent=опция1, опция2) — для каскада", el("textarea",{value:mapToText(f.map||{}), oninput:e=>{
+        f.map=textToMap(e.target.value); save();
+      }}))
+    );
+    c.appendChild(r4);
+
+    // row 5: id and move controls
+    const r5=el("div",{className:"row"});
+    r5.append(
+      wrap("ID (служебный, менять осторожно)", el("input",{value:f.id, oninput:e=>{f.id=e.target.value.trim(); save(); render();}})),
+      wrap("Порядок (число, меньше — выше)", el("input",{type:"number",value:Number.isFinite(f.order)?f.order:0, oninput:e=>{f.order=+e.target.value||0; save(); render();}}))
+    );
+    c.appendChild(r5);
+
+    listEl.appendChild(c);
+  });
+
+  // Add button at bottom
+  const addBottom=el("div",{style:"display:flex;justify-content:flex-start;margin:12px 0"});
+  const addBtn=el("button",{textContent:"+ Фильтр"});
+  addBtn.onclick=addFilter;
+  addBottom.append(addBtn);
+  listEl.append(addBottom);
+}
+
+function wrap(labelText, control){
+  const w=el("div");
+  const lb=el("label",{textContent:labelText});
+  w.append(lb, control);
+  return w;
+}
+
+// map helpers
+function mapToText(mapObj){
+  return Object.entries(mapObj).map(([k,arr])=>`${k}=${Array.isArray(arr)?arr.join(", "):""}`).join("\n");
+}
+function textToMap(text){
+  const out={};
+  text.split(/\n+/).map(l=>l.trim()).filter(Boolean).forEach(line=>{
+    const [k,v]=""+line.includes("=")?line.split("="):[line,""];
+    const items = (v||"").split(",").map(x=>x.trim()).filter(Boolean);
+    if(k) out[k.trim()]=items;
+  });
+  return out;
+}
+
+// data ops
+function addFilter(){
+  const id=uid();
+  data.filters.push({id, name:"", title:"Новый фильтр", type:"text", hint:"", parentId:null, options:[], map:{}, showIf:"", order:data.filters.length});
+  save(); render();
+}
+function removeFilter(id){
+  // remove children recursively
+  function rm(fid){
+    data.filters.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));
+    data.filters = data.filters.filter(f=>f.id!==fid);
+  }
+  rm(id);
+  save(); render();
+}
+
+// sorting by order then title
+function sortData(){
+  data.filters.sort((a,b)=>{
     const ao=Number.isFinite(a.order)?a.order:0;
     const bo=Number.isFinite(b.order)?b.order:0;
     if(ao!==bo) return ao-bo;
-    return (a.name||"").localeCompare(b.name||"");
-  });
-  return arr;
-}
-function normalizeOrder(pid){siblings(pid).forEach((it,i)=>{it.order=i;});}
-function reparent(item,newPid){const oldPid=item.parentId||"";item.parentId=newPid||null;normalizeOrder(oldPid);normalizeOrder(newPid||"");}
-function moveUp(item){const s=siblings(item.parentId||"");const idx=s.findIndex(x=>x.id===item.id);if(idx>0){const a=s[idx-1],b=s[idx];const t=a.order;a.order=b.order;b.order=t;}}
-function moveDown(item){const s=siblings(item.parentId||"");const idx=s.findIndex(x=>x.id===item.id);if(idx>=0&&idx<s.length-1){const a=s[idx],b=s[idx+1];const t=a.order;a.order=b.order;b.order=t;}}
-
-/* ===== Дерево ===== */
-function buildIndex(){
-  const byParent={};
-  data.items.forEach(it=>{
-    const k=it.parentId??"root";
-    (byParent[k]=byParent[k]||[]).push(it);
-  });
-  Object.keys(byParent).forEach(k=>{
-    byParent[k].sort((a,b)=>{
-      const ao=Number.isFinite(a.order)?a.order:0;
-      const bo=Number.isFinite(b.order)?b.order:0;
-      if(ao!==bo) return ao-bo;
-      return (a.name||"").localeCompare(b.name||"");
-    });
-  });
-  return byParent;
-}
-function renderTree(){
-  const byParent=buildIndex();
-  tree.innerHTML="";
-  (byParent["root"]||[]).forEach(it=>tree.appendChild(renderNode(it,byParent)));
-  renderParentOptions();
-  renderJSON();
-  renderPreview();
-}
-function renderNode(node,byParent){
-  const li=el("li");
-  const row=el("div",{className:"row"});
-  const toggle=el("button",{textContent: expanded.has(node.id)?"▾":"▸"});
-  toggle.onclick=()=>{expanded.has(node.id)?expanded.delete(node.id):expanded.add(node.id);renderTree();};
-  toggle.style.visibility=(byParent[node.id]&&byParent[node.id].length)?"visible":"hidden";
-  const label=el("span",{className:"node",textContent:`${node.name} [${node.type}]`});
-  if(selectedId===node.id) label.classList.add("active");
-  label.onclick=()=>select(node.id);
-  row.append(toggle,label);
-  li.appendChild(row);
-  if(expanded.has(node.id) && byParent[node.id]?.length){
-    const ul=el("ul");
-    byParent[node.id].forEach(ch=>ul.appendChild(renderNode(ch,byParent)));
-    li.appendChild(ul);
-  }
-  return li;
-}
-function select(id){
-  selectedId=id;
-  const it=data.items.find(x=>x.id===id);
-  if(!it) return;
-  nameEl.value=it.name||"";
-  typeEl.value=it.type||"section";
-  parentEl.value=it.parentId||"";
-  if(it.type==="field"){
-    fieldTypeRow.classList.remove("hidden");
-    fieldTypeEl.value=it.fieldType||"text";
-  }else{
-    fieldTypeRow.classList.add("hidden");
-  }
-  renderTree();
-}
-
-/* ===== Родитель ===== */
-function renderParentOptions(){
-  parentEl.innerHTML="<option value=''>Нет</option>";
-  const invalid=new Set();
-  if(selectedId){
-    invalid.add(selectedId);
-    (function markChildren(id){
-      data.items.filter(x=>x.parentId===id).forEach(ch=>{invalid.add(ch.id);markChildren(ch.id)});
-    })(selectedId);
-  }
-  data.items.forEach(it=>{
-    if(invalid.has(it.id)) return;
-    parentEl.appendChild(el("option",{value:it.id,textContent:`${it.name} [${it.type}]`}));
+    return (a.title||"").localeCompare(b.title||"");
   });
 }
 
-/* ===== Команды ===== */
-addBtn.onclick=()=>{
-  pushHistory();
-  const id=uid();
-  const item={id,name:"Новый фильтр",parentId:null,type:"section",order:siblings(null).length};
-  data.items.push(item);
-  selectedId=id; expanded.add(id);
-  save(); renderAll();
-};
-addChildBtn.onclick=()=>{
-  pushHistory();
-  const id=uid();
-  let pid=null;
-  if(selectedId){
-    const sel=data.items.find(x=>x.id===selectedId);
-    pid = sel.type==="field" ? sel.parentId : sel.id;
-  }
-  const item={id,name:"Новый фильтр",parentId:pid,type:"category",order:siblings(pid).length};
-  data.items.push(item);
-  selectedId=id; if(pid) expanded.add(pid); expanded.add(id);
-  save(); renderAll();
-};
-clearBtn.onclick=()=>{
-  if(!confirm("Очистить все фильтры?")) return;
-  pushHistory();
-  data={items:[]}; selectedId=null; expanded.clear();
-  save(); renderAll();
-};
-
-$("#saveBtn").onclick=()=>{
-  if(!selectedId) return alert("Не выбран фильтр");
-  pushHistory();
-  const it=data.items.find(x=>x.id===selectedId);
-  it.name=nameEl.value.trim()||"Без имени";
-  const newType=typeEl.value;
-  const newParent=parentEl.value||null;
-  if(newType==="field"){
-    it.fieldType=fieldTypeEl.value||"text";
-  }else{
-    delete it.fieldType;
-  }
-  it.type=newType;
-  if(it.parentId!==newParent){
-    reparent(it,newParent);
-  }
-  save(); renderAll();
-};
-$("#delBtn").onclick=()=>{
-  if(!selectedId) return;
-  if(!confirm("Удалить фильтр и всех его потомков?")) return;
-  pushHistory();
-  const remove=id=>{
-    data.items.filter(x=>x.parentId===id).forEach(ch=>remove(ch.id));
-    data.items=data.items.filter(x=>x.id!==id);
-  };
-  const it=data.items.find(x=>x.id===selectedId);
-  const pid=it?.parentId||null;
-  remove(selectedId);
-  normalizeOrder(pid);
-  selectedId=null;
-  save(); renderAll();
-};
-$("#dupBtn").onclick=()=>{
-  if(!selectedId) return;
-  pushHistory();
-  const it=data.items.find(x=>x.id===selectedId);
-  const id=uid();
-  const copy={...clone(it), id, name:it.name+" (копия)"};
-  copy.order=siblings(copy.parentId).length;
-  data.items.push(copy);
-  selectedId=id;
-  save(); renderAll();
-};
-$("#dupSubBtn").onclick=()=>{
-  if(!selectedId) return;
-  pushHistory();
-  function cloneRec(id,newParent){
-    const it=data.items.find(x=>x.id===id);
-    const nid=uid();
-    const copy={...clone(it), id:nid, name:it.name+" (копия)", parentId:newParent, order:siblings(newParent).length};
-    data.items.push(copy);
-    data.items.filter(x=>x.parentId===id).forEach(ch=>cloneRec(ch.id,nid));
-    return nid;
-  }
-  const rootNewId = cloneRec(selectedId, data.items.find(x=>x.id===selectedId).parentId);
-  selectedId=rootNewId;
-  save(); renderAll();
-};
-$("#upBtn").onclick=()=>{
-  if(!selectedId) return;
-  pushHistory();
-  const it=data.items.find(x=>x.id===selectedId);
-  moveUp(it);
-  save(); renderAll();
-};
-$("#downBtn").onclick=()=>{
-  if(!selectedId) return;
-  pushHistory();
-  const it=data.items.find(x=>x.id===selectedId);
-  moveDown(it);
-  save(); renderAll();
-};
-
-expandAllBtn.onclick=()=>{ data.items.forEach(it=>expanded.add(it.id)); renderTree(); };
-collapseAllBtn.onclick=()=>{ expanded.clear(); renderTree(); };
-
-typeEl.onchange=()=>{ if(typeEl.value==="field") fieldTypeRow.classList.remove("hidden"); else fieldTypeRow.classList.add("hidden"); };
-
-/* ===== JSON: импорт/экспорт ===== */
-function renderJSON(){ jsonArea.value=JSON.stringify(data,null,2); }
-downloadBtn.onclick=()=>{
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"filter-data_v06R.json"});
-  document.body.appendChild(a); a.click(); a.remove();
-};
-applyJsonBtn.onclick=()=>{
-  try{
-    const json=JSON.parse(jsonArea.value);
-    if(!json.items) throw new Error("Отсутствует ключ items");
-    pushHistory();
-    data=json;
-    new Set(data.items.map(it=>it.parentId||"")).forEach(pid=>normalizeOrder(pid));
-    save(); renderAll(); alert("Применено");
-  }catch(e){ alert("Ошибка JSON: "+e.message); }
-};
-importFileBtn.onclick=async ()=>{
-  const f=fileInput.files?.[0];
-  if(!f) return alert("Выберите JSON-файл");
-  try{
-    const txt=await f.text();
-    const json=JSON.parse(txt);
-    if(!json.items) throw new Error("Отсутствует ключ items");
-    pushHistory();
-    data=json;
-    new Set(data.items.map(it=>it.parentId||"")).forEach(pid=>normalizeOrder(pid));
-    save(); renderAll(); alert("Импортировано");
-  }catch(e){ alert("Ошибка импорта: "+e.message); }
-};
-resetDefaultsBtn.onclick=()=>{
-  if(!confirm("Сбросить к демо данным?")) return;
-  pushHistory();
-  data={items:[
-    {id:"realty",name:"Фильтр: Недвижимость",parentId:null,type:"section",order:0},
-    {id:"flat",name:"Фильтр: Квартиры",parentId:"realty",type:"category",order:0},
-    {id:"rent",name:"Фильтр: Аренда",parentId:"flat",type:"subcategory",order:0},
-    {id:"price",name:"Фильтр: Цена",parentId:null,type:"field",fieldType:"number",order:0},
-    {id:"floor",name:"Фильтр: Этаж",parentId:"flat",type:"field",fieldType:"number",order:1}
-  ]};
-  selectedId=null; expanded.clear();
-  save(); renderAll();
-};
-saveLocalBtn.onclick=()=>{ save(); alert("Сохранено в LocalStorage"); };
-loadLocalBtn.onclick=()=>{ load(); renderAll(); alert("Загружено из LocalStorage"); };
-
-/* ===== Предпросмотр ===== */
-function renderPreview(){
-  prevSection.innerHTML="<option value=''>--</option>";
-  data.items.filter(x=>x.type==="section").sort((a,b)=>(a.order??0)-(b.order??0)).forEach(s=>{
-    prevSection.appendChild(el("option",{value:s.id,textContent:s.name}));
-  });
-  updatePreview();
-}
-function updatePreview(){
-  prevCategory.innerHTML="<option value=''>--</option>";
-  prevSubcategory.innerHTML="<option value=''>--</option>";
-  fieldsEl.innerHTML="";
-  const sec=data.items.find(x=>x.id===prevSection.value);
-  if(sec) siblings(sec.id).filter(x=>x.type==="category").forEach(c=>{
-    prevCategory.appendChild(el("option",{value:c.id,textContent:c.name}));
-  });
-  const cat=data.items.find(x=>x.id===prevCategory.value);
-  if(cat) siblings(cat.id).filter(x=>x.type==="subcategory").forEach(sc=>{
-    prevSubcategory.appendChild(el("option",{value:sc.id,textContent:sc.name}));
-  });
-  const sub=data.items.find(x=>x.id===prevSubcategory.value);
-  const map=new Map();
-  data.items.forEach(it=>{
-    if(it.type!=="field") return;
-    if(it.parentId===null) map.set(it.id,it);
-    if(sec && it.parentId===sec.id) map.set(it.id,it);
-    if(cat && it.parentId===cat.id) map.set(it.id,it);
-    if(sub && it.parentId===sub.id) map.set(it.id,it);
-  });
-  if(!map.size){ fieldsEl.textContent="Нет полей"; return; }
-  [...map.values()].sort((a,b)=>(a.order??0)-(b.order??0)).forEach(f=>{
-    const row=el("div",{className:"row"});
-    row.appendChild(el("label",{className:"sp",textContent:`${f.name} (${f.fieldType||"text"})`}));
-    let inp;if(f.fieldType==="number") inp=el("input",{type:"number"});
-    else if(f.fieldType==="select") inp=el("select");
-    else inp=el("input",{type:"text"});
-    row.appendChild(inp);
-    fieldsEl.appendChild(row);
-  });
-}
-prevSection.onchange=updatePreview;
-prevCategory.onchange=updatePreview;
-prevSubcategory.onchange=updatePreview;
-
-/* ===== Табы ===== */
-function activate(tab){
-  tabTree.classList.remove("active"); tabJson.classList.remove("active"); tabPrev.classList.remove("active");
-  viewTree.classList.add("hidden"); viewJson.classList.add("hidden"); viewPrev.classList.add("hidden");
-  if(tab==="tree"){tabTree.classList.add("active");viewTree.classList.remove("hidden");}
-  if(tab==="json"){tabJson.classList.add("active");viewJson.classList.remove("hidden");}
-  if(tab==="preview"){tabPrev.classList.add("active");viewPrev.classList.remove("hidden");}
-}
-tabTree.onclick=()=>activate("tree");
-tabJson.onclick=()=>activate("json");
-tabPrev.onclick=()=>activate("preview");
-
-/* ===== Размер файла ===== */
-function updateSizeBadge(){
+// header size
+function updateSize(){
   try{
     const bytes = new Blob([document.documentElement.outerHTML]).size;
     const kb = (bytes/1024).toFixed(1);
-    sizeBadge.textContent = `Размер: ${kb} КБ`;
-  }catch{ sizeBadge.textContent = "Размер: неизвестно"; }
+    $("#sizeBadge").textContent = `Размер: ${kb} КБ`;
+  }catch{ $("#sizeBadge").textContent = "Размер: неизвестно"; }
 }
 
-/* ===== Рендер всего ===== */
-function renderAll(){
-  new Set(data.items.map(it=>it.parentId||"")).forEach(pid=>normalizeOrder(pid));
-  renderTree();
-  updateSizeBadge();
-}
+// import/export
+$("#importBtn").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=async e=>{
+  const f=e.target.files?.[0]; if(!f) return;
+  try{
+    const txt=await f.text(); const json=JSON.parse(txt);
+    if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items}; else throw new Error("Ожидается {filters:[...] }");
+    sortData(); save(); render(); alert("Импортировано");
+  }catch(err){ alert("Ошибка импорта: "+err.message); }
+};
+$("#exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v08R.json"});
+  document.body.appendChild(a); a.click(); a.remove();
+};
+$("#addBtn").onclick=addFilter;
+$("#clearBtn").onclick=()=>{ if(confirm("Очистить все фильтры?")){ data={filters:[]}; save(); render(); }};
 
-/* ===== Инициализация ===== */
+// init
 (function init(){
   load();
-  if(!data.items.length){
-    data={items:[
-      {id:"realty",name:"Фильтр: Недвижимость",parentId:null,type:"section",order:0},
-      {id:"flat",name:"Фильтр: Квартиры",parentId:"realty",type:"category",order:0},
-      {id:"rent",name:"Фильтр: Аренда",parentId:"flat",type:"subcategory",order:0},
-      {id:"price",name:"Фильтр: Цена",parentId:null,type:"field",fieldType:"number",order:0},
-      {id:"floor",name:"Фильтр: Этаж",parentId:"flat",type:"field",fieldType:"number",order:1}
-    ]};
+  if(!data.filters.length){
+    data.filters = [
+      {id:"country", name:"country", title:"Страна", type:"select", hint:"подпись/подсказка", parentId:null, options:["Узбекистан"], map:{}, showIf:"", order:0},
+      {id:"city", name:"city", title:"Город", type:"select", hint:"подпись/подсказка", parentId:"country", options:[], map:{"Узбекистан":["Ташкент","Самарканд"]}, showIf:"", order:1}
+    ];
   }
-  data.items.forEach(it=>{ if(it.parentId===null) expanded.add(it.id); });
-  renderAll();
+  sortData();
+  render();
+  updateSize();
 })();
 </script>
 </body>
