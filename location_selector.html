@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.24R</title>
+<title>location_selector v39.25R</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -101,14 +101,18 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 /* лейбл длин ребер */
 .edge-label{
-  background: rgba(0,0,0,0.75);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:28px;
+  min-height:20px;
+  padding:2px 6px;
+  background:rgba(0,0,0,0.7);
   color:#fff;
-  font-size:16px;
-  font-weight:800;
-  padding:3px 8px;
-  border:1px solid #fff;
-  border-radius:6px;
-  text-shadow:0 0 3px #000, 0 0 6px #000;
+  font-size:14px;
+  font-weight:bold;
+  border-radius:4px;
+  text-shadow:0 0 3px #000,0 0 6px #000;
   white-space:nowrap;
   pointer-events:none;
 }
@@ -116,7 +120,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.24R</span>
+  <span class="badge">location_selector v39.25R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -448,7 +452,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     updateEdgeLabels(p.id);
     return true;
   }
-  function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:4,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
+  function layerFromGeo(geo,c){ let l=null; L.geoJSON(geo,{style:{color:c||'#ff4d4f',weight:2,fillOpacity:.12}}).eachLayer(x=>l=x); return l; }
   function rebuildPolys(){
     polyIndex.clear(); polyFG.clearLayers();
     for(const p of db.polygons){
@@ -467,7 +471,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   const $polySearch=document.getElementById('polySearch');
 
   document.getElementById('btnPolyNew').onclick=()=>{
-    new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:4,fillOpacity:.12}}).enable();
+    new L.Draw.Polygon(map,{shapeOptions:{color:$polyColor.value||'#ff4d4f',weight:2,fillOpacity:.12}}).enable();
   };
 
   let polyEditToolbar=null, polyEditing=false, polyEditingTargetId=null;
