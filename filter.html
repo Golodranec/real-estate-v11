@@ -2,23 +2,22 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Фильтр v01R — дерево + предпросмотр (фикс)</title>
+<title>Фильтр v02R — полный</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--side:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
-  *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);display:flex;height:100vh}
   aside{width:300px;background:var(--side);border-right:1px solid var(--line);overflow:auto;padding:10px}
   main{flex:1;display:flex;flex-direction:column;padding:12px;overflow:auto}
   h1{margin:0;font-size:16px;padding:10px;background:var(--line)}
-  ul{list-style:none;padding-left:18px;margin:8px 0}
-  li{margin:4px 0}
+  ul{list-style:none;padding-left:18px;margin:6px 0}
+  li{margin:2px 0}
   li span{padding:2px 6px;border-radius:6px;cursor:pointer;display:inline-block}
   li span.active{background:var(--ok);color:#052e16}
   .editor{background:var(--side);padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:8px;max-width:640px;margin-bottom:16px;border:1px solid var(--line)}
   input,select,textarea,button{font:inherit}
-  input,select{padding:8px;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:var(--text)}
-  button{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
+  input,select{padding:6px;border-radius:6px;border:1px solid var(--line);background:#0b1220;color:var(--text)}
+  button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
   button.primary{background:var(--ok);color:#052e16}
   button.danger{background:var(--err);color:#3b0a0a}
   textarea{width:100%;height:220px;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,Consolas,Menlo,monospace;font-size:13px}
@@ -28,8 +27,6 @@
   nav button.active{background:var(--ok);color:#052e16}
   .hidden{display:none}
   .card{background:var(--side);padding:12px;border-radius:10px;border:1px solid var(--line);margin-bottom:16px}
-  .note{font-size:12px;opacity:.8}
-  .hr{height:1px;background:var(--line);margin:8px 0}
 </style>
 </head>
 <body>
@@ -37,8 +34,7 @@
     <h1>Элементы</h1>
     <div class="row">
       <button id="addBtn">＋ Добавить</button>
-      <button id="expandAllBtn">▾ Все</button>
-      <button id="collapseAllBtn">▸ Все</button>
+      <button id="clearBtn" class="danger">Очистить всё</button>
     </div>
     <ul id="tree"></ul>
   </aside>
@@ -53,7 +49,7 @@
     <section id="view-tree">
       <div class="editor">
         <h2>Редактор</h2>
-        <label>Название <input id="name" placeholder="Например: Квартиры"></label>
+        <label>Название <input id="name"></label>
         <label>Тип
           <select id="type">
             <option value="section">Раздел</option>
@@ -75,23 +71,18 @@
         <div class="row">
           <button class="primary" id="saveBtn">Сохранить</button>
           <button class="danger" id="delBtn">Удалить</button>
+          <button id="dupBtn">Дублировать</button>
         </div>
-        <div class="note">Подсказка: поле без родителя = глобальное (например, Цена).</div>
+        <div class="row">
+          <button id="upBtn">↑ Вверх</button>
+          <button id="downBtn">↓ Вниз</button>
+        </div>
       </div>
     </section>
 
     <section id="view-json" class="hidden">
       <div class="card">
         <h2>JSON</h2>
-        <div class="row">
-          <input type="file" id="fileInput" accept=".json,application/json">
-          <button id="importFileBtn">Импорт из файла</button>
-          <button id="exportBtn" class="primary">Экспорт</button>
-          <button id="resetBtn" class="danger">Сброс</button>
-          <span class="sp"></span>
-          <button id="saveLocalBtn">Сохранить LS</button>
-          <button id="loadLocalBtn">Загрузить LS</button>
-        </div>
         <textarea id="jsonArea"></textarea>
       </div>
     </section>
@@ -104,314 +95,112 @@
           <label class="sp">Категория <select id="prevCategory" class="sp"></select></label>
           <label class="sp">Подкатегория <select id="prevSubcategory" class="sp"></select></label>
         </div>
-        <div class="hr"></div>
         <div id="fields"></div>
       </div>
     </section>
   </main>
 
 <script>
-/* ===== Утилиты ===== */
-const $ = s => document.querySelector(s);
-const el = (t,p={}) => Object.assign(document.createElement(t), p);
-const uid = () => Math.random().toString(36).slice(2,9);
+const $=s=>document.querySelector(s);
+const el=(t,p={})=>Object.assign(document.createElement(t),p);
+const uid=()=>Math.random().toString(36).slice(2,9);
 
-/* ===== Состояние ===== */
-let expanded = new Set(); // открытые узлы дерева
-let data = {
-  items:[
-    {id:"realty",name:"Недвижимость",parentId:null,type:"section"},
-    {id:"flat",name:"Квартиры",parentId:"realty",type:"category"},
-    {id:"rent",name:"Аренда",parentId:"flat",type:"subcategory"},
-    {id:"price",name:"Цена",parentId:null,type:"field",fieldType:"number"},
-    {id:"floor",name:"Этаж",parentId:"flat",type:"field",fieldType:"number"}
-  ]
-};
-let selectedId = null;
+let data={items:[]};
+let selectedId=null;
 
-/* ===== DOM ===== */
-const treeEl = $("#tree");
-const addBtn = $("#addBtn");
-const expandAllBtn = $("#expandAllBtn");
-const collapseAllBtn = $("#collapseAllBtn");
+/* LocalStorage */
+function load(){try{const raw=localStorage.getItem("filter_v02R");if(raw) data=JSON.parse(raw);}catch{}}
+function save(){localStorage.setItem("filter_v02R",JSON.stringify(data));}
 
-const nameEl = $("#name");
-const typeEl = $("#type");
-const parentEl = $("#parent");
-const fieldTypeRow = $("#fieldTypeRow");
-const fieldTypeEl = $("#fieldType");
-
-const tabTree=$("#tab-tree"), tabJson=$("#tab-json"), tabPrev=$("#tab-preview");
-const viewTree=$("#view-tree"), viewJson=$("#view-json"), viewPrev=$("#view-preview");
-
-const jsonArea=$("#jsonArea");
-const fileInput=$("#fileInput");
-const importFileBtn=$("#importFileBtn");
-const exportBtn=$("#exportBtn");
-const resetBtn=$("#resetBtn");
-const saveLocalBtn=$("#saveLocalBtn");
-const loadLocalBtn=$("#loadLocalBtn");
-
-const prevSection=$("#prevSection");
-const prevCategory=$("#prevCategory");
-const prevSubcategory=$("#prevSubcategory");
-const fieldsEl=$("#fields");
-
-/* ===== Рендер дерева ===== */
-function buildIndex(){
-  const byParent = new Map();
-  data.items.forEach(it=>{
-    const key = it.parentId ?? "__root__";
-    if(!byParent.has(key)) byParent.set(key, []);
-    byParent.get(key).push(it);
-  });
-  return byParent;
-}
-
+/* Render Tree */
 function renderTree(){
-  const byParent = buildIndex();
-  treeEl.innerHTML = "";
-  const root = byParent.get("__root__") || byParent.get(null) || [];
-  root.forEach(it => treeEl.appendChild(renderNode(it, byParent)));
+  const byParent={};
+  data.items.forEach(it=>{const k=it.parentId??"root";(byParent[k]=byParent[k]||[]).push(it)});
+  tree.innerHTML="";
+  function build(pid,ul){
+    (byParent[pid]||[]).forEach(it=>{
+      const li=el("li");
+      const span=el("span",{textContent:`${it.name} [${it.type}]`});
+      if(it.id===selectedId) span.classList.add("active");
+      span.onclick=()=>select(it.id);
+      li.appendChild(span);
+      const u=el("ul");build(it.id,u);if(u.children.length) li.appendChild(u);
+      ul.appendChild(li);
+    });
+  }
+  build("root",tree);
+  jsonArea.value=JSON.stringify(data,null,2);
   renderParentOptions();
-  renderJSON();
   renderPreview();
 }
 
-function renderNode(node, byParent){
-  const li = el("li");
-  const row = el("div",{className:"row", style:"align-items:center"});
-  const toggle = el("button",{textContent: expanded.has(node.id) ? "▾" : "▸"});
-  toggle.style.minWidth="32px";
-  toggle.onclick = ()=>{ 
-    if(expanded.has(node.id)) expanded.delete(node.id); else expanded.add(node.id);
-    renderTree();
-  };
-  const label = el("span",{textContent:`${node.name} [${node.type}]`});
-  if(node.id===selectedId) label.classList.add("active");
-  label.onclick = ()=> select(node.id);
-
-  // показать кнопку только если есть дети
-  const hasChildren = (byParent.get(node.id)||[]).length>0;
-  toggle.style.visibility = hasChildren ? "visible" : "hidden";
-
-  row.append(toggle, label);
-  li.appendChild(row);
-
-  if(hasChildren && expanded.has(node.id)){
-    const ul = el("ul");
-    byParent.get(node.id).forEach(ch => ul.appendChild(renderNode(ch, byParent)));
-    li.appendChild(ul);
-  }
-  return li;
-}
-
-/* ===== Выбор элемента и редактор ===== */
-function select(id){
-  selectedId = id;
-  const it = data.items.find(x=>x.id===id);
-  if(!it) return;
-  nameEl.value = it.name || "";
-  typeEl.value = it.type || "section";
-  parentEl.value = it.parentId || "";
-  if(it.type==="field"){
-    fieldTypeRow.classList.remove("hidden");
-    fieldTypeEl.value = it.fieldType || "text";
-  }else{
-    fieldTypeRow.classList.add("hidden");
-  }
-  renderTree();
-}
-
-addBtn.onclick = ()=>{
-  const id = uid();
-  const item = { id, name:"Новый", parentId: null, type:"section" };
-  data.items.push(item);
-  expanded.add(null); // гарантируем корень открыт
-  select(id);
-};
-
-expandAllBtn.onclick = ()=>{
-  data.items.forEach(it=>expanded.add(it.id));
-  renderTree();
-};
-collapseAllBtn.onclick = ()=>{
-  expanded.clear();
-  renderTree();
-};
-
-$("#saveBtn").onclick = ()=>{
-  if(!selectedId) return alert("Не выбран элемент");
-  const it = data.items.find(x=>x.id===selectedId);
-  it.name = nameEl.value.trim() || "Без имени";
-  it.type = typeEl.value;
-  it.parentId = parentEl.value || null;
-  if(it.type==="field"){
-    it.fieldType = fieldTypeEl.value || "text";
-  }else{
-    delete it.fieldType;
-  }
-  // раскрыть родителя после изменения
-  if(it.parentId) expanded.add(it.parentId);
-  renderTree();
-};
-
-$("#delBtn").onclick = ()=>{
-  if(!selectedId) return;
-  if(!confirm("Удалить элемент и всех его потомков?")) return;
-  const removeRec = id => {
-    data.items.filter(x=>x.parentId===id).forEach(ch=>removeRec(ch.id));
-    data.items = data.items.filter(x=>x.id!==id);
-  };
-  removeRec(selectedId);
-  selectedId = null;
-  renderTree();
-};
-
-typeEl.onchange = ()=>{
-  if(typeEl.value==="field") fieldTypeRow.classList.remove("hidden");
-  else fieldTypeRow.classList.add("hidden");
-};
-
-/* ===== Родители в select ===== */
+/* Parent Options */
 function renderParentOptions(){
-  parentEl.innerHTML = "<option value=''>Нет</option>";
-  data.items.forEach(it=>{
-    const opt = el("option",{value:it.id, textContent:`${it.name} [${it.type}]`});
-    parentEl.appendChild(opt);
-  });
+  parent.innerHTML="<option value=''>Нет</option>";
+  if(!selectedId){data.items.forEach(it=>parent.appendChild(el("option",{value:it.id,textContent:it.name})));return}
+  const invalid=new Set([selectedId]);
+  function markChildren(id){data.items.filter(x=>x.parentId===id).forEach(ch=>{invalid.add(ch.id);markChildren(ch.id)})}
+  markChildren(selectedId);
+  data.items.forEach(it=>{if(!invalid.has(it.id)) parent.appendChild(el("option",{value:it.id,textContent:it.name}))});
 }
 
-/* ===== JSON: импорт/экспорт/LS ===== */
-function renderJSON(){ jsonArea.value = JSON.stringify(data, null, 2); }
-
-exportBtn.onclick = ()=>{
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a = el("a",{href:URL.createObjectURL(blob), download:"filter-data.json"});
-  document.body.appendChild(a); a.click(); a.remove();
-};
-
-importFileBtn.onclick = async ()=>{
-  const f = fileInput.files?.[0];
-  if(!f) return alert("Выберите JSON-файл");
-  try{
-    const txt = await f.text();
-    const json = JSON.parse(txt);
-    if(!json.items) throw new Error("Отсутствует ключ items");
-    data = json;
-    expanded.clear();
-    renderTree();
-    alert("Импортировано");
-  }catch(e){ alert("Ошибка импорта: "+e.message); }
-};
-
-$("#importBtn")?.addEventListener("click", ()=>{
-  try{
-    const json = JSON.parse(jsonArea.value);
-    if(!json.items) throw new Error("Отсутствует ключ items");
-    data = json; expanded.clear(); renderTree(); alert("Импортировано");
-  }catch(e){ alert("Ошибка JSON: "+e.message); }
-});
-
-resetBtn.onclick = ()=>{
-  if(!confirm("Сбросить данные?")) return;
-  data = { items: [] };
-  expanded.clear();
+/* Select */
+function select(id){
+  selectedId=id;const it=data.items.find(x=>x.id===id);if(!it)return;
+  name.value=it.name;type.value=it.type;parent.value=it.parentId||"";
+  if(it.type==="field"){fieldTypeRow.classList.remove("hidden");fieldType.value=it.fieldType||"text"}else fieldTypeRow.classList.add("hidden");
   renderTree();
-};
+}
 
-saveLocalBtn.onclick = ()=>{
-  localStorage.setItem("filter_v01R_data", JSON.stringify(data));
-  alert("Сохранено в LocalStorage");
-};
-loadLocalBtn.onclick = ()=>{
-  const raw = localStorage.getItem("filter_v01R_data");
-  if(!raw) return alert("В LocalStorage пусто");
-  try{ data = JSON.parse(raw); renderTree(); alert("Загружено"); }
-  catch{ alert("Повреждён JSON в LocalStorage"); }
-};
+/* Buttons */
+addBtn.onclick=()=>{const id=uid();data.items.push({id,name:"Новый",parentId:null,type:"section"});select(id);save();renderTree()}
+saveBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);it.name=name.value;it.type=type.value;it.parentId=parent.value||null;if(it.type==="field")it.fieldType=fieldType.value;else delete it.fieldType;save();renderTree()}
+delBtn.onclick=()=>{if(!selectedId)return;const remove=id=>{data.items.filter(x=>x.parentId===id).forEach(ch=>remove(ch.id));data.items=data.items.filter(x=>x.id!==id)};remove(selectedId);selectedId=null;save();renderTree()}
+dupBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);const id=uid();const copy={...it,id,name:it.name+" (копия)"};data.items.push(copy);save();renderTree()}
+upBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);const arr=data.items.filter(x=>(x.parentId||"")===(it.parentId||""));const idx=arr.findIndex(x=>x.id===it.id);if(idx>0){const a=data.items.indexOf(arr[idx-1]);const b=data.items.indexOf(arr[idx]);[data.items[a],data.items[b]]=[data.items[b],data.items[a]];save();renderTree()}}
+downBtn.onclick=()=>{if(!selectedId)return;const it=data.items.find(x=>x.id===selectedId);const arr=data.items.filter(x=>(x.parentId||"")===(it.parentId||""));const idx=arr.findIndex(x=>x.id===it.id);if(idx<arr.length-1){const a=data.items.indexOf(arr[idx]);const b=data.items.indexOf(arr[idx+1]);[data.items[a],data.items[b]]=[data.items[b],data.items[a]];save();renderTree()}}
+clearBtn.onclick=()=>{if(confirm("Очистить всё дерево?")){data={items:[]};selectedId=null;save();renderTree()}}
+type.onchange=()=>{if(type.value==="field")fieldTypeRow.classList.remove("hidden");else fieldTypeRow.classList.add("hidden")}
 
-/* ===== Предпросмотр ===== */
+/* Preview */
 function renderPreview(){
-  // секции
-  prevSection.innerHTML = "<option value=''>--</option>";
-  data.items.filter(x=>x.type==="section").forEach(s=>{
-    prevSection.appendChild(el("option",{value:s.id,textContent:s.name}));
-  });
+  prevSection.innerHTML="<option value=''>--</option>";
+  data.items.filter(x=>x.type==="section").forEach(s=>prevSection.appendChild(el("option",{value:s.id,textContent:s.name})));
   updatePreview();
 }
-
 function updatePreview(){
-  prevCategory.innerHTML = "<option value=''>--</option>";
-  prevSubcategory.innerHTML = "<option value=''>--</option>";
-  fieldsEl.innerHTML = "";
-
-  const sec = data.items.find(x=>x.id===prevSection.value);
-  if(sec){
-    data.items.filter(x=>x.parentId===sec.id && x.type==="category")
-      .forEach(c=>prevCategory.appendChild(el("option",{value:c.id,textContent:c.name})));
-  }
-  const cat = data.items.find(x=>x.id===prevCategory.value);
-  if(cat){
-    data.items.filter(x=>x.parentId===cat.id && x.type==="subcategory")
-      .forEach(sc=>prevSubcategory.appendChild(el("option",{value:sc.id,textContent:sc.name})));
-  }
-  const sub = data.items.find(x=>x.id===prevSubcategory.value);
-
-  // Поля: глобальные + на каждом уровне
-  const fields = [];
+  prevCategory.innerHTML="<option value=''>--</option>";
+  prevSubcategory.innerHTML="<option value=''>--</option>";
+  fields.innerHTML="";
+  const sec=data.items.find(x=>x.id===prevSection.value);
+  if(sec)data.items.filter(x=>x.parentId===sec.id&&x.type==="category").forEach(c=>prevCategory.appendChild(el("option",{value:c.id,textContent:c.name})));
+  const cat=data.items.find(x=>x.id===prevCategory.value);
+  if(cat)data.items.filter(x=>x.parentId===cat.id&&x.type==="subcategory").forEach(sc=>prevSubcategory.appendChild(el("option",{value:sc.id,textContent:sc.name})));
+  const sub=data.items.find(x=>x.id===prevSubcategory.value);
+  const fieldsArr=[];
   data.items.forEach(it=>{
-    if(it.type!=="field") return;
-    if(it.parentId===null) fields.push(it);
-    if(sec && it.parentId===sec.id) fields.push(it);
-    if(cat && it.parentId===cat.id) fields.push(it);
-    if(sub && it.parentId===sub.id) fields.push(it);
+    if(it.type!=="field")return;
+    if(it.parentId===null)fieldsArr.push(it);
+    if(sec&&it.parentId===sec.id)fieldsArr.push(it);
+    if(cat&&it.parentId===cat.id)fieldsArr.push(it);
+    if(sub&&it.parentId===sub.id)fieldsArr.push(it);
   });
-
-  if(fields.length===0){ fieldsEl.textContent="Нет полей для выбранной комбинации"; return; }
-
-  fields.forEach(f=>{
-    const row = el("div",{className:"row"});
-    const label = el("label",{className:"sp", textContent:`${f.name} (${f.fieldType||"text"})`});
-    let input;
-    if(f.fieldType==="number") input = el("input",{type:"number",placeholder:f.name});
-    else if(f.fieldType==="select") input = el("select");
-    else input = el("input",{type:"text",placeholder:f.name});
-    row.append(label,input);
-    fieldsEl.appendChild(row);
+  if(!fieldsArr.length){fields.textContent="Нет полей";return}
+  fieldsArr.forEach(f=>{
+    const row=el("div",{className:"row"});
+    row.appendChild(el("label",{className:"sp",textContent:`${f.name} (${f.fieldType||"text"})`}));
+    let inp;if(f.fieldType==="number")inp=el("input",{type:"number"});else if(f.fieldType==="select")inp=el("select");else inp=el("input",{type:"text"});
+    row.appendChild(inp);fields.appendChild(row);
   });
 }
+prevSection.onchange=updatePreview;prevCategory.onchange=updatePreview;prevSubcategory.onchange=updatePreview;
 
-prevSection.onchange = updatePreview;
-prevCategory.onchange = updatePreview;
-prevSubcategory.onchange = updatePreview;
+/* Tabs */
+function activate(tab){tabTree.classList.remove("active");tabJson.classList.remove("active");tabPreview.classList.remove("active");viewTree.classList.add("hidden");viewJson.classList.add("hidden");viewPreview.classList.add("hidden");if(tab==="tree"){tabTree.classList.add("active");viewTree.classList.remove("hidden")}if(tab==="json"){tabJson.classList.add("active");viewJson.classList.remove("hidden")}if(tab==="preview"){tabPreview.classList.add("active");viewPreview.classList.remove("hidden")}}
+tabTree.onclick=()=>activate("tree");tabJson.onclick=()=>activate("json");tabPreview.onclick=()=>activate("preview");
 
-/* ===== Табы ===== */
-function activate(tab){
-  tabTree.classList.remove("active"); tabJson.classList.remove("active"); tabPrev.classList.remove("active");
-  viewTree.classList.add("hidden"); viewJson.classList.add("hidden"); viewPrev.classList.add("hidden");
-  if(tab==="tree"){ tabTree.classList.add("active"); viewTree.classList.remove("hidden"); }
-  if(tab==="json"){ tabJson.classList.add("active"); viewJson.classList.remove("hidden"); }
-  if(tab==="preview"){ tabPrev.classList.add("active"); viewPrev.classList.remove("hidden"); }
-}
-tabTree.onclick = ()=>activate("tree");
-tabJson.onclick = ()=>activate("json");
-tabPrev.onclick = ()=>activate("preview");
-
-/* ===== Инициализация ===== */
-(function init(){
-  // попробовать загрузить сохранённые
-  try{
-    const raw = localStorage.getItem("filter_v01R_data");
-    if(raw){
-      const json = JSON.parse(raw);
-      if(json?.items) data = json;
-    }
-  }catch{}
-  // раскрыть корень
-  (data.items||[]).forEach(it=>{ if(it.parentId===null) expanded.add(it.id); });
-  renderTree();
-})();
+/* Init */
+load();if(!data.items.length){data={items:[{id:"realty",name:"Недвижимость",parentId:null,type:"section"}]}};renderTree();
 </script>
 </body>
 </html>
