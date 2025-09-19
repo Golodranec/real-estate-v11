@@ -2,10 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>filter_v10R — редактор и предпросмотр фильтров</title>
+<title>filter_v11R — редактор и предпросмотр фильтров</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444;--warn:#f59e0b}
+  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
   header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
@@ -35,7 +35,7 @@
   <header>
     <div class="left">
       <strong>Фильтры</strong>
-      <span class="badge">v10R</span>
+      <span class="badge">v11R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
     </div>
     <div class="right top-actions">
@@ -74,7 +74,7 @@ const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
 // ===== storage =====
-const LS_KEY="filter_v10R_data";
+const LS_KEY="filter_v11R_data";
 let data={filters:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
@@ -182,7 +182,7 @@ function renderPreview(){
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v10R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v11R.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addFilter;$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
@@ -197,7 +197,9 @@ function updateSize(){try{const bytes=new Blob([document.documentElement.outerHT
   {id:"realty",name:"realty",title:"Недвижимость",type:"section"},
   {id:"auto",name:"auto",title:"Авто",type:"section"},
   {id:"city",name:"city",title:"Город",type:"select",parentId:"realty",options:["Ташкент","Самарканд"]},
-  {id:"brand",name:"brand",title:"Марка авто",type:"select",parentId:"auto",options:["Chevrolet","Hyundai"]}
+  {id:"price",name:"price",title:"Цена",type:"number",parentId:"realty"},
+  {id:"brand",name:"brand",title:"Марка авто",type:"select",parentId:"auto",options:["Chevrolet","Hyundai"]},
+  {id:"year",name:"year",title:"Год выпуска",type:"number",parentId:"auto"}
 ];}renderEditor();updateSize();})();
 </script>
 </body>
