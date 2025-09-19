@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>filter_v12R-fix1 — редактор и предпросмотр фильтров</title>
+<title>filter_v12R-fix2 — редактор и предпросмотр фильтров</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
@@ -36,7 +36,7 @@
   <header>
     <div class="left">
       <strong>Фильтры</strong>
-      <span class="badge">v12R-fix1</span>
+      <span class="badge">v12R-fix2</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
     </div>
     <div class="right top-actions">
@@ -76,7 +76,7 @@ const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
 // ===== storage =====
-const LS_KEY="filter_v12R_fix1_data"; // уникальный ключ, чтобы не смешивалось с v11
+const LS_KEY="filter_v12R_fix2_data";
 let data={filters:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
@@ -160,8 +160,9 @@ function renderPreview(initial=false){
 
   const form=$("#previewForm");
   form.innerHTML="";
-  const values={}; // сбрасываем значения при каждом рендере для чистоты раздела
+  const values={};
 
+  // рисуем только детей выбранного раздела
   const renderField=f=>{
     if(f.showIf){const [k,v]=f.showIf.split('=');if(k&&v){const vals=v.split('|');if(!vals.includes(values[k])) return;}}
     let inp;
@@ -186,7 +187,7 @@ function renderPreview(initial=false){
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();renderPreview(true);alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v12R_fix1.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v12R_fix2.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addFilter;$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();renderPreview(true);}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
