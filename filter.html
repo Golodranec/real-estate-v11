@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>filter_v12R — редактор и предпросмотр фильтров</title>
+<title>filter_v12R-fix1 — редактор и предпросмотр фильтров</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
@@ -22,20 +22,21 @@
   .card h3{margin:0 0 6px 0;display:flex;gap:10px;align-items:center}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
   label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
-  input,select,textarea{width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:#0b1220;color:var(--text);font:inherit}
+  input,select,textarea{width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:#0b1220;color:#e5e7eb;font:inherit}
   textarea{min-height:60px}
   .mini{font-size:12px;opacity:.75}
   .ghost{opacity:.7}
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
   .preview-form{display:flex;flex-direction:column;gap:12px}
+  .hint{font-size:12px;opacity:.7}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Фильтры</strong>
-      <span class="badge">v12R</span>
+      <span class="badge">v12R-fix1</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
     </div>
     <div class="right top-actions">
@@ -62,6 +63,7 @@
         <label>Раздел:
           <select id="sectionSelect"></select>
         </label>
+        <span id="sectionInfo" class="hint"></span>
       </div>
       <form id="previewForm" class="preview-form"></form>
     </section>
@@ -74,7 +76,7 @@ const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
 // ===== storage =====
-const LS_KEY="filter_v12R_data";
+const LS_KEY="filter_v12R_fix1_data"; // уникальный ключ, чтобы не смешивалось с v11
 let data={filters:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
@@ -144,17 +146,21 @@ function addFilter(){data.filters.push({id:uid(),title:"Новый фильтр"
 function removeFilter(id){function rm(fid){data.filters.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.filters=data.filters.filter(f=>f.id!==fid);}rm(id);save();renderEditor();}
 
 // ===== preview rendering =====
-function renderPreview(){
+function renderPreview(initial=false){
   const secSel=$("#sectionSelect");
   secSel.innerHTML="";
   const sections=data.filters.filter(f=>f.type==="section");
   sections.forEach(s=> secSel.append(el("option",{value:s.id,textContent:s.title||s.name||s.id})));
-  if(!sections.length) return;
-  if(!secSel.value) secSel.value=sections[0].id;
+  if(!sections.length){ $("#sectionInfo").textContent="Добавь хотя бы один фильтр типа section"; $("#previewForm").innerHTML=""; return; }
+  if(initial || !Array.from(secSel.options).some(o=>o.value===secSel.value)){
+    secSel.value=sections[0].id;
+  }
   const currentId=secSel.value;
+  $("#sectionInfo").textContent=`Выбран: ${sections.find(s=>s.id===currentId)?.title||currentId}`;
+
   const form=$("#previewForm");
   form.innerHTML="";
-  const values={};
+  const values={}; // сбрасываем значения при каждом рендере для чистоты раздела
 
   const renderField=f=>{
     if(f.showIf){const [k,v]=f.showIf.split('=');if(k&&v){const vals=v.split('|');if(!vals.includes(values[k])) return;}}
@@ -162,7 +168,7 @@ function renderPreview(){
     if(f.type==="text"||f.type==="number"||f.type==="date"){inp=el("input",{type:f.type==="number"?"number":f.type==="date"?"date":"text"});}
     else if(f.type==="checkbox"){inp=el("input",{type:"checkbox"});}
     else if(f.type==="select"){inp=el("select");(f.options||[]).forEach(o=>inp.append(el("option",{value:o,textContent:o})));}
-    inp.oninput=()=>{values[f.name]=inp.type==="checkbox"?inp.checked:inp.value;renderPreview();};
+    inp.oninput=()=>{values[f.name]=inp.type==="checkbox"?inp.checked:inp.value;renderPreview(false);};
     const wrapDiv=el("div");wrapDiv.append(el("label",{textContent:f.title||f.name||f.id}),inp);form.appendChild(wrapDiv);
   };
 
@@ -174,18 +180,18 @@ function renderPreview(){
   };
 
   renderChildren(currentId);
-  secSel.onchange=()=>renderPreview();
+  secSel.onchange=()=>renderPreview(false);
 }
 
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
-$("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v12R.json"});document.body.appendChild(a);a.click();a.remove();};
-$("#addBtn").onclick=addFilter;$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();renderPreview();}};
+$("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();renderPreview(true);alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v12R_fix1.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#addBtn").onclick=addFilter;$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();renderPreview(true);}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
 
-function activate(tab){$("#tab-editor").classList.remove("active");$("#tab-preview").classList.remove("active");$("#editorSection").classList.add("hidden");$("#previewSection").classList.add("hidden");if(tab==="editor"){$("#tab-editor").classList.add("active");$("#editorSection").classList.remove("hidden");}else{$("#tab-preview").classList.add("active");$("#previewSection").classList.remove("hidden");renderPreview();}}
+function activate(tab){$("#tab-editor").classList.remove("active");$("#tab-preview").classList.remove("active");$("#editorSection").classList.add("hidden");$("#previewSection").classList.add("hidden");if(tab==="editor"){$("#tab-editor").classList.add("active");$("#editorSection").classList.remove("hidden");}else{$("#tab-preview").classList.add("active");$("#previewSection").classList.remove("hidden");renderPreview(true);}}
 
 // ===== size badge =====
 function updateSize(){try{const bytes=new Blob([document.documentElement.outerHTML]).size;$("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;}catch{$("#sizeBadge").textContent="Размер: ?";}}
