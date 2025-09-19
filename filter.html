@@ -2,25 +2,26 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_v2R — редактор категорий</title>
+<title>categories_editor_full_v5R — полный редактор категорий</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444;--hint:#9ca3af}
+  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
-  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
+  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
   .left,.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#0b1220;font-size:12px}
   nav.tabs{display:flex;gap:8px;padding:8px;background:#111827;border-bottom:1px solid var(--line)}
   nav.tabs button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
   nav.tabs button.active{background:var(--ok);color:#052e16}
-  main{flex:1;overflow:auto;padding:12px;max-width:1100px;margin:0 auto;width:100%}
+  main{flex:1;overflow:auto;padding:12px;max-width:1200px;margin:0 auto;width:100%}
   button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
   button.primary{background:var(--ok);color:#052e16}
+  button.warn{background:var(--warn);color:#3b2306}
   button.danger{background:var(--err);color:#3b0a0a}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;cursor:grab}
   .card.dragging{opacity:0.5}
-  .card h3{margin:0 0 6px 0;display:flex;gap:10px;align-items:center}
+  .card h3{margin:0 0 8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
   label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
   input,select,textarea{width:100%;padding:6px;border-radius:6px;border:1px solid var(--line);background:#0b1220;color:#e5e7eb;font:inherit}
@@ -30,15 +31,19 @@
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
   .preview-form{display:flex;flex-direction:column;gap:12px}
-  .hint{font-size:12px;color:var(--hint);margin-top:2px}
+  .hint{font-size:12px;color:#9ca3af;margin-top:2px}
+  .divider{height:1px;background:var(--line);margin:8px 0}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
+  .help{font-size:12px;opacity:.8}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
-      <strong>Категории</strong>
-      <span class="badge">v2R</span>
+      <strong>Категории — полный редактор</strong>
+      <span class="badge">v5R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
+      <span id="statusBadge" class="badge">Сохранено</span>
     </div>
     <div class="right top-actions">
       <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
@@ -52,6 +57,7 @@
   <nav class="tabs">
     <button id="tab-editor" class="active">Редактор</button>
     <button id="tab-preview">Предпросмотр</button>
+    <button id="tab-help">Справка</button>
   </nav>
 
   <main>
@@ -62,6 +68,21 @@
     <section id="previewSection" class="hidden">
       <form id="previewForm" class="preview-form"></form>
     </section>
+
+    <section id="helpSection" class="hidden">
+      <div class="card">
+        <h3>Подсказки по условиям</h3>
+        <div class="kv">
+          <div>Формат</div><div><code>ключ=значение1|значение2</code> — показывать если ключ равен одному из значений</div>
+          <div>Пример</div><div><code>category=Квартира|Дома</code></div>
+          <div>AND</div><div>Можно писать как <code>key1=... & key2=...</code> (поддерживается в предпросмотре этого файла)</div>
+        </div>
+        <div class="divider"></div>
+        <div class="kv">
+          <div>Карта опций</div><div>Строки вида <code>Ключ=Опция1,Опция2</code>. Работает только для типа <b>select</b>.</div>
+        </div>
+      </div>
+    </section>
   </main>
 
 <script>
@@ -69,10 +90,10 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_v2R_data";
+const LS_KEY="categories_editor_full_v5R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
 
 const listEl=$("#list");
 let dragSrcId=null;
@@ -114,32 +135,32 @@ function renderEditor(){
     const h=el("h3");
     h.append(el("span",{textContent:f.title||"Без заголовка"}), el("span",{className:"mini ghost",textContent:`(${f.name||f.id})`}));
     const delBtn=el("button",{className:"danger",textContent:"Удалить"});
-    delBtn.onclick=()=>{ if(confirm("Удалить категорию?")) removeCategory(f.id); };
-    h.append(el("span",{className:"sp"}), delBtn);
+    delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) removeCategory(f.id); };
+    h.append(delBtn);
     c.appendChild(h);
 
     const r1=el("div",{className:"row"});
-    r1.append(wrap("Заголовок", el("input",{value:f.title||"", oninput:e=>{f.title=e.target.value; save();}})),
-               wrap("Имя (ключ)", el("input",{value:f.name||"", oninput:e=>{f.name=e.target.value; save();}})));
+    r1.append(wrap("Заголовок", el("input",{value:f.title||"", oninput:e=>{f.title=e.target.value; dirty();}})),
+               wrap("Имя (ключ)", el("input",{value:f.name||"", oninput:e=>{f.name=e.target.value; dirty();}})));
     c.appendChild(r1);
 
     const r2=el("div",{className:"row"});
-    const typeSel=el("select",{onchange:e=>{f.type=e.target.value; save(); renderEditor();}});
+    const typeSel=el("select",{onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
     ["group","text","number","select","checkbox","date"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
     r2.append(wrap("Тип",typeSel),
-              wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hint=e.target.value; save();}})));
+              wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hint=e.target.value; dirty();}})));
     c.appendChild(r2);
 
     const r3=el("div",{className:"row"});
-    const pSel=el("select",{onchange:e=>{f.parentId=e.target.value||null; save(); renderEditor();}});
+    const pSel=el("select",{onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
     r3.append(wrap("Родитель",pSel),
-              wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"ключ=значение|знач2", oninput:e=>{f.showIf=e.target.value; save();}})));
+              wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"key=val1|val2 [& key2=...]", oninput:e=>{f.showIf=e.target.value; dirty();}})));
     c.appendChild(r3);
 
     const r4=el("div",{className:"row"});
-    r4.append(wrap("Опции (для select)",el("textarea",{value:(f.options||[]).join(', '), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); save();}})),
-              wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), oninput:e=>{f.map=textToMap(e.target.value); save();}})));
+    r4.append(wrap("Опции (для select)",el("textarea",{value:(f.options||[]).join(', '), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
+              wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), oninput:e=>{f.map=textToMap(e.target.value); dirty();}})));
     c.appendChild(r4);
 
     listEl.appendChild(c);
@@ -149,56 +170,133 @@ function renderEditor(){
   addBtn.onclick=addCategory;
   listEl.appendChild(addBtn);
 }
+
+function dirty(){ $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
+
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${arr.join(',')}`).join("\n");}
 function textToMap(txt){const out={};txt.split(/\n/).forEach(l=>{const [k,v]=l.split('=');if(k) out[k.trim()]=(v||'').split(',').map(x=>x.trim()).filter(Boolean)});return out;}
 function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:""}); save(); renderEditor();}
-function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();}
+function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();renderPreview();}
 
+// ===== preview =====
 let previewValues={};
-function visibleByCondition(f){if(!f.showIf) return true;const [k,v]=f.showIf.split("=");if(!k||v===undefined) return true;const allowed=v.split("|").map(s=>s.trim());return allowed.includes(String(previewValues[k] ?? ""));}
-function optionsFor(f){let opts=Array.isArray(f.options)?f.options.slice():[];if(f.parentId){const p=data.categories.find(x=>x.id===f.parentId);const pKey=p?.name||p?.id;const pVal=previewValues[pKey];if(f.map&&pVal&&f.map[pVal]) opts=f.map[pVal].slice();}return opts;}
+function parseShowIf(str){
+  if(!str) return ()=>true;
+  const parts = str.split("&").map(s=>s.trim()).filter(Boolean);
+  const tests = parts.map(p=>{
+    const [k,v]=p.split("="); if(!k||v===undefined) return ()=>true;
+    const allowed = v.split("|").map(s=>s.trim());
+    return (vals)=> allowed.includes(String(vals[k] ?? ""));
+  });
+  return (vals)=> tests.every(t=>t(vals));
+}
+function visibleByCondition(f){
+  const test=parseShowIf(f.showIf||"");
+  return test(previewValues);
+}
+function optionsFor(f){
+  let opts = Array.isArray(f.options)?f.options.slice():[];
+  if(f.parentId){
+    const p = data.categories.find(x=>x.id===f.parentId);
+    const pKey = p?.name || p?.id;
+    const pVal = previewValues[pKey];
+    if(f.map && pVal && f.map[pVal]) opts = f.map[pVal].slice();
+  }
+  return opts;
+}
 
 function renderPreview(){
-  const form=$("#previewForm");form.innerHTML="";
+  const form=$("#previewForm");
+  form.innerHTML="";
   data.categories.forEach(f=>{
     if(f.type==="group"){
-      const sel=el("select");sel.append(el("option",{value:"",textContent:"—"}));(f.options||[]).forEach(o=>sel.append(el("option",{value:o,textContent:o})));
-      const key=f.name||f.id;if(previewValues[key]) sel.value=previewValues[key];
+      const sel=el("select");
+      sel.append(el("option",{value:"",textContent:"—"}));
+      (f.options||[]).forEach(o=>sel.append(el("option",{value:o,textContent:o})));
+      const key=f.name||f.id;
+      if(previewValues[key]) sel.value=previewValues[key];
       sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
-      const w=wrap(f.title||f.name||f.id, sel);if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      const w=wrap(f.title||f.name||f.id, sel);
+      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
       form.append(w);
+      return;
     }
     if(f.type==="select"||f.type==="text"||f.type==="number"||f.type==="date"||f.type==="checkbox"){
       if(!visibleByCondition(f)) return;
-      let ctrl;if(f.type==="select"){ctrl=el("select");ctrl.append(el("option",{value:"",textContent:"—"}));optionsFor(f).forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
-        const key=f.name||f.id;if(previewValues[key]) ctrl.value=previewValues[key];ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
-      }else if(f.type==="checkbox"){ctrl=el("input",{type:"checkbox"});const key=f.name||f.id;ctrl.checked=!!previewValues[key];ctrl.onchange=()=>{previewValues[key]=ctrl.checked;renderPreview();};
-      }else{ctrl=el("input",{type:f.type});const key=f.name||f.id;if(previewValues[key]) ctrl.value=previewValues[key];ctrl.oninput=()=>{previewValues[key]=ctrl.value;};}
-      const w=wrap(f.title||f.name||f.id, ctrl);if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));form.append(w);
+      let ctrl;
+      if(f.type==="select"){
+        ctrl=el("select");
+        ctrl.append(el("option",{value:"",textContent:"—"}));
+        optionsFor(f).forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
+        const key=f.name||f.id;
+        if(previewValues[key]) ctrl.value=previewValues[key];
+        ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      }else if(f.type==="checkbox"){
+        ctrl=el("input",{type:"checkbox"});
+        const key=f.name||f.id; ctrl.checked=!!previewValues[key];
+        ctrl.onchange=()=>{previewValues[key]=ctrl.checked;renderPreview();};
+      }else{
+        ctrl=el("input",{type:f.type});
+        const key=f.name||f.id; if(previewValues[key]) ctrl.value=previewValues[key];
+        ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
+      }
+      const w=wrap(f.title||f.name||f.id, ctrl);
+      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      form.append(w);
     }
   });
 }
 
+// ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.categories)) data=json; else if(Array.isArray(json.items)) data={categories:json.items};save();renderEditor();previewValues={};renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v2R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v5R.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addCategory;
 $("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
+$("#tab-help").onclick=()=>{activate("help");};
 
-function activate(tab){$("#tab-editor").classList.remove("active");$("#tab-preview").classList.remove("active");$("#editorSection").classList.add("hidden");$("#previewSection").classList.add("hidden");if(tab==="editor"){$("#tab-editor").classList.add("active");$("#editorSection").classList.remove("hidden");}else{$("#tab-preview").classList.add("active");$("#previewSection").classList.remove("hidden");renderPreview();}}
+function activate(tab){
+  $("#tab-editor").classList.remove("active");
+  $("#tab-preview").classList.remove("active");
+  $("#tab-help").classList.remove("active");
+  $("#editorSection").classList.add("hidden");
+  $("#previewSection").classList.add("hidden");
+  $("#helpSection").classList.add("hidden");
+  if(tab==="editor"){ $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
+  else if(tab==="preview"){ $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
+  else { $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
+}
 
 function updateSize(){try{const bytes=new Blob([document.documentElement.outerHTML]).size;$("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;}catch{$("#sizeBadge").textContent="Размер: ?";}}
 
-(function init(){load();if(!data.categories.length){data.categories=[
-  {id:"cat",name:"category",title:"Категория",type:"group",options:["Недвижимость","Авто"],hint:"Выберите раздел"},
-  {id:"city",name:"city",title:"Город",type:"select",parentId:"cat",showIf:"category=Недвижимость",options:["Ташкент","Самарканд"],hint:"Город для поиска"},
-  {id:"price",name:"price",title:"Цена",type:"number",parentId:"cat",showIf:"category=Недвижимость",hint:"Цена в долларах США"},
-  {id:"brand",name:"brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"category=Авто",options:["Chevrolet","Hyundai"],hint:"Выберите марку"},
-  {id:"year",name:"year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"category=Авто",hint:"Например: 2015"}
-];}renderEditor();updateSize();})();
+(function init(){
+  load();
+  if(!data.categories.length){
+    data.categories=[
+      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел"},
+      {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
+        "Недвижимость":["Квартира","Дома","Коммерция","Земля"],
+        "Транспорт":["Легковые автомобили","Грузовые автомобили"]
+      },options:[]},
+      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"category=Квартира|Дома|Коммерция|Земля",map:{
+        "Квартира":["Аренда","Продажа"],
+        "Дома":["Аренда","Продажа"],
+        "Коммерция":["Аренда","Продажа"],
+        "Земля":["Продажа"]
+      },options:[]},
+      {id:"type",name:"TypeOfHousing",title:"Тип жилья",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира",options:["Новостройка","Вторичка","От застройщика"]},
+      {id:"price",name:"Price",title:"Цена",type:"number",parentId:"cat",showIf:"Chapter=Недвижимость"},
+      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"]},
+      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт"}
+    ];
+  }
+  renderEditor();
+  renderPreview();
+  updateSize();
+})();
 </script>
 </body>
 </html>
