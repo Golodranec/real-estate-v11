@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>filter_v09R — редактор и предпросмотр фильтров</title>
+<title>filter_v10R — редактор и предпросмотр фильтров</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444;--warn:#f59e0b}
@@ -35,7 +35,7 @@
   <header>
     <div class="left">
       <strong>Фильтры</strong>
-      <span class="badge">v09R</span>
+      <span class="badge">v10R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
     </div>
     <div class="right top-actions">
@@ -58,6 +58,11 @@
     </section>
 
     <section id="previewSection" class="hidden">
+      <div style="margin-bottom:12px">
+        <label>Раздел:
+          <select id="sectionSelect"></select>
+        </label>
+      </div>
       <form id="previewForm" class="preview-form"></form>
     </section>
   </main>
@@ -67,10 +72,9 @@
 const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
-const clone=o=>JSON.parse(JSON.stringify(o));
 
 // ===== storage =====
-const LS_KEY="filter_v09R_data";
+const LS_KEY="filter_v10R_data";
 let data={filters:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
@@ -109,7 +113,7 @@ function renderEditor(){
 
     const r2=el("div",{className:"row"});
     const typeSel=el("select",{onchange:e=>{f.type=e.target.value; save(); renderEditor();}});
-    ["text","number","select","checkbox","date"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
+    ["section","text","number","select","checkbox","date"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
     r2.append(wrap("Тип",typeSel),
               wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hint=e.target.value; save();}})));
     c.appendChild(r2);
@@ -141,9 +145,16 @@ function removeFilter(id){function rm(fid){data.filters.filter(f=>f.parentId===f
 
 // ===== preview rendering =====
 function renderPreview(){
+  const secSel=$("#sectionSelect");
+  secSel.innerHTML="";
+  const sections=data.filters.filter(f=>f.type==="section");
+  sections.forEach(s=> secSel.append(el("option",{value:s.id,textContent:s.title||s.name||s.id})));
+  const currentId=secSel.value||sections[0]?.id;
+  if(currentId) secSel.value=currentId;
   const form=$("#previewForm");
   form.innerHTML="";
   const values={};
+
   const renderField=f=>{
     if(f.showIf){const [k,v]=f.showIf.split('=');if(k&&v){const vals=v.split('|');if(!vals.includes(values[k])) return;}}
     let inp;
@@ -153,17 +164,25 @@ function renderPreview(){
     inp.oninput=()=>{values[f.name]=inp.type==="checkbox"?inp.checked:inp.value;renderPreview();};
     const wrapDiv=el("div");wrapDiv.append(el("label",{textContent:f.title||f.name||f.id}),inp);form.appendChild(wrapDiv);
   };
-  data.filters.filter(f=>!f.parentId).forEach(renderField);
-  data.filters.filter(f=>f.parentId).forEach(f=>{
-    const parentVal=values[data.filters.find(p=>p.id===f.parentId)?.name];
-    if(parentVal){if(f.type==="select"&&f.map&&f.map[parentVal]) f.options=f.map[parentVal];renderField(f);}
-  });
+
+  const renderChildren=(pid)=>{
+    data.filters.filter(f=>f.parentId===pid && f.type!=="section").forEach(f=>{
+      renderField(f);
+      renderChildren(f.id);
+    });
+  };
+
+  if(currentId){
+    renderChildren(currentId);
+  }
+
+  secSel.onchange=()=>renderPreview();
 }
 
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v09R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v10R.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addFilter;$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
@@ -174,7 +193,12 @@ function activate(tab){$("#tab-editor").classList.remove("active");$("#tab-previ
 function updateSize(){try{const bytes=new Blob([document.documentElement.outerHTML]).size;$("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;}catch{$("#sizeBadge").textContent="Размер: ?";}}
 
 // ===== init =====
-(function init(){load();if(!data.filters.length){data.filters=[{id:"country",name:"country",title:"Страна",type:"select",options:["Узбекистан"],map:{},showIf:""},{id:"city",name:"city",title:"Город",type:"select",parentId:"country",options:["Ташкент","Самарканд"],map:{},showIf:""}];}renderEditor();updateSize();})();
+(function init(){load();if(!data.filters.length){data.filters=[
+  {id:"realty",name:"realty",title:"Недвижимость",type:"section"},
+  {id:"auto",name:"auto",title:"Авто",type:"section"},
+  {id:"city",name:"city",title:"Город",type:"select",parentId:"realty",options:["Ташкент","Самарканд"]},
+  {id:"brand",name:"brand",title:"Марка авто",type:"select",parentId:"auto",options:["Chevrolet","Hyundai"]}
+];}renderEditor();updateSize();})();
 </script>
 </body>
 </html>
