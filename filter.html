@@ -2,14 +2,14 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>filter_v12R-fix3 — редактор и предпросмотр фильтров</title>
+<title>filter_v13R — редактор и предпросмотр фильтров (логика как в админке)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
   header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
-  .left, .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .left,.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#0b1220;font-size:12px}
   nav.tabs{display:flex;gap:8px;padding:8px;background:#111827;border-bottom:1px solid var(--line)}
   nav.tabs button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
@@ -29,14 +29,13 @@
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
   .preview-form{display:flex;flex-direction:column;gap:12px}
-  .hint{font-size:12px;opacity:.7}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Фильтры</strong>
-      <span class="badge">v12R-fix3</span>
+      <span class="badge">v13R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
     </div>
     <div class="right top-actions">
@@ -63,7 +62,6 @@
         <label>Раздел:
           <select id="sectionSelect"></select>
         </label>
-        <span id="sectionInfo" class="hint"></span>
       </div>
       <form id="previewForm" class="preview-form"></form>
     </section>
@@ -76,12 +74,12 @@ const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
 // ===== storage =====
-const LS_KEY="filter_v12R_fix3_data";
+const LS_KEY="filter_v13R_data";
 let data={filters:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
 
-// ===== rendering editor =====
+// ===== editor =====
 const listEl=$("#list");
 function renderEditor(){
   listEl.innerHTML="";
@@ -124,7 +122,7 @@ function renderEditor(){
     const pSel=el("select",{onchange:e=>{f.parentId=e.target.value||null; save(); renderEditor();}});
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
     r3.append(wrap("Родитель",pSel),
-              wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"ключ=значение", oninput:e=>{f.showIf=e.target.value; save();}})));
+              wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"ключ=значение|знач2", oninput:e=>{f.showIf=e.target.value; save();}})));
     c.appendChild(r3);
 
     const r4=el("div",{className:"row"});
@@ -145,53 +143,105 @@ function textToMap(txt){const out={};txt.split(/\n/).forEach(l=>{const [k,v]=l.s
 function addFilter(){data.filters.push({id:uid(),title:"Новый фильтр",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:""}); save(); renderEditor();}
 function removeFilter(id){function rm(fid){data.filters.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.filters=data.filters.filter(f=>f.id!==fid);}rm(id);save();renderEditor();}
 
-// ===== preview rendering =====
-function renderPreview(initial=false){
-  const secSel=$("#sectionSelect");
-  secSel.innerHTML="";
-  const sections=data.filters.filter(f=>f.type==="section");
-  sections.forEach(s=> secSel.append(el("option",{value:s.id,textContent:s.title||s.name||s.id})));
-  if(!sections.length){ $("#sectionInfo").textContent="Добавь хотя бы один фильтр типа section"; $("#previewForm").innerHTML=""; return; }
-  if(initial || !Array.from(secSel.options).some(o=>o.value===secSel.value)){
-    secSel.value=sections[0].id;
+// ===== preview =====
+let currentSectionId=null;
+let previewValues={};
+
+function sectionList(){ return data.filters.filter(f=>f.type==="section"); }
+function childrenOf(pid){ return data.filters.filter(f=>f.parentId===pid && f.type!=="section"); }
+function descendantsOf(pid){ const res=[]; const stack=[pid]; while(stack.length){ const id=stack.pop(); const kids=childrenOf(id); kids.forEach(k=>{res.push(k); stack.push(k.id);}); } return res; }
+
+function optionsFor(f){
+  let opts = Array.isArray(f.options)?f.options.slice():[];
+  if(f.parentId){
+    const p = data.filters.find(x=>x.id===f.parentId);
+    const pKey = p?.name || p?.id;
+    const pVal = previewValues[pKey];
+    if(f.map && pVal && f.map[pVal]) opts = f.map[pVal].slice();
   }
-  const currentId=secSel.value;
-  $("#sectionInfo").textContent=`Выбран: ${sections.find(s=>s.id===currentId)?.title||currentId}`;
+  return opts;
+}
+function visibleByCondition(f){
+  if(!f.showIf) return true;
+  const [k,v] = f.showIf.split("=");
+  if(!k || v===undefined) return true;
+  const allowed = v.split("|").map(s=>s.trim());
+  return allowed.includes(String(previewValues[k] ?? ""));
+}
+
+function renderPreview(){
+  const secSel=$("#sectionSelect");
+  const secs=sectionList();
+  secSel.innerHTML="";
+  secs.forEach(s=>secSel.append(el("option",{value:s.id,textContent:s.title||s.name||s.id})));
+  if(!secs.length){ $("#previewForm").innerHTML=""; return; }
+  if(!currentSectionId || !secs.some(s=>s.id===currentSectionId)) currentSectionId=secs[0].id;
+  secSel.value=currentSectionId;
 
   const form=$("#previewForm");
   form.innerHTML="";
-  const values={};
+  const list = descendantsOf(currentSectionId);
 
-  const renderField=f=>{
-    if(f.showIf){const [k,v]=f.showIf.split('=');if(k&&v){const vals=v.split('|');if(!vals.includes(values[k])) return;}}
-    let inp;
-    if(f.type==="text"||f.type==="number"||f.type==="date"){inp=el("input",{type:f.type==="number"?"number":f.type==="date"?"date":"text"});}
-    else if(f.type==="checkbox"){inp=el("input",{type:"checkbox"});}
-    else if(f.type==="select"){inp=el("select");(f.options||[]).forEach(o=>inp.append(el("option",{value:o,textContent:o})));}
-    inp.oninput=()=>{values[f.name]=inp.type==="checkbox"?inp.checked:inp.value;};
-    const wrapDiv=el("div");wrapDiv.append(el("label",{textContent:f.title||f.name||f.id}),inp);form.appendChild(wrapDiv);
-  };
+  // сортируем: сначала те у кого нет детей? Лучше по уровням
+  const depth = new Map();
+  function calcDepth(id,d){ depth.set(id,d); childrenOf(id).forEach(ch=>calcDepth(ch.id,d+1)); }
+  calcDepth(currentSectionId, 0);
+  list.sort((a,b)=> (depth.get(a.id)||0) - (depth.get(b.id)||0));
 
-  const renderChildren=(pid)=>{
-    data.filters.filter(f=>f.parentId===pid && f.type!=="section").forEach(f=>{
-      renderField(f);
-      renderChildren(f.id);
-    });
-  };
+  list.forEach(f=>{
+    if(!visibleByCondition(f)) return;
+    let control;
+    if(f.type==="select"){
+      control = el("select");
+      const opts = optionsFor(f);
+      control.append(el("option",{value:"",textContent:"—"}));
+      opts.forEach(o=>control.append(el("option",{value:o,textContent:o})));
+      const key=f.name||f.id;
+      if(previewValues[key] && opts.includes(previewValues[key])) control.value=previewValues[key];
+    }else if(f.type==="number"||f.type==="date"||f.type==="text"){
+      control = el("input",{type: f.type==="number"?"number":f.type==="date"?"date":"text"});
+      const key=f.name||f.id; if(previewValues[key]!=null) control.value=previewValues[key];
+    }else if(f.type==="checkbox"){
+      control = el("input",{type:"checkbox"});
+      const key=f.name||f.id; control.checked = !!previewValues[key];
+    }else{
+      return;
+    }
 
-  renderChildren(currentId);
-  secSel.onchange=()=>renderPreview(true);
+    control.onchange = e=>{
+      const key=f.name||f.id;
+      const val = (control.type==="checkbox") ? control.checked : control.value;
+      previewValues[key]=val;
+
+      // если значение родителя поменялось, чистим потомков
+      descendantsOf(f.id).forEach(d=>{ const dk=d.name||d.id; delete previewValues[dk]; });
+
+      // если выбранное значение выпало из опций, обнуляем себя
+      if(f.type==="select"){
+        const opts = optionsFor(f);
+        if(val && !opts.includes(val)){ previewValues[key]=""; }
+      }
+      renderPreview();
+    };
+
+    const wrapDiv=el("div");
+    wrapDiv.append(el("label",{textContent:f.title||f.name||f.id}), control);
+    form.appendChild(wrapDiv);
+  });
+
+  secSel.onchange = ()=>{ currentSectionId = secSel.value; previewValues={}; renderPreview(); };
 }
 
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
-$("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();renderPreview(true);alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v12R_fix3.json"});document.body.appendChild(a);a.click();a.remove();};
-$("#addBtn").onclick=addFilter;$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();renderPreview(true);}};
+$("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();currentSectionId=null;previewValues={};renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_v13R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#addBtn").onclick=addFilter;
+$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();currentSectionId=null;previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
 
-function activate(tab){$("#tab-editor").classList.remove("active");$("#tab-preview").classList.remove("active");$("#editorSection").classList.add("hidden");$("#previewSection").classList.add("hidden");if(tab==="editor"){$("#tab-editor").classList.add("active");$("#editorSection").classList.remove("hidden");}else{$("#tab-preview").classList.add("active");$("#previewSection").classList.remove("hidden");renderPreview(true);}}
+function activate(tab){$("#tab-editor").classList.remove("active");$("#tab-preview").classList.remove("active");$("#editorSection").classList.add("hidden");$("#previewSection").classList.add("hidden");if(tab==="editor"){$("#tab-editor").classList.add("active");$("#editorSection").classList.remove("hidden");}else{$("#tab-preview").classList.add("active");$("#previewSection").classList.remove("hidden");renderPreview();}}
 
 // ===== size badge =====
 function updateSize(){try{const bytes=new Blob([document.documentElement.outerHTML]).size;$("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;}catch{$("#sizeBadge").textContent="Размер: ?";}}
