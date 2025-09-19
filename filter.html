@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>filters_admin_v15R — редактор с перетаскиванием</title>
+<title>filters_admin_v15R_fix1 — редактор с перетаскиванием</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--err:#ef4444}
@@ -36,7 +36,7 @@
   <header>
     <div class="left">
       <strong>Фильтры</strong>
-      <span class="badge">v15R</span>
+      <span class="badge">v15R-fix1</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
     </div>
     <div class="right top-actions">
@@ -73,7 +73,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="filters_admin_v15R_data";
+const LS_KEY="filters_admin_v15R_fix1_data";
 let data={filters:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); }
@@ -129,7 +129,7 @@ function renderEditor(){
     c.appendChild(h);
 
     const r1=el("div",{className:"row"});
-    r1.append(wrap("Заголовок", el("input",{value:f.title||"", oninput:e=>{f.title=e.target.value; save(); renderEditor();}})),
+    r1.append(wrap("Заголовок", el("input",{value:f.title||"", oninput:e=>{f.title=e.target.value; save();}})),
                wrap("Имя (ключ)", el("input",{value:f.name||"", oninput:e=>{f.name=e.target.value; save();}})));
     c.appendChild(r1);
 
@@ -245,7 +245,7 @@ function renderPreview(){
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.filters)) data=json; else if(Array.isArray(json.items)) data={filters:json.items};save();renderEditor();currentSectionId=null;previewValues={};renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_admin_v15R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"filters_admin_v15R_fix1.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addFilter;
 $("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={filters:[]};save();renderEditor();currentSectionId=null;previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
