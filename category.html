@@ -2,10 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v9R — полный редактор с range + multicheck</title>
+<title>categories_editor_full_v10R — полный редактор (dropdown multicheck как OLX)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
+  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--white:#ffffff;--black:#0b1220}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
   header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
@@ -32,11 +32,7 @@
   .hidden{display:none}
 
   /* Сетка предпросмотра */
-  .preview-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
-  }
+  .preview-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
   .preview-form .full { grid-column: span 2; }
   .preview-form .half { grid-column: span 1; }
   .preview-form .third { grid-column: span 1; }
@@ -46,15 +42,27 @@
   .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
   .help{font-size:12px;opacity:.8}
   .inline{display:flex;gap:8px;align-items:center}
-  .stack label{display:flex;align-items:center;gap:8px;margin:2px 0}
-  .stack{max-height:220px;overflow:auto;border:1px dashed var(--line);border-radius:8px;padding:6px;background:#0b1220}
+
+  /* Dropdown Multicheck (OLX-like) */
+  .dropdown{position:relative}
+  .dropdown-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--white);color:#111;border:1px solid #cfd4dc;border-radius:8px;cursor:pointer}
+  .dropdown-toggle .arrow{transition:transform .15s ease}
+  .dropdown.open .dropdown-toggle .arrow{transform:rotate(180deg)}
+  .dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;max-width:560px;background:#fff;border:1px solid #cfd4dc;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:50;display:none;max-height:280px;overflow:auto}
+  .dropdown.open .dropdown-menu{display:block}
+  .dropdown-menu .item{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:14px;cursor:pointer}
+  .dropdown-menu .item:hover{background:#f3f4f6}
+  .dropdown-menu .item input{width:18px;height:18px}
+  .dropdown-menu .separator{height:1px;background:#e5e7eb;margin:4px 0}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid #cfd4dc;background:#fff;color:#111;font-size:12px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v9R</span>
+      <span class="badge">v10R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -84,12 +92,11 @@
 
     <section id="helpSection" class="hidden">
       <div class="card">
-        <h3>Подсказки по условиям</h3>
+        <h3>Подсказки</h3>
         <div class="kv">
-          <div>Формат</div><div><code>ключ=знач1|знач2</code>. AND: <code>key1=... & key2=...</code></div>
-          <div>Карта опций</div><div>Только для select: <code>РодительОпция=Дочерняя1,Дочерняя2</code></div>
+          <div>Условия</div><div><code>key=val1|val2</code> и AND: <code>key1=... & key2=...</code></div>
           <div>Layout</div><div><code>full</code>, <code>half</code>, <code>third</code></div>
-          <div>Новые типы</div><div><b>range</b> (От/До), <b>multicheck</b> (список галочек)</div>
+          <div>Типы</div><div><b>range</b> (От/До), <b>multicheck</b> (выпадающий список галочек)</div>
         </div>
       </div>
     </section>
@@ -100,7 +107,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v9R_data";
+const LS_KEY="categories_editor_full_v10R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -223,11 +230,59 @@ function optionsFor(f){
   return opts;
 }
 
+function makeDropdownMulticheck(fieldDef){
+  const key = fieldDef.name || fieldDef.id;
+  const allLabel = "Все объявления";
+  const opts = optionsFor(fieldDef);
+  const items = (opts[0]===allLabel?opts:([allLabel, ...opts]));
+
+  const container = el("div",{className:"dropdown"});
+  const toggle = el("button",{type:"button",className:"dropdown-toggle"});
+  const arrow = el("span",{className:"arrow",textContent:"▾"});
+  const valueSpan = el("span",{textContent: allLabel});
+  toggle.append(valueSpan,arrow);
+
+  const menu = el("div",{className:"dropdown-menu"});
+  const current = new Set(previewValues[key]||[]);
+
+  items.forEach((opt, idx)=>{
+    const it = el("label",{className:"item"});
+    const cb = el("input",{type:"checkbox"});
+    cb.checked = current.size ? current.has(opt) : (opt===allLabel);
+    cb.onchange = ()=>{
+      let set = new Set(previewValues[key]||[]);
+      if(opt===allLabel){
+        if(cb.checked){ set = new Set(items); }
+        else{ set.clear(); }
+        menu.querySelectorAll('input').forEach((x,i)=>{ x.checked = cb.checked; });
+      }else{
+        if(cb.checked) set.add(opt); else set.delete(opt);
+        // update "all"
+        const allBox = menu.querySelector('label.item input');
+        if(allBox){ allBox.checked = set.size === items.length; }
+      }
+      previewValues[key] = Array.from(set);
+      valueSpan.textContent = (previewValues[key].length && previewValues[key].length<4)
+         ? previewValues[key].filter(v=>v!==allLabel).join(", ")
+         : allLabel;
+    };
+    it.append(cb, document.createTextNode(opt));
+    if(idx===0){ it.style.borderBottom = "1px solid #e5e7eb"; }
+    menu.append(it);
+  });
+
+  toggle.onclick = (e)=>{ e.stopPropagation(); container.classList.toggle("open"); };
+  document.addEventListener("click", ()=> container.classList.remove("open"));
+
+  container.append(toggle,menu);
+  return container;
+}
+
 function renderPreview(){
   const form=$("#previewForm");
   form.innerHTML="";
   data.categories.forEach(f=>{
-    // GROUP acts like select of sections
+    // GROUP
     if(f.type==="group"){
       const sel=el("select");
       sel.append(el("option",{value:"",textContent:"—"}));
@@ -271,34 +326,18 @@ function renderPreview(){
       const box=el("div",{className:"inline"});
       const min=el("input",{type:"number",placeholder:"От"});
       const max=el("input",{type:"number",placeholder:"До"});
-      if(previewValues[key]){
-        min.value=previewValues[key].min||"";
-        max.value=previewValues[key].max||"";
-      }
+      if(previewValues[key]){ min.value=previewValues[key].min||""; max.value=previewValues[key].max||""; }
       min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
       max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
       box.append(min,max);
       w=wrap(f.title||f.name||f.id, box);
     }
     else if(f.type==="multicheck"){
-      const stack=el("div",{className:"stack"});
-      const current=new Set(previewValues[key]||[]);
-      optionsFor(f).forEach(o=>{
-        const lbl=el("label");
-        const cb=el("input",{type:"checkbox"});
-        cb.checked=current.has(o);
-        cb.onchange=()=>{
-          const set=new Set(previewValues[key]||[]);
-          if(cb.checked) set.add(o); else set.delete(o);
-          previewValues[key]=Array.from(set);
-        };
-        lbl.append(cb, document.createTextNode(" "+o));
-        stack.append(lbl);
-      });
-      w=wrap(f.title||f.name||f.id, stack);
+      ctrl = makeDropdownMulticheck(f);
+      w=wrap(f.title||f.name||f.id, ctrl);
     }
     else{
-      return; // unknown type
+      return;
     }
 
     if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
@@ -310,7 +349,7 @@ function renderPreview(){
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.categories)) data=json; else if(Array.isArray(json.items)) data={categories:json.items};save();renderEditor();previewValues={};renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v9R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v10R.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addCategory;
 $("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
