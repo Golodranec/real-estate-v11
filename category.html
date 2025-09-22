@@ -186,13 +186,14 @@ function renderEditor(){
     r4.append(wrap("Опции (для select/multicheck/radio)",el("textarea",{value:(f.options||[]).join(', '), onfocus:()=>pending=snapshot(), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
               wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), onfocus:()=>pending=snapshot(), oninput:e=>{f.map=textToMap(e.target.value); dirty();}})));
     c.appendChild(r4);
-
-    const r5=el("div",{className:"row"});
-    const layoutSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty();}});
-    ["full","half","third"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
-    r5.append(wrap("Layout",layoutSel),
-              wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}})));
-    c.appendChild(r5);
+const r5 = el("div",{className:"row"});
+const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty();}});
+["full","half","third"].forEach(t => layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
+r5.append(
+  wrap("Layout", layoutSel),
+  wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
+);
+c.appendChild(r5);
 
     listEl.appendChild(c);
   });
