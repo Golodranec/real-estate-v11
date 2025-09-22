@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v12R — полный редактор (фикс dropdown multicheck)</title>
+<title>categories_editor_full_v13R — 3‑колоночная сетка + фиксы</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
@@ -31,17 +31,17 @@
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
 
-  /* Сетка предпросмотра */
-  .preview-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-  .preview-form .full { grid-column: span 2; }
-  .preview-form .half { grid-column: span 1; }
+  /* Сетка предпросмотра — 3 колонки на десктопе */
+  .preview-form { display:grid; gap:16px; grid-template-columns:repeat(3, minmax(0,1fr)); }
+  @media (max-width: 1100px) { .preview-form { grid-template-columns: repeat(2, minmax(0,1fr)); } .preview-form .full{grid-column:span 2;} }
+  @media (max-width: 640px)  { .preview-form { grid-template-columns: 1fr; } .preview-form .full{grid-column:span 1;} .preview-form .half{grid-column:span 1;} .preview-form .third{grid-column:span 1;} }
+
+  .preview-form .full  { grid-column: span 3; }
+  .preview-form .half  { grid-column: span 2; }
   .preview-form .third { grid-column: span 1; }
 
   .hint{font-size:12px;color:#9ca3af;margin-top:2px}
-  .divider{height:1px;background:var(--line);margin:8px 0}
   .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
-  .help{font-size:12px;opacity:.8}
-  .inline{display:flex;gap:8px;align-items:center}
 
   /* Dropdown Multicheck в стиле select */
   .dropdown{position:relative}
@@ -53,13 +53,14 @@
   .dropdown-menu .item{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:14px;cursor:pointer;color:#111}
   .dropdown-menu .item:hover{background:#f3f4f6}
   .dropdown-menu .item input{width:18px;height:18px}
+  .inline{display:flex;gap:8px;align-items:center}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v12R</span>
+      <span class="badge">v13R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -92,9 +93,9 @@
         <h3>Подсказки</h3>
         <div class="kv">
           <div>Условия</div><div><code>key=val1|val2</code> и AND: <code>key1=... & key2=...</code></div>
-          <div>Layout</div><div><code>full</code>, <code>half</code>, <code>third</code></div>
+          <div>Layout</div><div><code>full</code> = 3/3, <code>half</code> = 2/3, <code>third</code> = 1/3 ширины</div>
           <div>Типы</div><div><b>range</b> (От/До), <b>multicheck</b> (выпадающий список галочек)</div>
-          <div>ID</div><div>внутренний уникальный идентификатор блока. Менять не нужно.</div>
+          <div>ID</div><div>внутренний уникальный идентификатор блока. Используется для связей. Обычно не меняй.</div>
         </div>
       </div>
     </section>
@@ -105,7 +106,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v12R_data";
+const LS_KEY="categories_editor_full_v13R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -253,7 +254,6 @@ function makeDropdownMulticheck(fieldDef){
       if(opt===allLabel){
         if(cb.checked){ set = new Set(items); }
         else{ set.clear(); }
-        // Синхронизируем все чекбоксы, кроме первого (самого "все")
         menu.querySelectorAll('label.item input').forEach((x,i)=>{ if(i>0) x.checked = cb.checked; });
       }else{
         if(cb.checked) set.add(opt); else set.delete(opt);
@@ -270,10 +270,7 @@ function makeDropdownMulticheck(fieldDef){
   });
 
   toggle.onclick = (e)=>{ e.stopPropagation(); container.classList.toggle("open"); };
-  // Закрываем по клику вне меню, но НЕ закрываем при клике внутри меню
-  document.addEventListener("click", (e)=>{
-    if(!container.contains(e.target)){ container.classList.remove("open"); }
-  });
+  document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
 
   container.append(toggle,menu);
   return container;
@@ -347,60 +344,80 @@ function renderPreview(){
 }
 
 // ===== import/export and tabs =====
-$("#importBtn").onclick=()=>$("#fileInput\").click();
-$("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.categories)) data=json; else if(Array.isArray(json.items)) data={categories:json.items};save();renderEditor();previewValues={};renderPreview();alert(\"Импортировано\");}catch(err){alert(\"Ошибка: \"+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:\"application/json\"});const a=el(\"a\",{href:URL.createObjectURL(blob),download:\"categories_editor_full_v12R.json\"});document.body.appendChild(a);a.click();a.remove();};
+$("#importBtn").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=async e=>{
+  const f=e.target.files?.[0];
+  if(!f) return;
+  try{
+    const txt=await f.text();
+    const json=JSON.parse(txt);
+    if(Array.isArray(json.categories)) data=json; 
+    else if(Array.isArray(json.items)) data={categories:json.items};
+    save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
+  }catch(err){alert("Ошибка: "+err.message);}
+};
+$("#exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v13R.json"});
+  document.body.appendChild(a);a.click();a.remove();
+};
 $("#addBtn").onclick=addCategory;
-$("#clearBtn").onclick=()=>{if(confirm(\"Очистить все?\")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
-$("#tab-editor").onclick=()=>{activate(\"editor\");};
-$("#tab-preview").onclick=()=>{activate(\"preview\");};
-$("#tab-help").onclick=()=>{activate(\"help\");};
+$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
+$("#tab-editor").onclick=()=>{activate("editor");};
+$("#tab-preview").onclick=()=>{activate("preview");};
+$("#tab-help").onclick=()=>{activate("help");};
 
 function activate(tab){
-  $(\"#tab-editor\").classList.remove(\"active\");
-  $(\"#tab-preview\").classList.remove(\"active\");
-  $(\"#tab-help\").classList.remove(\"active\");
-  $(\"#editorSection\").classList.add(\"hidden\");
-  $(\"#previewSection\").classList.add(\"hidden\");
-  $(\"#helpSection\").classList.add(\"hidden\");
-  if(tab===\"editor\"){ $(\"#tab-editor\").classList.add(\"active\"); $(\"#editorSection\").classList.remove(\"hidden\"); }
-  else if(tab===\"preview\"){ $(\"#tab-preview\").classList.add(\"active\"); $(\"#previewSection\").classList.remove(\"hidden\"); renderPreview(); }
-  else { $(\"#tab-help\").classList.add(\"active\"); $(\"#helpSection\").classList.remove(\"hidden\"); }
+  $("#tab-editor").classList.remove("active");
+  $("#tab-preview").classList.remove("active");
+  $("#tab-help").classList.remove("active");
+  $("#editorSection").classList.add("hidden");
+  $("#previewSection").classList.add("hidden");
+  $("#helpSection").classList.add("hidden");
+  if(tab==="editor"){ $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
+  else if(tab==="preview"){ $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
+  else { $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
 }
 
-function updateSize(){try{const bytes=new Blob([document.documentElement.outerHTML]).size;$(\"#sizeBadge\").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;}catch{$(\"#sizeBadge\").textContent=\"Размер: ?\";}}
+function updateSize(){
+  try{
+    const bytes=new Blob([document.documentElement.outerHTML]).size;
+    $("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;
+  }catch{
+    $("#sizeBadge").textContent="Размер: ?";
+  }
+}
 
 (function init(){
   load();
   if(!data.categories.length){
     data.categories=[
-      {id:\"sec\",name:\"Chapter\",title:\"Раздел\",type:\"group\",options:[\"Недвижимость\",\"Транспорт\",\"Здоровье\"],hint:\"Выберите верхний раздел\",layout:\"half\"},
-      {id:\"cat\",name:\"category\",title:\"Категория\",type:\"select\",parentId:\"sec\",showIf:\"Chapter=Недвижимость|Транспорт\",map:{
-        \"Недвижимость\":[\"Квартира\",\"Дома\",\"Коммерция\",\"Земля\",\"Посуточная аренда\"],
-        \"Транспорт\":[\"Легковые автомобили\",\"Грузовые автомобили\"]
-      },options:[],layout:\"half\"},
-      {id:\"sub\",name:\"Subcategory\",title:\"Подкатегория\",type:\"select\",parentId:\"cat\",showIf:\"category=Квартира|Дома|Коммерция|Земля|Посуточная аренда\",map:{
-        \"Квартира\":[\"Аренда\",\"Продажа\"],
-        \"Дома\":[\"Аренда\",\"Продажа\"],
-        \"Коммерция\":[\"Аренда\",\"Продажа\"],
-        \"Земля\":[\"Продажа\"],
-        \"Посуточная аренда\":[\"Квартиры\",\"Дома\",\"Хостелы\",\"Гостиницы\",\"Санатории/Дома отдыха\"]
-      },options:[],layout:\"half\"},
+      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"third"},
+      {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
+        "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
+        "Транспорт":["Легковые автомобили","Грузовые автомобили"]
+      },options:[],layout:"third"},
+      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
+        "Квартира":["Аренда","Продажа"],
+        "Дома":["Аренда","Продажа"],
+        "Коммерция":["Аренда","Продажа"],
+        "Земля":["Продажа"],
+        "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
+      },options:[],layout:"third"},
 
-      {id:\"type\",name:\"TypeOfHousing\",title:\"Тип жилья\",type:\"select\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Квартира\",options:[\"Новостройка\",\"Вторичка\",\"От застройщика\"],layout:\"half\"},
+      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third"},
+      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"third"},
+      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"third"},
 
-      {id:\"price\",name:\"Price\",title:\"Цена (за сутки)\",type:\"range\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда\",layout:\"half\"},
-      {id:\"beds\",name:\"Beds\",title:\"Количество спальных мест\",type:\"select\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда\",options:[\"1\",\"2\",\"3\",\"4\",\"5+\"],layout:\"half\"},
-      {id:\"rules\",name:\"Rules\",title:\"Правила\",type:\"select\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда\",options:[\"Без животных\",\"Без вечеринок\",\"Только некурящие\"],layout:\"half\"},
-      {id:\"comfort\",name:\"Comfort\",title:\"Удобства\",type:\"multicheck\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда\",options:[\"Микроволновая печь\",\"Утюг\",\"Фен\",\"Холодильник\",\"Wi‑Fi\",\"Телевизор\",\"Кондиционер\",\"Парковка\"],layout:\"full\"},
-      {id:\"infra\",name:\"Infrastructure\",title:\"Инфраструктура\",type:\"select\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда\",options:[\"Метро рядом\",\"Центр города\",\"Магазины поблизости\"],layout:\"half\"},
-      {id:\"food\",name:\"Food\",title:\"Питание\",type:\"select\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда\",options:[\"Без питания\",\"Завтрак включен\",\"Полный пансион\"],layout:\"half\"},
+      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"full"},
+      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"half"},
+      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"half"},
 
-      {id:\"hotelName\",name:\"HotelName\",title:\"Название отеля\",type:\"text\",parentId:\"cat\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха\",layout:\"half\"},
-      {id:\"roomCat\",name:\"RoomCategory\",title:\"Категория номера\",type:\"select\",parentId:\"sub\",showIf:\"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха\",options:[\"Эконом\",\"Стандарт\",\"Полулюкс\",\"Люкс\",\"Коттедж\"],layout:\"half\"},
+      {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"half"},
+      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"select",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"half"},
 
-      {id:\"brand\",name:\"Brand\",title:\"Марка авто\",type:\"select\",parentId:\"cat\",showIf:\"Chapter=Транспорт\",options:[\"Chevrolet\",\"Hyundai\"],layout:\"half\"},
-      {id:\"year\",name:\"Year\",title:\"Год выпуска\",type:\"number\",parentId:\"cat\",showIf:\"Chapter=Транспорт\",layout:\"half\"}
+      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"third"},
+      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"third"}
     ];
   }
   renderEditor();
