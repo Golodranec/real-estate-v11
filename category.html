@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v20R — полный редактор, независимые мультиселекты, undo/redo, radio</title>
+<title>categories_editor_full_v20R — полный редактор</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -93,7 +93,7 @@
     <section id="helpSection" class="hidden">
       <div class="card">
         <h3>Подсказки</h3>
-        <div>Плейсхолдер для select теперь «Все объявления». Тип <b>radio</b> — жёсткий выбор (нет пустого варианта).</div>
+        <div>Плейсхолдер для select — «Все объявления». Тип <b>radio</b> — жёсткий выбор.</div>
         <div>Undo/Redo: кнопки вверху, также Ctrl+Z / Ctrl+Shift+Z.</div>
       </div>
     </section>
@@ -186,14 +186,15 @@ function renderEditor(){
     r4.append(wrap("Опции (для select/multicheck/radio)",el("textarea",{value:(f.options||[]).join(', '), onfocus:()=>pending=snapshot(), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
               wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), onfocus:()=>pending=snapshot(), oninput:e=>{f.map=textToMap(e.target.value); dirty();}})));
     c.appendChild(r4);
-const r5 = el("div",{className:"row"});
-const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty();}});
-["full","half","third"].forEach(t => layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
-r5.append(
-  wrap("Layout", layoutSel),
-  wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
-);
-c.appendChild(r5);
+
+    const r5 = el("div",{className:"row"});
+    const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty();}});
+    ["full","half","third"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
+    r5.append(
+      wrap("Layout", layoutSel),
+      wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
+    );
+    c.appendChild(r5);
 
     listEl.appendChild(c);
   });
@@ -206,10 +207,19 @@ c.appendChild(r5);
 function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
-function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${arr.join(',')}`).join("
-");}
-function textToMap(txt){const out={};txt.split(/
-/).forEach(l=>{const [k,v]=l.split('=');if(k) out[k.trim()]=(v||'').split(',').map(x=>x.trim()).filter(Boolean)});return out;}
+function mapToText(mapObj){
+  return Object.entries(mapObj)
+    .map(([k,arr]) => `${k}=${(arr||[]).join(', ')}`)
+    .join('\n');
+}
+function textToMap(txt){
+  const out={};
+  txt.split(/\n/).forEach(line=>{
+    const [k,v]=line.split('=');
+    if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
+  });
+  return out;
+}
 function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();renderPreview();}
 
@@ -303,7 +313,7 @@ function makeDropdownMulticheck(fieldDef){
     document.querySelectorAll('.dropdown.open').forEach(dd=>{ if(dd!==container) dd.classList.remove('open'); });
     container.classList.toggle("open");
   };
-  document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
+  document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove('open'); } });
 
   container.append(toggle,menu);
   return container;
