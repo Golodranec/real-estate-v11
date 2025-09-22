@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v13R — 3‑колоночная сетка + фиксы</title>
+<title>categories_editor_full_v15R — полный редактор (3 колонки, фиксы)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
@@ -31,19 +31,19 @@
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
 
-  /* Сетка предпросмотра — 3 колонки на десктопе */
+  /* Сетка предпросмотра — 3 колонки */
   .preview-form { display:grid; gap:16px; grid-template-columns:repeat(3, minmax(0,1fr)); }
-  @media (max-width: 1100px) { .preview-form { grid-template-columns: repeat(2, minmax(0,1fr)); } .preview-form .full{grid-column:span 2;} }
-  @media (max-width: 640px)  { .preview-form { grid-template-columns: 1fr; } .preview-form .full{grid-column:span 1;} .preview-form .half{grid-column:span 1;} .preview-form .third{grid-column:span 1;} }
-
+  @media (max-width:1100px){ .preview-form{grid-template-columns:repeat(2, minmax(0,1fr));} .preview-form .full{grid-column:span 2;} }
+  @media (max-width:640px) { .preview-form{grid-template-columns:1fr;} .preview-form .full,.preview-form .half,.preview-form .third{grid-column:span 1;} }
   .preview-form .full  { grid-column: span 3; }
   .preview-form .half  { grid-column: span 2; }
   .preview-form .third { grid-column: span 1; }
 
   .hint{font-size:12px;color:#9ca3af;margin-top:2px}
   .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
+  .inline{display:flex;gap:8px;align-items:center}
 
-  /* Dropdown Multicheck в стиле select */
+  /* Dropdown Multicheck в стиле обычного select */
   .dropdown{position:relative}
   .dropdown-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:#ffffff;color:#111;border:1px solid #cfd4dc;border-radius:8px;cursor:pointer}
   .dropdown-toggle .arrow{transition:transform .15s ease}
@@ -53,14 +53,13 @@
   .dropdown-menu .item{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:14px;cursor:pointer;color:#111}
   .dropdown-menu .item:hover{background:#f3f4f6}
   .dropdown-menu .item input{width:18px;height:18px}
-  .inline{display:flex;gap:8px;align-items:center}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v13R</span>
+      <span class="badge">v15R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -93,9 +92,9 @@
         <h3>Подсказки</h3>
         <div class="kv">
           <div>Условия</div><div><code>key=val1|val2</code> и AND: <code>key1=... & key2=...</code></div>
-          <div>Layout</div><div><code>full</code> = 3/3, <code>half</code> = 2/3, <code>third</code> = 1/3 ширины</div>
+          <div>Layout</div><div><code>full</code>=3/3, <code>half</code>=2/3, <code>third</code>=1/3</div>
           <div>Типы</div><div><b>range</b> (От/До), <b>multicheck</b> (выпадающий список галочек)</div>
-          <div>ID</div><div>внутренний уникальный идентификатор блока. Используется для связей. Обычно не меняй.</div>
+          <div>ID</div><div>внутренний идентификатор. Нужен для связей родитель/потомок. Менять не требуется.</div>
         </div>
       </div>
     </section>
@@ -106,7 +105,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v13R_data";
+const LS_KEY="categories_editor_full_v15R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -183,7 +182,7 @@ function renderEditor(){
     const layoutSel=el("select",{onchange:e=>{f.layout=e.target.value; dirty();}});
     ["full","half","third"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
     r5.append(wrap("Layout",layoutSel),
-              wrap("ID",el("input",{value:f.id||"",oninput=e=>{f.id=e.target.value; dirty();}})));
+              wrap("ID", el("input",{value:f.id||"", oninput:e=>{f.id=e.target.value; dirty();}})));
     c.appendChild(r5);
 
     listEl.appendChild(c);
@@ -343,22 +342,22 @@ function renderPreview(){
   });
 }
 
-// ===== import/export and tabs =====
+// ===== import/export и табы =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
-$("#fileInput").onchange=async e=>{
-  const f=e.target.files?.[0];
+$("#fileInput").onchange=async (e)=>{
+  const f=e.target.files && e.target.files[0];
   if(!f) return;
   try{
     const txt=await f.text();
     const json=JSON.parse(txt);
-    if(Array.isArray(json.categories)) data=json; 
+    if(Array.isArray(json.categories)) data=json;
     else if(Array.isArray(json.items)) data={categories:json.items};
     save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
   }catch(err){alert("Ошибка: "+err.message);}
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v13R.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v15R.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=addCategory;
