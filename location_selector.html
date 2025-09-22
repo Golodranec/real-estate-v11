@@ -101,9 +101,10 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   background:#0f1626; border:1px solid var(--border); border-radius:10px; padding:6px 8px;
   box-shadow:0 6px 18px rgba(0,0,0,0.4);
 }
-.loc-tool .handle{font-size:12px; color:#8aa4ff; cursor:move; user-select:none; padding:2px 6px; border-radius:6px; background:#151e31;}
+.loc-tool .handle{font-size:12px; color:#8aa4ff; cursor:move; user-select:none; padding:4px 8px; border-radius:6px; background:#151e31;}
 .loc-tool label{display:inline-flex; align-items:center; gap:6px; font-size:13px}
 .loc-tool select, .loc-tool button{height:28px}
+.loc-tool select{min-width:110px; padding:0 8px;}
 
 
 /* новая кнопка мультиселекта */
@@ -163,7 +164,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
         <button id="btnSelectAll">Выбрать всё</button>
         <button id="btnClearAll" class="danger">Сбросить всё</button>
       </div>
-      <div class="help">Чекбокс-категории открываются в большом списке как на Авито. Внутри тоже есть «Выбрать всё / Сбросить всё».</div>
+      
       <div id="cascadeBox" style="margin-top:8px"></div>
 
       <div class="sep"></div>
@@ -243,7 +244,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     <div id="locDrag" class="handle">Локация</div>
     <label><input type="radio" name="locType" value="exact" checked> Точное</label>
     <label><input type="radio" name="locType" value="approx"> Примерное</label>
-    <select id="approxRadius">
+    <select id="approxRadius" aria-label="Радиус зоны">
       <option value="200">200 м</option>
       <option value="500" selected>500 м</option>
       <option value="1000">1 км</option>
@@ -263,7 +264,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       <button id="btnCoordAdd">Добавить</button>
       <button id="btnCoordClear" class="danger">Очистить</button>
     </div>
-    <div class="help">Перетащи окно в удобный угол. Показ — только на карте (в предпросмотр не лезем).</div>
+    
   </div>
 
   <!-- Скрипты карт -->
@@ -1254,7 +1255,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   (function enableDrag(){
     const handle=document.getElementById('coordDrag');
     let sx=0,sy=0,ox=0,oy=0,isDown=false;
-    handle.addEventListener('mousedown',e=>{isDown=true;sx=e.clientX;sy=e.clientY; const r=$coordTool.getBoundingClientRect(); ox=r.left; oy=r.top; e.preventDefault();});
+    handle.addEventListener('mousedown',e=>{ e.stopPropagation && e.stopPropagation();isDown=true;sx=e.clientX;sy=e.clientY; const r=$coordTool.getBoundingClientRect(); ox=r.left; oy=r.top; e.preventDefault();});
     document.addEventListener('mousemove',e=>{
       if(!isDown) return;
       const dx=e.clientX-sx, dy=e.clientY-sy;
@@ -1322,8 +1323,15 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   /***** ПАНЕЛЬ ТИПА ЛОКАЦИИ (ТОЧНОЕ/ПРИМЕРНОЕ) *****/
   const $locTool=document.getElementById('locTool');
   const $radius=document.getElementById('approxRadius');
+  $radius.addEventListener('change', (e)=>{
+    e.stopPropagation && e.stopPropagation();
+    const val=parseInt($radius.value||'500',10);
+    if(approxCircle){ approxCircle.setRadius(val); const c=approxCircle.getLatLng(); localStorage.setItem(APPROX_KEY, JSON.stringify({lat:c.lat,lng:c.lng,radius:val,updatedAt:Date.now()})); }
+  });
+
   const $btnApproxClear=document.getElementById('btnApproxClear');
   document.getElementById('map').appendChild($locTool);
+  if(window.L && L.DomEvent){ try{ L.DomEvent.disableClickPropagation($locTool); L.DomEvent.disableScrollPropagation($locTool);}catch(_){}}
   (function restoreLocToolPos(){
     const pos=JSON.parse(localStorage.getItem('locToolPos')||'null');
     if(pos){ $locTool.style.left=pos.left; $locTool.style.top=pos.top; }
@@ -1333,7 +1341,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   (function dragLocTool(){
     const handle=document.getElementById('locDrag');
     let down=false, dx=0, dy=0;
-    handle.addEventListener('mousedown',e=>{
+    handle.addEventListener('mousedown',e=>{ e.stopPropagation && e.stopPropagation();
       down=true; const r=$locTool.getBoundingClientRect(); dx=e.clientX-r.left; dy=e.clientY-r.top; e.preventDefault();
     });
     document.addEventListener('mousemove',e=>{
@@ -1354,7 +1362,12 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   let currentLocType=localStorage.getItem(LOC_TYPE_KEY)||'exact';
   [...document.querySelectorAll('input[name="locType"]')].forEach(r=>{
     r.checked = r.value===currentLocType;
-    r.onchange=()=>{ currentLocType=r.value; localStorage.setItem(LOC_TYPE_KEY,currentLocType); };
+    r.onchange=(ev)=>{ ev && ev.stopPropagation && ev.stopPropagation(); currentLocType=r.value; localStorage.setItem(LOC_TYPE_KEY,currentLocType); if(currentLocType==='exact' && approxCircle){ map.removeLayer(approxCircle); approxCircle=null; localStorage.removeItem(APPROX_KEY);} 
+    if(currentLocType==='approx'){
+      try{ if(typeof tempMarker!=='undefined' && tempMarker && map.hasLayer(tempMarker)){ map.removeLayer(tempMarker); tempMarker=null; } }catch(_){}
+      try{ if(typeof marker!=='undefined' && marker && map.hasLayer(marker)){ map.removeLayer(marker); marker=null; } }catch(_){}
+    }
+ };
   });
 
   let approxCircle=null;
@@ -1370,9 +1383,9 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
     localStorage.setItem(APPROX_KEY, JSON.stringify({lat,lng,radius,updatedAt:Date.now()}));
   }
 
-  $btnApproxClear.onclick=()=>{
+  $btnApproxClear.onclick=(e)=>{ e && e.stopPropagation && e.stopPropagation(); e.preventDefault && e.preventDefault();
     localStorage.removeItem(APPROX_KEY);
-    if(approxCircle){ map.removeLayer(approxCircle); approxCircle=null; }
+    if(approxCircle){ map.removeLayer(approxCircle); approxCircle=null; } try{ if(typeof tempMarker!=='undefined' && tempMarker && map.hasLayer(tempMarker)){ map.removeLayer(tempMarker); tempMarker=null; } }catch(_){}
   };
 
   map.on('click', (e)=>{
@@ -1381,7 +1394,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       setTempMarker(lat,lng);
       $coordPair.value=lat.toFixed(6)+', '+lng.toFixed(6);
     }else{
-      if(approxCircle){ map.removeLayer(approxCircle); approxCircle=null; }
+      if(approxCircle){ map.removeLayer(approxCircle); approxCircle=null; } try{ if(typeof tempMarker!=='undefined' && tempMarker && map.hasLayer(tempMarker)){ map.removeLayer(tempMarker); tempMarker=null; } }catch(_){}
       approxCircle=L.circle([lat,lng],{radius:parseInt($radius.value||'500',10),color:'#33d6a6',fillColor:'#33d6a6',fillOpacity:0.2}).addTo(map);
       saveApprox(lat,lng);
     }
