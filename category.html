@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v21W</title>
+<title>categories_editor — v21X</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -37,7 +37,6 @@
   .hidden{display:none}
 
   .preview-form { display:grid; gap:16px; grid-template-columns:repeat(6, minmax(0,1fr)); }
-  /* Layout spans on 6-column grid */
   .preview-form .full{grid-column:span 6;}
   .preview-form .five-sixth{grid-column:span 5;}
   .preview-form .two-third{grid-column:span 4;}
@@ -65,7 +64,7 @@
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v21W</span>
+      <span class="badge">v21X</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -88,6 +87,16 @@
 
   <main>
     <section id="editorSection">
+      <div class="card" style="padding:10px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label>Папка</label>
+          <select id="folderSelect"></select>
+          <button id="addFolderBtn">+ Папка</button>
+          <button id="renameFolderBtn">Переименовать</button>
+          <button id="delFolderBtn" class="danger">Удалить</button>
+          <span id="crumbs" class="mini ghost" style="margin-left:auto"></span>
+        </div>
+      </div>
       <div id="list"></div>
     </section>
 
@@ -99,8 +108,9 @@
       <div class="card">
         <h3>Подсказки</h3>
         <div>Можно сворачивать карточки категорий. Кнопка ▼/▶ в заголовке.</div>
-        <div>Макет предпросмотра теперь на 6 колонок: full, five-sixth, two-third, half, third, sixth.</div>
+        <div>Макет предпросмотра на 6 колонок: full, five-sixth, two-third, half, third, sixth.</div>
         <div>Плейсхолдер для select — «Все объявления». Он выбран по умолчанию и виден сразу.</div>
+        <div>Папки в редакторе: выпадающий список, хлебные крошки, перенос категорий между папками.</div>
       </div>
     </section>
   </main>
@@ -110,22 +120,50 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_v21W_data";
-let data={categories:[]};
+const LS_KEY="categories_editor_v21X_data";
+const PV_KEY=LS_KEY+"_pv";
+const UI_KEY=LS_KEY+"_ui";
+
+let data={categories:[], folders:[{id:"root",title:"Все",parentId:null}]};
+let previewValues={};
+let ui={activeTab:"editor",folder:"root",scrollEditor:0,scrollPreview:0};
+
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
+function loadPV(){ try{ const raw=localStorage.getItem(PV_KEY); if(raw) previewValues=JSON.parse(raw)||{}; }catch{} }
+function savePV(){ try{ localStorage.setItem(PV_KEY, JSON.stringify(previewValues)); }catch{} }
+function loadUI(){ try{ const raw=localStorage.getItem(UI_KEY); if(raw) ui=Object.assign(ui, JSON.parse(raw)||{}); }catch{} }
+function saveUI(){ try{ localStorage.setItem(UI_KEY, JSON.stringify(ui)); }catch{} }
 
 // History (undo/redo)
 const snapshot=()=>JSON.parse(JSON.stringify(data));
 let hist=[], future=[], pending=null;
 function pushHistory(preSnap){ if(preSnap){ hist.push(preSnap); if(hist.length>50) hist.shift(); future.length=0; } }
-function undo(){ if(hist.length){ future.push(snapshot()); data=hist.pop(); save(); renderEditor(); renderPreview(); } }
-function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); save(); renderEditor(); renderPreview(); } }
+function undo(){ if(hist.length){ future.push(snapshot()); data=hist.pop(); save(); renderFolderControls(); renderEditor(); renderPreview(); } }
+function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); save(); renderFolderControls(); renderEditor(); renderPreview(); } }
 $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
 document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
 
 const listEl=$("#list");
 let dragSrcId=null;
+
+// Folders API
+function ensureFolders(){ if(!data.folders) data.folders=[{id:"root",title:"Все",parentId:null}]; if(!ui.folder) ui.folder="root";}
+function addFolder(title,parentId){ const id="fld_"+uid(); data.folders.push({id,title:title||"Новая папка",parentId:parentId||"root"}); save(); return id; }
+function renameFolder(id,title){ const f=data.folders.find(x=>x.id===id); if(f&&f.id!=="root"){ f.title=title; save(); } }
+function deleteFolder(id){
+  if(id==="root") return;
+  const f=data.folders.find(x=>x.id===id); if(!f) return;
+  const parent=f.parentId||"root";
+  data.folders.filter(x=>x.parentId===id).forEach(x=> x.parentId=parent);
+  data.categories.filter(x=> (x.folderId||"root")===id).forEach(x=> x.folderId=parent);
+  data.folders=data.folders.filter(x=>x.id!==id);
+  if(ui.folder===id) ui.folder=parent;
+  save();
+}
+function folderPath(id){ const chain=[]; let cur=id; while(cur){ const f=data.folders.find(x=>x.id===cur); if(!f) break; chain.push(f); cur=f.parentId; } return chain.reverse(); }
+function folderChildren(id){ return data.folders.filter(x=> (x.parentId||"root")===(id||"root")); }
+function buildFolderOptions(){ const out=[]; (function walk(id,depth){ folderChildren(id).forEach(f=>{ out.push({id:f.id,title:(depth?("  ".repeat(depth)):"")+f.title}); walk(f.id,depth+1); }); })("root",0); return out; }
 
 function renderEditor(){
   listEl.innerHTML="";
@@ -143,7 +181,7 @@ function renderEditor(){
     return opts;
   };
 
-  data.categories.forEach((f, idx)=>{
+  data.categories.filter(f=> (f.folderId||"root")=== (ui.folder||"root")).forEach((f, idx)=>{
     const c=el("div",{className:"card",draggable:true});
     if(f._collapsed) c.classList.add("collapsed");
     c.dataset.id=f.id;
@@ -153,8 +191,8 @@ function renderEditor(){
     c.ondragover=(e)=>{e.preventDefault();};
     c.ondrop=(e)=>{
       e.preventDefault();
-      const srcIndex=data.categories.findIndex(x=>x.id===dragSrcId);
-      const targetIndex=idx;
+      const srcIndex=data.categories.findIndex(x=>x.id===dragSrcId && (x.folderId||"root")===(ui.folder||"root"));
+      const targetIndex=data.categories.findIndex(x=>x.id===f.id && (x.folderId||"root")===(ui.folder||"root"));
       if(srcIndex>=0 && targetIndex>=0 && srcIndex!==targetIndex){
         pushHistory(snapshot());
         const moved=data.categories.splice(srcIndex,1)[0];
@@ -186,9 +224,9 @@ function renderEditor(){
     c.appendChild(r2);
 
     const r3=el("div",{className:"row"});
-    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
+    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange=e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
-    r3.append(wrap("Родитель",pSel),
+    r3.append(wrap("Родитель (логика)",pSel),
               wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"key=val1|val2 [& key2=...]", onfocus:()=>pending=snapshot(), oninput:e=>{f.showIf=e.target.value; dirty();}})));
     c.appendChild(r3);
 
@@ -200,9 +238,12 @@ function renderEditor(){
     const r5 = el("div",{className:"row"});
     const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty();}});
     ["full","five-sixth","two-third","half","third","sixth"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
+    const folderSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value||"root"; dirty(); renderEditor();}});
+    buildFolderOptions().forEach(o=> folderSel.append(el("option",{value:o.id,textContent:o.title,selected:(f.folderId||"root")===o.id})));
     r5.append(
-      wrap("Layout", layoutSel),
-      wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
+      wrap("Макет (предпросмотр)", layoutSel),
+      wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}})),
+      wrap("Папка (организация)", folderSel)
     );
     c.appendChild(r5);
 
@@ -217,14 +258,12 @@ function renderEditor(){
 function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
-function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\n');}
-function textToMap(txt){const out={};txt.split(/\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
-function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
+function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
+function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half",folderId:(ui.folder||"root")}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();renderPreview();}
 
 // ===== preview =====
-let previewValues={};
-
 const DEFAULT_LABEL = "Все объявления";
 
 function parseShowIf(str){
@@ -262,14 +301,12 @@ function assignSelectValue(sel, key){
   sel.value = exists ? val : "";
   previewValues[key] = sel.value;
 }
-
 function ruPlural(n, forms){
   const n10 = n % 10, n100 = n % 100;
   if(n10===1 && n100!==11) return forms[0];
   if(n10>=2 && n10<=4 && (n100<10 || n100>=20)) return forms[1];
   return forms[2];
 }
-
 function makeDropdownMulticheck(fieldDef){
   const key = fieldDef.name || fieldDef.id;
   const baseOpts = optionsFor(fieldDef);
@@ -296,13 +333,13 @@ function makeDropdownMulticheck(fieldDef){
     cb.onchange = (e)=>{
       e.stopPropagation();
       if(cb.checked) current.add(opt); else current.delete(opt);
-      previewValues[key] = Array.from(current);
+      previewValues[key] = Array.from(current); savePV();
       updateLabel();
     };
     row.append(cb, document.createTextNode(opt));
     menu.append(row);
   });
-  previewValues[key] = Array.from(current);
+  previewValues[key] = Array.from(current); savePV();
   updateLabel();
   toggle.onclick = (e)=>{
     e.stopPropagation();
@@ -324,7 +361,7 @@ function renderPreview(){
       (f.options||[]).forEach(o=>sel.append(new Option(o,o)));
       const key=f.name||f.id;
       assignSelectValue(sel, key);
-      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
+      sel.onchange=()=>{previewValues[key]=sel.value; savePV(); renderPreview();};
       const w=wrap(f.title||f.name||f.id, sel);
       if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
       if(f.layout) w.classList.add(f.layout);
@@ -342,7 +379,7 @@ function renderPreview(){
       ensurePlaceholder(ctrl);
       optionsFor(f).forEach(o=>{ if(o!==DEFAULT_LABEL) ctrl.append(new Option(o,o)); });
       assignSelectValue(ctrl, key);
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePV(); renderPreview();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="radio"){
@@ -350,20 +387,20 @@ function renderPreview(){
       ctrl=el("select");
       opts.forEach(o=>ctrl.append(new Option(o,o)));
       if(previewValues[key] && opts.includes(previewValues[key])) ctrl.value=previewValues[key];
-      else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};
+      else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; savePV(); }
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePV();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="checkbox"){
       ctrl=el("input",{type:"checkbox"});
       ctrl.checked=!!previewValues[key];
-      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.checked; savePV();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="text"||f.type==="number"||f.type==="date"){
       ctrl=el("input",{type:f.type});
       if(previewValues[key]) ctrl.value=previewValues[key];
-      ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
+      ctrl.oninput=()=>{previewValues[key]=ctrl.value; savePV();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="range"){
@@ -371,8 +408,8 @@ function renderPreview(){
       const min=el("input",{type:"number",placeholder:"От"});
       const max=el("input",{type:"number",placeholder:"До"});
       if(previewValues[key]){ min.value=previewValues[key].min||""; max.value=previewValues[key].max||""; }
-      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
-      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
+      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value}; savePV();};
+      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value}; savePV();};
       box.append(min,max);
       w=wrap(f.title||f.name||f.id, box);
     }
@@ -399,17 +436,18 @@ $("#fileInput").onchange=async (e)=>{
     const txt=await f.text();
     const json=JSON.parse(txt);
     if(Array.isArray(json.categories)) data=json;
-    else if(Array.isArray(json.items)) data={categories:json.items};
-    save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
+    else if(Array.isArray(json.items)) data={categories:json.items, folders:[{id:"root",title:"Все",parentId:null}]};
+    if(!data.folders) data.folders=[{id:"root",title:"Все",parentId:null}];
+    save();renderFolderControls();renderEditor();previewValues={};savePV();renderPreview();alert("Импортировано");
   }catch(err){alert("Ошибка: "+err.message);}
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v21W.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v21X.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
-$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){ pushHistory(snapshot()); data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
+$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){ pushHistory(snapshot()); data={categories:[],folders:[{id:"root",title:"Все",parentId:null}]};save();renderFolderControls();renderEditor();previewValues={};savePV();renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
 $("#tab-help").onclick=()=>{activate("help");};
@@ -421,9 +459,15 @@ function activate(tab){
   $("#editorSection").classList.add("hidden");
   $("#previewSection").classList.add("hidden");
   $("#helpSection").classList.add("hidden");
-  if(tab==="editor"){ $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
-  else if(tab==="preview"){ $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
-  else { $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
+  if(tab==="editor"){ setActiveTab('editor'); $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
+  else if(tab==="preview"){ setActiveTab('preview'); $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
+  else { setActiveTab('help'); $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
+}
+
+function setActiveTab(tab){
+  ui.activeTab = tab; saveUI();
+  const scr = document.querySelector('main');
+  setTimeout(()=>{ scr.scrollTop = (tab==='editor'? (ui.scrollEditor||0) : (ui.scrollPreview||0)); }, 0);
 }
 
 function updateSize(){
@@ -435,37 +479,62 @@ function updateSize(){
   }
 }
 
+// Top folder controls
+function renderFolderControls(){
+  if(!data.folders) data.folders=[{id:"root",title:"Все",parentId:null}];
+  if(!ui.folder) ui.folder="root";
+  const sel = $("#folderSelect");
+  if(!sel) return;
+  sel.innerHTML = "";
+  (function build(){ const opts=[]; (function walk(id,depth){ data.folders.filter(x=> (x.parentId||"root")===(id||"root")).forEach(f=>{ opts.push({id:f.id,title:(depth?("  ".repeat(depth)):"")+f.title}); walk(f.id,depth+1); }); })("root",0); opts.forEach(o=> sel.append(el("option",{value:o.id,textContent:o.title,selected:(ui.folder||"root")===o.id}))); })();
+  sel.onchange = ()=>{ ui.folder = sel.value; saveUI(); renderEditor(); };
+  const path = folderPath(ui.folder||"root");
+  $("#crumbs").textContent = path.map(p=>p.title).join(" / ");
+  $("#addFolderBtn").onclick = ()=>{ const title = prompt("Название папки:"); if(!title) return; addFolder(title, ui.folder||"root"); renderFolderControls(); renderEditor(); };
+  $("#renameFolderBtn").onclick = ()=>{ if((ui.folder||"root")==="root"){ alert("Корневую папку переименовать нельзя."); return; } const f = data.folders.find(x=>x.id===ui.folder); const title = prompt("Новое название:", f?.title||""); if(!title) return; renameFolder(ui.folder, title); renderFolderControls(); renderEditor(); };
+  $("#delFolderBtn").onclick = ()=>{ if((ui.folder||"root")==="root"){ alert("Нельзя удалить корневую папку."); return; } if(confirm("Удалить папку? Содержимое будет перемещено в родительскую.")){ deleteFolder(ui.folder); saveUI(); renderFolderControls(); renderEditor(); } };
+}
+
 (function init(){
-  load();
+  load(); loadPV(); loadUI(); ensureFolders();
   if(!data.categories.length){
     data.categories=[
-      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"sixth"},
+      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"sixth",folderId:"root"},
       {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
         "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
         "Транспорт":["Легковые автомобили","Грузовые автомобили"]
-      },options:[],layout:"sixth"},
+      },options:[],layout:"sixth",folderId:"root"},
       {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
         "Квартира":["Аренда","Продажа"],
         "Дома":["Аренда","Продажа"],
         "Коммерция":["Аренда","Продажа"],
         "Земля":["Продажа"],
         "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
-      },options:[],layout:"sixth"},
+      },options:[],layout:"sixth",folderId:"root"},
 
-      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third"},
-      {id:"currency",name:"Currency",title:"Валюта",type:"radio",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["UZS","USD"],layout:"sixth"},
-      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"sixth"},
-      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"sixth"},
+      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third",folderId:"root"},
+      {id:"currency",name:"Currency",title:"Валюта",type:"radio",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["UZS","USD"],layout:"sixth",folderId:"root"},
+      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"sixth",folderId:"root"},
+      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"sixth",folderId:"root"},
 
-      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"full"},
-      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"half"},
-      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"half"}
+      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"full",folderId:"root"},
+      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"half",folderId:"root"},
+      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"half",folderId:"root"}
     ];
   }
+  renderFolderControls();
   renderEditor();
   renderPreview();
   updateSize();
   hist.length=0; future.length=0;
+
+  // restore active tab and scroll
+  if(ui.activeTab && ui.activeTab!=='editor') activate(ui.activeTab); else activate('editor');
+  const scr = document.querySelector('main');
+  scr.addEventListener('scroll', ()=>{
+    if(ui.activeTab==='editor') ui.scrollEditor = scr.scrollTop; else if(ui.activeTab==='preview') ui.scrollPreview = scr.scrollTop;
+    saveUI();
+  });
 })();
 </script>
 </body>
