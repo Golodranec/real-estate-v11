@@ -2,351 +2,576 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Categories Editor — min22G</title>
+<title>categories_editor — v22D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-:root{--bg:#0f1720;--panel:#111a27;--line:#223049;--text:#e8f1ff;--muted:#9fb2c8;--ok:#18c29c;--warn:#f5a524;--danger:#ef4e4e}
-*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-/* header */
-header{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:#0c1522}
-.badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted)}
-button{background:#0f1b2d;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer}
-button.small{padding:4px 8px;font-size:12px}
-button.ok{background:#0f2a22;border-color:#184a3d;color:#98f5d3}
-button.danger{background:#2b1416;border-color:#4a2326;color:#ffb3b3}
-.wrap{display:grid;grid-template-columns:300px 1fr;gap:0}
-aside{border-right:1px solid var(--line);background:#0b1422;min-height:calc(100vh - 50px)}
-main{min-height:calc(100vh - 50px)}
-/* tree */
-.tree{padding:10px}
-.node{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer}
-.node.active{background:#14253b}
-.node .name{flex:1}
-.node .actions{display:none;gap:4px}
-.node:hover .actions{display:flex}
-.children{margin-left:14px;border-left:1px dashed var(--line);padding-left:8px}
-/* list */
-.section{padding:12px}
-.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
-.col-12{grid-column:span 12}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-2{grid-column:span 2}
-.card{background:#0f1d32;border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden}
-.card .head{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid var(--line);background:#0f1b2c}
-.card .head .sp{flex:1}
-.card .body{padding:10px;display:none}
-.card.open .body{display:block}
-label{display:block;font-size:12px;color:#9fb2c8;margin-bottom:4px}
-input,select,textarea{width:100%;background:#0b1626;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px}
-textarea{min-height:64px;resize:vertical}
-/* preview */
-.preview{padding:12px}
-.preview .form{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.preview .cell{grid-column:span 3}
-.preview .cell.third{grid-column:span 2}
-.preview .cell.full{grid-column:span 6}
-.hint{font-size:12px;color:#9bb1cb}
+  :root{
+    --bg:#0f172a; --panel:#111827; --line:#1f2937; --text:#e5e7eb; --ok:#22c55e;
+    --warn:#f59e0b; --err:#ef4444; --field:#0b1220
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
+  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
+  .left,.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#0b1220;font-size:12px}
+  nav.tabs{display:flex;gap:8px;padding:8px;background:#111827;border-bottom:1px solid var(--line)}
+  nav.tabs button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
+  nav.tabs button.active{background:var(--ok);color:#052e16}
+  main{flex:1;overflow:auto;padding:12px;max-width:1200px;margin:0 auto;width:100%}
+  button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
+  button.primary{background:var(--ok);color:#052e16}
+  button.warn{background:var(--warn);color:#3b2306}
+  button.danger{background:var(--err);color:#fff}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;cursor:default}
+  .card.collapsed .row{display:none}
+  .card h3{margin:0 0 8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+  label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
+  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit}
+  textarea{min-height:60px}
+  .mini{font-size:12px;opacity:.75}
+  .ghost{opacity:.7}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .hidden{display:none}
+  /* Preview: 6 cols desktop, 3 cols tablet, 1 col mobile */
+  .preview-form { display:grid; gap:16px; grid-template-columns:repeat(6, minmax(0,1fr)); }
+  .preview-form .col-1{grid-column:span 1}
+  .preview-form .col-2{grid-column:span 2}
+  .preview-form .col-3{grid-column:span 3}
+  .preview-form .col-4{grid-column:span 4}
+  .preview-form .col-5{grid-column:span 5}
+  .preview-form .col-6{grid-column:span 6}
+  @media (max-width:1100px){
+    .preview-form{grid-template-columns:repeat(3, minmax(0,1fr));}
+    .preview-form .col-4,.preview-form .col-5,.preview-form .col-6{grid-column:span 3}
+    .preview-form .col-3{grid-column:span 3}
+    .preview-form .col-2{grid-column:span 2}
+    .preview-form .col-1{grid-column:span 1}
+  }
+  @media (max-width:640px){
+    .preview-form{grid-template-columns:1fr;}
+    .preview-form [class^="col-"]{grid-column:span 1}
+  }
+  .hint{font-size:12px;color:#9ca3af;margin-top:2px}
+  .inline{display:flex;gap:8px;align-items:center}
+  .dropdown{position:relative}
+  .filter-select{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+  .filter-select .arrow{transition:transform .15s ease}
+  .dropdown.open .filter-select .arrow{transform:rotate(180deg)}
+  .dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;background:var(--field);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:50;display:none;max-height:320px;overflow:auto}
+  .dropdown.open .dropdown-menu{display:block}
+  .dropdown-menu .item{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:14px;color:var(--text);cursor:pointer}
+  .dropdown-menu .item:hover{background:#1f2937}
+  .dropdown-menu .item input{width:18px;height:18px}
+  .muted{opacity:.7}
+  /* Folder bar */
+  .folderbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
 </style>
 </head>
 <body>
-<header>
-  <strong>Редактор категорий</strong>
-  <span class="badge" id="ver">min22G</span>
-  <span class="badge" id="status">—</span>
-  <div style="margin-left:auto"></div>
-  <button id="undo" class="small">↶ Undo</button>
-  <button id="redo" class="small">↷ Redo</button>
-  <button id="import" class="small">Импорт</button>
-  <button id="export" class="small ok">Экспорт</button>
-</header>
-
-<div class="wrap">
-  <aside>
-    <div class="section">
-      <div class="grid">
-        <div class="col-12">
-          <label>Создать подпапку в текущей</label>
-          <div class="grid">
-            <div class="col-8"><input id="newFolderName" placeholder="Название папки"/></div>
-            <div class="col-4"><button id="addFolder" class="small">+ Папка</button></div>
-          </div>
-        </div>
-      </div>
+  <header>
+    <div class="left">
+      <strong>Категории — редактор с папками</strong>
+      <span class="badge">v22D</span>
+      <span id="sizeBadge" class="badge">Размер: …</span>
+      <span id="statusBadge" class="badge">Сохранено</span>
     </div>
-    <div class="tree" id="tree"></div>
-  </aside>
+    <div class="right top-actions">
+      <button id="collapseAll" class="warn">Свернуть все</button>
+      <button id="expandAll" class="warn">Развернуть все</button>
+      <button id="undoBtn">↶ Undo</button>
+      <button id="redoBtn">↷ Redo</button>
+      <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+      <button id="importBtn">Импорт</button>
+      <button id="exportBtn" class="primary">Экспорт</button>
+      <button id="addBtn">+ Категория</button>
+      <button id="clearBtn" class="danger">Очистить</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-editor" class="active">Редактор</button>
+    <button id="tab-preview">Предпросмотр</button>
+    <button id="tab-help">Справка</button>
+  </nav>
 
   <main>
-    <div class="section">
-      <div class="grid">
-        <div class="col-8"><button id="addCat" class="small">+ Категория</button></div>
-        <div class="col-4" style="text-align:right">
-          <button id="collapseAll" class="small">Свернуть все</button>
-          <button id="expandAll" class="small">Развернуть все</button>
+    <section id="editorSection">
+      <div class="card">
+        <div class="folderbar">
+          <label>Папка</label>
+          <select id="folderFilter"></select>
+          <button id="addFolder">+ Папка</button>
+          <button id="renameFolder">Переименовать</button>
+          <button id="deleteFolder" class="danger">Удалить</button>
         </div>
       </div>
       <div id="list"></div>
-    </div>
+    </section>
 
-    <div class="section">
-      <h3>Предпросмотр</h3>
-      <div class="preview">
-        <div class="form" id="preview"></div>
-        <div class="hint">Предпросмотр и прокрутка сохраняются (localStorage).</div>
+    <section id="previewSection" class="hidden">
+      <form id="previewForm" class="preview-form"></form>
+    </section>
+
+    <section id="helpSection" class="hidden">
+      <div class="card">
+        <h3>Подсказки</h3>
+        <ul>
+          <li>Плейсхолдер для select — «Все объявления». Он выбран по умолчанию и виден сразу.</li>
+          <li>Тип <b>radio</b> — жёсткий выбор (без пустого варианта). Валюта по умолчанию UZS.</li>
+          <li>Undo/Redo: кнопки вверху, также Ctrl+Z / Ctrl+Shift+Z.</li>
+          <li>Свернуть/развернуть все — только для редактора. У отдельных карточек — иконка «▾» справа от заголовка.</li>
+          <li>Сетка предпросмотра — 6 колонок: col-1…col-6. Старые full/half/third мэпятся на col-6/col-3/col-2.</li>
+        </ul>
       </div>
-    </div>
+    </section>
   </main>
-</div>
-
-<input id="file" type="file" hidden accept=".json,.txt"/>
 
 <script>
-// ====== Data model (минимально-инвазивно) ======
-// Flat categories + "folderPath" ('Недвижимость/Квартира').
-// Ничего не ломаем. Старые поля остаются как есть.
-const KEY_DATA='cats_min22G';
-const KEY_PREVIEW='cats_min22G_preview';
-const KEY_SCROLL='cats_min22G_scroll';
-
-let data = load() || seed();
-let cwd = ""; // текущий путь папки, "" = корень
-let history = []; let hIndex=-1;
-
 const $=s=>document.querySelector(s);
-const $$=(s,root=document)=>Array.from(root.querySelectorAll(s));
+const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
-function clone(x){return JSON.parse(JSON.stringify(x));}
 
-function seed(){
-  return {
-    version:'min22G',
-    categories:[
-      {id:uid(), folderPath:"Недвижимость", title:"Раздел", key:"Chapter", type:"select", options:["Недвижимость","Транспорт"], layout:"half"},
-      {id:uid(), folderPath:"Недвижимость", title:"Категория", key:"category", type:"select", options:["Квартиры","Дома","Посуточная аренда"], layout:"half"},
-      {id:uid(), folderPath:"Недвижимость/Посуточная аренда", title:"Подкатегория", key:"Subcategory", type:"select", options:["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"], layout:"third"},
-      {id:uid(), folderPath:"Недвижимость/Посуточная аренда", title:"Цена (за сутки)", key:"Price", type:"range", layout:"third"},
-      {id:uid(), folderPath:"Недвижимость/Посуточная аренда", title:"Валюта", key:"Currency", type:"radio", options:["UZS","USD"], layout:"third"},
-      {id:uid(), folderPath:"Недвижимость/Посуточная аренда", title:"Удобства", key:"Comfort", type:"multicheck", options:["Wi‑Fi","Кондиционер","Телевизор","Парковка","Кухня"], layout:"full"}
-    ]
-  };
-}
+const LS_KEY="categories_editor_v22D_data";
+let data={folders:[],categories:[],collapsed:{}};
+function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
 
-function load(){ try{ return JSON.parse(localStorage.getItem(KEY_DATA)||""); }catch(e){ return null; } }
-function save(push=true){
-  localStorage.setItem(KEY_DATA, JSON.stringify(data));
-  if(push){
-    const snap=JSON.stringify(data);
-    history = history.slice(0,hIndex+1);
-    history.push(snap); if(history.length>50) history.shift();
-    hIndex = history.length-1;
+// History (undo/redo)
+const snapshot=()=>JSON.parse(JSON.stringify(data));
+let hist=[], future=[], pending=null;
+function pushHistory(preSnap){ if(preSnap){ hist.push(preSnap); if(hist.length>50) hist.shift(); future.length=0; } }
+function undo(){ if(hist.length){ future.push(snapshot()); data=hist.pop(); save(); renderEditor(); renderPreview(); } }
+function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); save(); renderEditor(); renderPreview(); } }
+$("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
+document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
+
+const listEl=$("#list");
+let currentFolder="__ALL__";
+
+function migrateIfNeeded(){
+  // Если импортирована старая схема (без folders)
+  if(!Array.isArray(data.folders) || !data.folders.length){
+    const rootId = "root";
+    data.folders = [{id:rootId,title:"(Все)",open:true}];
+    data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
   }
-  $('#status').textContent='Сохранено';
-}
-function undo(){ if(hIndex>0){ hIndex--; data=JSON.parse(history[hIndex]); renderAll(); }}
-function redo(){ if(hIndex<history.length-1){ hIndex++; data=JSON.parse(history[hIndex]); renderAll(); }}
-
-function renderAll(){ renderTree(); renderList(); renderPreview(); }
-
-/* ====== Tree ====== */
-function buildTree(){
-  const root={name:"", children:{}};
+  // Гарантия полей
   data.categories.forEach(c=>{
-    const parts=(c.folderPath||"").split('/').filter(Boolean);
-    let node=root;
-    parts.forEach(p=> node=node.children[p]||(node.children[p]={name:p,children:{}}) );
+    if(!c.id) c.id=uid();
+    if(!c.layout) c.layout="half";
+    if(!c.type) c.type="text";
+    if(!c.folderId) c.folderId = data.folders[0].id;
   });
-  return root;
-}
-function renderTree(){
-  const root=buildTree();
-  const host=$("#tree"); host.innerHTML="";
-  // Корень
-  const rootRow=document.createElement('div'); rootRow.className='node'+(cwd===""?' active':'');
-  rootRow.innerHTML=`<span>📁</span><span class="name">(Корень)</span><span class="actions"><button class="small" data-act="open">Открыть</button></span>`;
-  rootRow.querySelector('[data-act=open]').onclick=()=>{ cwd=""; renderAll(); };
-  host.appendChild(rootRow);
-  // Рекурсивная отрисовка
-  function draw(node, path){
-    Object.keys(node.children).sort().forEach(k=>{
-      const p = path? path+"/"+k : k;
-      const row=document.createElement('div');
-      row.className='node'+(p===cwd?' active':'');
-      row.innerHTML=`<span>📁</span><span class="name">${k}</span><span class="actions">
-        <button class="small" data-act="open">Открыть</button>
-        <button class="small" data-act="add">+ Внутрь</button>
-        <button class="small danger" data-act="del">Удалить</button>
-      </span>`;
-      row.querySelector('[data-act=open]').onclick=()=>{ cwd=p; renderAll(); };
-      row.querySelector('[data-act=add]').onclick=()=>{
-        const nm = prompt('Название подпапки'); if(!nm) return;
-        data.categories.push({id:uid(), folderPath:(p? p+'/'+nm : nm), title:"", key:"", type:"text", options:[], layout:"third"});
-        save(); renderAll();
-      };
-      row.querySelector('[data-act=del]').onclick=()=>{
-        const used = data.categories.some(c=> (c.folderPath||"").startsWith(p));
-        if(used && !confirm('В папке есть категории. Удалить всё?')) return;
-        data.categories = data.categories.filter(c=> !(c.folderPath||"").startsWith(p));
-        if(cwd.startsWith(p)) cwd=""; save(); renderAll();
-      };
-      host.appendChild(row);
-      const ch=document.createElement('div'); ch.className='children'; host.appendChild(ch);
-      draw(node.children[k], p);
-    });
-  }
-  draw(root, "");
+  if(typeof data.collapsed!=='object') data.collapsed={};
 }
 
-/* ====== List ====== */
-function renderList(){
-  const host=$("#list"); host.innerHTML="";
-  const items = data.categories.filter(c=> (c.folderPath||"")===cwd);
-  items.forEach(c=> host.appendChild(card(c)) );
+function updateFolderFilter(){
+  const sel=$("#folderFilter");
+  sel.innerHTML="";
+  const optAll=el("option",{value:"__ALL__",textContent:"(Все)"});
+  sel.append(optAll);
+  data.folders.forEach(f=>{
+    const o=el("option",{value:f.id,textContent:f.title});
+    sel.append(o);
+  });
+  sel.value = currentFolder;
+  sel.onchange=()=>{ currentFolder=sel.value; renderEditor(); };
 }
-function card(c){
-  const el=document.createElement('div'); el.className='card open';
-  el.innerHTML=`
-    <div class="head">
-      <strong>${c.title||'Категория'}</strong>
-      <span class="badge">${c.key||'key'}</span>
-      <span class="sp"></span>
-      <button class="small" data-act="toggle">▾</button>
-      <button class="small" data-act="dup">Дублировать</button>
-      <button class="small danger" data-act="del">Удалить</button>
-    </div>
-    <div class="body">
-      <div class="grid">
-        <div class="col-6"><label>Заголовок</label><input data-k="title" value="${esc(c.title)}"></div>
-        <div class="col-6"><label>Имя (ключ)</label><input data-k="key" value="${esc(c.key)}"></div>
-        <div class="col-3"><label>Тип</label>
-          <select data-k="type">
-            ${['select','radio','multicheck','text','range','number','checkbox'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}
-          </select>
-        </div>
-        <div class="col-3"><label>Layout</label>
-          <select data-k="layout">
-            ${['full','half','third'].map(t=>`<option ${((c.layout||'half')===t)?'selected':''}>${t}</option>`).join('')}
-          </select>
-        </div>
-        <div class="col-6"><label>Папка</label>
-          <input data-k="folderPath" value="${esc(c.folderPath||'')}" placeholder="Пример: Недвижимость/Посуточная аренда">
-        </div>
-        <div class="col-12"><label>Опции (по строке, первая — «Все объявления»)</label>
-          <textarea data-k="options">${esc((c.options||[]).join('\n'))}</textarea>
-        </div>
-        <div class="col-12"><label>Условие отображения (showIf)</label>
-          <input data-k="showIf" value="${esc(c.showIf||'')}">
-        </div>
-      </div>
-    </div>`;
-  el.querySelector('[data-act=toggle]').onclick=()=> el.classList.toggle('open');
-  el.querySelector('[data-act=del]').onclick=()=>{ if(!confirm('Удалить категорию?'))return; data.categories=data.categories.filter(x=>x.id!==c.id); save(); renderAll(); };
-  el.querySelector('[data-act=dup]').onclick=()=>{ const cp=clone(c); cp.id=uid(); data.categories.push(cp); save(); renderAll(); };
-  el.querySelectorAll('[data-k]').forEach(inp=>{
-    inp.oninput=()=>{
-      const k=inp.dataset.k;
-      let v=inp.value;
-      if(k==='options'){ v=inp.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(!v.length || v[0]!=='Все объявления') v=['Все объявления', ...v]; }
-      c[k]=v; save(); renderPreview();
-      if(k==='title') el.querySelector('strong').textContent=c.title||'Категория';
-      if(k==='key') el.querySelector('.badge').textContent=c.key||'key';
-      if(k==='folderPath'){ renderTree(); renderList(); }
+
+function renderEditor(){
+  listEl.innerHTML="";
+  // фильтр по папке: (Все) показывает все, включая без папки
+  const items = data.categories.filter(c => currentFolder==="__ALL__" ? true : (c.folderId||"")===currentFolder);
+
+  items.forEach((f, idx)=>{
+    const c=el("div",{className:"card"});
+    c.dataset.id=f.id;
+
+    const h=el("h3");
+    const titleText = el("span",{textContent:f.title||"Без заголовка"});
+    const ghost = el("span",{className:"mini ghost",textContent:`(${f.name||f.id})`});
+    const collapseBtn=el("button",{className:"ghost",textContent: data.collapsed[f.id] ? "▸" : "▾"});
+    collapseBtn.onclick=(e)=>{ data.collapsed[f.id]=!data.collapsed[f.id]; c.classList.toggle("collapsed", !!data.collapsed[f.id]); save(); };
+    const delBtn=el("button",{className:"danger",textContent:"Удалить"});
+    delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) { pushHistory(snapshot()); removeCategory(f.id);} };
+    h.append(titleText, ghost, collapseBtn, delBtn);
+    c.appendChild(h);
+    if(data.collapsed[f.id]) c.classList.add("collapsed");
+
+    const r1=el("div",{className:"row"});
+    r1.append(wrap("Заголовок", el("input",{value:f.title||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.title=e.target.value; dirty();}})),
+               wrap("Имя (ключ)", el("input",{value:f.name||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.name=e.target.value; dirty();}})));
+    c.appendChild(r1);
+
+    const r2=el("div",{className:"row"});
+    const typeSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
+    ["group","text","number","select","radio","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
+    r2.append(
+      wrap("Тип",typeSel),
+      wrap("Описание",el("input",{value:f.hint||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.hint=e.target.value; dirty();}}))
+    );
+    c.appendChild(r2);
+
+    const r3=el("div",{className:"row"});
+    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
+    const parentOptions=(currentId)=>{
+      const invalid=new Set([currentId]);
+      (function mark(id){ data.categories.filter(x=>x.parentId===id).forEach(ch=>{ invalid.add(ch.id); mark(ch.id); }); })(currentId);
+      return [{id:"", name:"(нет)"}].concat(
+        data.categories.filter(x=>!invalid.has(x.id)).map(x=>({id:x.id,name:`${x.title||x.name||x.id}`}))
+      );
     };
-  });
-  return el;
-}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));}
+    parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
+    const folderSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value; dirty(); renderEditor();}});
+    data.folders.forEach(F=> folderSel.append(el("option",{value:F.id,textContent:F.title,selected:F.id===(f.folderId||"")})));
+    r3.append(wrap("Родитель",pSel), wrap("Папка", folderSel));
+    c.appendChild(r3);
 
-/* ====== Preview ====== */
+    const r4=el("div",{className:"row"});
+    r4.append(
+      wrap("Опции (для select/multicheck/radio)",el("textarea",{value:(f.options||[]).join(', '), onfocus:()=>pending=snapshot(), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
+      wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), onfocus:()=>pending=snapshot(), oninput:e=>{f.map=textToMap(e.target.value); dirty();}}))
+    );
+    c.appendChild(r4);
+
+    const r5 = el("div",{className:"row"});
+    const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty(); renderPreview();}});
+    ["full","half","third","quarter","sixth","col-1","col-2","col-3","col-4","col-5","col-6"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
+    r5.append(
+      wrap("Layout", layoutSel),
+      wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
+    );
+    c.appendChild(r5);
+
+    listEl.appendChild(c);
+  });
+
+  const addBtn=el("button",{textContent:"+ Категория"});
+  addBtn.onclick=()=>{ pushHistory(snapshot()); addCategory(); };
+  listEl.appendChild(addBtn);
+}
+
+function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
+
+function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
+function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
+function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
+function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
+
+// ===== preview =====
+let previewValues={};
+const DEFAULT_LABEL = "Все объявления";
+const previewState = JSON.parse(sessionStorage.getItem('previewState')||'{}');
+
+function parseShowIf(str){
+  if(!str) return ()=>true;
+  const parts = str.split("&").map(s=>s.trim()).filter(Boolean);
+  const tests = parts.map(p=>{
+    const [k,v]=p.split("="); if(!k||v===undefined) return ()=>true;
+    const allowed = v.split("|").map(s=>s.trim());
+    return (vals)=> allowed.includes(String(vals[k] ?? ""));
+  });
+  return (vals)=> tests.every(t=>t(vals));
+}
+function visibleByCondition(f){
+  const test=parseShowIf(f.showIf||"");
+  return test(previewValues);
+}
+function optionsFor(f){
+  let opts = Array.isArray(f.options)?f.options.slice():[];
+  if(f.parentId){
+    const p = data.categories.find(x=>x.id===f.parentId);
+    const pKey = p?.name || p?.id;
+    const pVal = previewValues[pKey] ?? previewValues[p?.id] ?? "";
+    if(f.map && pVal && f.map[pVal]) opts = f.map[pVal].slice();
+  }
+  return opts;
+}
+function ensurePlaceholder(sel){
+  if(!sel.options.length || sel.options[0].value!==""){
+    sel.insertBefore(new Option(DEFAULT_LABEL,""), sel.firstChild);
+  }
+}
+function assignSelectValue(sel, key){
+  const val = previewValues[key] ?? "";
+  const exists = Array.from(sel.options).some(o=>o.value===val);
+  sel.value = exists ? val : "";
+  previewValues[key] = sel.value;
+}
+
+function ruPlural(n, forms){
+  const n10 = n % 10, n100 = n % 100;
+  if(n10===1 && n100!==11) return forms[0];
+  if(n10>=2 && n10<=4 && (n100<10 || n100>=20)) return forms[1];
+  return forms[2];
+}
+
+function makeDropdownMulticheck(fieldDef){
+  const key = fieldDef.name || fieldDef.id;
+  const baseOpts = optionsFor(fieldDef);
+  const items = baseOpts.slice();
+  const container = el("div",{className:"dropdown"});
+  container.dataset.key = key;
+  const toggle = el("button",{type:"button",className:"filter-select"});
+  const arrow = el("span",{className:"arrow",textContent:"▾"});
+  const valueSpan = el("span",{textContent: DEFAULT_LABEL, className:"value muted"});
+  toggle.append(valueSpan,arrow);
+  const menu = el("div",{className:"dropdown-menu"});
+  const current = new Set((previewValues[key]||[]).filter(Boolean));
+  function updateLabel(){
+    const chosen = Array.from(current);
+    if(chosen.length===0){ valueSpan.textContent = DEFAULT_LABEL; valueSpan.classList.add("muted"); return; }
+    valueSpan.classList.remove("muted");
+    if(chosen.length<=2){ valueSpan.textContent = chosen.join(", "); }
+    else{ valueSpan.textContent = `${chosen.length} ${ruPlural(chosen.length, ['вариант','варианта','вариантов'])}`; }
+  }
+  items.forEach((opt)=>{
+    const row = el("label",{className:"item"});
+    const cb = el("input",{type:"checkbox"});
+    cb.checked = current.has(opt);
+    cb.onchange = (e)=>{
+      e.stopPropagation();
+      if(cb.checked) current.add(opt); else current.delete(opt);
+      previewValues[key] = Array.from(current);
+      updateLabel();
+    };
+    row.append(cb, document.createTextNode(opt));
+    menu.append(row);
+  });
+  previewValues[key] = Array.from(current);
+  updateLabel();
+  toggle.onclick = (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dropdown.open').forEach(dd=>{ if(dd!==container) dd.classList.remove('open'); });
+    container.classList.toggle("open");
+  };
+  document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
+  container.append(toggle,menu);
+  return container;
+}
+
+function layoutToClass(v){
+  switch(v){
+    case "full": return "col-6";
+    case "half": return "col-3";
+    case "third": return "col-2";
+    case "quarter": return "col-2";      // 2/6
+    case "sixth": return "col-1";        // 1/6
+    case "col-1":
+    case "col-2":
+    case "col-3":
+    case "col-4":
+    case "col-5":
+    case "col-6": return v;
+    default: return "col-3";
+  }
+}
+
 function renderPreview(){
-  const host=$("#preview"); const scPane = host.parentElement.parentElement;
-  const prevScroll = scPane.scrollTop;
-  host.innerHTML="";
-  const items = data.categories.filter(c=> (c.folderPath||"")===cwd);
-  const bag = getPreviewBag();
-  items.forEach(c=>{
-    if(c.showIf && !checkShowIf(c.showIf, bag)) return;
-    const cell=document.createElement('div');
-    cell.className='cell '+(c.layout==='full'?'full':c.layout==='third'?'third':'');
-    const lab=document.createElement('div'); lab.className='hint'; lab.textContent=c.title||c.key; cell.appendChild(lab);
-    let ctl;
-    const key=c.key||c.id;
-    if(c.type==='text'){ ctl=document.createElement('input'); ctl.value=bag[key]??''; ctl.oninput=()=>{bag[key]=ctl.value; setPreviewBag(bag);} }
-    else if(c.type==='range'){
-      const box=document.createElement('div'); box.style.display='flex'; box.style.gap='8px';
-      const a=document.createElement('input'); a.type='number'; a.placeholder='От'; a.value=bag[key]?.min??'';
-      const b=document.createElement('input'); b.type='number'; b.placeholder='До'; b.value=bag[key]?.max??'';
-      [a,b].forEach(i=>i.oninput=()=>{bag[key]={min:a.value,max:b.value}; setPreviewBag(bag);});
-      box.append(a,b); ctl=box;
-    } else if(c.type==='multicheck'){
-      ctl=document.createElement('select'); ctl.multiple=true; ctl.size=Math.min(7,(c.options||[]).length);
-      (c.options||['Все объявления']).forEach(o=>ctl.append(new Option(o,o)));
-      (Array.isArray(bag[key])?bag[key]:[]).forEach(v=>{ const opt=[...ctl.options].find(x=>x.value===v); if(opt) opt.selected=true; });
-      ctl.onchange=()=>{bag[key]=Array.from(ctl.selectedOptions).map(o=>o.value).filter(v=>v!=='Все объявления'); setPreviewBag(bag);};
-    } else if(c.type==='radio'){
-      ctl=document.createElement('select');
-      (c.options?.length?c.options:['UZS','USD']).forEach(o=>ctl.append(new Option(o,o)));
-      ctl.value=bag[key] ?? ctl.options[0].value;
-      ctl.onchange=()=>{bag[key]=ctl.value; setPreviewBag(bag);};
-    } else { // select / number / checkbox => select-подобный
-      ctl=document.createElement('select'); const opts=(c.options?.length?c.options:['Все объявления']);
-      opts.forEach(o=>ctl.append(new Option(o,o))); ctl.value = (bag[key] && opts.includes(bag[key]))?bag[key]:'Все объявления';
-      ctl.onchange=()=>{bag[key]=ctl.value; setPreviewBag(bag);};
+  const form=$("#previewForm");
+  const sc = form.parentElement.scrollTop;
+  form.innerHTML="";
+  data.categories.forEach(f=>{
+    if(f.type==="group"){
+      const sel=el("select");
+      ensurePlaceholder(sel);
+      (f.options||[]).forEach(o=>sel.append(new Option(o,o)));
+      const key=f.name||f.id;
+      assignSelectValue(sel, key);
+      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
+      const w=wrap(f.title||f.name||f.id, sel);
+      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      w.classList.add(layoutToClass(f.layout||"col-3"));
+      form.append(w);
+      return;
     }
-    cell.appendChild(ctl); host.appendChild(cell);
+
+    if(!visibleByCondition(f)) return;
+
+    let ctrl, w;
+    const key=f.name||f.id;
+
+    if(f.type==="select"){
+      ctrl=el("select");
+      ensurePlaceholder(ctrl);
+      optionsFor(f).forEach(o=>{ if(o!==DEFAULT_LABEL) ctrl.append(new Option(o,o)); });
+      assignSelectValue(ctrl, key);
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="radio"){
+      const opts=optionsFor(f);
+      ctrl=el("select");
+      opts.forEach(o=>ctrl.append(new Option(o,o)));
+      if(previewValues[key] && opts.includes(previewValues[key])) ctrl.value=previewValues[key];
+      else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="checkbox"){
+      ctrl=el("input",{type:"checkbox"});
+      ctrl.checked=!!previewValues[key];
+      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="text"||f.type==="number"||f.type==="date"){
+      ctrl=el("input",{type:f.type});
+      if(previewValues[key]) ctrl.value=previewValues[key];
+      ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="range"){
+      const box=el("div",{className:"inline"});
+      const min=el("input",{type:"number",placeholder:"От"});
+      const max=el("input",{type:"number",placeholder:"До"});
+      if(previewValues[key]){ min.value=previewValues[key].min||""; max.value=previewValues[key].max||""; }
+      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
+      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
+      box.append(min,max);
+      w=wrap(f.title||f.name||f.id, box);
+    }
+    else if(f.type==="multicheck"){
+      ctrl = makeDropdownMulticheck(f);
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else{
+      return;
+    }
+
+    if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+    w.classList.add(layoutToClass(f.layout||"col-3"));
+    form.append(w);
   });
-  // restore scroll
-  setTimeout(()=>{ scPane.scrollTop = +localStorage.getItem(KEY_SCROLL)||prevScroll; },0);
-}
-function checkShowIf(expr, bag){
-  try{
-    return expr.split("&").map(s=>s.trim()).filter(Boolean).every(tok=>{
-      const [k,v]=tok.split("=").map(x=>x?.trim()); if(!k||v==null) return true;
-      const cur = bag[k]; if(cur==null) return false;
-      if(Array.isArray(cur)) return cur.includes(v);
-      return String(cur)===v;
-    });
-  }catch(e){ return true; }
-}
-function getPreviewBag(){ try{ return JSON.parse(localStorage.getItem(KEY_PREVIEW)||"{}"); }catch(e){ return {}; } }
-function setPreviewBag(b){ localStorage.setItem(KEY_PREVIEW, JSON.stringify(b)); }
-
-/* ====== toolbar ====== */
-$('#collapseAll').onclick=()=>$$('#list .card').forEach(c=>c.classList.remove('open'));
-$('#expandAll').onclick=()=>$$('#list .card').forEach(c=>c.classList.add('open'));
-$('#addFolder').onclick=()=>{
-  const nm=$('#newFolderName').value.trim(); if(!nm) return;
-  const p = cwd ? (cwd+'/'+nm) : nm;
-  data.categories.push({id:uid(), folderPath:p, title:"", key:"", type:"text", options:[], layout:"third"});
-  save(); $('#newFolderName').value=""; renderAll();
-};
-$('#addCat').onclick=()=>{
-  const item={id:uid(), folderPath:cwd, title:'Новая категория', key:'field_'+uid(), type:'select', options:['Все объявления'], layout:'third'};
-  data.categories.push(item); save(); renderAll();
-};
-$('#undo').onclick=undo; $('#redo').onclick=redo;
-$('#export').onclick=()=>{
-  const a=document.createElement('a'); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  a.href=URL.createObjectURL(blob); a.download='categories_min22G.json'; a.click();
-};
-$('#import').onclick=()=>$('#file').click();
-$('#file').onchange=async e=>{
-  const f=e.target.files[0]; if(!f) return;
-  try{
-    const txt=await f.text(); const json=JSON.parse(txt);
-    if(Array.isArray(json.categories)){ data=json; save(false); renderAll(); }
-    else alert('Не распознан формат');
-  }catch(err){ alert('Ошибка импорта'); }
-  e.target.value='';
-};
-
-/* ====== preview scroll persist ====== */
-const prevPane = document.querySelector('#preview').parentElement.parentElement;
-prevPane.addEventListener('scroll',()=> localStorage.setItem(KEY_SCROLL, prevPane.scrollTop||0) );
-
-/* ====== init ====== */
-(function(){
-  save(false); // seed history without pushing twice
-  renderAll();
   // restore preview scroll
-  const sc = +localStorage.getItem(KEY_SCROLL)||0; prevPane.scrollTop = sc;
+  setTimeout(()=>{ form.parentElement.scrollTop = previewState.scrollTop||sc; },0);
+}
+
+// import/export и табы
+$("#importBtn").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=async (e)=>{
+  const f=e.target.files && e.target.files[0];
+  if(!f) return;
+  try{
+    const txt=await f.text();
+    const json=JSON.parse(txt);
+    if(Array.isArray(json.categories) && !json.folders){
+      data = {folders:[{id:"root",title:"(Все)",open:true}], categories: json.categories.map(c=>({...c, folderId:"root"})), collapsed:{}};
+    }else{ data=json; }
+    migrateIfNeeded();
+    save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
+  }catch(err){alert("Ошибка: "+err.message);}
+};
+$("#exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22D.json"});
+  document.body.appendChild(a);a.click();a.remove();
+};
+$("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
+$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){ pushHistory(snapshot()); data={folders:[],categories:[],collapsed:{}};migrateIfNeeded();save();renderEditor();previewValues={};renderPreview();}};
+$("#tab-editor").onclick=()=>{activate("editor");};
+$("#tab-preview").onclick=()=>{activate("preview");};
+$("#tab-help").onclick=()=>{activate("help");};
+
+function activate(tab){
+  $("#tab-editor").classList.remove("active");
+  $("#tab-preview").classList.remove("active");
+  $("#tab-help").classList.remove("active");
+  $("#editorSection").classList.add("hidden");
+  $("#previewSection").classList.add("hidden");
+  $("#helpSection").classList.add("hidden");
+  if(tab==="editor"){ $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
+  else if(tab==="preview"){ $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
+  else { $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
+}
+
+function updateSize(){
+  try{
+    const bytes=new Blob([document.documentElement.outerHTML]).size;
+    $("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;
+  }catch{
+    $("#sizeBadge").textContent="Размер: ?";
+  }
+}
+
+// folder ops
+$("#addFolder").onclick=()=>{
+  const name=prompt("Название папки:","Новая папка");
+  if(!name) return;
+  data.folders.push({id:uid(),title:name,open:true}); save(); updateFolderFilter(); renderEditor();
+};
+$("#renameFolder").onclick=()=>{
+  const cur = $("#folderFilter").value;
+  if(cur==="__ALL__") return alert("Выберите конкретную папку");
+  const f = data.folders.find(x=>x.id===cur); if(!f) return;
+  const name=prompt("Новое имя папки",f.title); if(!name) return;
+  f.title=name; save(); updateFolderFilter(); renderEditor();
+};
+$("#deleteFolder").onclick=()=>{
+  const cur = $("#folderFilter").value;
+  if(cur==="__ALL__") return alert("Выберите конкретную папку");
+  const used = data.categories.some(c=>c.folderId===cur);
+  if(used) return alert("Папка не пуста. Переместите категории.");
+  data.folders = data.folders.filter(f=>f.id!==cur);
+  currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
+};
+
+// collapse / expand all
+$("#collapseAll").onclick=()=>{
+  data.categories.forEach(c=>data.collapsed[c.id]=true);
+  save(); renderEditor();
+};
+$("#expandAll").onclick=()=>{
+  data.collapsed={};
+  save(); renderEditor();
+};
+
+// remember preview scroll
+window.addEventListener('beforeunload', ()=>{
+  previewState.scrollTop = $("#previewForm").parentElement.scrollTop;
+  sessionStorage.setItem('previewState', JSON.stringify(previewState));
+});
+
+(function init(){
+  load();
+  migrateIfNeeded();
+  if(!data.categories.length){
+    data.categories=[
+      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"third",folderId:data.folders[0].id},
+      {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
+        "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
+        "Транспорт":["Легковые автомобили","Грузовые автомобили"]
+      },options:[],layout:"third",folderId:data.folders[0].id},
+      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
+        "Квартира":["Аренда","Продажа"],
+        "Дома":["Аренда","Продажа"],
+        "Коммерция":["Аренда","Продажа"],
+        "Земля":["Продажа"],
+        "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
+      },options:[],layout:"third",folderId:data.folders[0].id},
+
+      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third",folderId:data.folders[0].id},
+      {id:"currency",name:"Currency",title:"Валюта",type:"radio",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["UZS","USD"],layout:"third",folderId:data.folders[0].id},
+      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"third",folderId:data.folders[0].id},
+      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"third",folderId:data.folders[0].id},
+
+      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"col-6",folderId:data.folders[0].id},
+      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"col-3",folderId:data.folders[0].id},
+      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"col-3",folderId:data.folders[0].id},
+
+      {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"col-3",folderId:data.folders[0].id},
+      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"multicheck",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха|Гостиницы",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"col-3",folderId:data.folders[0].id},
+
+      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"third",folderId:data.folders[0].id},
+      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"third",folderId:data.folders[0].id}
+    ];
+  }
+  updateFolderFilter();
+  renderEditor();
+  renderPreview();
+  updateSize();
+  hist.length=0; future.length=0;
 })();
 </script>
 </body>
