@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v19R — полный редактор, независимые мультиселекты</title>
+<title>categories_editor_full_v20R — полный редактор, независимые мультиселекты, undo/redo, radio</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -34,7 +34,6 @@
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
 
-  /* Сетка предпросмотра — 3 колонки */
   .preview-form { display:grid; gap:16px; grid-template-columns:repeat(3, minmax(0,1fr)); }
   @media (max-width:1100px){ .preview-form{grid-template-columns:repeat(2, minmax(0,1fr));} .preview-form .full{grid-column:span 2;} }
   @media (max-width:640px) { .preview-form{grid-template-columns:1fr;} .preview-form .full,.preview-form .half,.preview-form .third{grid-column:span 1;} }
@@ -43,10 +42,8 @@
   .preview-form .third { grid-column: span 1; }
 
   .hint{font-size:12px;color:#9ca3af;margin-top:2px}
-  .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
   .inline{display:flex;gap:8px;align-items:center}
 
-  /* Унифицированный стиль для нашего кастомного селекта (multicheck) */
   .dropdown{position:relative}
   .filter-select{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer}
   .filter-select .arrow{transition:transform .15s ease}
@@ -63,11 +60,13 @@
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v19R</span>
+      <span class="badge">v20R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
     <div class="right top-actions">
+      <button id="undoBtn">↶ Undo</button>
+      <button id="redoBtn">↷ Redo</button>
       <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
       <button id="importBtn">Импорт</button>
       <button id="exportBtn" class="primary">Экспорт</button>
@@ -94,12 +93,8 @@
     <section id="helpSection" class="hidden">
       <div class="card">
         <h3>Подсказки</h3>
-        <div class="kv">
-          <div>Условия</div><div><code>key=val1|val2</code> и AND: <code>key1=... & key2=...</code></div>
-          <div>Layout</div><div><code>full</code>=3/3, <code>half</code>=2/3, <code>third</code>=1/3</div>
-          <div>Типы</div><div><b>range</b> (От/До), <b>multicheck</b> (выпадашка с чекбоксами)</div>
-          <div>ID</div><div>внутренний идентификатор. Нужен для связей. Обычно не менять.</div>
-        </div>
+        <div>Плейсхолдер для select теперь «Все объявления». Тип <b>radio</b> — жёсткий выбор (нет пустого варианта).</div>
+        <div>Undo/Redo: кнопки вверху, также Ctrl+Z / Ctrl+Shift+Z.</div>
       </div>
     </section>
   </main>
@@ -109,10 +104,19 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v19R_data";
+const LS_KEY="categories_editor_full_v20R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
+
+// History (undo/redo)
+const snapshot=()=>JSON.parse(JSON.stringify(data));
+let hist=[], future=[], pending=null;
+function pushHistory(preSnap){ if(preSnap){ hist.push(preSnap); if(hist.length>50) hist.shift(); future.length=0; } }
+function undo(){ if(hist.length){ future.push(snapshot()); data=hist.pop(); save(); renderEditor(); renderPreview(); } }
+function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); save(); renderEditor(); renderPreview(); } }
+$("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
+document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
 
 const listEl=$("#list");
 let dragSrcId=null;
@@ -145,6 +149,7 @@ function renderEditor(){
       const srcIndex=data.categories.findIndex(x=>x.id===dragSrcId);
       const targetIndex=idx;
       if(srcIndex>=0 && targetIndex>=0 && srcIndex!==targetIndex){
+        pushHistory(snapshot());
         const moved=data.categories.splice(srcIndex,1)[0];
         data.categories.splice(targetIndex,0,moved);
         save();renderEditor();renderPreview();
@@ -154,54 +159,56 @@ function renderEditor(){
     const h=el("h3");
     h.append(el("span",{textContent:f.title||"Без заголовка"}), el("span",{className:"mini ghost",textContent:`(${f.name||f.id})`}));
     const delBtn=el("button",{className:"danger",textContent:"Удалить"});
-    delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) removeCategory(f.id); };
+    delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) { pushHistory(snapshot()); removeCategory(f.id);} };
     h.append(delBtn);
     c.appendChild(h);
 
     const r1=el("div",{className:"row"});
-    r1.append(wrap("Заголовок", el("input",{value:f.title||"", oninput:e=>{f.title=e.target.value; dirty();}})),
-               wrap("Имя (ключ)", el("input",{value:f.name||"", oninput:e=>{f.name=e.target.value; dirty();}})));
+    r1.append(wrap("Заголовок", el("input",{value:f.title||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.title=e.target.value; dirty();}})),
+               wrap("Имя (ключ)", el("input",{value:f.name||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.name=e.target.value; dirty();}})));
     c.appendChild(r1);
 
     const r2=el("div",{className:"row"});
-    const typeSel=el("select",{onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
-    ["group","text","number","select","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
+    const typeSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
+    ["group","text","number","select","radio","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
     r2.append(wrap("Тип",typeSel),
-              wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hint=e.target.value; dirty();}})));
+              wrap("Описание",el("input",{value:f.hint||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.hint=e.target.value; dirty();}})));
     c.appendChild(r2);
 
     const r3=el("div",{className:"row"});
-    const pSel=el("select",{onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
+    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
     r3.append(wrap("Родитель",pSel),
-              wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"key=val1|val2 [& key2=...]", oninput:e=>{f.showIf=e.target.value; dirty();}})));
+              wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"key=val1|val2 [& key2=...]", onfocus:()=>pending=snapshot(), oninput:e=>{f.showIf=e.target.value; dirty();}})));
     c.appendChild(r3);
 
     const r4=el("div",{className:"row"});
-    r4.append(wrap("Опции (для select/multicheck)",el("textarea",{value:(f.options||[]).join(', '), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
-              wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), oninput:e=>{f.map=textToMap(e.target.value); dirty();}})));
+    r4.append(wrap("Опции (для select/multicheck/radio)",el("textarea",{value:(f.options||[]).join(', '), onfocus:()=>pending=snapshot(), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
+              wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), onfocus:()=>pending=snapshot(), oninput:e=>{f.map=textToMap(e.target.value); dirty();}})));
     c.appendChild(r4);
 
     const r5=el("div",{className:"row"});
-    const layoutSel=el("select",{onchange:e=>{f.layout=e.target.value; dirty();}});
+    const layoutSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty();}});
     ["full","half","third"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
     r5.append(wrap("Layout",layoutSel),
-              wrap("ID", el("input",{value:f.id||"", oninput:e=>{f.id=e.target.value; dirty();}})));
+              wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}})));
     c.appendChild(r5);
 
     listEl.appendChild(c);
   });
 
   const addBtn=el("button",{textContent:"+ Категория"});
-  addBtn.onclick=addCategory;
+  addBtn.onclick=()=>{ pushHistory(snapshot()); addCategory(); };
   listEl.appendChild(addBtn);
 }
 
-function dirty(){ $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
+function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
-function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${arr.join(',')}`).join("\n");}
-function textToMap(txt){const out={};txt.split(/\n/).forEach(l=>{const [k,v]=l.split('=');if(k) out[k.trim()]=(v||'').split(',').map(x=>x.trim()).filter(Boolean)});return out;}
+function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${arr.join(',')}`).join("
+");}
+function textToMap(txt){const out={};txt.split(/
+/).forEach(l=>{const [k,v]=l.split('=');if(k) out[k.trim()]=(v||'').split(',').map(x=>x.trim()).filter(Boolean)});return out;}
 function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();renderPreview();}
 
@@ -232,7 +239,7 @@ function optionsFor(f){
   return opts;
 }
 
-function ruPlural(n, forms){ // ['вариант','варианта','вариантов']
+function ruPlural(n, forms){
   const n10 = n % 10, n100 = n % 100;
   if(n10===1 && n100!==11) return forms[0];
   if(n10>=2 && n10<=4 && (n100<10 || n100>=20)) return forms[1];
@@ -287,17 +294,14 @@ function makeDropdownMulticheck(fieldDef){
     menu.append(row);
   });
 
-  // начальная метка
   previewValues[key] = Array.from(current);
   updateLabel();
 
-  // Авто-закрытие других
   toggle.onclick = (e)=>{
     e.stopPropagation();
     document.querySelectorAll('.dropdown.open').forEach(dd=>{ if(dd!==container) dd.classList.remove('open'); });
     container.classList.toggle("open");
   };
-  // Закрыть по клику вне
   document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
 
   container.append(toggle,menu);
@@ -310,7 +314,7 @@ function renderPreview(){
   data.categories.forEach(f=>{
     if(f.type==="group"){
       const sel=el("select");
-      sel.append(el("option",{value:"",textContent:"—"}));
+      sel.append(el("option",{value:"",textContent:"Все объявления"}));
       (f.options||[]).forEach(o=>sel.append(el("option",{value:o,textContent:o})));
       const key=f.name||f.id;
       if(previewValues[key]) sel.value=previewValues[key];
@@ -329,10 +333,19 @@ function renderPreview(){
 
     if(f.type==="select"){
       ctrl=el("select");
-      ctrl.append(el("option",{value:"",textContent:"—"}));
+      ctrl.append(el("option",{value:"",textContent:"Все объявления"}));
       optionsFor(f).forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
       if(previewValues[key]) ctrl.value=previewValues[key];
       ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="radio"){
+      const opts=optionsFor(f);
+      ctrl=el("select");
+      opts.forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
+      if(previewValues[key]) ctrl.value=previewValues[key];
+      else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="checkbox"){
@@ -386,11 +399,11 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v19R.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v20R.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
-$("#addBtn").onclick=addCategory;
-$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
+$("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
+$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){ pushHistory(snapshot()); data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
 $("#tab-preview").onclick=()=>{activate("preview");};
 $("#tab-help").onclick=()=>{activate("help");};
@@ -410,9 +423,9 @@ function activate(tab){
 function updateSize(){
   try{
     const bytes=new Blob([document.documentElement.outerHTML]).size;
-    $("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;
+    document.getElementById("sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;
   }catch{
-    $("#sizeBadge").textContent="Размер: ?";
+    document.getElementById("sizeBadge").textContent="Размер: ?";
   }
 }
 
@@ -425,7 +438,7 @@ function updateSize(){
         "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
         "Транспорт":["Легковые автомобили","Грузовые автомобили"]
       },options:[],layout:"third"},
-      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
+      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
         "Квартира":["Аренда","Продажа"],
         "Дома":["Аренда","Продажа"],
         "Коммерция":["Аренда","Продажа"],
@@ -434,6 +447,7 @@ function updateSize(){
       },options:[],layout:"third"},
 
       {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third"},
+      {id:"currency",name:"Currency",title:"Валюта",type:"radio",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["UZS","USD"],layout:"third"},
       {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"third"},
       {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"third"},
 
@@ -442,7 +456,7 @@ function updateSize(){
       {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"half"},
 
       {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"half"},
-      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"select",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"half"},
+      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"multicheck",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха|Гостиницы",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"half"},
 
       {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"third"},
       {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"third"}
@@ -451,6 +465,7 @@ function updateSize(){
   renderEditor();
   renderPreview();
   updateSize();
+  hist.length=0; future.length=0;
 })();
 </script>
 </body>
