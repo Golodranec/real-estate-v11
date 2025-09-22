@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v21X</title>
+<title>Categories Editor — v22A</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -36,6 +36,7 @@
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
 
+  /* Preview 6-col grid */
   .preview-form { display:grid; gap:16px; grid-template-columns:repeat(6, minmax(0,1fr)); }
   .preview-form .full{grid-column:span 6;}
   .preview-form .five-sixth{grid-column:span 5;}
@@ -48,6 +49,7 @@
   .hint{font-size:12px;color:#9ca3af;margin-top:2px}
   .inline{display:flex;gap:8px;align-items:center}
 
+  /* Dropdown for multicheck */
   .dropdown{position:relative}
   .filter-select{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer}
   .filter-select .arrow{transition:transform .15s ease}
@@ -63,12 +65,14 @@
 <body>
   <header>
     <div class="left">
-      <strong>Категории — полный редактор</strong>
-      <span class="badge">v21X</span>
+      <strong>Категории — редактор</strong>
+      <span class="badge">v22A</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
     <div class="right top-actions">
+      <button id="collapseAllBtn">Свернуть все</button>
+      <button id="expandAllBtn">Развернуть все</button>
       <button id="undoBtn">↶ Undo</button>
       <button id="redoBtn">↷ Redo</button>
       <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
@@ -107,10 +111,11 @@
     <section id="helpSection" class="hidden">
       <div class="card">
         <h3>Подсказки</h3>
-        <div>Можно сворачивать карточки категорий. Кнопка ▼/▶ в заголовке.</div>
-        <div>Макет предпросмотра на 6 колонок: full, five-sixth, two-third, half, third, sixth.</div>
-        <div>Плейсхолдер для select — «Все объявления». Он выбран по умолчанию и виден сразу.</div>
-        <div>Папки в редакторе: выпадающий список, хлебные крошки, перенос категорий между папками.</div>
+        <div>Кнопка ▼/▶ в заголовке категории сворачивает/разворачивает карточку. Состояние запоминается.</div>
+        <div>Папки: выбирайте папку сверху. Можно создавать вложенные, переименовывать и удалять. У каждой категории есть поле «Папка».</div>
+        <div>Предпросмотр на 6 колонок: full, five-sixth, two-third, half, third, sixth.</div>
+        <div>Плейсхолдер для select — «Все объявления».</div>
+        <div>Ctrl+Z / Ctrl+Shift+Z — Undo/Redo.</div>
       </div>
     </section>
   </main>
@@ -120,7 +125,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_v21X_data";
+const LS_KEY="categories_editor_v22A_data";
 const PV_KEY=LS_KEY+"_pv";
 const UI_KEY=LS_KEY+"_ui";
 
@@ -144,12 +149,16 @@ function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); sa
 $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
 document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
 
+// Collapse all/expand all
+$("#collapseAllBtn").onclick=()=>{ data.categories.forEach(f=>f._collapsed=true); save(); renderEditor(); };
+$("#expandAllBtn").onclick=()=>{ data.categories.forEach(f=>f._collapsed=false); save(); renderEditor(); };
+
 const listEl=$("#list");
 let dragSrcId=null;
 
 // Folders API
 function ensureFolders(){ if(!data.folders) data.folders=[{id:"root",title:"Все",parentId:null}]; if(!ui.folder) ui.folder="root";}
-function addFolder(title,parentId){ const id="fld_"+uid(); data.folders.push({id,title:title||"Новая папка",parentId:parentId||"root"}); save(); return id; }
+function addFolder(title,parentId){ const id="fld_"+uid(); data.folders.push({id,title:title||"Новая папка",parentId: parentId??ui.folder??"root"}); save(); return id; }
 function renameFolder(id,title){ const f=data.folders.find(x=>x.id===id); if(f&&f.id!=="root"){ f.title=title; save(); } }
 function deleteFolder(id){
   if(id==="root") return;
@@ -191,8 +200,8 @@ function renderEditor(){
     c.ondragover=(e)=>{e.preventDefault();};
     c.ondrop=(e)=>{
       e.preventDefault();
-      const srcIndex=data.categories.findIndex(x=>x.id===dragSrcId && (x.folderId||"root")===(ui.folder||"root"));
-      const targetIndex=data.categories.findIndex(x=>x.id===f.id && (x.folderId||"root")===(ui.folder||"root"));
+      const srcIndex=data.categories.findIndex(x=>x.id===dragSrcId);
+      const targetIndex=data.categories.findIndex(x=>x.id===f.id);
       if(srcIndex>=0 && targetIndex>=0 && srcIndex!==targetIndex){
         pushHistory(snapshot());
         const moved=data.categories.splice(srcIndex,1)[0];
@@ -224,9 +233,9 @@ function renderEditor(){
     c.appendChild(r2);
 
     const r3=el("div",{className:"row"});
-    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange=e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
+    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
-    r3.append(wrap("Родитель (логика)",pSel),
+    r3.append(wrap("Родитель",pSel),
               wrap("Условие отображения",el("input",{value:f.showIf||"",placeholder:"key=val1|val2 [& key2=...]", onfocus:()=>pending=snapshot(), oninput:e=>{f.showIf=e.target.value; dirty();}})));
     c.appendChild(r3);
 
@@ -241,9 +250,9 @@ function renderEditor(){
     const folderSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value||"root"; dirty(); renderEditor();}});
     buildFolderOptions().forEach(o=> folderSel.append(el("option",{value:o.id,textContent:o.title,selected:(f.folderId||"root")===o.id})));
     r5.append(
-      wrap("Макет (предпросмотр)", layoutSel),
+      wrap("Макет", layoutSel),
       wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}})),
-      wrap("Папка (организация)", folderSel)
+      wrap("Папка", folderSel)
     );
     c.appendChild(r5);
 
@@ -258,8 +267,8 @@ function renderEditor(){
 function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
-function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
-function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\n');}
+function textToMap(txt){const out={};txt.split(/\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
 function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half",folderId:(ui.folder||"root")}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();renderPreview();}
 
@@ -353,6 +362,7 @@ function makeDropdownMulticheck(fieldDef){
 
 function renderPreview(){
   const form=$("#previewForm");
+  const keepScroll = form.parentElement?.scrollTop || 0;
   form.innerHTML="";
   data.categories.forEach(f=>{
     if(f.type==="group"){
@@ -425,6 +435,7 @@ function renderPreview(){
     if(f.layout) w.classList.add(f.layout);
     form.append(w);
   });
+  form.parentElement.scrollTop = keepScroll;
 }
 
 // import/export и табы
@@ -443,7 +454,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v21X.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22A.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
@@ -486,13 +497,34 @@ function renderFolderControls(){
   const sel = $("#folderSelect");
   if(!sel) return;
   sel.innerHTML = "";
-  (function build(){ const opts=[]; (function walk(id,depth){ data.folders.filter(x=> (x.parentId||"root")===(id||"root")).forEach(f=>{ opts.push({id:f.id,title:(depth?("  ".repeat(depth)):"")+f.title}); walk(f.id,depth+1); }); })("root",0); opts.forEach(o=> sel.append(el("option",{value:o.id,textContent:o.title,selected:(ui.folder||"root")===o.id}))); })();
+  buildFolderOptions().forEach(o=> sel.append(el("option",{value:o.id,textContent:o.title,selected:(ui.folder||"root")===o.id})));
   sel.onchange = ()=>{ ui.folder = sel.value; saveUI(); renderEditor(); };
+
   const path = folderPath(ui.folder||"root");
   $("#crumbs").textContent = path.map(p=>p.title).join(" / ");
-  $("#addFolderBtn").onclick = ()=>{ const title = prompt("Название папки:"); if(!title) return; addFolder(title, ui.folder||"root"); renderFolderControls(); renderEditor(); };
-  $("#renameFolderBtn").onclick = ()=>{ if((ui.folder||"root")==="root"){ alert("Корневую папку переименовать нельзя."); return; } const f = data.folders.find(x=>x.id===ui.folder); const title = prompt("Новое название:", f?.title||""); if(!title) return; renameFolder(ui.folder, title); renderFolderControls(); renderEditor(); };
-  $("#delFolderBtn").onclick = ()=>{ if((ui.folder||"root")==="root"){ alert("Нельзя удалить корневую папку."); return; } if(confirm("Удалить папку? Содержимое будет перемещено в родительскую.")){ deleteFolder(ui.folder); saveUI(); renderFolderControls(); renderEditor(); } };
+
+  $("#addFolderBtn").onclick = ()=>{
+    const title = prompt("Название папки:");
+    if(!title) return;
+    addFolder(title, ui.folder||"root");
+    renderFolderControls(); renderEditor();
+  };
+  $("#renameFolderBtn").onclick = ()=>{
+    if((ui.folder||"root")==="root"){ alert("Корневую папку переименовать нельзя."); return; }
+    const f = data.folders.find(x=>x.id===ui.folder);
+    const title = prompt("Новое название:", f?.title||"");
+    if(!title) return;
+    renameFolder(ui.folder, title);
+    renderFolderControls(); renderEditor();
+  };
+  $("#delFolderBtn").onclick = ()=>{
+    if((ui.folder||"root")==="root"){ alert("Нельзя удалить корневую папку."); return; }
+    if(confirm("Удалить папку? Содержимое будет перемещено в родительскую.")){
+      deleteFolder(ui.folder);
+      saveUI();
+      renderFolderControls(); renderEditor();
+    }
+  };
 }
 
 (function init(){
