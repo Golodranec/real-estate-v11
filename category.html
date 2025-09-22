@@ -2,10 +2,13 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v16R — единый стиль + счётчик выбранных</title>
+<title>categories_editor_full_v19R — полный редактор, независимые мультиселекты</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--field:#0b1220}
+  :root{
+    --bg:#0f172a; --panel:#111827; --line:#1f2937; --text:#e5e7eb; --ok:#22c55e;
+    --warn:#f59e0b; --err:#ef4444; --field:#0b1220
+  }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
   header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
@@ -43,7 +46,7 @@
   .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
   .inline{display:flex;gap:8px;align-items:center}
 
-  /* Унифицированный стиль select-поля для мультиселекта */
+  /* Унифицированный стиль для нашего кастомного селекта (multicheck) */
   .dropdown{position:relative}
   .filter-select{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer}
   .filter-select .arrow{transition:transform .15s ease}
@@ -60,7 +63,7 @@
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v16R</span>
+      <span class="badge">v19R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -95,7 +98,7 @@
           <div>Условия</div><div><code>key=val1|val2</code> и AND: <code>key1=... & key2=...</code></div>
           <div>Layout</div><div><code>full</code>=3/3, <code>half</code>=2/3, <code>third</code>=1/3</div>
           <div>Типы</div><div><b>range</b> (От/До), <b>multicheck</b> (выпадашка с чекбоксами)</div>
-          <div>ID</div><div>внутренний идентификатор для связей. Менять не требуется.</div>
+          <div>ID</div><div>внутренний идентификатор. Нужен для связей. Обычно не менять.</div>
         </div>
       </div>
     </section>
@@ -106,7 +109,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v16R_data";
+const LS_KEY="categories_editor_full_v19R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -164,7 +167,7 @@ function renderEditor(){
     const typeSel=el("select",{onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
     ["group","text","number","select","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
     r2.append(wrap("Тип",typeSel),
-              wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hинt=e.target.value; dirty();}})));
+              wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hint=e.target.value; dirty();}})));
     c.appendChild(r2);
 
     const r3=el("div",{className:"row"});
@@ -243,9 +246,11 @@ function makeDropdownMulticheck(fieldDef){
   const items = (baseOpts[0]===allLabel?baseOpts:[allLabel, ...baseOpts]);
 
   const container = el("div",{className:"dropdown"});
+  container.dataset.key = key;
+
   const toggle = el("button",{type:"button",className:"filter-select"});
   const arrow = el("span",{className:"arrow",textContent:"▾"});
-  const valueSpan = el("span",{textContent: allLabel, className:"value"});
+  const valueSpan = el("span",{textContent: allLabel, className:"value muted"});
   toggle.append(valueSpan,arrow);
 
   const menu = el("div",{className:"dropdown-menu"});
@@ -256,15 +261,13 @@ function makeDropdownMulticheck(fieldDef){
     if(chosen.length===0){ valueSpan.textContent = allLabel; valueSpan.classList.add("muted"); return; }
     valueSpan.classList.remove("muted");
     if(chosen.length<=2){ valueSpan.textContent = chosen.join(", "); }
-    else{
-      valueSpan.textContent = `${chosen.length} ${ruPlural(chosen.length, ['вариант','варианта','вариантов'])}`;
-    }
+    else{ valueSpan.textContent = `${chosen.length} ${ruPlural(chosen.length, ['вариант','варианта','вариантов'])}`; }
   }
 
   items.forEach((opt, idx)=>{
     const row = el("label",{className:"item"});
     const cb = el("input",{type:"checkbox"});
-    cb.checked = current.size ? current.has(opt) : (opt===allLabel);
+    cb.checked = current.size ? current.has(opt) : false;
     cb.onchange = (e)=>{
       e.stopPropagation();
       let set = new Set(previewValues[key]||[]);
@@ -288,7 +291,13 @@ function makeDropdownMulticheck(fieldDef){
   previewValues[key] = Array.from(current);
   updateLabel();
 
-  toggle.onclick = (e)=>{ e.stopPropagation(); container.classList.toggle("open"); };
+  // Авто-закрытие других
+  toggle.onclick = (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dropdown.open').forEach(dd=>{ if(dd!==container) dd.classList.remove('open'); });
+    container.classList.toggle("open");
+  };
+  // Закрыть по клику вне
   document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
 
   container.append(toggle,menu);
@@ -377,7 +386,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v16R.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v19R.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=addCategory;
