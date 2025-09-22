@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v5R — полный редактор категорий</title>
+<title>categories_editor_full_v7R — полный редактор категорий</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
@@ -30,7 +30,11 @@
   .ghost{opacity:.7}
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
-  .preview-form{display:flex;flex-direction:column;gap:12px}
+  /* NEW: сетка предпросмотра и классы ширины */
+  .preview-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .preview-form .full{grid-column:span 2}
+  .preview-form .half{grid-column:span 1}
+  .preview-form .third{grid-column:span 1}
   .hint{font-size:12px;color:#9ca3af;margin-top:2px}
   .divider{height:1px;background:var(--line);margin:8px 0}
   .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
@@ -41,7 +45,7 @@
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v5R</span>
+      <span class="badge">v7R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -90,7 +94,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v5R_data";
+const LS_KEY="categories_editor_full_v7R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -176,7 +180,7 @@ function dirty(){ $("#statusBadge").textContent="Есть несохранённ
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${arr.join(',')}`).join("\n");}
 function textToMap(txt){const out={};txt.split(/\n/).forEach(l=>{const [k,v]=l.split('=');if(k) out[k.trim()]=(v||'').split(',').map(x=>x.trim()).filter(Boolean)});return out;}
-function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:""}); save(); renderEditor();}
+function addCategory(){data.categories.push({id:uid(),title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid);}rm(id);save();renderEditor();renderPreview();}
 
 // ===== preview =====
@@ -219,6 +223,7 @@ function renderPreview(){
       sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
       const w=wrap(f.title||f.name||f.id, sel);
       if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      if(f.layout) w.classList.add(f.layout); // NEW: поддержка layout
       form.append(w);
       return;
     }
@@ -243,6 +248,7 @@ function renderPreview(){
       }
       const w=wrap(f.title||f.name||f.id, ctrl);
       if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      if(f.layout) w.classList.add(f.layout); // NEW: поддержка layout
       form.append(w);
     }
   });
@@ -251,7 +257,7 @@ function renderPreview(){
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.categories)) data=json; else if(Array.isArray(json.items)) data={categories:json.items};save();renderEditor();previewValues={};renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v5R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v7R.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addCategory;
 $("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
@@ -276,21 +282,28 @@ function updateSize(){try{const bytes=new Blob([document.documentElement.outerHT
   load();
   if(!data.categories.length){
     data.categories=[
-      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел"},
+      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"half"},
       {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
-        "Недвижимость":["Квартира","Дома","Коммерция","Земля"],
+        "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
         "Транспорт":["Легковые автомобили","Грузовые автомобили"]
-      },options:[]},
-      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"category=Квартира|Дома|Коммерция|Земля",map:{
+      },options:[],layout:"half"},
+      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
         "Квартира":["Аренда","Продажа"],
         "Дома":["Аренда","Продажа"],
         "Коммерция":["Аренда","Продажа"],
-        "Земля":["Продажа"]
-      },options:[]},
-      {id:"type",name:"TypeOfHousing",title:"Тип жилья",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира",options:["Новостройка","Вторичка","От застройщика"]},
-      {id:"price",name:"Price",title:"Цена",type:"number",parentId:"cat",showIf:"Chapter=Недвижимость"},
-      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"]},
-      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт"}
+        "Земля":["Продажа"],
+        "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
+      },options:[],layout:"half"},
+      {id:"type",name:"TypeOfHousing",title:"Тип жилья",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира",options:["Новостройка","Вторичка","От застройщика"],layout:"half"},
+      {id:"price",name:"Price",title:"Цена",type:"number",parentId:"cat",showIf:"Chapter=Недвижимость",layout:"half"},
+      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"half"},
+      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"half"},
+      /* Примеры полей под 'Посуточная аренда' */
+      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"half"},
+      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"half"},
+      {id:"comfort",name:"Comfort",title:"Удобства",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Wi-Fi","Кондиционер","Телевизор","Парковка"],layout:"full"},
+      {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"half"},
+      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"select",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"half"}
     ];
   }
   renderEditor();
