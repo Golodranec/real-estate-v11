@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor_full_v7R — полный редактор категорий</title>
+<title>categories_editor_full_v9R — полный редактор с range + multicheck</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{--bg:#0f172a;--panel:#111827;--line:#1f2937;--text:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
@@ -30,22 +30,31 @@
   .ghost{opacity:.7}
   .top-actions{display:flex;gap:8px;align-items:center}
   .hidden{display:none}
-  /* NEW: сетка предпросмотра и классы ширины */
-  .preview-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-  .preview-form .full{grid-column:span 2}
-  .preview-form .half{grid-column:span 1}
-  .preview-form .third{grid-column:span 1}
+
+  /* Сетка предпросмотра */
+  .preview-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .preview-form .full { grid-column: span 2; }
+  .preview-form .half { grid-column: span 1; }
+  .preview-form .third { grid-column: span 1; }
+
   .hint{font-size:12px;color:#9ca3af;margin-top:2px}
   .divider{height:1px;background:var(--line);margin:8px 0}
   .kv{display:grid;grid-template-columns:160px 1fr;gap:8px}
   .help{font-size:12px;opacity:.8}
+  .inline{display:flex;gap:8px;align-items:center}
+  .stack label{display:flex;align-items:center;gap:8px;margin:2px 0}
+  .stack{max-height:220px;overflow:auto;border:1px dashed var(--line);border-radius:8px;padding:6px;background:#0b1220}
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Категории — полный редактор</strong>
-      <span class="badge">v7R</span>
+      <span class="badge">v9R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -77,13 +86,10 @@
       <div class="card">
         <h3>Подсказки по условиям</h3>
         <div class="kv">
-          <div>Формат</div><div><code>ключ=значение1|значение2</code> — показывать если ключ равен одному из значений</div>
-          <div>Пример</div><div><code>category=Квартира|Дома</code></div>
-          <div>AND</div><div>Можно писать как <code>key1=... & key2=...</code> (поддерживается в предпросмотре этого файла)</div>
-        </div>
-        <div class="divider"></div>
-        <div class="kv">
-          <div>Карта опций</div><div>Строки вида <code>Ключ=Опция1,Опция2</code>. Работает только для типа <b>select</b>.</div>
+          <div>Формат</div><div><code>ключ=знач1|знач2</code>. AND: <code>key1=... & key2=...</code></div>
+          <div>Карта опций</div><div>Только для select: <code>РодительОпция=Дочерняя1,Дочерняя2</code></div>
+          <div>Layout</div><div><code>full</code>, <code>half</code>, <code>third</code></div>
+          <div>Новые типы</div><div><b>range</b> (От/До), <b>multicheck</b> (список галочек)</div>
         </div>
       </div>
     </section>
@@ -94,7 +100,7 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 
-const LS_KEY="categories_editor_full_v7R_data";
+const LS_KEY="categories_editor_full_v9R_data";
 let data={categories:[]};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -150,7 +156,7 @@ function renderEditor(){
 
     const r2=el("div",{className:"row"});
     const typeSel=el("select",{onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
-    ["group","text","number","select","checkbox","date"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
+    ["group","text","number","select","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
     r2.append(wrap("Тип",typeSel),
               wrap("Описание",el("input",{value:f.hint||"", oninput:e=>{f.hint=e.target.value; dirty();}})));
     c.appendChild(r2);
@@ -163,9 +169,16 @@ function renderEditor(){
     c.appendChild(r3);
 
     const r4=el("div",{className:"row"});
-    r4.append(wrap("Опции (для select)",el("textarea",{value:(f.options||[]).join(', '), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
+    r4.append(wrap("Опции (для select/multicheck)",el("textarea",{value:(f.options||[]).join(', '), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
               wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), oninput:e=>{f.map=textToMap(e.target.value); dirty();}})));
     c.appendChild(r4);
+
+    const r5=el("div",{className:"row"});
+    const layoutSel=el("select",{onchange:e=>{f.layout=e.target.value; dirty();}});
+    ["full","half","third"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
+    r5.append(wrap("Layout",layoutSel),
+              wrap("ID",el("input",{value:f.id||"",oninput:e=>{f.id=e.target.value; dirty();}})));
+    c.appendChild(r5);
 
     listEl.appendChild(c);
   });
@@ -214,6 +227,7 @@ function renderPreview(){
   const form=$("#previewForm");
   form.innerHTML="";
   data.categories.forEach(f=>{
+    // GROUP acts like select of sections
     if(f.type==="group"){
       const sel=el("select");
       sel.append(el("option",{value:"",textContent:"—"}));
@@ -223,41 +237,80 @@ function renderPreview(){
       sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
       const w=wrap(f.title||f.name||f.id, sel);
       if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
-      if(f.layout) w.classList.add(f.layout); // NEW: поддержка layout
+      if(f.layout) w.classList.add(f.layout);
       form.append(w);
       return;
     }
-    if(f.type==="select"||f.type==="text"||f.type==="number"||f.type==="date"||f.type==="checkbox"){
-      if(!visibleByCondition(f)) return;
-      let ctrl;
-      if(f.type==="select"){
-        ctrl=el("select");
-        ctrl.append(el("option",{value:"",textContent:"—"}));
-        optionsFor(f).forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
-        const key=f.name||f.id;
-        if(previewValues[key]) ctrl.value=previewValues[key];
-        ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
-      }else if(f.type==="checkbox"){
-        ctrl=el("input",{type:"checkbox"});
-        const key=f.name||f.id; ctrl.checked=!!previewValues[key];
-        ctrl.onchange=()=>{previewValues[key]=ctrl.checked;renderPreview();};
-      }else{
-        ctrl=el("input",{type:f.type});
-        const key=f.name||f.id; if(previewValues[key]) ctrl.value=previewValues[key];
-        ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
-      }
-      const w=wrap(f.title||f.name||f.id, ctrl);
-      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
-      if(f.layout) w.classList.add(f.layout); // NEW: поддержка layout
-      form.append(w);
+
+    if(!visibleByCondition(f)) return;
+
+    let ctrl, w;
+    const key=f.name||f.id;
+
+    if(f.type==="select"){
+      ctrl=el("select");
+      ctrl.append(el("option",{value:"",textContent:"—"}));
+      optionsFor(f).forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
+      if(previewValues[key]) ctrl.value=previewValues[key];
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      w=wrap(f.title||f.name||f.id, ctrl);
     }
+    else if(f.type==="checkbox"){
+      ctrl=el("input",{type:"checkbox"});
+      ctrl.checked=!!previewValues[key];
+      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="text"||f.type==="number"||f.type==="date"){
+      ctrl=el("input",{type:f.type});
+      if(previewValues[key]) ctrl.value=previewValues[key];
+      ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="range"){
+      const box=el("div",{className:"inline"});
+      const min=el("input",{type:"number",placeholder:"От"});
+      const max=el("input",{type:"number",placeholder:"До"});
+      if(previewValues[key]){
+        min.value=previewValues[key].min||"";
+        max.value=previewValues[key].max||"";
+      }
+      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
+      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
+      box.append(min,max);
+      w=wrap(f.title||f.name||f.id, box);
+    }
+    else if(f.type==="multicheck"){
+      const stack=el("div",{className:"stack"});
+      const current=new Set(previewValues[key]||[]);
+      optionsFor(f).forEach(o=>{
+        const lbl=el("label");
+        const cb=el("input",{type:"checkbox"});
+        cb.checked=current.has(o);
+        cb.onchange=()=>{
+          const set=new Set(previewValues[key]||[]);
+          if(cb.checked) set.add(o); else set.delete(o);
+          previewValues[key]=Array.from(set);
+        };
+        lbl.append(cb, document.createTextNode(" "+o));
+        stack.append(lbl);
+      });
+      w=wrap(f.title||f.name||f.id, stack);
+    }
+    else{
+      return; // unknown type
+    }
+
+    if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+    if(f.layout) w.classList.add(f.layout);
+    form.append(w);
   });
 }
 
 // ===== import/export and tabs =====
 $("#importBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f) return;try{const txt=await f.text();const json=JSON.parse(txt);if(Array.isArray(json.categories)) data=json; else if(Array.isArray(json.items)) data={categories:json.items};save();renderEditor();previewValues={};renderPreview();alert("Импортировано");}catch(err){alert("Ошибка: "+err.message);}};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v7R.json"});document.body.appendChild(a);a.click();a.remove();};
+$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_full_v9R.json"});document.body.appendChild(a);a.click();a.remove();};
 $("#addBtn").onclick=addCategory;
 $("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){data={categories:[]};save();renderEditor();previewValues={};renderPreview();}};
 $("#tab-editor").onclick=()=>{activate("editor");};
@@ -294,16 +347,21 @@ function updateSize(){try{const bytes=new Blob([document.documentElement.outerHT
         "Земля":["Продажа"],
         "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
       },options:[],layout:"half"},
+
       {id:"type",name:"TypeOfHousing",title:"Тип жилья",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира",options:["Новостройка","Вторичка","От застройщика"],layout:"half"},
-      {id:"price",name:"Price",title:"Цена",type:"number",parentId:"cat",showIf:"Chapter=Недвижимость",layout:"half"},
-      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"half"},
-      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"half"},
-      /* Примеры полей под 'Посуточная аренда' */
+
+      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"half"},
       {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"half"},
       {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"half"},
-      {id:"comfort",name:"Comfort",title:"Удобства",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Wi-Fi","Кондиционер","Телевизор","Парковка"],layout:"full"},
+      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"full"},
+      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"half"},
+      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"half"},
+
       {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"half"},
-      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"select",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"half"}
+      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"select",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"half"},
+
+      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"half"},
+      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"half"}
     ];
   }
   renderEditor();
