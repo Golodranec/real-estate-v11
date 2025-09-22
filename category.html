@@ -330,7 +330,7 @@ function renderPreview(){
       const key=f.name||f.id;
       const have = Array.from(sel.options).some(o=>o.value===(previewValues[key] ?? ""));
       if(have){ sel.value = previewValues[key]; } else { sel.value=""; previewValues[key]=""; }
-      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};renderPreview();};
+      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
       const w=wrap(f.title||f.name||f.id, sel);
       if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
       if(f.layout) w.classList.add(f.layout);
