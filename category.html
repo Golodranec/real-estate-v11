@@ -319,10 +319,12 @@ function makeDropdownMulticheck(fieldDef){
   return container;
 }
 
+
 function renderPreview(){
   const form=$("#previewForm");
   form.innerHTML="";
   data.categories.forEach(f=>{
+    // GROUP
     if(f.type==="group"){
       const sel=el("select");
       sel.append(el("option",{value:"",textContent:"Все объявления"}));
@@ -330,9 +332,9 @@ function renderPreview(){
       const key=f.name||f.id;
       const have = Array.from(sel.options).some(o=>o.value===(previewValues[key] ?? ""));
       if(have){ sel.value = previewValues[key]; } else { sel.value=""; previewValues[key]=""; }
-      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
+      sel.onchange=()=>{previewValues[key]=sel.value; renderPreview();};
       const w=wrap(f.title||f.name||f.id, sel);
-      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      if(f.hint)   w.append(el("div",{className:"hint",textContent:f.hint}));
       if(f.layout) w.classList.add(f.layout);
       form.append(w);
       return;
@@ -348,9 +350,8 @@ function renderPreview(){
       ctrl.append(el("option",{value:"",textContent:"Все объявления"}));
       optionsFor(f).forEach(o=>ctrl.append(el("option",{value:o,textContent:o})));
       const have = Array.from(ctrl.options).some(o=>o.value===(previewValues[key] ?? ""));
-      if(have){ ctrl.value = previewValues[key]; }
-      else { ctrl.value = ""; previewValues[key] = ""; }
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      if(have){ ctrl.value = previewValues[key]; } else { ctrl.value=""; previewValues[key] = ""; }
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; renderPreview();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="radio"){
@@ -360,13 +361,13 @@ function renderPreview(){
       const have = opts.includes(previewValues[key]);
       if(have){ ctrl.value = previewValues[key]; }
       else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; renderPreview();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="checkbox"){
       ctrl=el("input",{type:"checkbox"});
       ctrl.checked=!!previewValues[key];
-      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.checked; renderPreview();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="text"||f.type==="number"||f.type==="date"){
@@ -397,6 +398,8 @@ function renderPreview(){
     if(f.layout) w.classList.add(f.layout);
     form.append(w);
   });
+}
+);
 }
 
 // ===== import/export и табы =====
