@@ -1,465 +1,577 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<title>categories_editor — v22D</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Categories Editor — v22E</title>
 <style>
-:root{
-  --bg:#0f1621; --panel:#111c2a; --panel-2:#0d1723; --muted:#9fb3c8;
-  --text:#e6eef7; --brand:#19d3da; --accent:#ffd166; --danger:#ef476f;
-  --ok:#06d6a0; --line:#243447;
-  --card:#132238; --hover:#1b2a41;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;background:var(--bg);color:var(--text);
-  font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial
-}
-header{
-  position:sticky;top:0;z-index:5;
-  background:linear-gradient(180deg,var(--panel),var(--panel-2));
-  border-bottom:1px solid var(--line);
-  padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap
-}
-header .title{font-weight:700;margin-right:auto}
-.btn{
-  background:#16283c;border:1px solid #214; color:#d8e7ff; padding:8px 10px;
-  border-radius:10px;cursor:pointer;user-select:none;transition:.15s;
-}
-.btn:hover{background:var(--hover)}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ok{background:var(--ok);color:#001b1e;border-color:transparent}
-.btn.danger{background:var(--danger);color:#fff;border-color:transparent}
-.btn.small{padding:5px 8px;font-size:12px;border-radius:8px}
-.badge{background:#112031;border:1px solid var(--line);padding:4px 6px;border-radius:8px;color:var(--muted)}
-
-#wrap{height:calc(100% - 64px);display:grid;grid-template-columns: 1fr 1fr;gap:0;border-top:1px solid var(--line)}
-.panel{height:100%;overflow:auto;background:var(--panel-2)}
-.panel h3{margin:12px 12px 8px;font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.02em}
-
-.tools{display:flex;gap:6px;flex-wrap:wrap}
-
-.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:12px}
-.row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-.col-12{grid-column:span 12}.col-6{grid-column: span 6}.col-4{grid-column:span 4}.col-2{grid-column:span 2}
-
-.card{background:#0f1d32;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.card + .card{margin-top:10px}
-.card__head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:#11213a}
-.card__title{font-weight:600}
-.card__hint{margin-left:6px;color:var(--muted);font-size:12px}
-.card__actions{margin-left:auto;display:flex;gap:6px}
-.card__body{padding:12px;display:none}
-.card.open .card__body{display:block}
-.card__grid{display:grid;gap:8px;grid-template-columns:160px 1fr}
-
-input[type="text"],input[type="number"],select,textarea{
-  width:100%;background:#0b1728;border:1px solid var(--line);color:var(--text);
-  border-radius:10px;padding:8px 10px;outline:none
-}
-textarea{min-height:80px;resize:vertical}
-label.small{font-size:12px;color:var(--muted)}
-
-.folderbar{display:flex;gap:8px;align-items:center;margin:12px}
-.folderbar .path{display:flex;gap:6px;flex-wrap:wrap}
-.folderbar .crumb{background:#0e1a2a;border:1px solid var(--line);padding:6px 10px;border-radius:10px}
-.folderbar .crumb.current{background:#13243b;color:#fff}
-
-.folder{margin:12px}
-.folder__header{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.folder__title{font-weight:700}
-.folder__list{display:flex;flex-direction:column;gap:8px}
-
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center}
-
-.preview-grid{display:grid;grid-template-columns:repeat(6, 1fr);gap:12px}
-.preview-grid .cell{grid-column: span 2}
-.preview-grid .cell.cell-3{grid-column: span 3}
-.preview-grid .cell.cell-6{grid-column: span 6}
-
-select.inline{appearance:none;background:#0b1728 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="10"><path fill="%23a9c1d6" d="M1 2 L7 8 L13 2"/></svg>') no-repeat right 8px center;padding-right:28px}
-
-.footer-note{color:#83a0b8;font-size:12px;text-align:center;margin:10px}
+  :root{
+    --bg:#0f172a; --panel:#111827; --line:#1f2937; --text:#e5e7eb; --ok:#22c55e;
+    --warn:#f59e0b; --err:#ef4444; --field:#0b1220
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
+  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
+  .left,.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#0b1220;font-size:12px}
+  nav.tabs{display:flex;gap:8px;padding:8px;background:#111827;border-bottom:1px solid var(--line)}
+  nav.tabs button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
+  nav.tabs button.active{background:var(--ok);color:#052e16}
+  main{flex:1;overflow:auto;padding:12px;max-width:1200px;margin:0 auto;width:100%}
+  button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
+  button.primary{background:var(--ok);color:#052e16}
+  button.warn{background:var(--warn);color:#3b2306}
+  button.danger{background:var(--err);color:#fff}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;cursor:default}
+  .card.collapsed .row{display:none}
+  .card h3{margin:0 0 8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+  label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
+  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit}
+  textarea{min-height:60px}
+  .mini{font-size:12px;opacity:.75}
+  .ghost{opacity:.7}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .hidden{display:none}
+  /* Preview: 6 cols desktop, 3 cols tablet, 1 col mobile */
+  .preview-form { display:grid; gap:16px; grid-template-columns:repeat(6, minmax(0,1fr)); }
+  .preview-form .col-1{grid-column:span 1}
+  .preview-form .col-2{grid-column:span 2}
+  .preview-form .col-3{grid-column:span 3}
+  .preview-form .col-4{grid-column:span 4}
+  .preview-form .col-5{grid-column:span 5}
+  .preview-form .col-6{grid-column:span 6}
+  @media (max-width:1100px){
+    .preview-form{grid-template-columns:repeat(3, minmax(0,1fr));}
+    .preview-form .col-4,.preview-form .col-5,.preview-form .col-6{grid-column:span 3}
+    .preview-form .col-3{grid-column:span 3}
+    .preview-form .col-2{grid-column:span 2}
+    .preview-form .col-1{grid-column:span 1}
+  }
+  @media (max-width:640px){
+    .preview-form{grid-template-columns:1fr;}
+    .preview-form [class^="col-"]{grid-column:span 1}
+  }
+  .hint{font-size:12px;color:#9ca3af;margin-top:2px}
+  .inline{display:flex;gap:8px;align-items:center}
+  .dropdown{position:relative}
+  .filter-select{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+  .filter-select .arrow{transition:transform .15s ease}
+  .dropdown.open .filter-select .arrow{transform:rotate(180deg)}
+  .dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;background:var(--field);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:50;display:none;max-height:320px;overflow:auto}
+  .dropdown.open .dropdown-menu{display:block}
+  .dropdown-menu .item{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:14px;color:var(--text);cursor:pointer}
+  .dropdown-menu .item:hover{background:#1f2937}
+  .dropdown-menu .item input{width:18px;height:18px}
+  .muted{opacity:.7}
+  /* Folder bar */
+  .folderbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
 </style>
 </head>
 <body>
-<header>
-  <div class="title">Категории — редактор <span class="badge" id="ver">v22E</span></div>
-  <div class="tools">
-    <button class="btn small" id="collapseAll">Свернуть все</button>
-    <button class="btn small" id="expandAll">Развернуть все</button>
-    <span class="badge" id="status">Сохранено</span>
-    <button class="btn small" id="undoBtn">↶ Undo</button>
-    <button class="btn small" id="redoBtn">↷ Redo</button>
-    <button class="btn small" id="importBtn">Импорт</button>
-    <button class="btn small" id="exportBtn">Экспорт</button>
-  </div>
-</header>
+  <header>
+    <div class="left">
+      <strong>Категории — редактор с папками</strong>
+      <span class="badge">v22D</span>
+      <span id="sizeBadge" class="badge">Размер: …</span>
+      <span id="statusBadge" class="badge">Сохранено</span>
+    </div>
+    <div class="right top-actions">
+      <button id="collapseAll" class="warn">Свернуть все</button>
+      <button id="expandAll" class="warn">Развернуть все</button>
+      <button id="undoBtn">↶ Undo</button>
+      <button id="redoBtn">↷ Redo</button>
+      <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+      <button id="importBtn">Импорт</button>
+      <button id="exportBtn" class="primary">Экспорт</button>
+      <button id="addBtn">+ Категория</button>
+      <button id="clearBtn" class="danger">Очистить</button>
+    </div>
+  </header>
 
-<div id="wrap">
-  <aside class="panel" id="editor">
-    <div class="folderbar">
-      <span class="label small">Путь:</span>
-      <div class="path" id="path"></div>
-      <div style="margin-left:auto;display:flex;gap:6px">
-        <button class="btn small" id="addFolderBtn">+ Папка</button>
-        <button class="btn small" id="addCategoryBtn">+ Категория</button>
+  <nav class="tabs">
+    <button id="tab-editor" class="active">Редактор</button>
+    <button id="tab-preview">Предпросмотр</button>
+    <button id="tab-help">Справка</button>
+  </nav>
+
+  <main>
+    <section id="editorSection">
+      <div class="card">
+        <div class="folderbar">
+          <label>Папка</label>
+          <select id="folderFilter"></select>
+          <button id="addFolder">+ Папка</button>
+          <button id="renameFolder">Переименовать</button>
+          <button id="deleteFolder" class="danger">Удалить</button>
+        </div>
       </div>
-    </div>
-    <div class="box">
-      <div class="folder__list" id="list"></div>
-    </div>
-  </aside>
+      <div id="list"></div>
+    </section>
 
-  <main class="panel" id="previewPanel">
-    <div class="box">
-      <h3>Предпросмотр</h3>
-      <div class="preview-grid" id="preview"></div>
-    </div>
-    <div class="footer-note">Состояние предпросмотра и положение прокрутки сохраняются автоматически.</div>
+    <section id="previewSection" class="hidden">
+      <form id="previewForm" class="preview-form"></form>
+    </section>
+
+    <section id="helpSection" class="hidden">
+      <div class="card">
+        <h3>Подсказки</h3>
+        <ul>
+          <li>Плейсхолдер для select — «Все объявления». Он выбран по умолчанию и виден сразу.</li>
+          <li>Тип <b>radio</b> — жёсткий выбор (без пустого варианта). Валюта по умолчанию UZS.</li>
+          <li>Undo/Redo: кнопки вверху, также Ctrl+Z / Ctrl+Shift+Z.</li>
+          <li>Свернуть/развернуть все — только для редактора. У отдельных карточек — иконка «▾» справа от заголовка.</li>
+          <li>Сетка предпросмотра — 6 колонок: col-1…col-6. Старые full/half/third мэпятся на col-6/col-3/col-2.</li>
+        </ul>
+      </div>
+    </section>
   </main>
-</div>
-
-<input type="file" accept=".json,.txt" id="fileInput" hidden />
 
 <script>
-/* ======= persistence helpers ======= */
-const LS_KEY = 'ce_v22E_data';
-const LS_PREVIEW = 'ce_v22E_preview';
-const LS_SCROLL = 'ce_v22E_scroll';
-const $ = (sel,root=document)=>root.querySelector(sel);
-const $$ = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
-const uid = ()=>'id'+Math.random().toString(36).slice(2,9);
+const $=s=>document.querySelector(s);
+const el=(t,p={})=>Object.assign(document.createElement(t),p);
+const uid=()=>Math.random().toString(36).slice(2,9);
 
-/* ======= default dataset ======= */
-const DEFAULT_DATA = {
-  version:'v22E',
-  root: {
-    id: 'root',
-    title: '(Все)',
-    type: 'folder',
-    children: [
-      { id: uid(), type:'folder', title: 'Недвижимость', children:[]},
-      { id: uid(), type:'folder', title: 'Транспорт', children:[] }
-    ]
+const LS_KEY="categories_editor_v22D_data";
+let data={folders:[],categories:[],collapsed:{}};
+function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
+
+// History (undo/redo)
+const snapshot=()=>JSON.parse(JSON.stringify(data));
+let hist=[], future=[], pending=null;
+function pushHistory(preSnap){ if(preSnap){ hist.push(preSnap); if(hist.length>50) hist.shift(); future.length=0; } }
+function undo(){ if(hist.length){ future.push(snapshot()); data=hist.pop(); save(); renderEditor(); renderPreview(); } }
+function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); save(); renderEditor(); renderPreview(); } }
+$("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
+document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
+
+const listEl=$("#list");
+let currentFolder="__ALL__";
+
+function migrateIfNeeded(){
+  // Если импортирована старая схема (без folders)
+  if(!Array.isArray(data.folders) || !data.folders.length){
+    const rootId = "root";
+    data.folders = [{id:rootId,title:"(Все)",open:true}];
+    data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
   }
-};
-
-let data = load();
-let cwd = data.root; // current folder pointer
-const history = []; let hIndex = -1;
-
-function pushHistory(){
-  // limit history to 50
-  history.splice(hIndex+1);
-  history.push(JSON.stringify(data));
-  if(history.length>50) history.shift();
-  hIndex = history.length-1;
-  setStatus('Сохранено', true);
-  save();
-}
-function undo(){ if(hIndex>0){ hIndex--; data = JSON.parse(history[hIndex]); navigate(pathIds()); render(); }}
-function redo(){ if(hIndex < history.length-1){ hIndex++; data = JSON.parse(history[hIndex]); navigate(pathIds()); render(); }}
-
-function setStatus(msg, ok){ const s=$('#status'); s.textContent=msg; s.style.color= ok?'#83ffa9':'#ffd1a4'; }
-
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
-function load(){ try{ const raw=localStorage.getItem(LS_KEY); return raw?JSON.parse(raw):structuredClone(DEFAULT_DATA);}catch(e){return structuredClone(DEFAULT_DATA);} }
-
-/* ======= path helpers ======= */
-function pathArray(node=cwd){
-  const arr=[]; let p=node;
-  while(p){ arr.unshift(p); if(p===data.root) break; p=findParent(p.id); }
-  return arr;
-}
-function pathIds(){ return pathArray().map(n=>n.id); }
-function navigate(ids){
-  let node=data.root;
-  for(const id of ids.slice(1)){ node = (node.children||[]).find(x=>x.id===id) || node; }
-  cwd=node;
-}
-
-/* ======= render ======= */
-function render(){
-  renderPath();
-  renderFolder();
-  renderPreview();
-}
-function renderPath(){
-  const bar=$('#path'); bar.innerHTML='';
-  const arr=pathArray();
-  arr.forEach((n,i)=>{
-    const b=document.createElement('button');
-    b.className='btn small ghost crumb'+(i===arr.length-1?' current':'');
-    b.textContent=n.title;
-    b.onclick=()=>{ cwd=n; render(); };
-    bar.appendChild(b);
+  // Гарантия полей
+  data.categories.forEach(c=>{
+    if(!c.id) c.id=uid();
+    if(!c.layout) c.layout="half";
+    if(!c.type) c.type="text";
+    if(!c.folderId) c.folderId = data.folders[0].id;
   });
+  if(typeof data.collapsed!=='object') data.collapsed={};
 }
-function renderFolder(){
-  const list=$('#list'); list.innerHTML='';
-  (cwd.children||[]).forEach(item=>{
-    if(item.type==='folder'){ list.appendChild(folderRow(item)); }
-    else list.appendChild(categoryCard(item));
+
+function updateFolderFilter(){
+  const sel=$("#folderFilter");
+  sel.innerHTML="";
+  const optAll=el("option",{value:"__ALL__",textContent:"(Все)"});
+  sel.append(optAll);
+  data.folders.forEach(f=>{
+    const o=el("option",{value:f.id,textContent:f.title});
+    sel.append(o);
   });
+  sel.value = currentFolder;
+  sel.onchange=()=>{ currentFolder=sel.value; renderEditor(); };
 }
 
-function folderRow(folder){
-  const row=document.createElement('div');
-  row.className='card';
-  row.innerHTML=`
-    <div class="card__head">
-      <div class="card__title">📁 ${folder.title}</div>
-      <div class="card__actions">
-        <button class="btn small" data-act="open">Открыть</button>
-        <button class="btn small" data-act="rename">Переименовать</button>
-        <button class="btn small danger" data-act="del">Удалить</button>
-      </div>
-    </div>`;
-  row.querySelector('[data-act=open]').onclick=()=>{ cwd=folder; render(); };
-  row.querySelector('[data-act=rename]').onclick=()=>{
-    const t=prompt('Название папки', folder.title); if(!t) return;
-    folder.title=t; pushHistory(); render(); };
-  row.querySelector('[data-act=del]').onclick=()=>{
-    if(!confirm('Удалить папку и все содержимое?'))return;
-    removeById(folder.id); pushHistory(); render();
-  };
-  return row;
-}
+function renderEditor(){
+  listEl.innerHTML="";
+  // фильтр по папке: (Все) показывает все, включая без папки
+  const items = data.categories.filter(c => currentFolder==="__ALL__" ? true : (c.folderId||"")===currentFolder);
 
-function categoryCard(f){
-  const card=document.createElement('div');
-  card.className='card open';
-  card.dataset.id=f.id;
-  const layoutClass = layoutToCols(f.layout||'half');
+  items.forEach((f, idx)=>{
+    const c=el("div",{className:"card"});
+    c.dataset.id=f.id;
 
-  card.innerHTML=`
-  <div class="card__head">
-    <div class="card__title">${f.title||'Категория'}</div>
-    <div class="card__hint">(${f.key||'key'})</div>
-    <div class="card__actions">
-      <button class="btn small" data-act="toggle">⯆</button>
-      <button class="btn small" data-act="dup">Дублировать</button>
-      <button class="btn small danger" data-act="del">Удалить</button>
-    </div>
-  </div>
-  <div class="card__body">
-    <div class="kv"><label class="small">Заголовок</label><input type="text" value="${f.title||''}" data-field="title"></div>
-    <div class="kv"><label class="small">Имя (ключ)</label><input type="text" value="${f.key||''}" data-field="key"></div>
-    <div class="kv"><label class="small">Тип</label>
-      <select data-field="ctype" class="inline">
-        <option value="select" ${f.ctype==='select'?'selected':''}>select</option>
-        <option value="multicheck" ${f.ctype==='multicheck'?'selected':''}>multicheck</option>
-        <option value="radio" ${f.ctype==='radio'?'selected':''}>radio (жёсткий)</option>
-        <option value="text" ${f.ctype==='text'?'selected':''}>text</option>
-        <option value="range" ${f.ctype==='range'?'selected':''}>range</option>
-      </select>
-    </div>
-    <div class="kv"><label class="small">Родитель</label>
-      <select data-field="parent" class="inline"><option value="">(нет)</option>${ optionsForSelect(allCategoryKeys(), f.parent) }</select>
-    </div>
-    <div class="kv"><label class="small">Условие отображения</label><input type="text" placeholder="пример: Chapter=Недвижимость & category=Посуточная аренда" data-field="showIf" value="${f.showIf||''}"></div>
-    <div class="kv"><label class="small">Опции (по одной в строке)</label><textarea data-field="options">${(f.options||[]).join('\n')}</textarea></div>
-    <div class="kv"><label class="small">Layout</label>
-      <select data-field="layout" class="inline">
-        <option value="full" ${f.layout==='full'?'selected':''}>full (1/1)</option>
-        <option value="half" ${(!f.layout||f.layout==='half')?'selected':''}>half (1/2)</option>
-        <option value="third" ${f.layout==='third'?'selected':''}>third (1/3)</option>
-        <option value="sixth" ${f.layout==='sixth'?'selected':''}>sixth (1/6)</option>
-      </select>
-    </div>
-  </div>`;
+    const h=el("h3");
+    const titleText = el("span",{textContent:f.title||"Без заголовка"});
+    const ghost = el("span",{className:"mini ghost",textContent:`(${f.name||f.id})`});
+    const collapseBtn=el("button",{className:"ghost",textContent: data.collapsed[f.id] ? "▸" : "▾"});
+    collapseBtn.onclick=(e)=>{ data.collapsed[f.id]=!data.collapsed[f.id]; c.classList.toggle("collapsed", !!data.collapsed[f.id]); save(); };
+    const delBtn=el("button",{className:"danger",textContent:"Удалить"});
+    delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) { pushHistory(snapshot()); removeCategory(f.id);} };
+    h.append(titleText, ghost, collapseBtn, delBtn);
+    c.appendChild(h);
+    if(data.collapsed[f.id]) c.classList.add("collapsed");
 
-  card.querySelector('[data-act=toggle]').onclick=()=>card.classList.toggle('open');
-  card.querySelector('[data-act=dup]').onclick=()=>{ const copy=structuredClone(f); copy.id=uid(); cwd.children.push(copy); pushHistory(); render(); };
-  card.querySelector('[data-act=del]').onclick=()=>{ if(!confirm('Удалить категорию?'))return; removeById(f.id); pushHistory(); render(); };
+    const r1=el("div",{className:"row"});
+    r1.append(wrap("Заголовок", el("input",{value:f.title||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.title=e.target.value; dirty();}})),
+               wrap("Имя (ключ)", el("input",{value:f.name||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.name=e.target.value; dirty();}})));
+    c.appendChild(r1);
 
-  // value change handlers
-  $$('[data-field]', card).forEach(el=>{
-    el.oninput = () => {
-      const field = el.getAttribute('data-field');
-      if(field==='options'){ f.options = el.value.split('\n').map(s=>s.trim()).filter(Boolean); }
-      else f[field] = el.value;
-      pushHistory(); renderPreview(); // re-render preview only
-      // update title in header instantly
-      if(field==='title') card.querySelector('.card__title').textContent = f.title || 'Категория';
-      if(field==='key') card.querySelector('.card__hint').textContent = '('+(f.key||'key')+')';
+    const r2=el("div",{className:"row"});
+    const typeSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
+    ["group","text","number","select","radio","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
+    r2.append(
+      wrap("Тип",typeSel),
+      wrap("Описание",el("input",{value:f.hint||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.hint=e.target.value; dirty();}}))
+    );
+    c.appendChild(r2);
+
+    const r3=el("div",{className:"row"});
+    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
+    const parentOptions=(currentId)=>{
+      const invalid=new Set([currentId]);
+      (function mark(id){ data.categories.filter(x=>x.parentId===id).forEach(ch=>{ invalid.add(ch.id); mark(ch.id); }); })(currentId);
+      return [{id:"", name:"(нет)"}].concat(
+        data.categories.filter(x=>!invalid.has(x.id)).map(x=>({id:x.id,name:`${x.title||x.name||x.id}`}))
+      );
     };
+    parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
+    const folderSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value; dirty(); renderEditor();}});
+    data.folders.forEach(F=> folderSel.append(el("option",{value:F.id,textContent:F.title,selected:F.id===(f.folderId||"")})));
+    r3.append(wrap("Родитель",pSel), wrap("Папка", folderSel));
+    c.appendChild(r3);
+
+    const r4=el("div",{className:"row"});
+    r4.append(
+      wrap("Опции (для select/multicheck/radio)",el("textarea",{value:(f.options||[]).join(', '), onfocus:()=>pending=snapshot(), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
+      wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), onfocus:()=>pending=snapshot(), oninput:e=>{f.map=textToMap(e.target.value); dirty();}}))
+    );
+    c.appendChild(r4);
+
+    const r5 = el("div",{className:"row"});
+    const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty(); renderPreview();}});
+    ["full","half","third","quarter","sixth","col-1","col-2","col-3","col-4","col-5","col-6"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
+    r5.append(
+      wrap("Layout", layoutSel),
+      wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
+    );
+    c.appendChild(r5);
+
+    listEl.appendChild(c);
   });
-  return card;
+
+  const addBtn=el("button",{textContent:"+ Категория"});
+  addBtn.onclick=()=>{ pushHistory(snapshot()); addCategory(); };
+  listEl.appendChild(addBtn);
 }
 
-function layoutToCols(layout){
-  switch(layout){
-    case 'full': return 'col-12';
-    case 'third': return 'col-4';
-    case 'sixth': return 'col-2';
-    default: return 'col-6';
+function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
+
+function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
+function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
+function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
+function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
+
+// ===== preview =====
+let previewValues={};
+const DEFAULT_LABEL = "Все объявления";
+const previewState = JSON.parse(sessionStorage.getItem('previewState')||'{}');
+
+function parseShowIf(str){
+  if(!str) return ()=>true;
+  const parts = str.split("&").map(s=>s.trim()).filter(Boolean);
+  const tests = parts.map(p=>{
+    const [k,v]=p.split("="); if(!k||v===undefined) return ()=>true;
+    const allowed = v.split("|").map(s=>s.trim());
+    return (vals)=> allowed.includes(String(vals[k] ?? ""));
+  });
+  return (vals)=> tests.every(t=>t(vals));
+}
+function visibleByCondition(f){
+  const test=parseShowIf(f.showIf||"");
+  return test(previewValues);
+}
+function optionsFor(f){
+  let opts = Array.isArray(f.options)?f.options.slice():[];
+  if(f.parentId){
+    const p = data.categories.find(x=>x.id===f.parentId);
+    const pKey = p?.name || p?.id;
+    const pVal = previewValues[pKey] ?? previewValues[p?.id] ?? "";
+    if(f.map && pVal && f.map[pVal]) opts = f.map[pVal].slice();
+  }
+  return opts;
+}
+function ensurePlaceholder(sel){
+  if(!sel.options.length || sel.options[0].value!==""){
+    sel.insertBefore(new Option(DEFAULT_LABEL,""), sel.firstChild);
   }
 }
+function assignSelectValue(sel, key){
+  const val = previewValues[key] ?? "";
+  const exists = Array.from(sel.options).some(o=>o.value===val);
+  sel.value = exists ? val : "";
+  previewValues[key] = sel.value;
+}
 
-/* ======= preview ======= */
-function renderPreview(){
-  const grid = $('#preview'); grid.innerHTML='';
+function ruPlural(n, forms){
+  const n10 = n % 10, n100 = n % 100;
+  if(n10===1 && n100!==11) return forms[0];
+  if(n10>=2 && n10<=4 && (n100<10 || n100>=20)) return forms[1];
+  return forms[2];
+}
 
-  // flatten categories of current folder only
-  const cats = (cwd.children||[]).filter(x=>x.type==='category');
-
-  cats.forEach(f=>{
-    // condition check by simple contains of key=value from preview state
-    if(f.showIf && !checkCondition(f.showIf)) return;
-
-    const cell = document.createElement('div');
-    cell.className = 'cell '+ (f.layout==='full'?'cell-6': (f.layout==='third'?'':'') ); // grid columns defined by CSS
-
-    const label = document.createElement('label'); label.className='small'; label.textContent = f.title || f.key;
-    cell.appendChild(label);
-
-    let ctrl;
-    const state = loadPreview();
-    const key = f.key || f.id;
-
-    if(f.ctype==='text'){
-      ctrl = document.createElement('input'); ctrl.type='text'; ctrl.value = state[key] ?? '';
-      ctrl.oninput=()=>{state[key]=ctrl.value; savePreview(state)};
-    }else if(f.ctype==='range'){
-      const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.gap='8px';
-      const a = document.createElement('input'); a.type='number'; a.placeholder='От'; a.style.flex='1'; a.value = state[key]?.min ?? '';
-      const b = document.createElement('input'); b.type='number'; b.placeholder='До'; b.style.flex='1'; b.value = state[key]?.max ?? '';
-      [a,b].forEach(inp=>inp.oninput=()=>{state[key]={min:a.value,max:b.value}; savePreview(state)});
-      wrap.append(a,b); ctrl=wrap;
-    }else if(f.ctype==='multicheck'){
-      const dd = makeDropdownMulti(f, state[key]); ctrl=dd.el; dd.onChange(v=>{state[key]=v; savePreview(state)});
-    }else if(f.ctype==='radio'){
-      const dd = makeDropdownSingle(f, state[key] ?? (f.options?.[0]??'')); ctrl=dd.el; dd.onChange(v=>{state[key]=v; savePreview(state)});
-    }else{ // default select
-      const dd = makeDropdownSingle(f, state[key] ?? 'Все объявления', ['Все объявления',...(f.options||[])]);
-      ctrl=dd.el; dd.onChange(v=>{state[key]=v; savePreview(state)});
-    }
-    grid.appendChild(cell);
-    cell.appendChild(ctrl);
+function makeDropdownMulticheck(fieldDef){
+  const key = fieldDef.name || fieldDef.id;
+  const baseOpts = optionsFor(fieldDef);
+  const items = baseOpts.slice();
+  const container = el("div",{className:"dropdown"});
+  container.dataset.key = key;
+  const toggle = el("button",{type:"button",className:"filter-select"});
+  const arrow = el("span",{className:"arrow",textContent:"▾"});
+  const valueSpan = el("span",{textContent: DEFAULT_LABEL, className:"value muted"});
+  toggle.append(valueSpan,arrow);
+  const menu = el("div",{className:"dropdown-menu"});
+  const current = new Set((previewValues[key]||[]).filter(Boolean));
+  function updateLabel(){
+    const chosen = Array.from(current);
+    if(chosen.length===0){ valueSpan.textContent = DEFAULT_LABEL; valueSpan.classList.add("muted"); return; }
+    valueSpan.classList.remove("muted");
+    if(chosen.length<=2){ valueSpan.textContent = chosen.join(", "); }
+    else{ valueSpan.textContent = `${chosen.length} ${ruPlural(chosen.length, ['вариант','варианта','вариантов'])}`; }
+  }
+  items.forEach((opt)=>{
+    const row = el("label",{className:"item"});
+    const cb = el("input",{type:"checkbox"});
+    cb.checked = current.has(opt);
+    cb.onchange = (e)=>{
+      e.stopPropagation();
+      if(cb.checked) current.add(opt); else current.delete(opt);
+      previewValues[key] = Array.from(current);
+      updateLabel();
+    };
+    row.append(cb, document.createTextNode(opt));
+    menu.append(row);
   });
-  // restore scroll
-  const sc = +(localStorage.getItem(LS_SCROLL)||0); $('#previewPanel').scrollTop = sc;
-}
-
-/* dropdowns */
-function makeDropdownSingle(f, value, opts){
-  const options = opts || (['Все объявления', ...(f.options||[])]);
-  const sel = document.createElement('select'); sel.className='inline';
-  options.forEach(o=>{ const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op); });
-  if(!options.includes(value)) value=options[0]; sel.value=value;
-  sel.onchange=()=>dd._onChange(sel.value);
-  const dd = { el: sel, onChange: fn=>dd._onChange=fn, _onChange:()=>{} };
-  return dd;
-}
-function makeDropdownMulti(f, value){
-  const opts = ['Все объявления', ...(f.options||[])];
-  const sel = document.createElement('select'); sel.className='inline'; sel.multiple=true; sel.size=Math.min(7,opts.length);
-  opts.forEach(o=>{ const op=document.createElement('option'); op.value=o; op.textContent=o; sel.appendChild(op); });
-  (Array.isArray(value)?value:[]).forEach(v=>{ const op=[...sel.options].find(o=>o.value===v); if(op) op.selected=true; });
-  sel.onchange=()=>{
-    const vals=[...sel.selectedOptions].map(o=>o.value).filter(v=>v!=='Все объявления');
-    dd._onChange(vals);
+  previewValues[key] = Array.from(current);
+  updateLabel();
+  toggle.onclick = (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.dropdown.open').forEach(dd=>{ if(dd!==container) dd.classList.remove('open'); });
+    container.classList.toggle("open");
   };
-  const dd = { el: sel, onChange: fn=>dd._onChange=fn, _onChange:()=>{} };
-  return dd;
+  document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
+  container.append(toggle,menu);
+  return container;
 }
 
-function checkCondition(expr){
-  // very lightweight: split by &, expect "key=value" tokens; use preview state
-  try{
-    const st=loadPreview();
-    return expr.split('&').map(s=>s.trim()).every(tok=>{
-      const [k,v]=tok.split('=').map(x=>x?.trim());
-      if(!k||v==null) return true;
-      const cur = st[k];
-      if(cur==null) return false;
-      if(typeof cur==='object'){ return Object.values(cur).includes(v); }
-      return String(cur)===v;
-    });
-  }catch(e){ return true; }
-}
-
-/* ======= add/remove helpers ======= */
-function removeById(id, node=data.root){
-  if(!node.children) return false;
-  const i=node.children.findIndex(x=>x.id===id);
-  if(i>-1){ node.children.splice(i,1); return true; }
-  for(const ch of node.children){ if(removeById(id,ch)) return true; }
-  return false;
-}
-function findParent(id, node=data.root, parent=null){
-  if(node.id===id) return parent;
-  for(const ch of node.children||[]){
-    const r = findParent(id, ch, node);
-    if(r) return r;
+function layoutToClass(v){
+  switch(v){
+    case "full": return "col-6";
+    case "half": return "col-3";
+    case "third": return "col-2";
+    case "quarter": return "col-2";      // 2/6
+    case "sixth": return "col-1";        // 1/6
+    case "col-1":
+    case "col-2":
+    case "col-3":
+    case "col-4":
+    case "col-5":
+    case "col-6": return v;
+    default: return "col-3";
   }
-  return null;
 }
-function findById(id, node=data.root){
-  if(node.id===id) return node;
-  for(const ch of node.children||[]){ const r=findById(id,ch); if(r) return r; }
-  return null;
+
+function renderPreview(){
+  const form=$("#previewForm");
+  const sc = form.parentElement.scrollTop;
+  form.innerHTML="";
+  data.categories.forEach(f=>{
+    if(f.type==="group"){
+      const sel=el("select");
+      ensurePlaceholder(sel);
+      (f.options||[]).forEach(o=>sel.append(new Option(o,o)));
+      const key=f.name||f.id;
+      assignSelectValue(sel, key);
+      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
+      const w=wrap(f.title||f.name||f.id, sel);
+      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+      w.classList.add(layoutToClass(f.layout||"col-3"));
+      form.append(w);
+      return;
+    }
+
+    if(!visibleByCondition(f)) return;
+
+    let ctrl, w;
+    const key=f.name||f.id;
+
+    if(f.type==="select"){
+      ctrl=el("select");
+      ensurePlaceholder(ctrl);
+      optionsFor(f).forEach(o=>{ if(o!==DEFAULT_LABEL) ctrl.append(new Option(o,o)); });
+      assignSelectValue(ctrl, key);
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="radio"){
+      const opts=optionsFor(f);
+      ctrl=el("select");
+      opts.forEach(o=>ctrl.append(new Option(o,o)));
+      if(previewValues[key] && opts.includes(previewValues[key])) ctrl.value=previewValues[key];
+      else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="checkbox"){
+      ctrl=el("input",{type:"checkbox"});
+      ctrl.checked=!!previewValues[key];
+      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="text"||f.type==="number"||f.type==="date"){
+      ctrl=el("input",{type:f.type});
+      if(previewValues[key]) ctrl.value=previewValues[key];
+      ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else if(f.type==="range"){
+      const box=el("div",{className:"inline"});
+      const min=el("input",{type:"number",placeholder:"От"});
+      const max=el("input",{type:"number",placeholder:"До"});
+      if(previewValues[key]){ min.value=previewValues[key].min||""; max.value=previewValues[key].max||""; }
+      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
+      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
+      box.append(min,max);
+      w=wrap(f.title||f.name||f.id, box);
+    }
+    else if(f.type==="multicheck"){
+      ctrl = makeDropdownMulticheck(f);
+      w=wrap(f.title||f.name||f.id, ctrl);
+    }
+    else{
+      return;
+    }
+
+    if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
+    w.classList.add(layoutToClass(f.layout||"col-3"));
+    form.append(w);
+  });
+  // restore preview scroll
+  setTimeout(()=>{ form.parentElement.scrollTop = previewState.scrollTop||sc; },0);
 }
-function allCategoryKeys(node=cwd, out=[]){
-  for(const ch of node.children||[]){
-    if(ch.type==='category') out.push(ch.key||ch.id);
-  }
-  return out;
-}
-function optionsForSelect(arr, sel){
-  return arr.map(v=>`<option value="${escapeHtml(v)}" ${sel===v?'selected':''}>${escapeHtml(v)}</option>`).join('');
-}
-function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]))}
 
-/* ======= preview persistence ======= */
-function loadPreview(){try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||'{}'); }catch(e){ return {}; }}
-function savePreview(st){ localStorage.setItem(LS_PREVIEW, JSON.stringify(st)); }
-
-/* ======= controls ======= */
-$('#collapseAll').onclick=()=>{$$('#list .card').forEach(c=>c.classList.remove('open'));};
-$('#expandAll').onclick=()=>{$$('#list .card').forEach(c=>c.classList.add('open'));};
-$('#undoBtn').onclick=undo; $('#redoBtn').onclick=redo;
-
-$('#addFolderBtn').onclick=()=>{
-  const t=prompt('Название папки','Новая папка'); if(!t) return;
-  cwd.children ||= []; cwd.children.push({id:uid(), type:'folder', title:t, children:[]}); pushHistory(); render();
-};
-$('#addCategoryBtn').onclick=()=>{
-  const f={ id:uid(), type:'category', title:'Новая категория', key:'key_'+Math.random().toString(36).slice(2,6),
-            ctype:'select', layout:'half', options:['Все объявления'] };
-  cwd.children ||= []; cwd.children.push(f); pushHistory(); render();
-};
-
-$('#exportBtn').onclick=()=>{
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='categories_editor_full_v22E.json'; a.click();
-};
-$('#importBtn').onclick=()=>$('#fileInput').click();
-$('#fileInput').onchange=async e=>{
-  const file=e.target.files[0]; if(!file) return;
+// import/export и табы
+$("#importBtn").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=async (e)=>{
+  const f=e.target.files && e.target.files[0];
+  if(!f) return;
   try{
-    const txt=await file.text(); const obj=JSON.parse(txt);
-    if(obj && obj.root){ data=obj; cwd=data.root; pushHistory(); render(); }
-  }catch(err){ alert('Файл не распознан'); }
-  e.target.value='';
+    const txt=await f.text();
+    const json=JSON.parse(txt);
+    if(Array.isArray(json.categories) && !json.folders){
+      data = {folders:[{id:"root",title:"(Все)",open:true}], categories: json.categories.map(c=>({...c, folderId:"root"})), collapsed:{}};
+    }else{ data=json; }
+    migrateIfNeeded();
+    save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
+  }catch(err){alert("Ошибка: "+err.message);}
+};
+$("#exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22D.json"});
+  document.body.appendChild(a);a.click();a.remove();
+};
+$("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
+$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){ pushHistory(snapshot()); data={folders:[],categories:[],collapsed:{}};migrateIfNeeded();save();renderEditor();previewValues={};renderPreview();}};
+$("#tab-editor").onclick=()=>{activate("editor");};
+$("#tab-preview").onclick=()=>{activate("preview");};
+$("#tab-help").onclick=()=>{activate("help");};
+
+function activate(tab){
+  $("#tab-editor").classList.remove("active");
+  $("#tab-preview").classList.remove("active");
+  $("#tab-help").classList.remove("active");
+  $("#editorSection").classList.add("hidden");
+  $("#previewSection").classList.add("hidden");
+  $("#helpSection").classList.add("hidden");
+  if(tab==="editor"){ $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
+  else if(tab==="preview"){ $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
+  else { $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
+}
+
+function updateSize(){
+  try{
+    const bytes=new Blob([document.documentElement.outerHTML]).size;
+    $("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;
+  }catch{
+    $("#sizeBadge").textContent="Размер: ?";
+  }
+}
+
+// folder ops
+$("#addFolder").onclick=()=>{
+  const name=prompt("Название папки:","Новая папка");
+  if(!name) return;
+  data.folders.push({id:uid(),title:name,open:true}); save(); updateFolderFilter(); renderEditor();
+};
+$("#renameFolder").onclick=()=>{
+  const cur = $("#folderFilter").value;
+  if(cur==="__ALL__") return alert("Выберите конкретную папку");
+  const f = data.folders.find(x=>x.id===cur); if(!f) return;
+  const name=prompt("Новое имя папки",f.title); if(!name) return;
+  f.title=name; save(); updateFolderFilter(); renderEditor();
+};
+$("#deleteFolder").onclick=()=>{
+  const cur = $("#folderFilter").value;
+  if(cur==="__ALL__") return alert("Выберите конкретную папку");
+  const used = data.categories.some(c=>c.folderId===cur);
+  if(used) return alert("Папка не пуста. Переместите категории.");
+  data.folders = data.folders.filter(f=>f.id!==cur);
+  currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
 };
 
-/* ======= scroll save ======= */
-$('#previewPanel').addEventListener('scroll',()=>{
-  localStorage.setItem(LS_SCROLL, $('#previewPanel').scrollTop);
+// collapse / expand all
+$("#collapseAll").onclick=()=>{
+  data.categories.forEach(c=>data.collapsed[c.id]=true);
+  save(); renderEditor();
+};
+$("#expandAll").onclick=()=>{
+  data.collapsed={};
+  save(); renderEditor();
+};
+
+// remember preview scroll
+window.addEventListener('beforeunload', ()=>{
+  previewState.scrollTop = $("#previewForm").parentElement.scrollTop;
+  sessionStorage.setItem('previewState', JSON.stringify(previewState));
 });
 
-/* ======= boot ======= */
 (function init(){
-  // seed history
-  pushHistory();
-  render();
-  // restore scroll
-  const sc=+(localStorage.getItem(LS_SCROLL)||0); $('#previewPanel').scrollTop=sc;
+  load();
+  migrateIfNeeded();
+  if(!data.categories.length){
+    data.categories=[
+      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"third",folderId:data.folders[0].id},
+      {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
+        "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
+        "Транспорт":["Легковые автомобили","Грузовые автомобили"]
+      },options:[],layout:"third",folderId:data.folders[0].id},
+      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
+        "Квартира":["Аренда","Продажа"],
+        "Дома":["Аренда","Продажа"],
+        "Коммерция":["Аренда","Продажа"],
+        "Земля":["Продажа"],
+        "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
+      },options:[],layout:"third",folderId:data.folders[0].id},
+
+      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third",folderId:data.folders[0].id},
+      {id:"currency",name:"Currency",title:"Валюта",type:"radio",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["UZS","USD"],layout:"third",folderId:data.folders[0].id},
+      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"third",folderId:data.folders[0].id},
+      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"third",folderId:data.folders[0].id},
+
+      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"col-6",folderId:data.folders[0].id},
+      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"col-3",folderId:data.folders[0].id},
+      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"col-3",folderId:data.folders[0].id},
+
+      {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"col-3",folderId:data.folders[0].id},
+      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"multicheck",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха|Гостиницы",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"col-3",folderId:data.folders[0].id},
+
+      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"third",folderId:data.folders[0].id},
+      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"third",folderId:data.folders[0].id}
+    ];
+  }
+  updateFolderFilter();
+  renderEditor();
+  renderPreview();
+  updateSize();
+  hist.length=0; future.length=0;
 })();
 </script>
 </body>
