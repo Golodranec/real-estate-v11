@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>location_selector v39.30R</title>
+<title>location_selector v39.29R</title>
 
 <!-- Leaflet + плагины -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -101,16 +101,18 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
 /* лейбл длин ребер */
 .edge-label{
-  display:inline-flex;
+  display:flex;
   align-items:center;
   justify-content:center;
-  padding:1px 5px;
-  background:rgba(0,0,0,0.55);
+  min-width:28px;
+  min-height:20px;
+  padding:2px 6px;
+  background:rgba(0,0,0,0.6);
   color:#fff;
-  font-size:12px;
+  font-size:13px;
   font-weight:500;
-  border-radius:10px;
-  text-shadow:0 1px 1px rgba(0,0,0,0.8);
+  border-radius:3px;
+  text-shadow:0 1px 2px rgba(0,0,0,0.9);
   white-space:nowrap;
   pointer-events:none;
 }
@@ -118,7 +120,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 </head>
 <body>
 <header>
-  <span class="badge">location_selector v39.30R</span>
+  <span class="badge">location_selector v39.29R</span>
   <button id="btnExport">Экспорт (всё)</button>
   <button id="btnImport">Импорт (всё)</button>
   <input type="file" id="fileImport" accept=".json,.txt" style="display:none"/>
@@ -132,6 +134,19 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   
   
   
+
+  <!-- Примерное/точное расположение -->
+  <span class="badge">Локация</span>
+  <label style="margin-left:6px"><input type="radio" name="locType" value="exact" checked> Точное</label>
+  <label style="margin-left:6px"><input type="radio" name="locType" value="approx"> Примерное</label>
+  <select id="approxRadiusSel" style="display:none;margin-left:6px">
+    <option value="200">200 м</option>
+    <option value="500" selected>500 м</option>
+    <option value="1000">1 км</option>
+    <option value="2000">2 км</option>
+  </select>
+  <button id="approxClear" style="margin-left:6px">Очистить зону</button>
+
 </header>
 
 <div class="tabs">
@@ -356,6 +371,88 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
 
   /***** MAP + MARKERS *****/
   let map=L.map('map').setView([41.3111,69.2797],12);
+  // === Approximate location feature ===
+  const APPROX_KEY = "dict_approx_v39_29R";
+  let approx = { type:"exact", coords:null, radius:500, circle:null, handle:null };
+  function approxSave(){
+    try{ localStorage.setItem(APPROX_KEY, JSON.stringify({type:approx.type, coords:approx.coords, radius:approx.radius})); }catch(e){}
+  }
+  function approxLoad(){
+    try{
+      const raw=localStorage.getItem(APPROX_KEY);
+      if(raw){
+        const obj=JSON.parse(raw);
+        approx.type = (obj.type==="approx") ? "approx" : "exact";
+        approx.coords = obj.coords || null;
+        approx.radius = Number(obj.radius)||500;
+      }
+    }catch(e){}
+    // sync UI
+    const radios=document.querySelectorAll('input[name=locType]');
+    radios.forEach(r=> r.checked = r.value===approx.type);
+    const rs=document.getElementById('approxRadiusSel');
+    if(rs){ rs.style.display = approx.type==='approx' ? 'inline-block' : 'none'; rs.value=String(approx.radius); }
+    // draw if needed
+    if(approx.coords){
+      if(approx.type==='approx'){ approxPlace(approx.coords, approx.radius); }
+    }
+  }
+  function approxClearLayers(){
+    if(approx.circle){ map.removeLayer(approx.circle); approx.circle=null; }
+    if(approx.handle){ map.removeLayer(approx.handle); approx.handle=null; }
+  }
+  function approxPlace(latlng, radius){
+    approxClearLayers();
+    approx.circle = L.circle(latlng,{radius:radius,color:'#2563eb',fillColor:'#3b82f6',fillOpacity:0.15}).addTo(map);
+    approx.handle = L.marker(latlng,{draggable:true,opacity:0.8}).addTo(map);
+    approx.handle.on('drag',()=>{
+      const p=approx.handle.getLatLng();
+      approx.circle.setLatLng(p);
+    });
+    approx.handle.on('dragend',()=>{
+      approx.coords = approx.handle.getLatLng();
+      approxSave();
+    });
+    approx.coords = latlng;
+    approx.radius = radius;
+    approxSave();
+  }
+  map.on('click',(e)=>{
+    // только когда выбран режим "Примерное"
+    const r=document.querySelector('input[name=locType]:checked');
+    const mode=r ? r.value : 'exact';
+    if(mode==='approx'){
+      approxPlace(e.latlng, Number(document.getElementById('approxRadiusSel')?.value)||500);
+    }
+  });
+  // UI bindings
+  document.querySelectorAll('input[name=locType]').forEach(r=>{
+    r.addEventListener('change', e=>{
+      const v=e.target.value;
+      approx.type=v;
+      const rs=document.getElementById('approxRadiusSel');
+      if(rs) rs.style.display = v==='approx' ? 'inline-block' : 'none';
+      approxSave();
+      if(v==='exact'){ approxClearLayers(); }
+      else if(v==='approx' && approx.coords){ approxPlace(approx.coords, approx.radius); }
+    });
+  });
+  const rsEl=document.getElementById('approxRadiusSel');
+  if(rsEl){
+    rsEl.addEventListener('change', e=>{
+      approx.radius = Number(rsEl.value)||500;
+      if(approx.circle) approx.circle.setRadius(approx.radius);
+      approxSave();
+    });
+  }
+  const btnApproxClear=document.getElementById('approxClear');
+  if(btnApproxClear){
+    btnApproxClear.addEventListener('click',()=>{
+      approx.coords=null; approxClearLayers(); approxSave();
+    });
+  }
+  approxLoad();
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
   let cluster=L.markerClusterGroup(); map.addLayer(cluster);
   function clearMarkers(){cluster.clearLayers();}
@@ -1106,6 +1203,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
   /***** EXPORT/IMPORT (всё) *****/
   document.getElementById('btnExport').onclick=async ()=>{
     const full=JSON.parse(JSON.stringify(db));
+    try{ const raw=localStorage.getItem(APPROX_KEY); if(raw) full.approx=JSON.parse(raw); }catch(e){}
     for(const cat of full.categories){
       if(cat.iconKey && !cat.iconData){ try{ cat.iconData=await lfIcons.getItem(cat.iconKey)||null; }catch(e){} }
       for(const it of (cat.items||[])){
@@ -1137,6 +1235,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
           }
         }
         for(const p of obj.polygons){ if(!p.id) p.id=uid(); if(p.geojson){ await lfGeo.setItem(p.id,p.geojson); } }
+        if(obj.approx){ try{ localStorage.setItem(APPROX_KEY, JSON.stringify(obj.approx)); }catch(e){} }
         localStorage.setItem(KEY, JSON.stringify({
           categories:obj.categories.map(c=>({
             id:c.id,name:c.name,type:c.type,parentCategoryId:c.parentCategoryId||null,
@@ -1301,6 +1400,7 @@ input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid 
       localStorage.removeItem('collapsedCats_v2');
       localStorage.removeItem('coordToolPos');
       lfIcons.clear().then(()=>{}); lfGeo.clear().then(()=>{});
+      localStorage.removeItem(APPROX_KEY);
       location.reload();
     }
   };
