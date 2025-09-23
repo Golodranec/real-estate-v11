@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22D</title>
+<title>categories_editor — v22E</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -72,7 +72,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22D</span>
+      <span class="badge">v22E</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -132,8 +132,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v22D_preview";
-const LS_FOLDER  = "categories_editor_v22D_folder";
+const LS_PREVIEW = "categories_editor_v22E_preview";
+const LS_FOLDER  = "categories_editor_v22E_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -142,7 +142,7 @@ function savePreviewValues(){
   try{ localStorage.setItem(LS_PREVIEW, JSON.stringify(previewValues)); }catch(e){}
 }
 
-const LS_KEY="categories_editor_v22D_data";
+const LS_KEY="categories_editor_v22E_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -485,7 +485,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22D.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22E.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
