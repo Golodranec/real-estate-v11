@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22G</title>
+<title>categories_editor — v22H</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -79,7 +79,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22G</span>
+      <span class="badge">v22H</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -139,8 +139,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v22G_preview";
-const LS_FOLDER  = "categories_editor_v22G_folder";
+const LS_PREVIEW = "categories_editor_v22H_preview";
+const LS_FOLDER  = "categories_editor_v22H_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -150,7 +150,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v22G_data";
+const LS_KEY="categories_editor_v22H_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -181,6 +181,24 @@ function descendantFolderIds(rootId){
   const ids=new Set();
   const root=getFolderById(rootId);
   if(!root){ return ids; }
+
+// ---- unified folder listing and option builders ----
+function listFoldersSorted(){
+  const arr = (data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+  return arr.map(f=>{
+    const parts = String(f.title||"").split("/").filter(Boolean);
+    return { id:f.id, title:String(f.title||""), last: parts[parts.length-1] || String(f.title||""), depth: Math.max(0, parts.length-1) };
+  });
+}
+function populateFolderSelect(selectEl, currentId){
+  selectEl.innerHTML="";
+  listFoldersSorted().forEach(F=>{
+    const label = (F.depth>0? "  ".repeat(F.depth) : "") + F.last;
+    const opt = new Option(label, F.id, false, F.id===(currentId||""));
+    selectEl.appendChild(opt);
+  });
+}
+
   const base = String(root.title||"");
   (data.folders||[]).forEach(f=>{
     const t = String(f.title||"");
@@ -504,7 +522,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22G.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22H.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
