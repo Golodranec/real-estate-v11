@@ -177,10 +177,28 @@ function migrateIfNeeded(){
   if(typeof data.collapsed!=='object') data.collapsed={};
 }
 
+
 function updateFolderFilter(){
   const sel=$("#folderFilter");
   sel.innerHTML="";
-  const optAll=el("option",{value:"__ALL__",textContent:"(Все)"});
+  // (Все)
+  sel.append(el("option",{value:"__ALL__",textContent:"(Все)"}));
+  // отсортировать по полному пути title
+  const folders = (data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+  folders.forEach(f=>{
+    const depth = String(f.title||"").split("/").filter(Boolean).length - 1;
+    const last  = String(f.title||"").split("/").filter(Boolean).pop() || f.title || "";
+    // показываем только последний сегмент с отступом
+    sel.append(el("option",{value:f.id,textContent: (depth>0? "  ".repeat(depth) : "") + last }));
+  });
+  sel.value = currentFolder;
+  sel.onchange=()=>{
+    currentFolder=sel.value;
+    localStorage.setItem(LS_FOLDER, currentFolder);
+    renderEditor();
+  };
+}
+);
   sel.append(optAll);
   data.folders.forEach(f=>{
     const o=el("option",{value:f.id,textContent:f.title});
