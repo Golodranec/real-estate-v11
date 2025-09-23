@@ -1,720 +1,451 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<title>categories_editor — v22N2</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Categories Editor — v22P</title>
 <style>
-  :root{
-    --bg:#0f172a; --panel:#111827; --line:#1f2937; --text:#e5e7eb; --ok:#22c55e;
-    --warn:#f59e0b; --err:#ef4444; --field:#0b1220
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;flex-direction:column}
-  header{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:10}
-  .left,.right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .badge{border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#0b1220;font-size:12px}
-  nav.tabs{display:flex;gap:8px;padding:8px;background:#111827;border-bottom:1px solid var(--line)}
-  nav.tabs button{padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
-  nav.tabs button.active{background:var(--ok);color:#052e16}
-  main{flex:1;overflow:auto;padding:12px;max-width:1200px;margin:0 auto;width:100%}
-  button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#1f2937;color:var(--text);cursor:pointer}
-  button.primary{background:var(--ok);color:#052e16}
-  button.warn{background:var(--warn);color:#3b2306}
-  button.danger{background:var(--err);color:#fff}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;cursor:default}
-  .card.collapsed .row{display:none}
-  .card h3{margin:0 0 8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
-  label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
-  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit}
-  textarea{min-height:60px}
-  .mini{font-size:12px;opacity:.75}
-  .ghost{opacity:.7}
-  .top-actions{display:flex;gap:8px;align-items:center}
-  .hidden{display:none}
-  /* Preview: 6 cols desktop, 3 cols tablet, 1 col mobile */
-  .preview-form { display:grid; gap:16px; grid-template-columns:repeat(6, minmax(0,1fr)); }
-  .preview-form .col-1{grid-column:span 1}
-  .preview-form .col-2{grid-column:span 2}
-  .preview-form .col-3{grid-column:span 3}
-  .preview-form .col-4{grid-column:span 4}
-  .preview-form .col-5{grid-column:span 5}
-  .preview-form .col-6{grid-column:span 6}
-  @media (max-width:1100px){
-    .preview-form{grid-template-columns:repeat(3, minmax(0,1fr));}
-    .preview-form .col-4,.preview-form .col-5,.preview-form .col-6{grid-column:span 3}
-    .preview-form .col-3{grid-column:span 3}
-    .preview-form .col-2{grid-column:span 2}
-    .preview-form .col-1{grid-column:span 1}
-  }
-  @media (max-width:640px){
-    .preview-form{grid-template-columns:1fr;}
-    .preview-form [class^="col-"]{grid-column:span 1}
-  }
-  .hint{font-size:12px;color:#9ca3af;margin-top:2px}
-  .inline{display:flex;gap:8px;align-items:center}
-  .dropdown{position:relative}
-  .filter-select{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;background:var(--field);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer}
-  .filter-select .arrow{transition:transform .15s ease}
-  .dropdown.open .filter-select .arrow{transform:rotate(180deg)}
-  .dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;background:var(--field);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:50;display:none;max-height:320px;overflow:auto}
-  .dropdown.open .dropdown-menu{display:block}
-  .dropdown-menu .item{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:14px;color:var(--text);cursor:pointer}
-  .dropdown-menu .item:hover{background:#1f2937}
-  .dropdown-menu .item input{width:18px;height:18px}
-  .muted{opacity:.7}
-  /* Folder bar */
-  .folderbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+:root{
+  --bg:#0f1624; --panel:#121a2b; --card:#0e1726; --line:#21314b;
+  --text:#e6eefc; --muted:#9fb1c8; --accent:#39c5ff; --danger:#ff5a74; --ok:#35d487;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
+button,select,input,textarea{font:inherit;color:inherit}
+.header{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);background:#0c1423}
+.badge{border:1px solid var(--line);background:#0a1322;color:#b8c7df;border-radius:999px;padding:2px 8px;font-size:12px}
+.btn{background:#0a1424;border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:#2a3b5b}
+.btn.ok{background:#0f2a1e;border-color:#244f3c}
+.btn.danger{background:#2a0f14;border-color:#5a2630}
+.container{max-width:1400px;margin:0 auto;padding:12px}
+.grid{display:grid;grid-template-columns:380px 1fr;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.panel>h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--line);color:#b5c7df;font-size:15px}
+.pad{padding:12px}
+label{display:block;margin:6px 0 4px;color:#aac1db;font-size:12px}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:8px 10px
+}
+textarea{min-height:64px;resize:vertical}
+.hr{height:1px;background:var(--line);margin:10px 0}
+.small{font-size:12px;color:var(--muted)}
+.flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.indent select option{white-space:pre}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+.card .head{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+.card .title{font-weight:600}
+.card .body{padding:10px 12px}
+.card.collapsed .body{display:none}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed rgba(255,255,255,.06)}
+.kv:first-child{border-top:none}
+
+/* preview */
+.preview{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.col-1{grid-column:span 1}.col-2{grid-column:span 2}.col-3{grid-column:span 3}
+.col-4{grid-column:span 4}.col-5{grid-column:span 5}.col-6{grid-column:span 6}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.preview{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.preview{grid-template-columns:1fr}[class^=col-]{grid-column:1/-1}}
+.hint{color:#93a7c2;font-size:12px;margin-top:2px}
+
+/* dropdown for multicheck */
+.dropdown{position:relative}
+.dbtn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.menu{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;max-height:300px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.35);display:none;z-index:50}
+.dropdown.open .menu{display:block}
+.menu .row{display:flex;gap:8px;align-items:center;padding:8px 10px;cursor:pointer}
+.menu .row:hover{background:#0f1b2c}
 </style>
 </head>
 <body>
-  <header>
-    <div class="left">
-      <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22N2</span>
-      <span id="sizeBadge" class="badge">Размер: …</span>
-      <span id="statusBadge" class="badge">Сохранено</span>
-    </div>
-    <div class="right top-actions">
-      <button id="collapseAll" class="warn">Свернуть все</button>
-      <button id="expandAll" class="warn">Развернуть все</button>
-      <button id="undoBtn">↶ Undo</button>
-      <button id="redoBtn">↷ Redo</button>
-      <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
-      <button id="importBtn">Импорт</button>
-      <button id="exportBtn" class="primary">Экспорт</button>
-      <button id="addBtn">+ Категория</button>
-      <button id="clearBtn" class="danger">Очистить</button>
-    </div>
-  </header>
+<div class="header">
+  <div class="flex">
+    <strong>Категории — редактор</strong>
+    <span class="badge">v22P</span>
+    <span id="sizeBadge" class="badge">…</span>
+    <span id="statusBadge" class="badge">Сохранено</span>
+  </div>
+  <div class="flex">
+    <button id="btnCollapseAll" class="btn">Свернуть все</button>
+    <button id="btnExpandAll" class="btn">Развернуть все</button>
+    <button id="undoBtn" class="btn">↶ Undo</button>
+    <button id="redoBtn" class="btn">↷ Redo</button>
+    <input id="fileInput" type="file" accept=".json,application/json" style="display:none">
+    <button id="importBtn" class="btn">Импорт</button>
+    <button id="exportBtn" class="btn ok">Экспорт</button>
+    <button id="clearBtn" class="btn danger">Очистить</button>
+  </div>
+</div>
 
-  <nav class="tabs">
-    <button id="tab-editor" class="active">Редактор</button>
-    <button id="tab-preview">Предпросмотр</button>
-    <button id="tab-help">Справка</button>
-  </nav>
-
-  <main>
-    <section id="editorSection">
-      <div class="card">
-        <div class="folderbar">
-          <label>Папка</label>
-          <select id="folderFilter"></select>
-          <button id="addFolder">+ Папка</button>
-          <button id="renameFolder">Переименовать</button>
-          <button id="deleteFolder" class="danger">Удалить</button>
+<div class="container">
+  <div class="grid">
+    <div class="panel">
+      <h3>Папки</h3>
+      <div class="pad">
+        <label>Текущая папка</label>
+        <select id="folderFilter" class="indent"></select>
+        <div class="hr"></div>
+        <label>Создать/переименовать</label>
+        <div class="flex">
+          <input id="folderInput" type="text" placeholder="Недвижимость/Квартиры/Посуточная"/>
+          <button id="saveFolder" class="btn ok">Сохранить</button>
+          <button id="delFolder" class="btn danger">Удалить</button>
         </div>
+        <div class="hr"></div>
+        <div class="small">Папки только для удобства редактора. Предпросмотр не зависит от папок.</div>
       </div>
-      <div id="list"></div>
-    </section>
+    </div>
 
-    <section id="previewSection" class="hidden">
-      <form id="previewForm" class="preview-form"></form>
-    </section>
-
-    <section id="helpSection" class="hidden">
-      <div class="card">
-        <h3>Подсказки</h3>
-        <ul>
-          <li>Плейсхолдер для select — «Все объявления». Он выбран по умолчанию и виден сразу.</li>
-          <li>Тип <b>radio</b> — жёсткий выбор (без пустого варианта). Валюта по умолчанию UZS.</li>
-          <li>Undo/Redo: кнопки вверху, также Ctrl+Z / Ctrl+Shift+Z.</li>
-          <li>Свернуть/развернуть все — только для редактора. У отдельных карточек — иконка «▾» справа от заголовка.</li>
-          <li>Сетка предпросмотра — 6 колонок: col-1…col-6. Старые full/half/third мэпятся на col-6/col-3/col-2.</li>
-        </ul>
+    <div class="panel">
+      <h3>Категории</h3>
+      <div class="pad">
+        <div class="flex">
+          <button id="addCat" class="btn ok">+ Категория</button>
+          <span id="pathLabel" class="small"></span>
+        </div>
+        <div id="list"></div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Предпросмотр</h3>
+    <div class="pad">
+      <form id="previewForm" class="preview"></form>
+      <div class="small">Значения сохраняются в localStorage и не зависят от выбранной папки.</div>
+    </div>
+  </div>
+</div>
 
 <script>
-const $=s=>document.querySelector(s);
-const el=(t,p={})=>Object.assign(document.createElement(t),p);
-const uid=()=>Math.random().toString(36).slice(2,9);
-
-const LS_KEY="categories_editor_v22N2_data";
-let data={folders:[],categories:[],collapsed:{}};
-function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
-
-// History (undo/redo)
-const snapshot=()=>JSON.parse(JSON.stringify(data));
-let hist=[], future=[], pending=null;
-function pushHistory(preSnap){ if(preSnap){ hist.push(preSnap); if(hist.length>50) hist.shift(); future.length=0; } }
-function undo(){ if(hist.length){ future.push(snapshot()); data=hist.pop(); save(); renderEditor(); renderPreview(); } }
-function redo(){ if(future.length){ hist.push(snapshot()); data=future.pop(); save(); renderEditor(); renderPreview(); } }
-$("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
-document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
-
-const listEl=$("#list");
-let currentFolder="__ALL__";
-
-function migrateIfNeeded(){
-  // Если импортирована старая схема (без folders)
-  if(!Array.isArray(data.folders) || !data.folders.length){
-    const rootId = "root";
-    data.folders = [{id:rootId,title:"(Все)",open:true}];
-    data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
-  }
-  // Гарантия полей
-  data.categories.forEach(c=>{
-    if(!c.id) c.id=uid();
-    if(!c.layout) c.layout="half";
-    if(!c.type) c.type="text";
-    if(!c.folderId) c.folderId = data.folders[0].id;
-  });
-  if(typeof data.collapsed!=='object') data.collapsed={};
-}
-
-function updateFolderFilter(){
-  const sel=$("#folderFilter");
-  sel.innerHTML="";
-  const optAll=el("option",{value:"__ALL__",textContent:"(Все)"});
-  sel.append(optAll);
-  data.folders.forEach(f=>{
-    const o=el("option",{value:f.id,textContent:f.title});
-    sel.append(o);
-  });
-  sel.value = currentFolder;
-  sel.onchange=()=>{ currentFolder=sel.value; renderEditor(); };
-}
-
-function renderEditor(){
-  listEl.innerHTML="";
-  // фильтр по папке: (Все) показывает все, включая без папки
-  const items = data.categories.filter(c => currentFolder==="__ALL__" ? true : (c.folderId||"")===currentFolder);
-
-  items.forEach((f, idx)=>{
-    const c=el("div",{className:"card"});
-    c.dataset.id=f.id;
-
-    const h=el("h3");
-    const titleText = el("span",{textContent:f.title||"Без заголовка"});
-    const ghost = el("span",{className:"mini ghost",textContent:`(${f.name||f.id})`});
-    const collapseBtn=el("button",{className:"ghost",textContent: data.collapsed[f.id] ? "▸" : "▾"});
-    collapseBtn.onclick=(e)=>{ data.collapsed[f.id]=!data.collapsed[f.id]; c.classList.toggle("collapsed", !!data.collapsed[f.id]); save(); };
-    const delBtn=el("button",{className:"danger",textContent:"Удалить"});
-    delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) { pushHistory(snapshot()); removeCategory(f.id);} };
-    h.append(titleText, ghost, collapseBtn, delBtn);
-    c.appendChild(h);
-    if(data.collapsed[f.id]) c.classList.add("collapsed");
-
-    const r1=el("div",{className:"row"});
-    r1.append(wrap("Заголовок", el("input",{value:f.title||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.title=e.target.value; dirty();}})),
-               wrap("Имя (ключ)", el("input",{value:f.name||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.name=e.target.value; dirty();}})));
-    c.appendChild(r1);
-
-    const r2=el("div",{className:"row"});
-    const typeSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.type=e.target.value; dirty(); renderEditor();}});
-    ["group","text","number","select","radio","checkbox","date","range","multicheck"].forEach(t=> typeSel.append(el("option",{value:t,textContent:t,selected:f.type===t})));
-    r2.append(
-      wrap("Тип",typeSel),
-      wrap("Описание",el("input",{value:f.hint||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.hint=e.target.value; dirty();}}))
-    );
-    c.appendChild(r2);
-
-    const r3=el("div",{className:"row"});
-    const pSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.parentId=e.target.value||null; dirty(); renderEditor();}});
-    const parentOptions=(currentId)=>{
-      const invalid=new Set([currentId]);
-      (function mark(id){ data.categories.filter(x=>x.parentId===id).forEach(ch=>{ invalid.add(ch.id); mark(ch.id); }); })(currentId);
-      return [{id:"", name:"(нет)"}].concat(
-        data.categories.filter(x=>!invalid.has(x.id)).map(x=>({id:x.id,name:`${x.title||x.name||x.id}`}))
-      );
-    };
-    parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
-    const folderSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value; dirty(); renderEditor();}});
-    data.folders.forEach(F=> folderSel.append(el("option",{value:F.id,textContent:F.title,selected:F.id===(f.folderId||"")})));
-    r3.append(wrap("Родитель",pSel), wrap("Папка", folderSel));
-    c.appendChild(r3);
-
-    const r4=el("div",{className:"row"});
-    r4.append(
-      wrap("Опции (для select/multicheck/radio)",el("textarea",{value:(f.options||[]).join(', '), onfocus:()=>pending=snapshot(), oninput:e=>{f.options=e.target.value.split(',').map(x=>x.trim()).filter(Boolean); dirty();}})),
-      wrap("Карта опций",el("textarea",{value:mapToText(f.map||{}), onfocus:()=>pending=snapshot(), oninput:e=>{f.map=textToMap(e.target.value); dirty();}}))
-    );
-    c.appendChild(r4);
-
-    const r5 = el("div",{className:"row"});
-    const layoutSel = el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.layout=e.target.value; dirty(); renderPreview();}});
-    ["full","half","third","quarter","sixth","col-1","col-2","col-3","col-4","col-5","col-6"].forEach(t=> layoutSel.append(el("option",{value:t,textContent:t,selected:(f.layout||"half")===t})));
-    r5.append(
-      wrap("Layout", layoutSel),
-      wrap("ID", el("input",{value:f.id||"", onfocus:()=>pending=snapshot(), oninput:e=>{f.id=e.target.value; dirty();}}))
-    );
-    c.appendChild(r5);
-
-    listEl.appendChild(c);
-  });
-
-  const addBtn=el("button",{textContent:"+ Категория"});
-  addBtn.onclick=()=>{ pushHistory(snapshot()); addCategory(); };
-  listEl.appendChild(addBtn);
-}
-
-function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
-
-function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
-function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
-function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
-function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
-function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
-
-// ===== preview =====
-let previewValues={};
-const DEFAULT_LABEL = "Все объявления";
-const previewState = JSON.parse(sessionStorage.getItem('previewState')||'{}');
-
-function parseShowIf(str){
-  if(!str) return ()=>true;
-  const parts = str.split("&").map(s=>s.trim()).filter(Boolean);
-  const tests = parts.map(p=>{
-    const [k,v]=p.split("="); if(!k||v===undefined) return ()=>true;
-    const allowed = v.split("|").map(s=>s.trim());
-    return (vals)=> allowed.includes(String(vals[k] ?? ""));
-  });
-  return (vals)=> tests.every(t=>t(vals));
-}
-function visibleByCondition(f){
-  const test=parseShowIf(f.showIf||"");
-  return test(previewValues);
-}
-function optionsFor(f){
-  let opts = Array.isArray(f.options)?f.options.slice():[];
-  if(f.parentId){
-    const p = data.categories.find(x=>x.id===f.parentId);
-    const pKey = p?.name || p?.id;
-    const pVal = previewValues[pKey] ?? previewValues[p?.id] ?? "";
-    if(f.map && pVal && f.map[pVal]) opts = f.map[pVal].slice();
-  }
-  return opts;
-}
-function ensurePlaceholder(sel){
-  if(!sel.options.length || sel.options[0].value!==""){
-    sel.insertBefore(new Option(DEFAULT_LABEL,""), sel.firstChild);
-  }
-}
-function assignSelectValue(sel, key){
-  const val = previewValues[key] ?? "";
-  const exists = Array.from(sel.options).some(o=>o.value===val);
-  sel.value = exists ? val : "";
-  previewValues[key] = sel.value;
-}
-
-function ruPlural(n, forms){
-  const n10 = n % 10, n100 = n % 100;
-  if(n10===1 && n100!==11) return forms[0];
-  if(n10>=2 && n10<=4 && (n100<10 || n100>=20)) return forms[1];
-  return forms[2];
-}
-
-function makeDropdownMulticheck(fieldDef){
-  const key = fieldDef.name || fieldDef.id;
-  const baseOpts = optionsFor(fieldDef);
-  const items = baseOpts.slice();
-  const container = el("div",{className:"dropdown"});
-  container.dataset.key = key;
-  const toggle = el("button",{type:"button",className:"filter-select"});
-  const arrow = el("span",{className:"arrow",textContent:"▾"});
-  const valueSpan = el("span",{textContent: DEFAULT_LABEL, className:"value muted"});
-  toggle.append(valueSpan,arrow);
-  const menu = el("div",{className:"dropdown-menu"});
-  const current = new Set((previewValues[key]||[]).filter(Boolean));
-  function updateLabel(){
-    const chosen = Array.from(current);
-    if(chosen.length===0){ valueSpan.textContent = DEFAULT_LABEL; valueSpan.classList.add("muted"); return; }
-    valueSpan.classList.remove("muted");
-    if(chosen.length<=2){ valueSpan.textContent = chosen.join(", "); }
-    else{ valueSpan.textContent = `${chosen.length} ${ruPlural(chosen.length, ['вариант','варианта','вариантов'])}`; }
-  }
-  items.forEach((opt)=>{
-    const row = el("label",{className:"item"});
-    const cb = el("input",{type:"checkbox"});
-    cb.checked = current.has(opt);
-    cb.onchange = (e)=>{
-      e.stopPropagation();
-      if(cb.checked) current.add(opt); else current.delete(opt);
-      previewValues[key] = Array.from(current);
-      updateLabel();
-    };
-    row.append(cb, document.createTextNode(opt));
-    menu.append(row);
-  });
-  previewValues[key] = Array.from(current);
-  updateLabel();
-  toggle.onclick = (e)=>{
-    e.stopPropagation();
-    document.querySelectorAll('.dropdown.open').forEach(dd=>{ if(dd!==container) dd.classList.remove('open'); });
-    container.classList.toggle("open");
-  };
-  document.addEventListener("click", (e)=>{ if(!container.contains(e.target)){ container.classList.remove("open"); } });
-  container.append(toggle,menu);
-  return container;
-}
-
-function layoutToClass(v){
-  switch(v){
-    case "full": return "col-6";
-    case "half": return "col-3";
-    case "third": return "col-2";
-    case "quarter": return "col-2";      // 2/6
-    case "sixth": return "col-1";        // 1/6
-    case "col-1":
-    case "col-2":
-    case "col-3":
-    case "col-4":
-    case "col-5":
-    case "col-6": return v;
-    default: return "col-3";
-  }
-}
-
-function renderPreview(){
-  const form=$("#previewForm");
-  const sc = form.parentElement.scrollTop;
-  form.innerHTML="";
-  data.categories.forEach(f=>{
-    if(f.type==="group"){
-      const sel=el("select");
-      ensurePlaceholder(sel);
-      (f.options||[]).forEach(o=>sel.append(new Option(o,o)));
-      const key=f.name||f.id;
-      assignSelectValue(sel, key);
-      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
-      const w=wrap(f.title||f.name||f.id, sel);
-      if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
-      w.classList.add(layoutToClass(f.layout||"col-3"));
-      form.append(w);
-      return;
-    }
-
-    if(!visibleByCondition(f)) return;
-
-    let ctrl, w;
-    const key=f.name||f.id;
-
-    if(f.type==="select"){
-      ctrl=el("select");
-      ensurePlaceholder(ctrl);
-      optionsFor(f).forEach(o=>{ if(o!==DEFAULT_LABEL) ctrl.append(new Option(o,o)); });
-      assignSelectValue(ctrl, key);
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
-      w=wrap(f.title||f.name||f.id, ctrl);
-    }
-    else if(f.type==="radio"){
-      const opts=optionsFor(f);
-      ctrl=el("select");
-      opts.forEach(o=>ctrl.append(new Option(o,o)));
-      if(previewValues[key] && opts.includes(previewValues[key])) ctrl.value=previewValues[key];
-      else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};
-      w=wrap(f.title||f.name||f.id, ctrl);
-    }
-    else if(f.type==="checkbox"){
-      ctrl=el("input",{type:"checkbox"});
-      ctrl.checked=!!previewValues[key];
-      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
-      w=wrap(f.title||f.name||f.id, ctrl);
-    }
-    else if(f.type==="text"||f.type==="number"||f.type==="date"){
-      ctrl=el("input",{type:f.type});
-      if(previewValues[key]) ctrl.value=previewValues[key];
-      ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
-      w=wrap(f.title||f.name||f.id, ctrl);
-    }
-    else if(f.type==="range"){
-      const box=el("div",{className:"inline"});
-      const min=el("input",{type:"number",placeholder:"От"});
-      const max=el("input",{type:"number",placeholder:"До"});
-      if(previewValues[key]){ min.value=previewValues[key].min||""; max.value=previewValues[key].max||""; }
-      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
-      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
-      box.append(min,max);
-      w=wrap(f.title||f.name||f.id, box);
-    }
-    else if(f.type==="multicheck"){
-      ctrl = makeDropdownMulticheck(f);
-      w=wrap(f.title||f.name||f.id, ctrl);
-    }
-    else{
-      return;
-    }
-
-    if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
-    w.classList.add(layoutToClass(f.layout||"col-3"));
-    form.append(w);
-  });
-  // restore preview scroll
-  setTimeout(()=>{ form.parentElement.scrollTop = previewState.scrollTop||sc; },0);
-}
-
-// import/export и табы
-$("#importBtn").onclick=()=>$("#fileInput").click();
-$("#fileInput").onchange=async (e)=>{
-  const f=e.target.files && e.target.files[0];
-  if(!f) return;
-  try{
-    const txt=await f.text();
-    const json=JSON.parse(txt);
-    if(Array.isArray(json.categories) && !json.folders){
-      data = {folders:[{id:"root",title:"(Все)",open:true}], categories: json.categories.map(c=>({...c, folderId:"root"})), collapsed:{}};
-    }else{ data=json; }
-    migrateIfNeeded();
-    save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
-  }catch(err){alert("Ошибка: "+err.message);}
-};
-$("#exportBtn").onclick=()=>{
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22N2.json"});
-  document.body.appendChild(a);a.click();a.remove();
-};
-$("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
-$("#clearBtn").onclick=()=>{if(confirm("Очистить все?")){ pushHistory(snapshot()); data={folders:[],categories:[],collapsed:{}};migrateIfNeeded();save();renderEditor();previewValues={};renderPreview();}};
-$("#tab-editor").onclick=()=>{activate("editor");};
-$("#tab-preview").onclick=()=>{activate("preview");};
-$("#tab-help").onclick=()=>{activate("help");};
-
-function activate(tab){
-  $("#tab-editor").classList.remove("active");
-  $("#tab-preview").classList.remove("active");
-  $("#tab-help").classList.remove("active");
-  $("#editorSection").classList.add("hidden");
-  $("#previewSection").classList.add("hidden");
-  $("#helpSection").classList.add("hidden");
-  if(tab==="editor"){ $("#tab-editor").classList.add("active"); $("#editorSection").classList.remove("hidden"); }
-  else if(tab==="preview"){ $("#tab-preview").classList.add("active"); $("#previewSection").classList.remove("hidden"); renderPreview(); }
-  else { $("#tab-help").classList.add("active"); $("#helpSection").classList.remove("hidden"); }
-}
-
-function updateSize(){
-  try{
-    const bytes=new Blob([document.documentElement.outerHTML]).size;
-    $("#sizeBadge").textContent=`Размер: ${(bytes/1024).toFixed(1)} КБ`;
-  }catch{
-    $("#sizeBadge").textContent="Размер: ?";
-  }
-}
-
-// folder ops
-$("#addFolder").onclick=()=>{
-  const name=prompt("Название папки:","Новая папка");
-  if(!name) return;
-  data.folders.push({id:uid(),title:name,open:true}); save(); updateFolderFilter(); renderEditor();
-};
-$("#renameFolder").onclick=()=>{
-  const cur = $("#folderFilter").value;
-  if(cur==="__ALL__") return alert("Выберите конкретную папку");
-  const f = data.folders.find(x=>x.id===cur); if(!f) return;
-  const name=prompt("Новое имя папки",f.title); if(!name) return;
-  f.title=name; save(); updateFolderFilter(); renderEditor();
-};
-$("#deleteFolder").onclick=()=>{
-  const cur = $("#folderFilter").value;
-  if(cur==="__ALL__") return alert("Выберите конкретную папку");
-  const used = data.categories.some(c=>c.folderId===cur);
-  if(used) return alert("Папка не пуста. Переместите категории.");
-  data.folders = data.folders.filter(f=>f.id!==cur);
-  currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
-};
-
-// collapse / expand all
-$("#collapseAll").onclick=()=>{
-  data.categories.forEach(c=>data.collapsed[c.id]=true);
-  save(); renderEditor();
-};
-$("#expandAll").onclick=()=>{
-  data.collapsed={};
-  save(); renderEditor();
-};
-
-// remember preview scroll
-window.addEventListener('beforeunload', ()=>{
-  previewState.scrollTop = $("#previewForm").parentElement.scrollTop;
-  sessionStorage.setItem('previewState', JSON.stringify(previewState));
-});
-
-(function init(){
-  load();
-  migrateIfNeeded();
-  if(!data.categories.length){
-    data.categories=[
-      {id:"sec",name:"Chapter",title:"Раздел",type:"group",options:["Недвижимость","Транспорт","Здоровье"],hint:"Выберите верхний раздел",layout:"third",folderId:data.folders[0].id},
-      {id:"cat",name:"category",title:"Категория",type:"select",parentId:"sec",showIf:"Chapter=Недвижимость|Транспорт",map:{
-        "Недвижимость":["Квартира","Дома","Коммерция","Земля","Посуточная аренда"],
-        "Транспорт":["Легковые автомобили","Грузовые автомобили"]
-      },options:[],layout:"third",folderId:data.folders[0].id},
-      {id:"sub",name:"Subcategory",title:"Подкатегория",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Квартира|Дома|Коммерция|Земля|Посуточная аренда",map:{
-        "Квартира":["Аренда","Продажа"],
-        "Дома":["Аренда","Продажа"],
-        "Коммерция":["Аренда","Продажа"],
-        "Земля":["Продажа"],
-        "Посуточная аренда":["Квартиры","Дома","Хостелы","Гостиницы","Санатории/Дома отдыха"]
-      },options:[],layout:"third",folderId:data.folders[0].id},
-
-      {id:"price",name:"Price",title:"Цена (за сутки)",type:"range",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",layout:"third",folderId:data.folders[0].id},
-      {id:"currency",name:"Currency",title:"Валюта",type:"radio",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["UZS","USD"],layout:"third",folderId:data.folders[0].id},
-      {id:"beds",name:"Beds",title:"Количество спальных мест",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["1","2","3","4","5+"],layout:"third",folderId:data.folders[0].id},
-      {id:"rules",name:"Rules",title:"Правила",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без животных","Без вечеринок","Только некурящие"],layout:"third",folderId:data.folders[0].id},
-
-      {id:"comfort",name:"Comfort",title:"Удобства",type:"multicheck",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Микроволновая печь","Утюг","Фен","Холодильник","Wi‑Fi","Телевизор","Кондиционер","Парковка"],layout:"col-6",folderId:data.folders[0].id},
-      {id:"infra",name:"Infrastructure",title:"Инфраструктура",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Метро рядом","Центр города","Магазины поблизости"],layout:"col-3",folderId:data.folders[0].id},
-      {id:"food",name:"Food",title:"Питание",type:"select",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда",options:["Без питания","Завтрак включен","Полный пансион"],layout:"col-3",folderId:data.folders[0].id},
-
-      {id:"hotelName",name:"HotelName",title:"Название отеля",type:"text",parentId:"cat",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Гостиницы|Санатории/Дома отдыха",layout:"col-3",folderId:data.folders[0].id},
-      {id:"roomCat",name:"RoomCategory",title:"Категория номера",type:"multicheck",parentId:"sub",showIf:"Chapter=Недвижимость & category=Посуточная аренда & Subcategory=Санатории/Дома отдыха|Гостиницы",options:["Эконом","Стандарт","Полулюкс","Люкс","Коттедж"],layout:"col-3",folderId:data.folders[0].id},
-
-      {id:"brand",name:"Brand",title:"Марка авто",type:"select",parentId:"cat",showIf:"Chapter=Транспорт",options:["Chevrolet","Hyundai"],layout:"third",folderId:data.folders[0].id},
-      {id:"year",name:"Year",title:"Год выпуска",type:"number",parentId:"cat",showIf:"Chapter=Транспорт",layout:"third",folderId:data.folders[0].id}
-    ];
-  }
-  updateFolderFilter();
-  renderEditor();
-  renderPreview();
-  updateSize();
-  hist.length=0; future.length=0;
-})();
-</script>
-<script>
-
-/* ===== v22N2 overrides: decouple preview from folders + persist preview & current folder ===== */
-(function(){
-  const SK = { folder:'cat:folder', preview:'cat:preview' };
-
-  // helpers
-  const jget = (k, d=null) => {
-    try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; }
-  };
-  const jset = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
-
-  // override updateFolderFilter (build list from data.folders by title path, remember selection)
-  window.updateFolderFilter = function(){
-    const sel = $("#folderFilter");
-    if(!sel) return;
-    sel.innerHTML = "";
-    // "Все"
-    const allOpt = el("option",{value:"__ALL__",textContent:"(Все)"});
-    sel.append(allOpt);
-    const saved = localStorage.getItem(SK.folder) || "__ALL__";
-
-    // make tree from titles like "Недвижимость/Квартиры/Посуточная"
-    const list = (data.folders||[]).slice().sort((a,b)=> (a.title||"").localeCompare(b.title||""));
-    list.forEach(f=>{
-      const depth = (f.title||"").split("/").filter(Boolean).length-1;
-      const pad = "— ".repeat(Math.max(0,depth));
-      const o = el("option",{value:f.id,textContent: pad + (f.title||"")});
-      sel.append(o);
-    });
-
-    sel.value = saved;
-    sel.onchange = () => {
-      localStorage.setItem(SK.folder, sel.value);
-      renderEditor(); // only editor depends on folder
-    };
-  };
-
-  // override renderEditor to respect folder filter but not affect Preview
-  const _renderEditorOrig = window.renderEditor;
-  window.renderEditor = function(){
-    const listEl = $("#list");
-    if(!listEl){ _renderEditorOrig && _renderEditorOrig(); return; }
-    listEl.innerHTML = "";
-    const currentFolder = $("#folderFilter")?.value || "__ALL__";
-
-    const items = data.categories.filter(c=>{
-      if(currentFolder==="__ALL__") return true;
-      return String(c.folderId||"")===String(currentFolder);
-    });
-
-    // reuse existing card builder from original function if available
-    // fall back to simple builder:
-    const build = (f) => {
-      const card = el("div",{className:"card"});
-      const h3 = el("h3", {textContent: f.title || "Без заголовка"});
-      const openBtn = el("button",{className:"mini ghost",textContent:"▶"});
-      openBtn.onclick = ()=>{
-        const body = card.querySelector(".body");
-        body.style.display = (body.style.display==="none"?"":"none");
-      };
-      h3.append(openBtn);
-      card.append(h3);
-      const body = el("div",{className:"body"});
-      body.style.display = "none";
-      card.append(body);
-      return card;
-    };
-
-    items.forEach(f=>{
-      try{
-        // original path
-        if(_renderEditorOrig && typeof buildCategoryCard==="function"){
-          listEl.append(buildCategoryCard(f)); // if project exposes a builder
-        }else{
-          listEl.append(build(f));
+(() => {
+  "use strict";
+  const $ = (s,ctx=document)=>ctx.querySelector(s);
+  function el(tag, props){
+    const n=document.createElement(tag);
+    if(props){
+      for(const [k,v] of Object.entries(props)){
+        if(k==='dataset' && v && typeof v==='object'){
+          for(const [dk,dv] of Object.entries(v)) n.dataset[dk]=dv;
+        } else {
+          try{ n[k]=v; }catch{}
         }
-      }catch(e){
-        listEl.append(build(f));
       }
-    });
-    $("#sizeBadge").textContent = `Размер: ${Math.round(JSON.stringify(data).length/1024)} КБ`;
-  };
+    }
+    return n;
+  }
+  const uid = ()=>Math.random().toString(36).slice(2,9);
 
-  // override renderPreview: build from all categories (no folder filter) and persist values
-  window.renderPreview = function(){
-    const form = $("#previewForm");
-    const section = $("#previewSection");
-    if(!form || !section) return;
-    section.classList.remove("hidden");
-    form.innerHTML = "";
+  const LS_DATA='cat:data:v22P';
+  const LS_PREV='cat:preview:v22P';
+  const LS_FOLD='cat:folder:v22P';
+  const LS_SCROLL='cat:scroll:v22P';
 
-    // restore
-    const saved = jget(SK.preview, {});
-    const values = {...saved};
+  let data = load(LS_DATA)||seed();
+  let preview = load(LS_PREV)||{};
+  let collapsed = data.collapsed||{};
+  let currentFolder = localStorage.getItem(LS_FOLD) || '__ALL__';
 
-    const ensure = (ctrl, key) => {
-      if(values[key]==null){
-        if(ctrl.type==="checkbox") values[key] = !!ctrl.checked;
-        else values[key] = ctrl.value || "";
-      }
-      // write to control
-      if(ctrl.type==="checkbox"){ ctrl.checked = !!values[key]; }
-      else { ctrl.value = values[key]; }
-      ctrl.onchange = ctrl.oninput = ()=>{
-        values[key] = (ctrl.type==="checkbox") ? !!ctrl.checked : ctrl.value;
-        jset(SK.preview, values);
-      };
+  function load(k){ try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null} }
+  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function touch(){ save(LS_DATA, data); save(LS_PREV, preview); localStorage.setItem(LS_FOLD, currentFolder); updateSize(); $('#statusBadge').textContent='Сохранено'; }
+
+  function seed(){
+    return {
+      folders:[{id:'root', title:'(Все)', parentId:null}],
+      categories:[
+        {id:'sec',name:'Chapter',title:'Раздел',type:'select',options:'Недвижимость, Транспорт, Услуги',layout:'col-2',folderId:'root'},
+        {id:'cat',name:'category',title:'Категория',type:'select',map:'Недвижимость=Квартиры,Дома,Коммерция,Посуточная аренда\nТранспорт=Легковые,Грузовые',layout:'col-2',folderId:'root',showIf:''},
+        {id:'sub',name:'Subcategory',title:'Подкатегория',type:'select',map:'Квартиры=Аренда,Продажа\nДома=Аренда,Продажа\nПосуточная аренда=Квартиры,Дома,Хостелы,Гостиницы,Санатории/Дома отдыха',layout:'col-2',folderId:'root',showIf:'Chapter=Недвижимость'},
+        {id:'price',name:'Price',title:'Цена (за сутки)',type:'range',layout:'col-2',folderId:'root',showIf:'Chapter=Недвижимость & category=Посуточная аренда'},
+        {id:'currency',name:'Currency',title:'Валюта',type:'radio',options:'UZS, USD',layout:'col-1',folderId:'root',showIf:'Chapter=Недвижимость & category=Посуточная аренда'},
+        {id:'comfort',name:'Comfort',title:'Удобства',type:'multicheck',options:'Wi‑Fi, Телевизор, Кондиционер, Парковка, Холодильник, Микроволновка, Утюг, Фен',layout:'col-6',folderId:'root',showIf:'Chapter=Недвижимость & category=Посуточная аренда'}
+      ],
+      collapsed:{}
     };
+  }
+  function ensureRoot(){ if(!data.folders.some(f=>f.id==='root')) data.folders.unshift({id:'root',title:'(Все)',parentId:null}); }
 
-    // build simple preview controls for each category
-    data.categories.forEach(f=>{
-      const row = el("div",{className:"row"});
-      const lab = el("label",{textContent: f.title || f.name || f.key || "Поле"});
-      let ctrl;
-      if(f.type==="number"||f.type==="range"){ ctrl = el("input",{type:"number",placeholder:f.hint||""}); }
-      else if(f.type==="radio"||f.type==="multicheck"||f.type==="select"){
-        ctrl = el("select",{}); const opts = Array.isArray(f.options)?f.options: (f.map?Object.keys(f.map):[]);
-        el("option",{value:"",textContent:"Все объявления"}, ctrl);
-        (opts||[]).forEach(o=> el("option",{value:o,textContent:o}, ctrl));
-      }else{
-        ctrl = el("input",{type:"text",placeholder:f.hint||""});
+  /* Undo/Redo */
+  const snapshot=()=>JSON.parse(JSON.stringify({data,preview,collapsed,currentFolder}));
+  let hist=[], future=[], pending=null;
+  function push(){ if(pending){ hist.push(pending); if(hist.length>80) hist.shift(); future.length=0; pending=null; } }
+  function undo(){ if(!hist.length) return; const cur=snapshot(); future.push(cur); const prev=hist.pop(); ({data,preview,collapsed,currentFolder}=JSON.parse(JSON.stringify(prev))); touch(); renderAll(); }
+  function redo(){ if(!future.length) return; const cur=snapshot(); hist.push(cur); const next=future.pop(); ({data,preview,collapsed,currentFolder}=JSON.parse(JSON.stringify(next))); touch(); renderAll(); }
+  $('#undoBtn').onclick=undo; $('#redoBtn').onclick=redo;
+  document.addEventListener('keydown',e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
+
+  /* Folders */
+  function normalize(path){ return String(path||'').trim().replace(/\\+/g,'/').replace(/\/+/g,'/').replace(/^\/|\/$/g,''); }
+  function ensurePath(path){
+    path = normalize(path);
+    if(!path) return 'root';
+    let parent='root', acc='';
+    for(const part of path.split('/')){
+      acc = acc ? acc + '/' + part : part;
+      let node = data.folders.find(f=>f.parentId===parent && f.title===part);
+      if(!node){ node={id:uid(), title:part, parentId:parent}; data.folders.push(node); }
+      parent = node.id;
+    }
+    return parent;
+  }
+  function pathOf(id){
+    if(id==='__ALL__' || id==='root') return '/';
+    const chain=[]; let f=data.folders.find(x=>x.id===id);
+    while(f && f.parentId){ chain.push(f.title); f=data.folders.find(x=>x.id===f.parentId); }
+    return '/'+chain.reverse().join('/');
+  }
+  function buildTree(){
+    const out=[];
+    function walk(parentId, prefix){
+      const kids = data.folders.filter(f=>f.parentId===parentId && f.id!=='root').sort((a,b)=>a.title.localeCompare(b.title,'ru'));
+      for(const k of kids){
+        const path = (prefix?prefix+'/':'') + k.title;
+        const depth = path.split('/').length-1;
+        out.push({id:k.id, path, depth});
+        walk(k.id, path);
       }
-      ensure(ctrl, f.id);
-      row.append(lab, ctrl);
-      form.append(row);
+    }
+    walk('root','');
+    return out;
+  }
+  function updateFolderFilter(){
+    const sel = $('#folderFilter'); sel.innerHTML='';
+    sel.append(new Option('(Все)','__ALL__'));
+    const list = buildTree();
+    for(const item of list){ const depth=item.depth; const text = (depth? '  '.repeat(depth):'') + item.path; sel.append(new Option(text,item.id)); }
+    if(currentFolder!=='__ALL__' && !list.some(x=>x.id===currentFolder)) currentFolder='__ALL__';
+    sel.value=currentFolder;
+    sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLD,currentFolder); renderEditor(); /* preview не трогаем */ };
+    $('#pathLabel').textContent = 'Путь: ' + pathOf(currentFolder);
+  }
+
+  /* Editor */
+  const listEl = $('#list');
+  function wrapKV(label,ctrl){ const w=el('div',{className:'kv'}); const l=el('div',{className:'small',textContent:label}); w.append(l,ctrl); return w; }
+  function addCategory(){
+    const id = uid();
+    const folderId = currentFolder==='__ALL__' ? 'root' : currentFolder;
+    data.categories.push({id,folderId,title:'Новая категория',name:'key_'+id,type:'select',options:'Опция 1, Опция 2',map:'',hint:'',showIf:'',layout:'col-3'});
+  }
+  function removeCategory(id){ data.categories = data.categories.filter(c=>c.id!==id); delete collapsed[id]; }
+
+  function renderEditor(){
+    listEl.innerHTML='';
+    const cats = data.categories.filter(c=> currentFolder==='__ALL__' ? true : c.folderId===currentFolder);
+    cats.forEach(cfg=>{
+      const card = el('div',{className:'card'+(collapsed[cfg.id]?' collapsed':'')});
+      const head = el('div',{className:'head'});
+      const left = el('div',{className:'flex'});
+      left.append(el('span',{className:'title',textContent:cfg.title||'(без названия)'}),
+                  el('span',{className:'small',textContent:(cfg.name||'')}));
+      const right = el('div',{className:'flex'});
+      const tgl = el('button',{className:'btn',textContent: collapsed[cfg.id]?'▸':'▾'});
+      tgl.onclick=()=>{ collapsed[cfg.id]=!collapsed[cfg.id]; card.classList.toggle('collapsed'); tgl.textContent = collapsed[cfg.id]?'▸':'▾'; touch(); };
+      const del = el('button',{className:'btn danger',textContent:'Удалить'});
+      del.onclick=()=>{ if(confirm('Удалить категорию?')){ pending=snapshot(); removeCategory(cfg.id); push(); touch(); renderEditor(); renderPreview(); } };
+      right.append(tgl,del);
+      head.append(left,right);
+      card.append(head);
+
+      const body = el('div',{className:'body'});
+      // title / key
+      const iTitle = el('input',{type:'text',value:cfg.title||''});
+      iTitle.oninput=()=>{ cfg.title=iTitle.value; left.querySelector('.title').textContent=cfg.title||'(без названия)'; pending=pending||snapshot(); };
+      const iKey = el('input',{type:'text',value:cfg.name||''});
+      iKey.oninput=()=>{ cfg.name=iKey.value.trim(); pending=pending||snapshot(); };
+      body.append(wrapKV('Заголовок', iTitle), wrapKV('Ключ', iKey));
+
+      // type / layout
+      const iType = el('select',{}); ['select','multicheck','checkbox','radio','text','number','date','range'].forEach(t=> iType.append(new Option(t,t,false,t===cfg.type)));
+      iType.onchange=()=>{ cfg.type=iType.value; pending=pending||snapshot(); renderPreview(); };
+      const iLayout = el('select',{}); ['col-6','col-5','col-4','col-3','col-2','col-1','full','half','third','sixth'].forEach(t=> iLayout.append(new Option(t,t,false,(cfg.layout||'')===t)));
+      iLayout.onchange=()=>{ cfg.layout=iLayout.value; pending=pending||snapshot(); renderPreview(); };
+      body.append(wrapKV('Тип', iType), wrapKV('Layout', iLayout));
+
+      // folder
+      const iFolder = el('input',{type:'text',value: pathOf(cfg.folderId).slice(1)});
+      iFolder.placeholder='Недвижимость/Квартиры';
+      iFolder.onchange=()=>{ const id = ensurePath(iFolder.value); cfg.folderId=id; pending=pending||snapshot(); updateFolderFilter(); renderEditor(); };
+      body.append(wrapKV('Папка', iFolder));
+
+      // options/map
+      const iOpts = el('textarea',{value:String(cfg.options||'')});
+      iOpts.oninput=()=>{ cfg.options=iOpts.value; pending=pending||snapshot(); };
+      const iMap = el('textarea',{value:String(cfg.map||'')});
+      iMap.oninput=()=>{ cfg.map=iMap.value; pending=pending||snapshot(); };
+      body.append(wrapKV('Опции (через запятую)', iOpts), wrapKV('Карта key=value по строкам', iMap));
+
+      // hint/showIf
+      const iHint = el('input',{type:'text',value:cfg.hint||''});
+      iHint.oninput=()=>{ cfg.hint=iHint.value; pending=pending||snapshot(); };
+      const iShow = el('input',{type:'text',value:cfg.showIf||''});
+      iShow.placeholder='пример: Chapter=Недвижимость & category=Посуточная аренда';
+      iShow.oninput=()=>{ cfg.showIf=iShow.value; pending=pending||snapshot(); renderPreview(); };
+      body.append(wrapKV('Подсказка', iHint), wrapKV('Условие отображения', iShow));
+
+      card.append(body);
+      listEl.append(card);
     });
+    if(pending){ push(); touch(); pending=null; }
+  }
+
+  /* Preview */
+  const PRE_LABEL='Все объявления';
+  function layoutCls(v){
+    if(/^col-[1-6]$/.test(v)) return v;
+    if(v==='full') return 'col-6';
+    if(v==='half') return 'col-3';
+    if(v==='third') return 'col-2';
+    if(v==='sixth') return 'col-1';
+    return 'col-3';
+  }
+  function parseMap(txt){ const out={}; String(txt||'').split(/\n/).forEach(line=>{ const m=String(line).trim(); if(!m) return; const [k,...rest]=m.split('='); const v=rest.join('=').split(',').map(s=>s.trim()).filter(Boolean); if(k) out[k.trim()]=v; }); return out; }
+  function optList(c){
+    const map = parseMap(c.map);
+    let parentKey=null;
+    if(c.showIf && c.showIf.includes('=')){ const t=c.showIf.split('&')[0].trim(); parentKey = t.split('=')[0].trim(); }
+    if(parentKey && preview[parentKey] && map[preview[parentKey]]) return map[preview[parentKey]].slice();
+    const txt=String(c.options||''); if(!txt.trim()) return [];
+    return txt.split(',').map(s=>s.trim()).filter(Boolean);
+  }
+  function setSelPlaceholder(sel){ if(!sel.options.length || sel.options[0].value!==''){ sel.insertBefore(new Option(PRE_LABEL,''), sel.firstChild); } }
+  function assignSelValue(sel,key){ const v=preview[key]??''; const ok=[...sel.options].some(o=>o.value===v); sel.value = ok? v : ''; preview[key]=sel.value; save(LS_PREV,preview); }
+
+  function visibleBy(c){
+    const cond = String(c.showIf||'').trim(); if(!cond) return true;
+    const tests = cond.split('&').map(s=>s.trim()).filter(Boolean);
+    return tests.every(t=>{
+      const [k,v] = t.split('=');
+      if(v===undefined) return true;
+      const variants = v.split('|').map(s=>s.trim());
+      return variants.includes(String(preview[k]??''));
+    });
+  }
+
+  function renderPreview(){
+    const form = $('#previewForm');
+    const sc = form.parentElement.scrollTop;
+    form.innerHTML='';
+
+    // Предпросмотр НЕ фильтруется по папке
+    const items = data.categories.slice();
+
+    for(const c of items){
+      if(!visibleBy(c)) continue;
+      const wrap = el('div',{className:layoutCls(c.layout||'col-3')});
+      const lab = el('label',{textContent:c.title||c.name||c.id}); wrap.append(lab);
+      const key = c.name||c.id;
+      let ctrl;
+
+      if(c.type==='select'){
+        ctrl = el('select',{}); setSelPlaceholder(ctrl);
+        for(const o of optList(c)){ if(o!==PRE_LABEL) ctrl.append(new Option(o,o)); }
+        assignSelValue(ctrl,key);
+        ctrl.onchange=()=>{ preview[key]=ctrl.value; save(LS_PREV,preview); };
+      }
+      else if(c.type==='radio'){
+        ctrl = el('select',{});
+        const opts = optList(c);
+        if(opts.length) opts.forEach(o=> ctrl.append(new Option(o,o)));
+        if(!opts.length) ctrl.append(new Option('(нет опций)',''));
+        ctrl.value = String(preview[key]??(opts[0]||''));
+        preview[key]=ctrl.value; save(LS_PREV,preview);
+        ctrl.onchange=()=>{ preview[key]=ctrl.value; save(LS_PREV,preview); };
+      }
+      else if(c.type==='multicheck'){
+        const dd = el('div',{className:'dropdown'});
+        const btn = el('button',{type:'button',className:'dbtn'});
+        const valSpan = el('span',{textContent:PRE_LABEL,className:'small'});
+        const arr = new Set(String(preview[key]||'').split('|').filter(Boolean));
+        const menu = el('div',{className:'menu'});
+        function updateText(){
+          const list=[...arr];
+          valSpan.textContent = list.length ? (list.length<=2 ? list.join(', ') : list.length+' выбрано') : PRE_LABEL;
+          valSpan.style.opacity = list.length? '1' : '.75';
+        }
+        btn.append(valSpan, el('span',{textContent:'▾'}));
+        btn.onclick = (e)=>{ e.stopPropagation(); document.querySelectorAll('.dropdown.open').forEach(d=>{if(d!==dd)d.classList.remove('open')}); dd.classList.toggle('open'); };
+        document.addEventListener('click', e=>{ if(!dd.contains(e.target)) dd.classList.remove('open'); });
+        for(const o of optList(c)){
+          const row = el('div',{className:'row'});
+          const cb = el('input',{type:'checkbox'}); cb.checked = arr.has(o);
+          cb.onchange = ()=>{ if(cb.checked) arr.add(o); else arr.delete(o); preview[key]=[...arr].join('|'); save(LS_PREV,preview); updateText(); };
+          row.append(cb, el('span',{textContent:o}));
+          menu.append(row);
+        }
+        updateText();
+        dd.append(btn,menu);
+        ctrl = dd;
+      }
+      else if(c.type==='checkbox'){
+        const cb = el('input',{type:'checkbox'}); cb.checked = !!preview[key];
+        cb.onchange=()=>{ preview[key]=cb.checked; save(LS_PREV,preview); };
+        ctrl = cb;
+      }
+      else if(c.type==='text' || c.type==='number' || c.type==='date'){
+        const inp = el('input',{type:(c.type==='text'?'text':c.type)}); inp.value = preview[key]??'';
+        inp.oninput=()=>{ preview[key]=inp.value; save(LS_PREV,preview); };
+        ctrl = inp;
+      }
+      else if(c.type==='range'){
+        const row = el('div',{className:'flex'});
+        const lo = el('input',{type:'number',placeholder:'От',style:'width:100%'});
+        const hi = el('input',{type:'number',placeholder:'До',style:'width:100%'});
+        const cur = preview[key]||{}; lo.value=cur.min||''; hi.value=cur.max||'';
+        const upd = ()=>{ preview[key]={min:lo.value,max:hi.value}; save(LS_PREV,preview); };
+        lo.oninput=upd; hi.oninput=upd;
+        row.append(lo,hi); ctrl=row;
+      } else {
+        ctrl = el('div',{className:'small',textContent:'(тип '+c.type+' не поддержан)'});
+      }
+
+      wrap.append(ctrl);
+      if(c.hint) wrap.append(el('div',{className:'hint',textContent:c.hint}));
+      form.append(wrap);
+    }
+    setTimeout(()=>{ form.parentElement.scrollTop = Number(localStorage.getItem(LS_SCROLL)||0); },0);
+  }
+
+  /* Keep preview scroll */
+  const prevWrap = $('#previewForm').parentElement;
+  prevWrap.addEventListener('scroll', ()=>{ localStorage.setItem(LS_SCROLL, prevWrap.scrollTop); });
+
+  /* Top actions */
+  $('#addCat').onclick=()=>{ pending=snapshot(); addCategory(); push(); touch(); renderEditor(); renderPreview(); };
+  $('#btnCollapseAll').onclick=()=>{ document.querySelectorAll('.card').forEach(c=>c.classList.add('collapsed')); };
+  $('#btnExpandAll').onclick =()=>{ document.querySelectorAll('.card').forEach(c=>c.classList.remove('collapsed')); };
+  $('#clearBtn').onclick=()=>{ if(confirm('Очистить локальные данные?')){ pending=snapshot(); data=seed(); preview={}; collapsed={}; currentFolder='__ALL__'; push(); touch(); renderAll(); } };
+
+  /* Import/Export */
+  $('#importBtn').onclick=()=>$('#fileInput').click();
+  $('#fileInput').onchange=async (e)=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const txt=await f.text(); const json=JSON.parse(txt);
+      if(!json || !Array.isArray(json.categories)) throw new Error('wrong format');
+      pending=snapshot();
+      data = {folders: json.folders && Array.isArray(json.folders) ? json.folders : [{id:'root',title:'(Все)',parentId:null}], categories: json.categories, collapsed: json.collapsed||{}};
+      ensureRoot(); preview={}; collapsed=data.collapsed||{}; currentFolder='__ALL__';
+      push(); touch(); renderAll(); alert('Импортировано');
+    }catch(err){ alert('Ошибка импорта'); }
+    e.target.value='';
+  };
+  $('#exportBtn').onclick=()=>{
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=el('a',{href:URL.createObjectURL(blob),download:'categories_editor_v22P.json'});
+    document.body.appendChild(a); a.click(); a.remove();
   };
 
-  // run once on load
-  document.addEventListener("DOMContentLoaded", ()=>{
-    try{
-      updateFolderFilter();
-      // restore current folder to editor only
-      renderEditor();
-      // restore preview immediately
-      renderPreview();
-    }catch(e){}
-  });
-})();
+  function renderAll(){ updateFolderFilter(); renderEditor(); renderPreview(); }
+  function updateSize(){ try{ const bytes = new Blob([JSON.stringify({data,preview})]).size; $('#sizeBadge').textContent='Объём: '+bytes+' Б'; }catch{ $('#sizeBadge').textContent='Объём: ?'; } }
 
+  /* init */
+  ensureRoot(); updateFolderFilter(); renderEditor(); renderPreview(); updateSize();
+})();
 </script>
 </body>
 </html>
