@@ -131,6 +131,17 @@
 const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
+// --- persist preview & folder selection
+const LS_PREVIEW = "categories_editor_v22D_preview";
+const LS_FOLDER  = "categories_editor_v22D_folder";
+
+function loadPreviewValues(){
+  try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
+}
+function savePreviewValues(){
+  try{ localStorage.setItem(LS_PREVIEW, JSON.stringify(previewValues)); }catch(e){}
+}
+
 
 const LS_KEY="categories_editor_v22D_data";
 let data={folders:[],categories:[],collapsed:{}};
@@ -147,7 +158,7 @@ $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
 document.addEventListener("keydown",e=>{ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); } });
 
 const listEl=$("#list");
-let currentFolder="__ALL__";
+let currentFolder=(localStorage.getItem(LS_FOLDER)||"__ALL__");
 
 function migrateIfNeeded(){
   // Если импортирована старая схема (без folders)
@@ -176,7 +187,7 @@ function updateFolderFilter(){
     sel.append(o);
   });
   sel.value = currentFolder;
-  sel.onchange=()=>{ currentFolder=sel.value; renderEditor(); };
+  sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLDER, currentFolder); renderEditor(); };
 }
 
 function renderEditor(){
@@ -261,7 +272,7 @@ function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:u
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
 // ===== preview =====
-let previewValues={};
+let previewValues=loadPreviewValues();
 const DEFAULT_LABEL = "Все объявления";
 const previewState = JSON.parse(sessionStorage.getItem('previewState')||'{}');
 
@@ -334,13 +345,13 @@ function makeDropdownMulticheck(fieldDef){
     cb.onchange = (e)=>{
       e.stopPropagation();
       if(cb.checked) current.add(opt); else current.delete(opt);
-      previewValues[key] = Array.from(current);
+      previewValues[key] = Array.from(current); savePreviewValues();
       updateLabel();
     };
     row.append(cb, document.createTextNode(opt));
     menu.append(row);
   });
-  previewValues[key] = Array.from(current);
+  previewValues[key] = Array.from(current); savePreviewValues();
   updateLabel();
   toggle.onclick = (e)=>{
     e.stopPropagation();
@@ -380,7 +391,7 @@ function renderPreview(){
       (f.options||[]).forEach(o=>sel.append(new Option(o,o)));
       const key=f.name||f.id;
       assignSelectValue(sel, key);
-      sel.onchange=()=>{previewValues[key]=sel.value;renderPreview();};
+      sel.onchange=()=>{previewValues[key]=sel.value; savePreviewValues(); renderPreview();};
       const w=wrap(f.title||f.name||f.id, sel);
       if(f.hint) w.append(el("div",{className:"hint",textContent:f.hint}));
       w.classList.add(layoutToClass(f.layout||"col-3"));
@@ -398,7 +409,7 @@ function renderPreview(){
       ensurePlaceholder(ctrl);
       optionsFor(f).forEach(o=>{ if(o!==DEFAULT_LABEL) ctrl.append(new Option(o,o)); });
       assignSelectValue(ctrl, key);
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;renderPreview();};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePreviewValues(); savePreviewValues();renderPreview();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="radio"){
@@ -407,19 +418,19 @@ function renderPreview(){
       opts.forEach(o=>ctrl.append(new Option(o,o)));
       if(previewValues[key] && opts.includes(previewValues[key])) ctrl.value=previewValues[key];
       else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value;};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePreviewValues(); savePreviewValues();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="checkbox"){
       ctrl=el("input",{type:"checkbox"});
       ctrl.checked=!!previewValues[key];
-      ctrl.onchange=()=>{previewValues[key]=ctrl.checked;};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.checked; savePreviewValues();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="text"||f.type==="number"||f.type==="date"){
       ctrl=el("input",{type:f.type});
       if(previewValues[key]) ctrl.value=previewValues[key];
-      ctrl.oninput=()=>{previewValues[key]=ctrl.value;};
+      ctrl.oninput=()=>{previewValues[key]=ctrl.value; savePreviewValues(); savePreviewValues();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="range"){
@@ -427,8 +438,8 @@ function renderPreview(){
       const min=el("input",{type:"number",placeholder:"От"});
       const max=el("input",{type:"number",placeholder:"До"});
       if(previewValues[key]){ min.value=previewValues[key].min||""; max.value=previewValues[key].max||""; }
-      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value};};
-      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value};};
+      min.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),min:min.value}; savePreviewValues();};
+      max.oninput=()=>{previewValues[key]={...(previewValues[key]||{}),max:max.value}; savePreviewValues();};
       box.append(min,max);
       w=wrap(f.title||f.name||f.id, box);
     }
