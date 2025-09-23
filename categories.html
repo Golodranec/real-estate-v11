@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22H</title>
+<title>categories_editor — v22J</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -79,7 +79,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22H</span>
+      <span class="badge">v22J</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -139,8 +139,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v22H_preview";
-const LS_FOLDER  = "categories_editor_v22H_folder";
+const LS_PREVIEW = "categories_editor_v22J_preview";
+const LS_FOLDER  = "categories_editor_v22J_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -150,7 +150,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v22H_data";
+const LS_KEY="categories_editor_v22J_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -171,7 +171,7 @@ function migrateIfNeeded(){
   // Если импортирована старая схема (без folders)
   if(!Array.isArray(data.folders) || !data.folders.length){
     const rootId = "root";
-    data.folders = [{id:rootId,title:"(Все)",open:true}];
+    data.folders = [{id:rootId,title:"Общая",open:true}];
     data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
   }
 
@@ -522,7 +522,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22H.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22J.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
@@ -572,16 +572,34 @@ $("#renameFolder").onclick=()=>{
   });
   save(); updateFolderFilter(); renderEditor();
 };
-$("#deleteFolder").onclick=()=>{
-  const cur = $("#folderFilter").value;
-  if(cur==="__ALL__") return alert("Выберите конкретную папку");
-  const subIds = Array.from(descendantFolderIds(cur));
-  const used = data.categories.some(c=> subIds.includes(c.folderId||""));
-  const hasSubfolders = data.folders.some(f=> f.id!==cur && subIds.includes(f.id));
-  if(used || hasSubfolders) return alert("Папка или её подпапки не пусты. Переместите категории или удалите подпапки.");
-  data.folders = data.folders.filter(f=>f.id!==cur);
-  currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
-};
+function deleteFolderAttempt(e){
+  try{
+    const cur = $("#folderFilter").value;
+    if(cur==="__ALL__"){ alert("Выберите конкретную папку"); return; }
+    const subIds = Array.from(descendantFolderIds(cur));
+    const catsCount = data.categories.filter(c=> subIds.includes(c.folderId||"")).length;
+    const subCount  = data.folders.filter(f=> f.id!==cur && subIds.includes(f.id)).length;
+    if(e && e.shiftKey){
+      if(!confirm(`Удалить папку и всё содержимое? Категорий: ${catsCount}, подпапок: ${subCount}`)) return;
+      // каскадное удаление
+      data.categories = data.categories.filter(c=> !subIds.includes(c.folderId||""));
+      data.folders = data.folders.filter(f=> !subIds.includes(f.id));
+      currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
+      alert("Удалено каскадно.");
+      return;
+    }
+    if(catsCount>0 || subCount>0){
+      alert(`Папка или её подпапки не пусты. Категорий: ${catsCount}, подпапок: ${subCount}. Удерживайте Shift и нажмите «Удалить» для каскадного удаления.`);
+      return;
+    }
+    if(!confirm("Удалить пустую папку?")) return;
+    data.folders = data.folders.filter(f=> !subIds.includes(f.id));
+    currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
+  }catch(err){ console.error(err); alert("Ошибка удаления папки: " + err.message); }
+}
+$("#deleteFolder").onclick=(e)=>deleteFolderAttempt(e);
+document.addEventListener("click",(ev)=>{ if(ev.target && ev.target.id==="deleteFolder") deleteFolderAttempt(ev); });
+
 
 // collapse / expand all
 $("#collapseAll").onclick=()=>{
