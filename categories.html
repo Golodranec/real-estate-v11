@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22J</title>
+<title>categories_editor — v22K</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -79,7 +79,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22J</span>
+      <span class="badge">v22K</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -139,8 +139,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v22J_preview";
-const LS_FOLDER  = "categories_editor_v22J_folder";
+const LS_PREVIEW = "categories_editor_v22K_preview";
+const LS_FOLDER  = "categories_editor_v22K_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -150,7 +150,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v22J_data";
+const LS_KEY="categories_editor_v22K_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -214,7 +214,18 @@ function populateFolderSelect(selectEl, currentId){
     if(!c.type) c.type="text";
     if(!c.folderId) c.folderId = data.folders[0].id;
   });
-  if(typeof data.collapsed!=='object') data.collapsed={};
+  
+  // normalize folderId stored as title to proper id
+  try{
+    const titleToId = Object.fromEntries((data.folders||[]).map(f=>[String(f.title||""), f.id]));
+    data.categories.forEach(c=>{
+      if(c.folderId && !getFolderById(c.folderId)){
+        const mapped = titleToId[String(c.folderId)] || null;
+        if(mapped) c.folderId = mapped;
+      }
+    });
+  }catch{}
+if(typeof data.collapsed!=='object') data.collapsed={};
 }
 
 function updateFolderFilter(){
@@ -522,7 +533,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22J.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22K.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
