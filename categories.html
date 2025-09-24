@@ -227,7 +227,6 @@ function populateFolderSelect(selectEl, currentId){
   }catch{}if(typeof data.collapsed!=='object') data.collapsed={};
 }
 
-
 function updateFolderFilter(){
   const sel=$("#folderFilter");
   sel.innerHTML="";
@@ -242,8 +241,7 @@ function updateFolderFilter(){
     localStorage.setItem(LS_FOLDER, currentFolder);
     renderEditor();
   };
-}
-;
+};
 }
 
 function renderEditor(){
