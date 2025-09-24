@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MySale — Админка витрины</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#0f172a; --line:#1f2937; --text:#e5e7eb; --mut:#9ca3af;
+    --brand:#60a5fa; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:#0a1020;position:sticky;top:0;z-index:10}
+  header .right{margin-left:auto}
+  .wrap{display:grid;grid-template-columns:420px 1fr;gap:12px;height:calc(100% - 54px)}
+  @media (max-width:1100px){.wrap{grid-template-columns:1fr; height:auto}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto}
+  .col{padding:12px}
+  h2{margin:8px 0 12px 0;font-size:16px}
+  h3{margin:14px 0 8px 0;font-size:14px;color:var(--mut)}
+  label{font-size:12px;color:var(--mut);margin-bottom:4px;display:block}
+  input, select, textarea, button{width:100%;background:#0f172a;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  textarea{min-height:70px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mut{color:var(--mut)}
+  .btn{cursor:pointer}
+  .btn.inline{width:auto;padding:6px 10px;border-radius:8px}
+  .card{border:1px solid var(--line);border-radius:12px;padding:10px;background:#0e162a;margin:8px 0}
+  .minirow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:#0f1a2e}
+  .sep{height:1px;background:var(--line);margin:10px 0}
+  /* Preview */
+  .site{min-height:100%;display:flex;flex-direction:column}
+  .site header{position:sticky;top:0;background:#0a1020;border-bottom:1px solid var(--line);z-index:5}
+  .brand{display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .brand img{height:28px;width:auto;border-radius:6px}
+  .brand .sitename{font-weight:700}
+  .grid{display:grid;gap:var(--gap,12px);padding:16px}
+  .cardv{display:flex;flex-direction:column;gap:8px;background:#0f172a;border:1px solid var(--line);border-radius:var(--radius,14px);padding:14px;text-decoration:none;color:var(--text);min-height:var(--minh,120px);outline:none}
+  .cardv:hover{border-color:#334155}
+  .cardv .top{display:flex;justify-content:space-between;align-items:center}
+  .cardv .emoji{font-size:24px}
+  .cardv .title{font-weight:700}
+  .cardv .sub{color:var(--mut);font-size:12px}
+  footer{margin-top:auto;border-top:1px solid var(--line);padding:14px}
+  footer .links{display:flex;flex-wrap:wrap;gap:10px}
+  footer a{color:#93c5fd;text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <strong>MySale — Админка витрины</strong>
+  <span class="mut">v1</span>
+  <span class="right"></span>
+  <button id="btnExport" class="btn inline">Экспорт JSON</button>
+  <button id="btnImport" class="btn inline">Импорт JSON</button>
+  <button id="btnReset" class="btn inline" title="Сбросить к демо">Сброс</button>
+  <button id="btnSave" class="btn inline">Сохранить</button>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: ADMIN FORM -->
+  <div class="panel col" id="admin">
+    <h2>Глобальные настройки</h2>
+    <div class="grid2">
+      <div>
+        <label>Название сайта</label>
+        <input id="siteTitle" placeholder="MySale">
+      </div>
+      <div>
+        <label>Логотип (URL)</label>
+        <input id="logoUrl" placeholder="https://.../logo.png">
+      </div>
+      <div>
+        <label>Шрифт (CSS font-family)</label>
+        <input id="fontFamily" placeholder="system-ui, Segoe UI, Roboto">
+      </div>
+      <div>
+        <label>Подключить Google Fonts (URL стиля, опц.)</label>
+        <input id="fontHref" placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
+      </div>
+      <div>
+        <label>Колонки карточек (1–6)</label>
+        <input id="columns" type="number" min="1" max="6" value="3">
+      </div>
+      <div>
+        <label>Отступ между карточками (px)</label>
+        <input id="gap" type="number" min="0" max="40" value="12">
+      </div>
+      <div>
+        <label>Минимальная высота карточки (px)</label>
+        <input id="minh" type="number" min="80" max="320" value="120">
+      </div>
+      <div>
+        <label>Скругление (px)</label>
+        <input id="radius" type="number" min="0" max="30" value="14">
+      </div>
+      <div>
+        <label>Цвет фона страницы</label>
+        <input id="bgColor" value="#0b1220">
+      </div>
+      <div>
+        <label>Цвет карточки</label>
+        <input id="cardColor" value="#0f172a">
+      </div>
+    </div>
+
+    <div class="sep"></div>
+    <h2>Карточки разделов</h2>
+    <div id="cards"></div>
+    <div class="row">
+      <button id="addCard" class="btn inline">+ Добавить карточку</button>
+    </div>
+
+    <div class="sep"></div>
+    <h2>Нижний колонтитул (footer)</h2>
+    <div id="links"></div>
+    <div class="row">
+      <button id="addLink" class="btn inline">+ Добавить ссылку</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: LIVE PREVIEW -->
+  <div class="panel" id="previewWrap">
+    <div id="preview" class="site"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const storeKey = "mysale_showcase_admin_v1";
+
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+  const el = (t,attrs={})=>Object.assign(document.createElement(t), attrs);
+  const uid = ()=>'id_'+Math.random().toString(36).slice(2,9);
+
+  // ===== DATA =====
+  const demo = {
+    settings:{
+      siteTitle:"MySale",
+      logoUrl:"",
+      fontFamily:"system-ui, -apple-system, Segoe UI, Roboto, Arial",
+      fontHref:"",
+      columns:3, gap:12, minh:120, radius:14,
+      bgColor:"#0b1220", cardColor:"#0f172a"
+    },
+    cards:[
+      {id:uid(), title:"Недвижимость", subtitle:"Квартиры, дома, земля", emoji:"🏠", imageUrl:"", href:"#realty", newTab:true, enabled:true},
+      {id:uid(), title:"Транспорт", subtitle:"Легковые и грузовые", emoji:"🚗", imageUrl:"", href:"#auto", newTab:true, enabled:true},
+      {id:uid(), title:"Здоровье", subtitle:"Клиники и врачи", emoji:"🏥", imageUrl:"", href:"#health", newTab:true, enabled:true},
+      {id:uid(), title:"Электроника", subtitle:"Гаджеты и техника", emoji:"📱", imageUrl:"", href:"#electronics", newTab:true, enabled:true}
+    ],
+    footer:[
+      {id:uid(), label:"Правила сайта", href:"#rules"},
+      {id:uid(), label:"Обратная связь", href:"#feedback"},
+      {id:uid(), label:"Контакты", href:"#contacts"}
+    ]
+  };
+
+  let data = load() || demo;
+
+  function save(){ localStorage.setItem(storeKey, JSON.stringify(data)); }
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(storeKey)||""); } catch(e){ return null; }
+  }
+
+  // ===== ADMIN RENDER =====
+  const admin = $("#admin");
+  const cardsEl = $("#cards");
+  const linksEl = $("#links");
+
+  function bindSettings(){
+    const s = data.settings;
+    $("#siteTitle").value = s.siteTitle||"";
+    $("#logoUrl").value = s.logoUrl||"";
+    $("#fontFamily").value = s.fontFamily||"";
+    $("#fontHref").value = s.fontHref||"";
+    $("#columns").value = s.columns||3;
+    $("#gap").value = s.gap||12;
+    $("#minh").value = s.minh||120;
+    $("#radius").value = s.radius||14;
+    $("#bgColor").value = s.bgColor||"#0b1220";
+    $("#cardColor").value = s.cardColor||"#0f172a";
+
+    admin.oninput = (e)=>{
+      if(e.target.id in s){
+        const id = e.target.id;
+        s[id] = ["columns","gap","minh","radius"].includes(id) ? Number(e.target.value||0) : e.target.value;
+        save(); renderPreview();
+      }
+    };
+  }
+
+  function renderCards(){
+    cardsEl.innerHTML = "";
+    data.cards.forEach((c,idx)=>{
+      const card = el("div",{className:"card"});
+      const top = el("div",{className:"row"});
+      top.append(el("span",{className:"mut", textContent:`#${idx+1}`}));
+      const enable = el("input",{type:"checkbox"}); enable.checked = !!c.enabled;
+      enable.onchange = ()=>{ c.enabled = enable.checked; save(); renderPreview(); };
+      top.append(el("label",{className:"pill", innerHTML:`<input type="checkbox" ${c.enabled?'checked':''} style="transform:translateY(1px);margin-right:6px">Включена` }));
+      // re-bind because innerHTML created a new input
+      top.querySelector("input[type=checkbox]").onchange = enable.onchange;
+
+      const up = el("button",{className:"btn inline", textContent:"↑"});
+      const dn = el("button",{className:"btn inline", textContent:"↓"});
+      const del = el("button",{className:"btn inline", textContent:"Удалить"});
+      up.onclick = ()=>{ if(idx>0){ const t=data.cards[idx-1]; data.cards[idx-1]=data.cards[idx]; data.cards[idx]=t; save(); renderCards(); renderPreview(); } };
+      dn.onclick = ()=>{ if(idx<data.cards.length-1){ const t=data.cards[idx+1]; data.cards[idx+1]=data.cards[idx]; data.cards[idx]=t; save(); renderCards(); renderPreview(); } };
+      del.onclick = ()=>{ if(confirm("Удалить карточку?")){ data.cards.splice(idx,1); save(); renderCards(); renderPreview(); } };
+      top.append(up,dn,del);
+      card.append(top);
+
+      const g = el("div",{className:"grid2"});
+      // Title
+      const a1 = el("div"); a1.append(el("label",{textContent:"Заголовок"}));
+      const i1 = el("input",{value:c.title||""}); i1.oninput=()=>{ c.title=i1.value; save(); renderPreview(); }; a1.append(i1); g.append(a1);
+      // Subtitle
+      const a2 = el("div"); a2.append(el("label",{textContent:"Подзаголовок"}));
+      const i2 = el("input",{value:c.subtitle||""}); i2.oninput=()=>{ c.subtitle=i2.value; save(); renderPreview(); }; a2.append(i2); g.append(a2);
+      // Emoji / Icon
+      const a3 = el("div"); a3.append(el("label",{textContent:"Эмодзи/иконка (например, 🏠)"}));
+      const i3 = el("input",{value:c.emoji||""}); i3.oninput=()=>{ c.emoji=i3.value; save(); renderPreview(); }; a3.append(i3); g.append(a3);
+      // Image URL
+      const a4 = el("div"); a4.append(el("label",{textContent:"Картинка (URL, опционально)"}));
+      const i4 = el("input",{value:c.imageUrl||""}); i4.oninput=()=>{ c.imageUrl=i4.value; save(); renderPreview(); }; a4.append(i4); g.append(a4);
+      // Href
+      const a5 = el("div"); a5.append(el("label",{textContent:"Ссылка (URL модуля)"}));
+      const i5 = el("input",{value:c.href||""}); i5.oninput=()=>{ c.href=i5.value; save(); renderPreview(); }; a5.append(i5); g.append(a5);
+      // New tab
+      const a6 = el("div"); a6.append(el("label",{textContent:"Открывать в новой вкладке?"}));
+      const i6 = el("select"); ["Да","Нет"].forEach((v,i)=> i6.add(new Option(v,i===0?"true":"false")));
+      i6.value = c.newTab ? "true" : "false";
+      i6.onchange=()=>{ c.newTab = i6.value==="true"; save(); renderPreview(); }; a6.append(i6); g.append(a6);
+      card.append(g);
+      cardsEl.append(card);
+    });
+  }
+
+  $("#addCard").onclick = ()=>{
+    data.cards.push({id:uid(), title:"Новая карточка", subtitle:"", emoji:"🧩", imageUrl:"", href:"#", newTab:true, enabled:true});
+    save(); renderCards(); renderPreview();
+  };
+
+  function renderLinks(){
+    linksEl.innerHTML = "";
+    data.footer.forEach((l,idx)=>{
+      const row = el("div",{className:"row"});
+      row.style.margin = "6px 0";
+      const t1 = el("input",{placeholder:"Название", value:l.label||""}); t1.oninput=()=>{ l.label=t1.value; save(); renderPreview(); };
+      const t2 = el("input",{placeholder:"URL", value:l.href||""}); t2.oninput=()=>{ l.href=t2.value; save(); renderPreview(); };
+      const up = el("button",{className:"btn inline", textContent:"↑"});
+      const dn = el("button",{className:"btn inline", textContent:"↓"});
+      const del= el("button",{className:"btn inline", textContent:"Удалить"});
+      up.onclick=()=>{ if(idx>0){ const t=data.footer[idx-1]; data.footer[idx-1]=data.footer[idx]; data.footer[idx]=t; save(); renderLinks(); renderPreview(); } };
+      dn.onclick=()=>{ if(idx<data.footer.length-1){ const t=data.footer[idx+1]; data.footer[idx+1]=data.footer[idx]; data.footer[idx]=t; save(); renderLinks(); renderPreview(); } };
+      del.onclick=()=>{ if(confirm("Удалить ссылку?")){ data.footer.splice(idx,1); save(); renderLinks(); renderPreview(); } };
+      row.append(t1,t2,up,dn,del);
+      linksEl.append(row);
+    });
+  }
+  $("#addLink").onclick = ()=>{ data.footer.push({id:uid(),label:"Новая ссылка",href:"#"}); save(); renderLinks(); renderPreview(); };
+
+  // ===== PREVIEW RENDER =====
+  function renderPreview(){
+    const s = data.settings;
+    const cont = $("#preview");
+    cont.innerHTML = "";
+
+    // Dynamic font link
+    let linkEl = $("#dynFontLink");
+    if(s.fontHref){
+      if(!linkEl){ linkEl = el("link",{id:"dynFontLink", rel:"stylesheet"}); document.head.appendChild(linkEl); }
+      linkEl.href = s.fontHref;
+    }else if(linkEl){ linkEl.remove(); }
+
+    // Site container
+    const site = el("div",{className:"site"});
+    site.style.setProperty("--gap", `${Number(s.gap||12)}px`);
+    site.style.setProperty("--radius", `${Number(s.radius||14)}px`);
+    site.style.setProperty("--minh", `${Number(s.minh||120)}px`);
+    site.style.background = s.bgColor||"#0b1220";
+    site.style.fontFamily = s.fontFamily||"system-ui, Segoe UI, Roboto, Arial";
+
+    // Header
+    const head = el("header");
+    const b = el("div",{className:"brand"});
+    const logo = s.logoUrl ? el("img",{src:s.logoUrl, alt:"logo"}) : null;
+    if(logo) b.append(logo);
+    const title = el("div",{className:"sitename", textContent:s.siteTitle||"MySale"});
+    b.append(title);
+    head.append(b);
+    site.append(head);
+
+    // Grid
+    const grid = el("div",{className:"grid"});
+    grid.style.gridTemplateColumns = `repeat(${Math.max(1,Math.min(6, Number(s.columns||3)))}, minmax(0,1fr))`;
+
+    data.cards.forEach(c=>{
+      if(!c.enabled) return;
+      const a = el("a",{className:"cardv", href:c.href||"#", target: c.newTab ? "_blank" : "_self"});
+      a.style.background = s.cardColor||"#0f172a";
+      const top = el("div",{className:"top"});
+      const left = el("div",{className:"emoji", textContent: c.emoji || ""});
+      top.append(left);
+      const img = (c.imageUrl||"").trim() ? el("img",{src:c.imageUrl, alt:"", style:"height:28px;width:auto;border-radius:8px"}) : null;
+      if(img) top.append(img);
+      a.append(top);
+      a.append(el("div",{className:"title", textContent:c.title||""}));
+      if(c.subtitle) a.append(el("div",{className:"sub", textContent:c.subtitle}));
+      grid.append(a);
+    });
+    site.append(grid);
+
+    // Footer
+    const foot = el("footer");
+    const links = el("div",{className:"links"});
+    data.footer.forEach(l=>{
+      const a = el("a",{href:l.href||"#", textContent:l.label||""});
+      a.target = "_blank";
+      links.append(a);
+    });
+    foot.append(links);
+    site.append(foot);
+
+    cont.append(site);
+  }
+
+  // ===== IMPORT / EXPORT =====
+  $("#btnExport").onclick = ()=>{
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json;charset=utf-8"});
+    const a = el("a",{href:URL.createObjectURL(blob), download:"mysale_showcase_config.json"});
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  $("#btnImport").onclick = ()=>{
+    const inp = el("input",{type:"file", accept:".json,application/json"});
+    inp.onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      try{
+        const json = JSON.parse(await f.text());
+        if(json && json.settings && json.cards && json.footer){ data = json; save(); bindSettings(); renderCards(); renderLinks(); renderPreview(); }
+        else alert("Неверный формат JSON.");
+      }catch(err){ alert("Ошибка импорта: " + err.message); }
+    };
+    inp.click();
+  };
+  $("#btnReset").onclick = ()=>{ if(confirm("Сбросить к демо?")){ data = JSON.parse(JSON.stringify(demo)); save(); bindSettings(); renderCards(); renderLinks(); renderPreview(); } };
+  $("#btnSave").onclick = ()=>{ save(); alert("Сохранено"); };
+
+  // ===== INIT =====
+  bindSettings(); renderCards(); renderLinks(); renderPreview();
+})();
+</script>
+</body>
+</html>
