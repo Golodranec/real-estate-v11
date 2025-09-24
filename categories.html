@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22Q</title>
+<title>categories_editor — v22R</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -76,7 +76,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22Q</span>
+      <span class="badge">v22R</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -105,6 +105,7 @@
         <div class="folderbar">
           <label>Папка</label>
           <select id="folderFilter"></select>
+          <div class="subfolderbar"><label>Подпапка</label> <select id="subFolderFilter"></select></div>
           <button id="addFolder">+ Папка</button>
           <button id="renameFolder">Переименовать</button>
           <button id="deleteFolder" class="danger">Удалить</button>
@@ -305,12 +306,12 @@ function renderEditor(){
   listEl.innerHTML="";
   // фильтр по папке: (Все) показывает все, включая без папки
   const items = data.categories.filter(c => {
-    if(currentFolder==="__ALL__") return true; const effective = (currentSubFolder && currentSubFolder!=="__ALL__") ? currentSubFolder : currentFolder;
+    if(currentFolder==="__ALL__") return true;
+    const effective = (currentSubFolder && currentSubFolder!=="__ALL__") ? currentSubFolder : currentFolder;
     const fid=(c.folderId||"");
-    const set=descendantFolderIds(currentFolder);
+    const set=descendantFolderIds(effective);
     if(set.has(fid)) return true;
-    // fallback via titles if ids unavailable
-    const cf=getFolderById(currentFolder), ff=getFolderById(fid);
+    const cf=getFolderById(effective), ff=getFolderById(fid);
     if(!cf || !ff) return false;
     const base=String(cf.title||"").trim(), t=String(ff.title||"").trim();
     return t===base || t.startsWith(base + "/");
@@ -400,7 +401,7 @@ function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textCont
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
 function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
-function addCategory(){const fid=(currentFolder&&currentFolder!=="__ALL__")?currentFolder:data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
+function addCategory(){const fid=((currentSubFolder&&currentSubFolder!=="__ALL__")?currentSubFolder:currentFolder&&currentFolder!=="__ALL__")?currentFolder:data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
 // ===== preview =====
