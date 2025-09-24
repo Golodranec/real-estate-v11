@@ -319,6 +319,17 @@ function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${
 function textToMap(txt){
   const out={};
   if(!txt) return out;
+  const normalized = String(txt).replace(/
+/g,'
+');
+  const lines = normalized.split('
+').flatMap(s=>s.split('\n'));
+  lines.forEach(line=>{
+    const [k,v]=line.split('=');
+    if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
+  });
+  return out;
+}if(!txt) return out;
   txt.split(/(?:
 ?
 |\n)/).forEach(line=>{
