@@ -426,8 +426,30 @@ function renderEditor(){
 function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textContent="Есть несохранённые изменения"; save(); }
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
-function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
-function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function mapToText(mapObj){
+  return Object.entries(mapObj)
+    .map(([k,arr]) => `${k}=${(arr||[]).join(',')}`)
+    .join('
+'); // real newline in source file
+}=${(arr||[]).join(',')}`).join('\\n');}
+function textToMap(txt){
+  const out = {};
+  if(!txt) return out;
+  const norm = String(txt).replace(/\n/g, '
+');
+  norm.split(/
+?
+|;+/).forEach(line=>{
+    const s = line.trim();
+    if(!s) return;
+    const i = s.indexOf('=');
+    if(i < 0) return;
+    const key  = s.slice(0, i).trim();
+    const vals = s.slice(i+1).split(/[,\|]/).map(x=>x.trim()).filter(Boolean);
+    if(key) out[key] = vals;
+  });
+  return out;
+};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
 function addCategory(){const fid=(currentFolder&&currentFolder!=="__ALL__")?currentFolder:data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
