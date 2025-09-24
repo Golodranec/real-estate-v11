@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22H</title>
+<title>categories_editor — v22I</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -76,7 +76,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22H</span>
+      <span class="badge">v22I</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -224,12 +224,14 @@ function updateFolderFilter(){
   const sel=$("#folderFilter");
   sel.innerHTML="";
   sel.append(el("option",{value:"__ALL__",textContent:"(Все)"}));
-  listFoldersSorted().forEach(F=>{
-    const label=(F.depth>0? "  ".repeat(F.depth):"") + F.last;
-    sel.append(el("option",{value:F.id,textContent:label}));
+  const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+  arr.forEach(f=>{
+    const parts=String(f.title||"").split("/").filter(Boolean);
+    const label=(parts.length>1? "  ".repeat(parts.length-1):"") + (parts[parts.length-1]||String(f.title||""));
+    sel.append(el("option",{value:f.id,textContent:label}));
   });
   if(Array.from(sel.options).some(o=>o.value===currentFolder)) sel.value=currentFolder; else sel.value="__ALL__";
-  sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLDER, currentFolder); renderEditor(); };
+  sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLDER,currentFolder); renderEditor(); };
 }
 
 function renderEditor(){
@@ -291,7 +293,14 @@ function renderEditor(){
     };
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
     const folderSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value; dirty(); renderEditor();}});
-    populateFolderSelect(folderSel, f.folderId);
+    (function(){
+      const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+      arr.forEach(F=>{
+        const parts=String(F.title||"").split("/").filter(Boolean);
+        const label=(parts.length>1? "  ".repeat(parts.length-1):"") + (parts[parts.length-1]||String(F.title||""));
+        folderSel.append(new Option(label, F.id, false, F.id===(f.folderId||"")));
+      });
+    })();
     r3.append(wrap("Родитель",pSel), wrap("Папка", folderSel));
     c.appendChild(r3);
 
