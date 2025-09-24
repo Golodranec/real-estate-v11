@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22F</title>
+<title>categories_editor — v22G</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -72,7 +72,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22F</span>
+      <span class="badge">v22G</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -316,18 +316,19 @@ function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textCont
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
 function textToMap(txt){
-  const out={}; if(!txt) return out;
+  const out={};
+  if(!txt) return out;
   const normalized = String(txt).split('
 ').join('
 ');
   const lines = normalized.split('
 ').reduce((acc, line)=> acc.concat(line.split('\n')), []);
-  lines.forEach(line=>{
+  for(const line of lines){
     const [k,v]=line.split('=');
     if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
-  });
+  }
   return out;
-};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+}
 function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
