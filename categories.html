@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22K</title>
+<title>categories_editor — v22L</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -76,7 +76,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22K</span>
+      <span class="badge">v22L</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -137,6 +137,26 @@ const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
 const LS_PREVIEW = "categories_editor_v22D_preview";
+
+// === runtime helpers ===
+function setCurrentFolder(val){
+  currentFolder = val || "__ALL__";
+  try{ localStorage.setItem(LS_FOLDER, currentFolder); }catch(e){}
+  document.querySelectorAll('#folderFilter, .folderbar select').forEach(s=>{ if(s) s.value=currentFolder; });
+  renderEditor();
+}
+function getFolderById(id){ return (data.folders||[]).find(f=>f.id===id) || null; }
+function descendantFolderIds(rootId){
+  const out=new Set();
+  const root=getFolderById(rootId);
+  if(!root) return out;
+  const base=String(root.title||"").trim();
+  (data.folders||[]).forEach(f=>{
+    const t=String(f.title||"").trim();
+    if(t===base || t.startsWith(base + "/")) out.add(f.id);
+  });
+  return out;
+}
 const LS_FOLDER  = "categories_editor_v22D_folder";
 
 function loadPreviewValues(){
@@ -231,7 +251,6 @@ function populateFolderSelect(selectEl, currentId){
 function updateFolderFilter(){
   const sels = Array.from(document.querySelectorAll('#folderFilter, .folderbar select'));
   if(!sels.length) return;
-  // Build options list once
   const opts = [];
   opts.push({value:"__ALL__", label:"(Все)"});
   const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
@@ -240,13 +259,11 @@ function updateFolderFilter(){
     const label=(parts.length>1? "  ".repeat(parts.length-1):"") + (parts[parts.length-1]||String(f.title||""));
     opts.push({value:f.id,label});
   });
-  // Rebuild every select identically
   sels.forEach(sel=>{
     while(sel.firstChild) sel.removeChild(sel.firstChild);
     opts.forEach(o=> sel.append(new Option(o.label, o.value)));
     sel.onchange = ()=> setCurrentFolder(sel.value);
   });
-  // Set value
   const target = opts.some(o=>o.value===currentFolder) ? currentFolder : "__ALL__";
   sels.forEach(sel=> sel.value = target);
 }
