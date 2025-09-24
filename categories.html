@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22I</title>
+<title>categories_editor — v22J</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -76,7 +76,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22I</span>
+      <span class="badge">v22J</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -222,10 +222,13 @@ function populateFolderSelect(selectEl, currentId){
 
 function updateFolderFilter(){
   const sel=$("#folderFilter");
-  sel.innerHTML="";
+  // rebuild from scratch to avoid duplicates
+  while(sel.firstChild) sel.removeChild(sel.firstChild);
+  const seen=new Set();
   sel.append(el("option",{value:"__ALL__",textContent:"(Все)"}));
   const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
   arr.forEach(f=>{
+    if(seen.has(f.id)) return; seen.add(f.id);
     const parts=String(f.title||"").split("/").filter(Boolean);
     const label=(parts.length>1? "  ".repeat(parts.length-1):"") + (parts[parts.length-1]||String(f.title||""));
     sel.append(el("option",{value:f.id,textContent:label}));
@@ -333,7 +336,7 @@ function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textCont
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
 function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
-function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
+function addCategory(){const fid=(currentFolder&&currentFolder!=="__ALL__")?currentFolder:data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
 // ===== preview =====
