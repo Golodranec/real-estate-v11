@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v23B</title>
+<title>categories_editor — v23C</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -72,7 +72,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v23B</span>
+      <span class="badge">v23C</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -132,8 +132,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v23B_preview";
-const LS_FOLDER  = "categories_editor_v23B_folder";
+const LS_PREVIEW = "categories_editor_v23C_preview";
+const LS_FOLDER  = "categories_editor_v23C_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -143,7 +143,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v23B_data";
+const LS_KEY="categories_editor_v23C_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -203,7 +203,18 @@ function populateFolderSelect(selectEl, currentId){
     if(!c.type) c.type="text";
     if(!c.folderId) c.folderId = data.folders[0].id;
   });
-  if(typeof data.collapsed!=='object') data.collapsed={};
+  
+  // normalize folderId stored as folder title -> to id
+  try{
+    const titleToId = Object.fromEntries((data.folders||[]).map(f=>[String(f.title||""), f.id]));
+    data.categories.forEach(c=>{
+      if(c.folderId && !getFolderById(c.folderId)){
+        const mapped = titleToId[String(c.folderId)] || null;
+        if(mapped) c.folderId = mapped;
+      }
+    });
+  }catch{};
+if(typeof data.collapsed!=='object') data.collapsed={};
 }
 
 function updateFolderFilter(){
@@ -313,7 +324,19 @@ function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textCont
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
-function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function textToMap(txt){
+  const out={};
+  if(!txt) return out;
+  // split on real newlines or literal "
+"
+  txt.split(/(?:
+?
+|\n)/).forEach(line=>{
+    const [k,v]=line.split('=');
+    if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
+  });
+  return out;
+};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
 function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
@@ -523,7 +546,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v23B.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v23C.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
