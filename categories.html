@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22N</title>
+<title>categories_editor — v22P</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -76,7 +76,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22N</span>
+      <span class="badge">v22P</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -141,7 +141,7 @@ const LS_PREVIEW = "categories_editor_v22D_preview";
 // === runtime helpers ===
 function setCurrentFolder(val){
   currentFolder = val || "__ALL__";
-  try{ localStorage.setItem(LS_FOLDER, currentFolder); }
+  try{ localStorage.setItem(LS_FOLDER, currentFolder); }catch(e){}
 function setCurrentSubFolder(val){
   currentSubFolder = val || "__ALL__";
   try{ localStorage.setItem(LS_SUBFOLDER, currentSubFolder); }catch(e){}
