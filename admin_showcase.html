@@ -1,361 +1,403 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MySale — Админка витрины</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MySale — витрина (админка внутри)</title>
 <style>
-  :root{
-    --bg:#0b1220; --panel:#0f172a; --line:#1f2937; --text:#e5e7eb; --mut:#9ca3af;
-    --brand:#60a5fa; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-  header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:#0a1020;position:sticky;top:0;z-index:10}
-  header .right{margin-left:auto}
-  .wrap{display:grid;grid-template-columns:420px 1fr;gap:12px;height:calc(100% - 54px)}
-  @media (max-width:1100px){.wrap{grid-template-columns:1fr; height:auto}}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto}
-  .col{padding:12px}
-  h2{margin:8px 0 12px 0;font-size:16px}
-  h3{margin:14px 0 8px 0;font-size:14px;color:var(--mut)}
-  label{font-size:12px;color:var(--mut);margin-bottom:4px;display:block}
-  input, select, textarea, button{width:100%;background:#0f172a;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-  textarea{min-height:70px;resize:vertical}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .mut{color:var(--mut)}
-  .btn{cursor:pointer}
-  .btn.inline{width:auto;padding:6px 10px;border-radius:8px}
-  .card{border:1px solid var(--line);border-radius:12px;padding:10px;background:#0e162a;margin:8px 0}
-  .minirow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:#0f1a2e}
-  .sep{height:1px;background:var(--line);margin:10px 0}
-  /* Preview */
-  .site{min-height:100%;display:flex;flex-direction:column}
-  .site header{position:sticky;top:0;background:#0a1020;border-bottom:1px solid var(--line);z-index:5}
-  .brand{display:flex;align-items:center;gap:10px;padding:10px 14px}
-  .brand img{height:28px;width:auto;border-radius:6px}
-  .brand .sitename{font-weight:700}
-  .grid{display:grid;gap:var(--gap,12px);padding:16px}
-  .cardv{display:flex;flex-direction:column;gap:8px;background:#0f172a;border:1px solid var(--line);border-radius:var(--radius,14px);padding:14px;text-decoration:none;color:var(--text);min-height:var(--minh,120px);outline:none}
-  .cardv:hover{border-color:#334155}
-  .cardv .top{display:flex;justify-content:space-between;align-items:center}
-  .cardv .emoji{font-size:24px}
-  .cardv .title{font-weight:700}
-  .cardv .sub{color:var(--mut);font-size:12px}
-  footer{margin-top:auto;border-top:1px solid var(--line);padding:14px}
-  footer .links{display:flex;flex-wrap:wrap;gap:10px}
-  footer a{color:#93c5fd;text-decoration:none}
+:root{
+  --bg:#fae7c9;
+  --panel:#fff5e7;
+  --brand:#f28b1a;
+  --ink:#2b2b2b;
+  --muted:#666;
+  --card:#fff8ee;
+  --radius:18px;
+  --shadow:0 8px 30px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.55 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial}
+a{color:var(--brand);text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:32px 20px 48px}
+.header{display:flex;align-items:center;gap:24px;margin-bottom:18px}
+.logo{display:flex;align-items:center;gap:10px;user-select:none}
+.logo img{height:40px;width:auto}
+.logo-text{font-weight:800;font-size:38px;color:var(--brand);letter-spacing:.5px}
+.badge{display:inline-flex;align-items:center;justify-content:center;background:var(--brand);color:#fff;border-radius:10px 10px 10px 0;padding:6px 8px;font-weight:700}
+.topbar{display:flex;align-items:center;gap:12px;justify-content:space-between;margin:10px 0 20px}
+.nav{display:flex;gap:18px;font-weight:600}
+.nav a{color:#403b35;opacity:.9}
+.tools{display:flex;gap:8px}
+.btn{border:0;border-radius:12px;background:var(--brand);color:#fff;padding:10px 14px;font-weight:700;box-shadow:var(--shadow);cursor:pointer}
+.btn.secondary{background:#fff;color:#333}
+.btn.ghost{background:transparent;color:var(--brand);box-shadow:none;border:2px solid var(--brand)}
+.btn.small{padding:8px 10px;border-radius:10px;font-size:13px}
+.search{display:flex;gap:10px;background:var(--panel);border-radius:20px;padding:14px 14px;box-shadow:var(--shadow)}
+.search input{flex:1;border:0;background:#fff;border-radius:14px;padding:12px 14px;font-size:16px;outline:none}
+.grid{display:grid;gap:16px;margin-top:24px}
+.card{background:var(--card);border-radius:18px;padding:18px 16px;box-shadow:var(--shadow);transition:.2s;display:flex;align-items:center;gap:14px}
+.card:hover{transform:translateY(-3px)}
+.iconbox{height:52px;width:52px;border-radius:14px;background:#ffe3c3;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.iconbox svg{height:28px;width:28px;fill:#f07d00}
+.iconbox img{height:100%;width:100%;object-fit:cover}
+.card .title{font-weight:800}
+.card .hint{font-size:13px;color:var(--muted)}
+.footer{margin-top:36px;color:#777;font-size:13px;display:flex;gap:16px;flex-wrap:wrap}
+
+/* editor */
+#editorBar{position:fixed;right:18px;bottom:18px;display:flex;gap:10px;z-index:50}
+#panel{position:fixed;right:18px;top:18px;width:340px;background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:16px 14px 14px 14px;display:none;z-index:60;max-height:88vh;overflow:auto}
+#panel h3{margin:6px 0 10px}
+.row{display:flex;gap:8px}
+.input, select, textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e4d7c7;background:#fff}
+label{font-size:12px;color:#6b5c4e;margin:6px 0 4px;display:block}
+.help{font-size:12px;color:#8a7b6b}
+.list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.item{border:1px dashed #e6d7c3;padding:10px;border-radius:12px;background:#fff8f0}
+.item.drag{opacity:.5}
+.item-header{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.item-actions{display:flex;gap:8px}
+.item-actions .btn.small{padding:4px 8px}
+hr{border:0;border-top:1px solid #efe0d0;margin:12px 0}
+.logo-uploader{display:flex;align-items:center;gap:10px}
+.logo-uploader .preview{height:36px;width:auto}
+.toggle{position:fixed;left:18px;bottom:18px;z-index:50}
+.hidden{display:none}
+.kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,"Liberation Mono","Courier New",monospace;background:#f6efe6;border-radius:6px;padding:2px 6px}
 </style>
 </head>
 <body>
-<header>
-  <strong>MySale — Админка витрины</strong>
-  <span class="mut">v1</span>
-  <span class="right"></span>
-  <button id="btnExport" class="btn inline">Экспорт JSON</button>
-  <button id="btnImport" class="btn inline">Импорт JSON</button>
-  <button id="btnReset" class="btn inline" title="Сбросить к демо">Сброс</button>
-  <button id="btnSave" class="btn inline">Сохранить</button>
-</header>
-
-<div class="wrap">
-  <!-- LEFT: ADMIN FORM -->
-  <div class="panel col" id="admin">
-    <h2>Глобальные настройки</h2>
-    <div class="grid2">
-      <div>
-        <label>Название сайта</label>
-        <input id="siteTitle" placeholder="MySale">
-      </div>
-      <div>
-        <label>Логотип (URL)</label>
-        <input id="logoUrl" placeholder="https://.../logo.png">
-      </div>
-      <div>
-        <label>Шрифт (CSS font-family)</label>
-        <input id="fontFamily" placeholder="system-ui, Segoe UI, Roboto">
-      </div>
-      <div>
-        <label>Подключить Google Fonts (URL стиля, опц.)</label>
-        <input id="fontHref" placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
-      </div>
-      <div>
-        <label>Колонки карточек (1–6)</label>
-        <input id="columns" type="number" min="1" max="6" value="3">
-      </div>
-      <div>
-        <label>Отступ между карточками (px)</label>
-        <input id="gap" type="number" min="0" max="40" value="12">
-      </div>
-      <div>
-        <label>Минимальная высота карточки (px)</label>
-        <input id="minh" type="number" min="80" max="320" value="120">
-      </div>
-      <div>
-        <label>Скругление (px)</label>
-        <input id="radius" type="number" min="0" max="30" value="14">
-      </div>
-      <div>
-        <label>Цвет фона страницы</label>
-        <input id="bgColor" value="#0b1220">
-      </div>
-      <div>
-        <label>Цвет карточки</label>
-        <input id="cardColor" value="#0f172a">
-      </div>
+<div class="container" id="app">
+  <div class="header">
+    <div class="logo" id="logoNode">
+      <img id="logoImg" class="hidden" alt="logo"/>
+      <div id="logoText" class="logo-text">mysale</div>
+      <div class="badge">✓</div>
     </div>
-
-    <div class="sep"></div>
-    <h2>Карточки разделов</h2>
-    <div id="cards"></div>
-    <div class="row">
-      <button id="addCard" class="btn inline">+ Добавить карточку</button>
-    </div>
-
-    <div class="sep"></div>
-    <h2>Нижний колонтитул (footer)</h2>
-    <div id="links"></div>
-    <div class="row">
-      <button id="addLink" class="btn inline">+ Добавить ссылку</button>
+    <div class="topbar" style="flex:1">
+      <nav class="nav">
+        <a href="#" onclick="return false">Home</a>
+        <a href="#" onclick="return false">About</a>
+        <a href="#" onclick="return false">Contact</a>
+      </nav>
+      <div class="tools">
+        <button class="btn small" id="editBtn">✏️ Изменить</button>
+        <button class="btn small secondary" id="exportBtn">⬇️ Экспорт</button>
+        <label class="btn small ghost" for="importFile">⬆️ Импорт</label>
+        <input id="importFile" type="file" accept="application/json" class="hidden" />
+      </div>
     </div>
   </div>
 
-  <!-- RIGHT: LIVE PREVIEW -->
-  <div class="panel" id="previewWrap">
-    <div id="preview" class="site"></div>
+  <div class="search">
+    <input id="q" placeholder="Поиск товаров, услуг и объявлений…" />
+    <button class="btn" id="searchBtn">Поиск</button>
+  </div>
+
+  <div id="grid" class="grid"></div>
+
+  <div class="footer">
+    <a href="#" onclick="return false">Правила</a>
+    <a href="#" onclick="return false">Конфиденциальность</a>
+    <a href="#" onclick="return false">Обратная связь</a>
   </div>
 </div>
 
+<!-- floating editor buttons -->
+<div id="editorBar" class="hidden">
+  <button class="btn small" id="addCard">+ Карточка</button>
+  <button class="btn small" id="saveBtn">💾 Сохранить</button>
+  <button class="btn small ghost" id="closeBtn">✖ Закрыть</button>
+</div>
+
+<!-- side panel -->
+<aside id="panel">
+  <h3>Шапка</h3>
+  <label>Текст логотипа</label>
+  <input id="logoTextInput" class="input" placeholder="mysale"/>
+  <label>Цвет логотипа</label>
+  <input id="logoColor" type="color" value="#f28b1a" class="input"/>
+  <div class="logo-uploader">
+    <label class="btn small ghost">
+      Загрузить логотип
+      <input id="logoUpload" type="file" accept="image/*" class="hidden"/>
+    </label>
+    <img id="logoPreview" class="preview hidden"/>
+    <button id="logoAsText" class="btn small secondary">Текст вместо картинки</button>
+  </div>
+  <hr/>
+  <h3>Сетка</h3>
+  <div class="row">
+    <div style="flex:1">
+      <label>Колонок (2–6)</label>
+      <input id="cols" type="number" min="2" max="6" class="input" />
+    </div>
+    <div style="flex:1">
+      <label>Радиус</label>
+      <input id="radius" type="number" min="6" max="28" class="input"/>
+    </div>
+  </div>
+  <label>Основной цвет</label>
+  <input id="brandColor" type="color" value="#f28b1a" class="input"/>
+  <p class="help">Перетаскивайте карточки мышью для изменения порядка.</p>
+  <hr/>
+  <h3>Карточки</h3>
+  <div id="cardsList" class="list"></div>
+</aside>
+
 <script>
-(() => {
-  const storeKey = "mysale_showcase_admin_v1";
+const LS_KEY = "mysale_vitrine_v1";
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
 
-  const $ = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-  const el = (t,attrs={})=>Object.assign(document.createElement(t), attrs);
-  const uid = ()=>'id_'+Math.random().toString(36).slice(2,9);
+// --- initial model (defaults) ---
+const defaults = {
+  logoText: "mysale",
+  logoColor: "#f28b1a",
+  logoDataUrl: "",
+  columns: 4,
+  radius: 18,
+  brand: "#f28b1a",
+  items: [
+    {id: uid(), title:"Недвижимость", hint:"Квартиры, дома, участки", icon:"home", iconBg:"#ffe3c3", url:"#realestate"},
+    {id: uid(), title:"Авто",          hint:"Легковые и грузовые",  icon:"car",  iconBg:"#ffe3c3", url:"#cars"},
+    {id: uid(), title:"Электроника",   hint:"Телевизоры и ноутбуки",icon:"tv",   iconBg:"#ffe3c3", url:"#electronics"},
+    {id: uid(), title:"Вакансии",      hint:"Работа рядом",         icon:"brief",iconBg:"#ffe3c3", url:"#jobs"},
+    {id: uid(), title:"Сервисы",       hint:"Мастера и услуги",     icon:"wrench",iconBg:"#ffe3c3",url:"#services"},
+    {id: uid(), title:"Мебель",        hint:"Дом и интерьер",       icon:"sofa", iconBg:"#ffe3c3", url:"#furniture"},
+    {id: uid(), title:"Одежда",        hint:"Мода и стиль",         icon:"shirt",iconBg:"#ffe3c3", url:"#fashion"},
+    {id: uid(), title:"Хобби",         hint:"Спорт и отдых",        icon:"bike", iconBg:"#ffe3c3", url:"#hobbies"}
+  ]
+};
 
-  // ===== DATA =====
-  const demo = {
-    settings:{
-      siteTitle:"MySale",
-      logoUrl:"",
-      fontFamily:"system-ui, -apple-system, Segoe UI, Roboto, Arial",
-      fontHref:"",
-      columns:3, gap:12, minh:120, radius:14,
-      bgColor:"#0b1220", cardColor:"#0f172a"
-    },
-    cards:[
-      {id:uid(), title:"Недвижимость", subtitle:"Квартиры, дома, земля", emoji:"🏠", imageUrl:"", href:"#realty", newTab:true, enabled:true},
-      {id:uid(), title:"Транспорт", subtitle:"Легковые и грузовые", emoji:"🚗", imageUrl:"", href:"#auto", newTab:true, enabled:true},
-      {id:uid(), title:"Здоровье", subtitle:"Клиники и врачи", emoji:"🏥", imageUrl:"", href:"#health", newTab:true, enabled:true},
-      {id:uid(), title:"Электроника", subtitle:"Гаджеты и техника", emoji:"📱", imageUrl:"", href:"#electronics", newTab:true, enabled:true}
-    ],
-    footer:[
-      {id:uid(), label:"Правила сайта", href:"#rules"},
-      {id:uid(), label:"Обратная связь", href:"#feedback"},
-      {id:uid(), label:"Контакты", href:"#contacts"}
-    ]
-  };
+let model = loadModel();
 
-  let data = load() || demo;
+// --- utils ---
+function uid(){ return Math.random().toString(36).slice(2,9) }
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(model)) }
+function loadModel(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY)) || structuredClone(defaults) }catch(e){ return structuredClone(defaults) }
+}
+function el(tag, attrs={}, ...kids){
+  const n = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(k==="class") n.className = v;
+    else if(k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if(k==="html") n.innerHTML = v;
+    else n.setAttribute(k,v);
+  }
+  for(const k of kids) if(k) n.append(k);
+  return n;
+}
 
-  function save(){ localStorage.setItem(storeKey, JSON.stringify(data)); }
-  function load(){
-    try{ return JSON.parse(localStorage.getItem(storeKey)||""); } catch(e){ return null; }
+// --- icons (inline SVG) ---
+const icons = {
+  home:`<svg viewBox="0 0 24 24"><path d="M12 3l9 8-1.5 1.5L18 10.5V20h-5v-5H11v5H6v-9.5L4.5 12.5 3 11z"/></svg>`,
+  car:`<svg viewBox="0 0 24 24"><path d="M5 11l1-3 3-2h6l3 2 1 3v5h-2v2h-2v-2H9v2H7v-2H5v-5zm2.5 1a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm9 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>`,
+  tv:`<svg viewBox="0 0 24 24"><path d="M4 6h16v10H4zM8 18h8v2H8z"/></svg>`,
+  brief:`<svg viewBox="0 0 24 24"><path d="M9 3h6v3h4v14H5V6h4V3zm2 3h2V5h-2v1z"/></svg>`,
+  wrench:`<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 11-5.4 5.4l-5.3 5.3 1.4 1.4 5.3-5.3a4 4 0 005.4-5.4l-1.4-1.4z"/></svg>`,
+  sofa:`<svg viewBox="0 0 24 24"><path d="M4 10h16v6h-2v2H6v-2H4v-6zM7 6h10v3H7z"/></svg>`,
+  shirt:`<svg viewBox="0 0 24 24"><path d="M9 4l3 2 3-2 3 3-3 2v11H8V9L5 7l3-3z"/></svg>`,
+  bike:`<svg viewBox="0 0 24 24"><path d="M7 17a3 3 0 110-6 3 3 0 010 6zm10 0a3 3 0 110-6 3 3 0 010 6zM11 7h3l3 5h-2l-1-2h-2l-1 2H9l2-5z"/></svg>`
+};
+
+// --- rendering ---
+function render(){
+  // brand colors / radius
+  document.documentElement.style.setProperty('--brand', model.brand || '#f28b1a');
+  document.documentElement.style.setProperty('--radius', (model.radius||18)+'px');
+
+  // logo
+  $('#logoText').textContent = model.logoText || 'mysale';
+  $('#logoText').style.color = model.logoColor || '#f28b1a';
+  if(model.logoDataUrl){
+    $('#logoImg').src = model.logoDataUrl; $('#logoImg').classList.remove('hidden');
+    $('#logoText').classList.add('hidden'); $('#logoPreview').src = model.logoDataUrl; $('#logoPreview').classList.remove('hidden');
+  }else{
+    $('#logoImg').classList.add('hidden'); $('#logoText').classList.remove('hidden');
+    $('#logoPreview').classList.add('hidden');
   }
 
-  // ===== ADMIN RENDER =====
-  const admin = $("#admin");
-  const cardsEl = $("#cards");
-  const linksEl = $("#links");
+  // grid
+  const cols = Math.min(6, Math.max(2, Number(model.columns||4)));
+  $('#grid').style.gridTemplateColumns = `repeat(${cols}, minmax(0,1fr))`;
 
-  function bindSettings(){
-    const s = data.settings;
-    $("#siteTitle").value = s.siteTitle||"";
-    $("#logoUrl").value = s.logoUrl||"";
-    $("#fontFamily").value = s.fontFamily||"";
-    $("#fontHref").value = s.fontHref||"";
-    $("#columns").value = s.columns||3;
-    $("#gap").value = s.gap||12;
-    $("#minh").value = s.minh||120;
-    $("#radius").value = s.radius||14;
-    $("#bgColor").value = s.bgColor||"#0b1220";
-    $("#cardColor").value = s.cardColor||"#0f172a";
+  // cards
+  const q = ($('#q').value||"").trim().toLowerCase();
+  const grid = $('#grid'); grid.innerHTML = '';
+  model.items
+    .filter(it => !q || it.title.toLowerCase().includes(q) || (it.hint||'').toLowerCase().includes(q))
+    .forEach(it => grid.append(cardNode(it)));
 
-    admin.oninput = (e)=>{
-      if(e.target.id in s){
-        const id = e.target.id;
-        s[id] = ["columns","gap","minh","radius"].includes(id) ? Number(e.target.value||0) : e.target.value;
-        save(); renderPreview();
-      }
-    };
+  // panel values (if opened)
+  $('#logoTextInput').value = model.logoText;
+  $('#logoColor').value = model.logoColor || '#f28b1a';
+  $('#brandColor').value = model.brand || '#f28b1a';
+  $('#cols').value = cols;
+  $('#radius').value = model.radius || 18;
+
+  if(panelOpened) buildCardsList();
+}
+
+function iconNode(it){
+  const box = el('div', {class:'iconbox', style:`background:${it.iconBg||'#ffe3c3'}`});
+  if(/^data:image|^https?:/.test(it.icon||'')){
+    box.append(el('img',{src:it.icon}));
+  }else if(icons[it.icon]){
+    box.innerHTML = icons[it.icon];
+  }else{
+    box.append(el('div',{style:'font-size:28px'}, it.icon||'🧩'));
   }
+  return box;
+}
 
-  function renderCards(){
-    cardsEl.innerHTML = "";
-    data.cards.forEach((c,idx)=>{
-      const card = el("div",{className:"card"});
-      const top = el("div",{className:"row"});
-      top.append(el("span",{className:"mut", textContent:`#${idx+1}`}));
-      const enable = el("input",{type:"checkbox"}); enable.checked = !!c.enabled;
-      enable.onchange = ()=>{ c.enabled = enable.checked; save(); renderPreview(); };
-      top.append(el("label",{className:"pill", innerHTML:`<input type="checkbox" ${c.enabled?'checked':''} style="transform:translateY(1px);margin-right:6px">Включена` }));
-      // re-bind because innerHTML created a new input
-      top.querySelector("input[type=checkbox]").onchange = enable.onchange;
-
-      const up = el("button",{className:"btn inline", textContent:"↑"});
-      const dn = el("button",{className:"btn inline", textContent:"↓"});
-      const del = el("button",{className:"btn inline", textContent:"Удалить"});
-      up.onclick = ()=>{ if(idx>0){ const t=data.cards[idx-1]; data.cards[idx-1]=data.cards[idx]; data.cards[idx]=t; save(); renderCards(); renderPreview(); } };
-      dn.onclick = ()=>{ if(idx<data.cards.length-1){ const t=data.cards[idx+1]; data.cards[idx+1]=data.cards[idx]; data.cards[idx]=t; save(); renderCards(); renderPreview(); } };
-      del.onclick = ()=>{ if(confirm("Удалить карточку?")){ data.cards.splice(idx,1); save(); renderCards(); renderPreview(); } };
-      top.append(up,dn,del);
-      card.append(top);
-
-      const g = el("div",{className:"grid2"});
-      // Title
-      const a1 = el("div"); a1.append(el("label",{textContent:"Заголовок"}));
-      const i1 = el("input",{value:c.title||""}); i1.oninput=()=>{ c.title=i1.value; save(); renderPreview(); }; a1.append(i1); g.append(a1);
-      // Subtitle
-      const a2 = el("div"); a2.append(el("label",{textContent:"Подзаголовок"}));
-      const i2 = el("input",{value:c.subtitle||""}); i2.oninput=()=>{ c.subtitle=i2.value; save(); renderPreview(); }; a2.append(i2); g.append(a2);
-      // Emoji / Icon
-      const a3 = el("div"); a3.append(el("label",{textContent:"Эмодзи/иконка (например, 🏠)"}));
-      const i3 = el("input",{value:c.emoji||""}); i3.oninput=()=>{ c.emoji=i3.value; save(); renderPreview(); }; a3.append(i3); g.append(a3);
-      // Image URL
-      const a4 = el("div"); a4.append(el("label",{textContent:"Картинка (URL, опционально)"}));
-      const i4 = el("input",{value:c.imageUrl||""}); i4.oninput=()=>{ c.imageUrl=i4.value; save(); renderPreview(); }; a4.append(i4); g.append(a4);
-      // Href
-      const a5 = el("div"); a5.append(el("label",{textContent:"Ссылка (URL модуля)"}));
-      const i5 = el("input",{value:c.href||""}); i5.oninput=()=>{ c.href=i5.value; save(); renderPreview(); }; a5.append(i5); g.append(a5);
-      // New tab
-      const a6 = el("div"); a6.append(el("label",{textContent:"Открывать в новой вкладке?"}));
-      const i6 = el("select"); ["Да","Нет"].forEach((v,i)=> i6.add(new Option(v,i===0?"true":"false")));
-      i6.value = c.newTab ? "true" : "false";
-      i6.onchange=()=>{ c.newTab = i6.value==="true"; save(); renderPreview(); }; a6.append(i6); g.append(a6);
-      card.append(g);
-      cardsEl.append(card);
+function cardNode(it){
+  const a = el('a',{href: it.url || '#', target:'_blank', class:'card', draggable: panelOpened ? true : false});
+  a.append(iconNode(it));
+  a.append(el('div',{},
+      el('div',{class:'title'}, it.title||'Без названия'),
+      el('div',{class:'hint'}, it.hint||'')
+  ));
+  if(panelOpened){
+    a.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', it.id); a.classList.add('drag') });
+    a.addEventListener('dragend', ()=> a.classList.remove('drag'));
+    a.addEventListener('dragover', e=> e.preventDefault());
+    a.addEventListener('drop', e=>{
+      e.preventDefault();
+      const from = e.dataTransfer.getData('text/plain');
+      const to = it.id;
+      reorder(from,to);
     });
+    a.addEventListener('click', (e)=>{ e.preventDefault(); scrollToItemForm(it.id) });
   }
+  return a;
+}
 
-  $("#addCard").onclick = ()=>{
-    data.cards.push({id:uid(), title:"Новая карточка", subtitle:"", emoji:"🧩", imageUrl:"", href:"#", newTab:true, enabled:true});
-    save(); renderCards(); renderPreview();
-  };
+function reorder(fromId, toId){
+  if(fromId===toId) return;
+  const i = model.items.findIndex(x=>x.id===fromId);
+  const j = model.items.findIndex(x=>x.id===toId);
+  const [m] = model.items.splice(i,1);
+  model.items.splice(j,0,m);
+  save(); render();
+}
 
-  function renderLinks(){
-    linksEl.innerHTML = "";
-    data.footer.forEach((l,idx)=>{
-      const row = el("div",{className:"row"});
-      row.style.margin = "6px 0";
-      const t1 = el("input",{placeholder:"Название", value:l.label||""}); t1.oninput=()=>{ l.label=t1.value; save(); renderPreview(); };
-      const t2 = el("input",{placeholder:"URL", value:l.href||""}); t2.oninput=()=>{ l.href=t2.value; save(); renderPreview(); };
-      const up = el("button",{className:"btn inline", textContent:"↑"});
-      const dn = el("button",{className:"btn inline", textContent:"↓"});
-      const del= el("button",{className:"btn inline", textContent:"Удалить"});
-      up.onclick=()=>{ if(idx>0){ const t=data.footer[idx-1]; data.footer[idx-1]=data.footer[idx]; data.footer[idx]=t; save(); renderLinks(); renderPreview(); } };
-      dn.onclick=()=>{ if(idx<data.footer.length-1){ const t=data.footer[idx+1]; data.footer[idx+1]=data.footer[idx]; data.footer[idx]=t; save(); renderLinks(); renderPreview(); } };
-      del.onclick=()=>{ if(confirm("Удалить ссылку?")){ data.footer.splice(idx,1); save(); renderLinks(); renderPreview(); } };
-      row.append(t1,t2,up,dn,del);
-      linksEl.append(row);
-    });
+// --- editor panel ---
+let panelOpened = false;
+$('#editBtn').addEventListener('click', ()=>{ openPanel(true) });
+$('#closeBtn').addEventListener('click', ()=>{ openPanel(false) });
+$('#saveBtn').addEventListener('click', ()=>{ save(); openPanel(false); });
+
+function openPanel(flag){
+  panelOpened = !!flag;
+  $('#panel').style.display = flag?'block':'none';
+  $('#editorBar').classList.toggle('hidden', !flag);
+  $('#addCard').classList.toggle('hidden', !flag);
+  render();
+}
+
+function buildCardsList(){
+  const list = $('#cardsList'); list.innerHTML = '';
+  for(const it of model.items){
+    const card = el('div',{class:'item', id:'i_'+it.id});
+    const header = el('div',{class:'item-header'},
+      el('strong',{}, it.title || 'Без названия'),
+      el('div',{class:'item-actions'},
+        el('button',{class:'btn small secondary', onclick:()=>dupItem(it.id)},'Дублировать'),
+        el('button',{class:'btn small ghost', onclick:()=>delItem(it.id)},'Удалить')
+      ));
+    card.append(header);
+
+    card.append(lab('Заголовок'), inp(it,'title'));
+    card.append(lab('Подпись'), inp(it,'hint'));
+    card.append(lab('Ссылка (URL)'), inp(it,'url'));
+    const row = el('div',{class:'row'},
+      el('div',{style:'flex:1'}, lab('Иконка (эмодзи/ключ SVG/URL)'), inp(it,'icon')),
+      el('div',{style:'flex:1'}, lab('Цвет фона иконки'), color(it,'iconBg'))
+    );
+    card.append(row);
+    list.append(card);
+
+    function lab(t){ return el('label',{}, t) }
+    function inp(obj, key){
+      const n = el('input',{class:'input', value: obj[key]||'', oninput:(e)=>{ obj[key]=e.target.value; save(); render(); }});
+      return n;
+    }
+    function color(obj,key){
+      const val = obj[key] || '#ffe3c3';
+      const n = el('input',{type:'color', class:'input', value: val, oninput:(e)=>{ obj[key]=e.target.value; save(); render(); }});
+      return n;
+    }
   }
-  $("#addLink").onclick = ()=>{ data.footer.push({id:uid(),label:"Новая ссылка",href:"#"}); save(); renderLinks(); renderPreview(); };
+}
 
-  // ===== PREVIEW RENDER =====
-  function renderPreview(){
-    const s = data.settings;
-    const cont = $("#preview");
-    cont.innerHTML = "";
+function scrollToItemForm(id){
+  const node = $('#i_'+id);
+  if(node){ openPanel(true); node.scrollIntoView({behavior:'smooth', block:'center'}); node.style.outline='2px solid var(--brand)'; setTimeout(()=>node.style.outline='none',1200); }
+}
 
-    // Dynamic font link
-    let linkEl = $("#dynFontLink");
-    if(s.fontHref){
-      if(!linkEl){ linkEl = el("link",{id:"dynFontLink", rel:"stylesheet"}); document.head.appendChild(linkEl); }
-      linkEl.href = s.fontHref;
-    }else if(linkEl){ linkEl.remove(); }
+function delItem(id){
+  if(!confirm('Удалить карточку?')) return;
+  model.items = model.items.filter(x=>x.id!==id);
+  save(); buildCardsList(); render();
+}
+function dupItem(id){
+  const src = model.items.find(x=>x.id===id);
+  const copy = JSON.parse(JSON.stringify(src)); copy.id=uid(); copy.title += ' (копия)';
+  model.items.splice(model.items.findIndex(x=>x.id===id)+1,0,copy);
+  save(); buildCardsList(); render();
+}
+$('#addCard').addEventListener('click', ()=>{
+  model.items.push({id:uid(), title:'Новая карточка', hint:'Описание', icon:'home', iconBg:'#ffe3c3', url:'#'});
+  save(); buildCardsList(); render();
+});
 
-    // Site container
-    const site = el("div",{className:"site"});
-    site.style.setProperty("--gap", `${Number(s.gap||12)}px`);
-    site.style.setProperty("--radius", `${Number(s.radius||14)}px`);
-    site.style.setProperty("--minh", `${Number(s.minh||120)}px`);
-    site.style.background = s.bgColor||"#0b1220";
-    site.style.fontFamily = s.fontFamily||"system-ui, Segoe UI, Roboto, Arial";
+// bindings
+$('#q').addEventListener('input', render);
+$('#searchBtn').addEventListener('click', render);
+$('#cols').addEventListener('input', e=>{ model.columns = Number(e.target.value||4); save(); render(); });
+$('#radius').addEventListener('input', e=>{ model.radius = Number(e.target.value||18); save(); render(); });
+$('#brandColor').addEventListener('input', e=>{ model.brand = e.target.value; save(); render(); });
+$('#logoTextInput').addEventListener('input', e=>{ model.logoText = e.target.value; model.logoDataUrl=""; save(); render(); });
+$('#logoColor').addEventListener('input', e=>{ model.logoColor = e.target.value; save(); render(); });
+$('#logoAsText').addEventListener('click', ()=>{ model.logoDataUrl=""; save(); render(); });
 
-    // Header
-    const head = el("header");
-    const b = el("div",{className:"brand"});
-    const logo = s.logoUrl ? el("img",{src:s.logoUrl, alt:"logo"}) : null;
-    if(logo) b.append(logo);
-    const title = el("div",{className:"sitename", textContent:s.siteTitle||"MySale"});
-    b.append(title);
-    head.append(b);
-    site.append(head);
+$('#logoUpload').addEventListener('change', async (ev)=>{
+  const file = ev.target.files?.[0];
+  if(!file) return;
+  const buf = await file.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const dataUrl = `data:${file.type};base64,${base64}`;
+  model.logoDataUrl = dataUrl;
+  save(); render();
+});
 
-    // Grid
-    const grid = el("div",{className:"grid"});
-    grid.style.gridTemplateColumns = `repeat(${Math.max(1,Math.min(6, Number(s.columns||3)))}, minmax(0,1fr))`;
-
-    data.cards.forEach(c=>{
-      if(!c.enabled) return;
-      const a = el("a",{className:"cardv", href:c.href||"#", target: c.newTab ? "_blank" : "_self"});
-      a.style.background = s.cardColor||"#0f172a";
-      const top = el("div",{className:"top"});
-      const left = el("div",{className:"emoji", textContent: c.emoji || ""});
-      top.append(left);
-      const img = (c.imageUrl||"").trim() ? el("img",{src:c.imageUrl, alt:"", style:"height:28px;width:auto;border-radius:8px"}) : null;
-      if(img) top.append(img);
-      a.append(top);
-      a.append(el("div",{className:"title", textContent:c.title||""}));
-      if(c.subtitle) a.append(el("div",{className:"sub", textContent:c.subtitle}));
-      grid.append(a);
-    });
-    site.append(grid);
-
-    // Footer
-    const foot = el("footer");
-    const links = el("div",{className:"links"});
-    data.footer.forEach(l=>{
-      const a = el("a",{href:l.href||"#", textContent:l.label||""});
-      a.target = "_blank";
-      links.append(a);
-    });
-    foot.append(links);
-    site.append(foot);
-
-    cont.append(site);
+// import / export
+$('#exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(model, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mysale_vitrine_config.json';
+  a.click();
+});
+$('#importFile').addEventListener('change', async (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const txt = await file.text();
+  try{
+    const cfg = JSON.parse(txt);
+    if(!cfg.items) throw 0;
+    model = Object.assign(structuredClone(defaults), cfg);
+    save(); render();
+  }catch(err){
+    alert('Некорректный JSON');
   }
+});
 
-  // ===== IMPORT / EXPORT =====
-  $("#btnExport").onclick = ()=>{
-    const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json;charset=utf-8"});
-    const a = el("a",{href:URL.createObjectURL(blob), download:"mysale_showcase_config.json"});
-    a.click(); URL.revokeObjectURL(a.href);
-  };
-  $("#btnImport").onclick = ()=>{
-    const inp = el("input",{type:"file", accept:".json,application/json"});
-    inp.onchange = async e => {
-      const f = e.target.files[0]; if(!f) return;
-      try{
-        const json = JSON.parse(await f.text());
-        if(json && json.settings && json.cards && json.footer){ data = json; save(); bindSettings(); renderCards(); renderLinks(); renderPreview(); }
-        else alert("Неверный формат JSON.");
-      }catch(err){ alert("Ошибка импорта: " + err.message); }
-    };
-    inp.click();
-  };
-  $("#btnReset").onclick = ()=>{ if(confirm("Сбросить к демо?")){ data = JSON.parse(JSON.stringify(demo)); save(); bindSettings(); renderCards(); renderLinks(); renderPreview(); } };
-  $("#btnSave").onclick = ()=>{ save(); alert("Сохранено"); };
+// init
+render();
 
-  // ===== INIT =====
-  bindSettings(); renderCards(); renderLinks(); renderPreview();
-})();
 </script>
 </body>
 </html>
