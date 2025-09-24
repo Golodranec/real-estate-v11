@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22O</title>
+<title>categories_editor — v23A</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -66,20 +66,13 @@
   .muted{opacity:.7}
   /* Folder bar */
   .folderbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
-
-  /* Align action buttons in a fixed right column */
-  .card h3{display:flex;gap:10px;align-items:center;justify-content:flex-start}
-  .card h3 .title-wrap{display:flex;gap:10px;align-items:center;flex:1 1 auto;min-width:0}
-  .card h3 .actions{margin-left:auto;display:flex;gap:8px;align-items:center;justify-content:flex-end;flex:0 0 120px}
-  .card h3 .actions button{width:36px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center}
-
 </style>
 </head>
 <body>
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22O</span>
+      <span class="badge">v23A</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -139,8 +132,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v22O_preview";
-const LS_FOLDER  = "categories_editor_v22O_folder";
+const LS_PREVIEW = "categories_editor_v23A_preview";
+const LS_FOLDER  = "categories_editor_v23A_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -150,7 +143,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v22O_data";
+const LS_KEY="categories_editor_v23A_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -175,38 +168,34 @@ function migrateIfNeeded(){
     data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
   }
 
-// ===== Nested folders helpers =====
+// ===== Nested folders + unified listing =====
 function getFolderById(id){ return (data.folders||[]).find(f=>f.id===id) || null; }
 function descendantFolderIds(rootId){
   const ids=new Set();
   const root=getFolderById(rootId);
-  if(!root){ return ids; }
-  const norm = (s)=>String(s||"").trim();
-  const base = norm(root.title||"");
+  if(!root) return ids;
+  const base=String(root.title||"").trim();
   (data.folders||[]).forEach(f=>{
-    const t = norm(f.title||"");
+    const t=String(f.title||"").trim();
     if(t===base || t.startsWith(base + "/")) ids.add(f.id);
   });
-  ids.add(rootId);
   return ids;
 }
-// ---- unified folder listing and option builders ----
 function listFoldersSorted(){
-  const arr = (data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+  const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
   return arr.map(f=>{
-    const parts = String(f.title||"").split("/").filter(Boolean);
-    return { id:f.id, title:String(f.title||""), last: parts[parts.length-1] || String(f.title||""), depth: Math.max(0, parts.length-1) };
+    const parts=String(f.title||"").split("/").filter(Boolean);
+    return {id:f.id,title:String(f.title||""),last:parts[parts.length-1]||String(f.title||""),depth:Math.max(0,parts.length-1)};
   });
 }
 function populateFolderSelect(selectEl, currentId){
   selectEl.innerHTML="";
   listFoldersSorted().forEach(F=>{
-    const label = (F.depth>0? "  ".repeat(F.depth) : "") + F.last;
-    const opt = new Option(label, F.id, false, F.id===(currentId||""));
-    selectEl.appendChild(opt);
+    const label=(F.depth>0? "  ".repeat(F.depth):"") + F.last;
+    const o=new Option(label, F.id, false, F.id===(currentId||""));
+    selectEl.appendChild(o);
   });
 }
-
   // Гарантия полей
   data.categories.forEach(c=>{
     if(!c.id) c.id=uid();
@@ -214,35 +203,19 @@ function populateFolderSelect(selectEl, currentId){
     if(!c.type) c.type="text";
     if(!c.folderId) c.folderId = data.folders[0].id;
   });
-  
-  // normalize folderId that may store title instead of id
-  try{
-    const titleToId = Object.fromEntries((data.folders||[]).map(f=>[String(f.title||""), f.id]));
-    data.categories.forEach(c=>{
-      if(c.folderId && !getFolderById(c.folderId)){
-        const mapped = titleToId[String(c.folderId)] || null;
-        if(mapped) c.folderId = mapped;
-      }
-    });
-  }catch{}if(typeof data.collapsed!=='object') data.collapsed={};
+  if(typeof data.collapsed!=='object') data.collapsed={};
 }
-
 
 function updateFolderFilter(){
   const sel=$("#folderFilter");
   sel.innerHTML="";
   sel.append(el("option",{value:"__ALL__",textContent:"(Все)"}));
   listFoldersSorted().forEach(F=>{
-    const label=(F.depth>0? "  ".repeat(F.depth) : "") + F.last;
+    const label=(F.depth>0? "  ".repeat(F.depth):"") + F.last;
     sel.append(el("option",{value:F.id,textContent:label}));
   });
-  sel.value = currentFolder;
-  sel.onchange=()=>{
-    currentFolder=sel.value;
-    localStorage.setItem(LS_FOLDER, currentFolder);
-    renderEditor();
-  }
-;
+  if(Array.from(sel.options).some(o=>o.value===currentFolder)) sel.value=currentFolder; else sel.value="__ALL__";
+  sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLDER,currentFolder); renderEditor(); };
 }
 
 function renderEditor(){
@@ -251,8 +224,12 @@ function renderEditor(){
   const items = data.categories.filter(c => {
     if(currentFolder==="__ALL__") return true;
     const set = descendantFolderIds(currentFolder);
-    if(!set || set.size===0) return (c.folderId||"")===currentFolder;
-    return set.has(c.folderId||"");
+    const fid = (c.folderId||"");
+    if(set.has(fid)) return true;
+    const cf=getFolderById(currentFolder), ff=getFolderById(fid);
+    if(!cf || !ff) return false;
+    const base=String(cf.title||"").trim(), t=String(ff.title||"").trim();
+    return t===base || t.startsWith(base + "/");
   });
 
   items.forEach((f, idx)=>{
@@ -266,7 +243,7 @@ function renderEditor(){
     collapseBtn.onclick=(e)=>{ data.collapsed[f.id]=!data.collapsed[f.id]; c.classList.toggle("collapsed", !!data.collapsed[f.id]); save(); };
     const delBtn=el("button",{className:"danger",textContent:"Удалить"});
     delBtn.onclick=()=>{ if(confirm("Удалить категорию и её потомков?")) { pushHistory(snapshot()); removeCategory(f.id);} };
-    const leftWrap=el('span',{className:'title-wrap'}); leftWrap.append(titleText, ghost); const actions=el('span',{className:'actions'}); actions.append(collapseBtn, delBtn); h.append(leftWrap, actions);
+    h.append(titleText, ghost, collapseBtn, delBtn);
     c.appendChild(h);
     if(data.collapsed[f.id]) c.classList.add("collapsed");
 
@@ -295,7 +272,7 @@ function renderEditor(){
     };
     parentOptions(f.id).forEach(o=> pSel.append(el("option",{value:o.id,textContent:o.name,selected:(f.parentId||"")===(o.id||"")})));
     const folderSel=el("select",{onfocus:()=>pending=snapshot(), onchange:e=>{f.folderId=e.target.value; dirty(); renderEditor();}});
-    data.folders.forEach(F=> folderSel.append(el("option",{value:F.id,textContent:F.title,selected:F.id===(f.folderId||"")})));
+    populateFolderSelect(folderSel, f.folderId);
     r3.append(wrap("Родитель",pSel), wrap("Папка", folderSel));
     c.appendChild(r3);
 
@@ -327,7 +304,7 @@ function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textCont
 
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
-function textToMap(txt){const out={};txt.split(/\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
+function textToMap(txt){const out={};txt.split(/\\n/).forEach(line=>{const [k,v]=line.split('=');if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean)});return out;}
 function addCategory(){const fid=data.folders[0]?.id; data.categories.push({id:uid(),folderId:fid,title:"Новая категория",name:"",type:"text",hint:"",parentId:null,options:[],map:{},showIf:"",layout:"half"}); save(); renderEditor();}
 function removeCategory(id){function rm(fid){data.categories.filter(f=>f.parentId===fid).forEach(ch=>rm(ch.id));data.categories=data.categories.filter(f=>f.id!==fid); delete data.collapsed[fid];}rm(id);save();renderEditor();renderPreview();}
 
@@ -469,7 +446,7 @@ function renderPreview(){
       ensurePlaceholder(ctrl);
       optionsFor(f).forEach(o=>{ if(o!==DEFAULT_LABEL) ctrl.append(new Option(o,o)); });
       assignSelectValue(ctrl, key);
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePreviewValues();renderPreview();};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePreviewValues(); savePreviewValues();renderPreview();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="radio"){
@@ -478,7 +455,7 @@ function renderPreview(){
       opts.forEach(o=>ctrl.append(new Option(o,o)));
       if(previewValues[key] && opts.includes(previewValues[key])) ctrl.value=previewValues[key];
       else if(opts.length){ ctrl.value=opts[0]; previewValues[key]=opts[0]; }
-      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePreviewValues();};
+      ctrl.onchange=()=>{previewValues[key]=ctrl.value; savePreviewValues(); savePreviewValues();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="checkbox"){
@@ -490,7 +467,7 @@ function renderPreview(){
     else if(f.type==="text"||f.type==="number"||f.type==="date"){
       ctrl=el("input",{type:f.type});
       if(previewValues[key]) ctrl.value=previewValues[key];
-      ctrl.oninput=()=>{previewValues[key]=ctrl.value; savePreviewValues();};
+      ctrl.oninput=()=>{previewValues[key]=ctrl.value; savePreviewValues(); savePreviewValues();};
       w=wrap(f.title||f.name||f.id, ctrl);
     }
     else if(f.type==="range"){
@@ -528,15 +505,16 @@ $("#fileInput").onchange=async (e)=>{
     const txt=await f.text();
     const json=JSON.parse(txt);
     if(Array.isArray(json.categories) && !json.folders){
-      data = {folders:[{id:"root",title:"(Все)",open:true}], categories: json.categories.map(c=>({...c, folderId:"root"})), collapsed:{}};
+      data = {folders:[{id:"root",title:"Общая",open:true}], categories: json.categories.map(c=>({...c, folderId:"root"})), collapsed:{}};
     }else{ data=json; }
     migrateIfNeeded();
-    save();renderEditor();previewValues={};renderPreview();alert("Импортировано");
+    currentFolder="__ALL__"; localStorage.setItem(LS_FOLDER,currentFolder);
+    save(); updateFolderFilter(); renderEditor(); previewValues={}; renderPreview(); alert("Импортировано");
   }catch(err){alert("Ошибка: "+err.message);}
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22O.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v23A.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
@@ -573,43 +551,36 @@ $("#addFolder").onclick=()=>{
   data.folders.push({id:uid(),title:name,open:true}); save(); updateFolderFilter(); renderEditor();
 };
 $("#renameFolder").onclick=()=>{
-  const cur = $("#folderFilter").value;
+  const cur=$("#folderFilter").value;
   if(cur==="__ALL__") return alert("Выберите конкретную папку");
-  const f = data.folders.find(x=>x.id===cur); if(!f) return;
-  const old = String(f.title||"");
-  const name=prompt("Новое имя папки (можно с / для вложенности)", old); if(!name) return;
+  const f=getFolderById(cur); if(!f) return;
+  const old=String(f.title||"");
+  const name=prompt("Новое имя папки (вложенность через /)", old);
+  if(!name) return;
   data.folders.forEach(F=>{
-    const t = String(F.title||"");
-    if(t===old) F.title = name;
-    else if(t.startsWith(old + "/")) F.title = name + t.slice(old.length);
+    const t=String(F.title||"");
+    if(t===old) F.title=name.trim();
+    else if(t.startsWith(old + "/")) F.title=name.trim() + t.slice(old.length);
   });
   save(); updateFolderFilter(); renderEditor();
 };
-function deleteFolderAttempt(e){
-  try{
-    const cur = $("#folderFilter").value;
-    if(cur==="__ALL__"){ alert("Выберите конкретную папку"); return; }
-    const subIds = Array.from(descendantFolderIds(cur));
-    const catsCount = data.categories.filter(c=> subIds.includes(c.folderId||"")).length;
-    const subCount  = data.folders.filter(f=> f.id!==cur && subIds.includes(f.id)).length;
-    if(e && e.shiftKey){
-      if(!confirm(`Удалить папку и всё содержимое? Категорий: ${catsCount}, подпапок: ${subCount}`)) return;
-      data.categories = data.categories.filter(c=> !subIds.includes(c.folderId||""));
-      data.folders = data.folders.filter(f=> !subIds.includes(f.id));
-      currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
-      alert("Удалено каскадно.");
-      return;
-    }
-    if(catsCount>0 || subCount>0){
-      alert(`Папка или её подпапки не пусты. Категорий: ${catsCount}, подпапок: ${subCount}. Удерживайте Shift и нажмите «Удалить» для каскадного удаления.`);
-      return;
-    }
-    if(!confirm("Удалить пустую папку?")) return;
-    data.folders = data.folders.filter(f=> !subIds.includes(f.id));
-    currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
-  }catch(err){ console.error(err); alert("Ошибка удаления папки: " + err.message); }
-}
-$("#deleteFolder").onclick=(e)=>deleteFolderAttempt(e);
+$("#deleteFolder").onclick=(e)=>{
+  const cur=$("#folderFilter").value;
+  if(cur==="__ALL__") return alert("Выберите конкретную папку");
+  const subIds=Array.from(descendantFolderIds(cur));
+  const catsCount=data.categories.filter(c=>subIds.includes(c.folderId||"")).length;
+  const subCount=data.folders.filter(f=>f.id!==cur && subIds.includes(f.id)).length;
+  if(e && e.shiftKey){
+    if(!confirm(`Удалить папку и всё содержимое? Категорий: ${catsCount}, подпапок: ${subCount}`)) return;
+    data.categories=data.categories.filter(c=>!subIds.includes(c.folderId||""));
+    data.folders=data.folders.filter(f=>!subIds.includes(f.id));
+    currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor(); return;
+  }
+  if(catsCount>0 || subCount>0) return alert(`Папка или её подпапки не пусты. Категорий: ${catsCount}, подпапок: ${subCount}. Удерживайте Shift и нажмите «Удалить» для каскада.`);
+  if(!confirm("Удалить пустую папку?")) return;
+  data.folders=data.folders.filter(f=>!subIds.includes(f.id));
+  currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
+};
 
 // collapse / expand all
 $("#collapseAll").onclick=()=>{
