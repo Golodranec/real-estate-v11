@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22N</title>
+<title>categories_editor — v22O</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -79,7 +79,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22N</span>
+      <span class="badge">v22O</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -139,8 +139,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v22N_preview";
-const LS_FOLDER  = "categories_editor_v22N_folder";
+const LS_PREVIEW = "categories_editor_v22O_preview";
+const LS_FOLDER  = "categories_editor_v22O_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -150,7 +150,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v22N_data";
+const LS_KEY="categories_editor_v22O_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -227,6 +227,7 @@ function populateFolderSelect(selectEl, currentId){
   }catch{}if(typeof data.collapsed!=='object') data.collapsed={};
 }
 
+
 function updateFolderFilter(){
   const sel=$("#folderFilter");
   sel.innerHTML="";
@@ -240,8 +241,8 @@ function updateFolderFilter(){
     currentFolder=sel.value;
     localStorage.setItem(LS_FOLDER, currentFolder);
     renderEditor();
-  };
-};
+  }
+;
 }
 
 function renderEditor(){
@@ -535,7 +536,7 @@ $("#fileInput").onchange=async (e)=>{
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22N.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22O.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
