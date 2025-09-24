@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22E</title>
+<title>categories_editor — v22F</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -72,7 +72,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22E</span>
+      <span class="badge">v22F</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -168,22 +168,22 @@ function migrateIfNeeded(){
     data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
   }
 
-// ===== Nested folders helpers =====
+// ===== Nested folders helpers (safe) =====
 function getFolderById(id){ return (data.folders||[]).find(f=>f.id===id) || null; }
 function listFoldersSorted(){
-  const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+  const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"" ).localeCompare(String(b.title||"" )));
   return arr.map(f=>{
-    const parts=String(f.title||"").split("/").filter(Boolean);
-    return {id:f.id,title:String(f.title||""),last:parts.length?parts[parts.length-1]:String(f.title||""),depth:Math.max(0,parts.length-1)};
+    const parts=String(f.title||"" ).split("/").filter(Boolean);
+    return {id:f.id,title:String(f.title||"" ),last:parts.length?parts[parts.length-1]:String(f.title||"" ),depth:Math.max(0,parts.length-1)};
   });
 }
 function descendantFolderIds(rootId){
   const ids=new Set();
   const root=getFolderById(rootId);
   if(!root) return ids;
-  const base=String(root.title||"").trim();
+  const base=String(root.title||"" ).trim();
   (data.folders||[]).forEach(f=>{
-    const t=String(f.title||"").trim();
+    const t=String(f.title||"" ).trim();
     if(t===base || t.startsWith(base + "/")) ids.add(f.id);
   });
   return ids;
@@ -192,7 +192,7 @@ function populateFolderSelect(selectEl, currentId){
   selectEl.innerHTML="";
   listFoldersSorted().forEach(F=>{
     const label=(F.depth>0? "  ".repeat(F.depth):"") + F.last;
-    const o=new Option(label, F.id, false, F.id===(currentId||""));
+    const o=new Option(label, F.id, false, F.id===(currentId||"" ));
     selectEl.appendChild(o);
   });
 }
@@ -205,7 +205,6 @@ function populateFolderSelect(selectEl, currentId){
     if(!c.folderId) c.folderId = data.folders[0].id;
   });
   if(typeof data.collapsed!=='object') data.collapsed={};
-  // normalize folderId stored as folder title -> to id
   try{
     const titleToId = Object.fromEntries((data.folders||[]).map(f=>[String(f.title||""), f.id]));
     data.categories.forEach(c=>{
@@ -227,7 +226,7 @@ function updateFolderFilter(){
     sel.append(el("option",{value:F.id,textContent:label}));
   });
   if(Array.from(sel.options).some(o=>o.value===currentFolder)) sel.value=currentFolder; else sel.value="__ALL__";
-  sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLDER, currentFolder); renderEditor(); };
+  sel.onchange=()=>{ currentFolder=sel.value; localStorage.setItem(LS_FOLDER,currentFolder); renderEditor(); };
 }
 
 function renderEditor(){
@@ -238,7 +237,6 @@ function renderEditor(){
     const fid = (c.folderId||"");
     const set = descendantFolderIds(currentFolder);
     if(set.has(fid)) return true;
-    // fallback via titles if ids not present
     const cf=getFolderById(currentFolder), ff=getFolderById(fid);
     if(!cf || !ff) return false;
     const base=String(cf.title||"").trim(), t=String(ff.title||"").trim();
@@ -318,11 +316,12 @@ function dirty(){ pushHistory(pending); pending=null; $("#statusBadge").textCont
 function wrap(label,control){const w=el("div");w.append(el("label",{textContent:label}),control);return w;}
 function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${(arr||[]).join(',')}`).join('\\n');}
 function textToMap(txt){
-  const out={};
-  if(!txt) return out;
-  const lines = String(txt).split(/(?:
-?
-|\n)/);
+  const out={}; if(!txt) return out;
+  const normalized = String(txt).split('
+').join('
+');
+  const lines = normalized.split('
+').reduce((acc, line)=> acc.concat(line.split('\n')), []);
   lines.forEach(line=>{
     const [k,v]=line.split('=');
     if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
@@ -574,11 +573,12 @@ $("#addFolder").onclick=()=>{
   data.folders.push({id:uid(),title:name,open:true}); save(); updateFolderFilter(); renderEditor();
 };
 $("#renameFolder").onclick=()=>{
-  const cur = $("#folderFilter").value;
+  const cur=$("#folderFilter").value;
   if(cur==="__ALL__") return alert("Выберите конкретную папку");
-  const f = getFolderById(cur); if(!f) return;
-  const old = String(f.title||"");
-  const name=prompt("Новое имя папки (вложенность через /)", f.title); if(!name) return;
+  const f=getFolderById(cur); if(!f) return;
+  const old=String(f.title||"");
+  const name=prompt("Новое имя папки (вложенность через /)", f.title);
+  if(!name) return;
   data.folders.forEach(F=>{
     const t=String(F.title||"");
     if(t===old) F.title=name.trim();
@@ -587,23 +587,20 @@ $("#renameFolder").onclick=()=>{
   save(); updateFolderFilter(); renderEditor();
 };
 $("#deleteFolder").onclick=(e)=>{
-  const cur = $("#folderFilter").value;
+  const cur=$("#folderFilter").value;
   if(cur==="__ALL__") return alert("Выберите конкретную папку");
-  const subIds = Array.from(descendantFolderIds(cur));
-  const catsCount = data.categories.filter(c=> subIds.includes(c.folderId||"")).length;
-  const subCount  = data.folders.filter(f=> f.id!==cur && subIds.includes(f.id)).length;
+  const subIds=Array.from(descendantFolderIds(cur));
+  const catsCount=data.categories.filter(c=>subIds.includes(c.folderId||"")).length;
+  const subCount=data.folders.filter(f=>f.id!==cur && subIds.includes(f.id)).length;
   if(e && e.shiftKey){
     if(!confirm(`Удалить папку и всё содержимое? Категорий: ${catsCount}, подпапок: ${subCount}`)) return;
-    data.categories = data.categories.filter(c=> !subIds.includes(c.folderId||""));
-    data.folders = data.folders.filter(f=> !subIds.includes(f.id));
+    data.categories=data.categories.filter(c=>!subIds.includes(c.folderId||""));
+    data.folders=data.folders.filter(f=>!subIds.includes(f.id));
     currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor(); return;
   }
-  if(catsCount>0 || subCount>0){
-    alert(`Папка или её подпапки не пусты. Категорий: ${catsCount}, подпапок: ${subCount}. Удерживайте Shift и нажмите «Удалить» для каскада.`);
-    return;
-  }
+  if(catsCount>0 || subCount>0){ alert(`Папка или её подпапки не пусты. Категорий: ${catsCount}, подпапок: ${subCount}. Удерживайте Shift и нажмите «Удалить» для каскада.`); return; }
   if(!confirm("Удалить пустую папку?")) return;
-  data.folders = data.folders.filter(f=> !subIds.includes(f.id));
+  data.folders=data.folders.filter(f=>!subIds.includes(f.id));
   currentFolder="__ALL__"; save(); updateFolderFilter(); renderEditor();
 };
 
