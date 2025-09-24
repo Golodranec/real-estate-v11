@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v22M</title>
+<title>categories_editor — v22S</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -76,7 +76,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v22M</span>
+      <span class="badge">v22S</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -141,18 +141,14 @@ const uid=()=>Math.random().toString(36).slice(2,9);
 const LS_PREVIEW = "categories_editor_v22D_preview";
 
 // === runtime helpers ===
-function setCurrentFolder(val){
-  currentFolder = val || "__ALL__";
-  try{ localStorage.setItem(LS_FOLDER, currentFolder); }catch(e){}
-  document.querySelectorAll('#folderFilter, .folderbar select').forEach(s=>{ if(s) s.value=currentFolder; });
-  // Reset and repopulate subfolder on parent change
-  currentSubFolder="__ALL__";
-  const subSel=document.getElementById('subFolderFilter');
-  if(subSel){ subSel.value="__ALL__"; try{ localStorage.setItem(LS_SUBFOLDER, currentSubFolder); }catch(e){} }
-  updateFolderFilter();
+
+function setCurrentSubFolder(val){
+  currentSubFolder = val || "__ALL__";
+  try{ localStorage.setItem(LS_SUBFOLDER, currentSubFolder); }catch(e){}
+  const s = document.getElementById('subFolderFilter');
+  if(s) s.value = currentSubFolder;
   renderEditor();
 }
-
 function listSubFoldersSorted(parentId){
   const parent = getFolderById(parentId);
   if(!parent) return [];
@@ -171,12 +167,22 @@ function listSubFoldersSorted(parentId){
       return {id:f.id, last, depth};
     });
 }
-
+function setCurrentFolder(val){
   currentFolder = val || "__ALL__";
   try{ localStorage.setItem(LS_FOLDER, currentFolder); }catch(e){}
-  document.querySelectorAll('#folderFilter, .folderbar select').forEach(s=>{ if(s) s.value=currentFolder; });
+  // Reset subfolder when parent changes
+  currentSubFolder = "__ALL__";
+  try{ localStorage.setItem(LS_SUBFOLDER, currentSubFolder); }catch(e){}
+  // Reflect in UI
+  const fsel = document.getElementById('folderFilter');
+  if(fsel) fsel.value = currentFolder;
+  const ssel = document.getElementById('subFolderFilter');
+  if(ssel) ssel.value = currentSubFolder;
+  // Rebuild dropdowns and rerender
+  updateFolderFilter();
   renderEditor();
 }
+
 function getFolderById(id){ return (data.folders||[]).find(f=>f.id===id) || null; }
 function descendantFolderIds(rootId){
   const out=new Set();
@@ -301,26 +307,26 @@ function updateFolderFilter(){
   const target = opts.some(o=>o.value===currentFolder) ? currentFolder : "__ALL__";
   sels.forEach(sel=> sel.value = target);
 
-  // ---- fill subfolder select, scoped to currentFolder
+  // --- subfolder select update
   const subSel = document.getElementById('subFolderFilter');
   if(subSel){
     while(subSel.firstChild) subSel.removeChild(subSel.firstChild);
     const subOpts = [{value:"__ALL__", label:"(Все)"}];
     if(currentFolder !== "__ALL__"){
       listSubFoldersSorted(currentFolder).forEach(sf=>{
-        if(sf.depth===0) return; // root itself is covered by (Все)
+        if(sf.depth===0) return;
         const label = (sf.depth>0? "  ".repeat(sf.depth):"") + sf.last;
         subOpts.push({value:sf.id,label});
       });
     }
     subOpts.forEach(o=> subSel.append(new Option(o.label, o.value)));
     subSel.onchange = ()=> setCurrentSubFolder(subSel.value);
-    if(currentFolder==="__ALL__") currentSubFolder="__ALL__";
-    const validSub = subOpts.some(o=>o.value===currentSubFolder) ? currentSubFolder : "__ALL__";
-    subSel.value = validSub;
+    const valid = subOpts.some(o=>o.value===currentSubFolder) ? currentSubFolder : "__ALL__";
+    subSel.value = valid;
     try{ localStorage.setItem(LS_SUBFOLDER, subSel.value); }catch(e){}
   }
 }
+
 
 function renderEditor(){
   listEl.innerHTML="";
