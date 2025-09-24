@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>categories_editor — v23D</title>
+<title>categories_editor — v22E</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root{
@@ -24,7 +24,7 @@
   button.danger{background:var(--err);color:#fff}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;cursor:default}
   .card.collapsed .row{display:none}
-  .card h3{margin:0 0 8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .card h3{white-space:nowrap;margin:0 0 8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
   label{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
   input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--text);font:inherit}
@@ -72,7 +72,7 @@
   <header>
     <div class="left">
       <strong>Категории — редактор с папками</strong>
-      <span class="badge">v23D</span>
+      <span class="badge">v22E</span>
       <span id="sizeBadge" class="badge">Размер: …</span>
       <span id="statusBadge" class="badge">Сохранено</span>
     </div>
@@ -132,8 +132,8 @@ const $=s=>document.querySelector(s);
 const el=(t,p={})=>Object.assign(document.createElement(t),p);
 const uid=()=>Math.random().toString(36).slice(2,9);
 // --- persist preview & folder selection
-const LS_PREVIEW = "categories_editor_v23D_preview";
-const LS_FOLDER  = "categories_editor_v23D_folder";
+const LS_PREVIEW = "categories_editor_v22D_preview";
+const LS_FOLDER  = "categories_editor_v22D_folder";
 
 function loadPreviewValues(){
   try{ return JSON.parse(localStorage.getItem(LS_PREVIEW)||"{}"); }catch(e){ return {}; }
@@ -143,7 +143,7 @@ function savePreviewValues(){
 }
 
 
-const LS_KEY="categories_editor_v23D_data";
+const LS_KEY="categories_editor_v22D_data";
 let data={folders:[],categories:[],collapsed:{}};
 function load(){ try{ const raw=localStorage.getItem(LS_KEY); if(raw) data=JSON.parse(raw); }catch{} }
 function save(){ localStorage.setItem(LS_KEY, JSON.stringify(data)); updateSize(); $("#statusBadge").textContent="Сохранено"; }
@@ -164,12 +164,19 @@ function migrateIfNeeded(){
   // Если импортирована старая схема (без folders)
   if(!Array.isArray(data.folders) || !data.folders.length){
     const rootId = "root";
-    data.folders = [{id:rootId,title:"Общая",open:true}];
+    data.folders = [{id:rootId,title:"(Все)",open:true}];
     data.categories.forEach(c=>{ if(!c.folderId) c.folderId=rootId; });
   }
 
 // ===== Nested folders helpers =====
 function getFolderById(id){ return (data.folders||[]).find(f=>f.id===id) || null; }
+function listFoldersSorted(){
+  const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
+  return arr.map(f=>{
+    const parts=String(f.title||"").split("/").filter(Boolean);
+    return {id:f.id,title:String(f.title||""),last:parts.length?parts[parts.length-1]:String(f.title||""),depth:Math.max(0,parts.length-1)};
+  });
+}
 function descendantFolderIds(rootId){
   const ids=new Set();
   const root=getFolderById(rootId);
@@ -180,13 +187,6 @@ function descendantFolderIds(rootId){
     if(t===base || t.startsWith(base + "/")) ids.add(f.id);
   });
   return ids;
-}
-function listFoldersSorted(){
-  const arr=(data.folders||[]).slice().sort((a,b)=>String(a.title||"").localeCompare(String(b.title||"")));
-  return arr.map(f=>{
-    const parts=String(f.title||"").split("/").filter(Boolean);
-    return {id:f.id,title:String(f.title||""),last:parts[parts.length-1]||String(f.title||""),depth:Math.max(0,parts.length-1)};
-  });
 }
 function populateFolderSelect(selectEl, currentId){
   selectEl.innerHTML="";
@@ -205,7 +205,7 @@ function populateFolderSelect(selectEl, currentId){
     if(!c.folderId) c.folderId = data.folders[0].id;
   });
   if(typeof data.collapsed!=='object') data.collapsed={};
-  // normalize folderId stored as folder title -> convert to id
+  // normalize folderId stored as folder title -> to id
   try{
     const titleToId = Object.fromEntries((data.folders||[]).map(f=>[String(f.title||""), f.id]));
     data.categories.forEach(c=>{
@@ -235,9 +235,10 @@ function renderEditor(){
   // фильтр по папке: (Все) показывает все, включая без папки
   const items = data.categories.filter(c => {
     if(currentFolder==="__ALL__") return true;
-    const set = descendantFolderIds(currentFolder);
     const fid = (c.folderId||"");
+    const set = descendantFolderIds(currentFolder);
     if(set.has(fid)) return true;
+    // fallback via titles if ids not present
     const cf=getFolderById(currentFolder), ff=getFolderById(fid);
     if(!cf || !ff) return false;
     const base=String(cf.title||"").trim(), t=String(ff.title||"").trim();
@@ -319,20 +320,10 @@ function mapToText(mapObj){return Object.entries(mapObj).map(([k,arr])=>`${k}=${
 function textToMap(txt){
   const out={};
   if(!txt) return out;
-  const normalized = String(txt).replace(/
-/g,'
-');
-  const lines = normalized.split('
-').flatMap(s=>s.split('\n'));
-  lines.forEach(line=>{
-    const [k,v]=line.split('=');
-    if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
-  });
-  return out;
-}if(!txt) return out;
-  txt.split(/(?:
+  const lines = String(txt).split(/(?:
 ?
-|\n)/).forEach(line=>{
+|\n)/);
+  lines.forEach(line=>{
     const [k,v]=line.split('=');
     if(k) out[k.trim()]=(v||'').split(',').map(s=>s.trim()).filter(Boolean);
   });
@@ -541,13 +532,12 @@ $("#fileInput").onchange=async (e)=>{
       data = {folders:[{id:"root",title:"(Все)",open:true}], categories: json.categories.map(c=>({...c, folderId:"root"})), collapsed:{}};
     }else{ data=json; }
     migrateIfNeeded();
-    currentFolder="__ALL__"; localStorage.setItem(LS_FOLDER,currentFolder);
-    save(); updateFolderFilter(); renderEditor(); previewValues={}; renderPreview(); alert("Импортировано");
+    currentFolder="__ALL__"; localStorage.setItem(LS_FOLDER,currentFolder); save(); updateFolderFilter(); renderEditor(); previewValues={}; renderPreview(); alert("Импортировано");
   }catch(err){alert("Ошибка: "+err.message);}
 };
 $("#exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v23D.json"});
+  const a=el("a",{href:URL.createObjectURL(blob),download:"categories_editor_v22D.json"});
   document.body.appendChild(a);a.click();a.remove();
 };
 $("#addBtn").onclick=()=>{ pushHistory(snapshot()); addCategory(); };
@@ -588,12 +578,11 @@ $("#renameFolder").onclick=()=>{
   if(cur==="__ALL__") return alert("Выберите конкретную папку");
   const f = getFolderById(cur); if(!f) return;
   const old = String(f.title||"");
-  const name=prompt("Новое имя папки (можно с / для вложенности)", old);
-  if(!name) return;
+  const name=prompt("Новое имя папки (вложенность через /)", f.title); if(!name) return;
   data.folders.forEach(F=>{
-    const t = String(F.title||"");
-    if(t===old) F.title = name.trim();
-    else if(t.startsWith(old + "/")) F.title = name.trim() + t.slice(old.length);
+    const t=String(F.title||"");
+    if(t===old) F.title=name.trim();
+    else if(t.startsWith(old + "/")) F.title=name.trim() + t.slice(old.length);
   });
   save(); updateFolderFilter(); renderEditor();
 };
