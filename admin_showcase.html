@@ -1,528 +1,305 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MySale — Админ витрины (v6)</title>
-<!--
-  MySale Admin v6
-  Добавлено:
-  • Импорт JSON (к Экспорту).
-  • Строка поиска: включение/выключение, текст, ширина, свободное перемещение, закреп.
-  • Кнопка «+ Карточка» (создание новой). Удаление выбранной.
-  • Редактор выбранной карточки: Заголовок, Подпись, Иконка, Ссылка, Радиус, Ширина/Высота.
-  • Глобальный радиус (форма) + per-card override → можно круг/овал.
-  • Свободное перемещение: бренд / логотип / поиск / карточки — независимо, позиции сохраняются.
-  • Undo/Redo, Экспорт/Импорт, локальное хранение.
--->
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MySale — Админ витрины</title>
 <style>
-:root{
-  --bg:#F7E6CA;
-  --surface:#FFF5E6;
-  --text:#2A2A1A;
-  --accent:#FF7A00;
-  --radius:16px;
-  --gap:18px;
-  --shadow:0 12px 28px rgba(0,0,0,.08);
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-  background:var(--bg);
-  color:var(--text);
-}
-.wrap{display:grid;grid-template-columns:360px 1fr;gap:18px;min-height:100%}
-
-/* Sidebar */
-aside{
-  background:#fff8ee;
-  border-radius:16px;
-  padding:16px;
-  margin:14px;
-  position:sticky; top:14px;
-  height:calc(100vh - 28px);
-  overflow:auto;
-  box-shadow:0 10px 28px rgba(0,0,0,.06)
-}
-h2{margin:8px 0 10px}
-h3{margin:12px 0 6px}
-label{font-size:12px;color:#7a6b57;margin:8px 0 4px;display:block}
-input[type="text"],input[type="number"],input[type="url"],input[type="color"]{
-  width:100%;padding:9px 12px;border:1px solid #eadfce;border-radius:10px;background:#fff;outline:none
-}
-.small{font-size:12px;opacity:.65}
-.row{display:flex;gap:8px;align-items:center}
-.row>*{flex:1}
-.btn{border:0;border-radius:12px;background:var(--accent);color:#fff;padding:9px 14px;cursor:pointer;font-weight:600}
-.btn.secondary{background:#fff;color:#2a2a2a;border:1px solid #eadfce}
-.btn.warn{background:#d33}
-.kbd{background:#eee;border-radius:6px;padding:2px 6px;font:12px/18px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.sep{height:1px;background:#eadfce;margin:10px 0}
-
-/* Canvas */
-main{
-  background:linear-gradient(180deg,var(--surface),#fff7ec);
-  border-radius:16px;
-  margin:14px 14px 14px 0;
-  padding:14px;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)
-}
-.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-.badge{background:#fff;border:1px solid #eadfce;border-radius:999px;padding:4px 9px;font-size:12px}
-#status{font-size:12px;color:#665844;margin-left:6px}
-.canvas{
-  position:relative;
-  min-height:82vh;
-  border-radius:12px;
-  padding:14px;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)
-}
-
-/* Floating boxes */
-.box{position:absolute;z-index:5}
-.brand{font-weight:900;font-size:48px;letter-spacing:.4px;display:inline-flex;gap:0;line-height:1}
-.brand span{display:inline-block;white-space:pre}
-#logoImg{width:64px;height:64px;object-fit:contain;display:block;background:transparent}
-
-/* Search box */
-#searchBox{position:absolute;z-index:9}
-.search{
-  display:flex;gap:8px;align-items:center;background:#fff;border-radius:999px;
-  box-shadow:var(--shadow); padding:10px 12px; border:1px solid #eadfce
-}
-.search input{border:0;outline:none;font-size:14px;width:420px}
-.search button{border:0;background:var(--accent);color:#fff;border-radius:999px;padding:8px 14px;cursor:pointer}
-
-/* Cards */
-.cards{position:relative}
-.card{
-  position:absolute;
-  background:#fff;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:14px;
-  min-width:200px;
-}
-.card.selected{outline:2px solid var(--accent)}
-.card .icon{font-size:28px}
-.card .title{font-weight:800;margin:6px 0 4px;font-size:18px;outline:none}
-.card .hint{font-size:13px;color:#7a6b57;margin:0;outline:none}
-.card .link{position:absolute;top:8px;right:10px;font-size:12px;color:#7a6b57;background:#fff;border:1px solid #eadfce;border-radius:999px;padding:3px 8px;text-decoration:none}
-
-/* Drag */
-.draggable{cursor:grab}
-.dragging{opacity:.92;cursor:grabbing;outline:2px dashed rgba(0,0,0,.18)}
-
-/* Letters UI */
-.letters{display:flex;flex-wrap:wrap;gap:6px}
-.letters .cell{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadfce;border-radius:10px;padding:6px}
-
-/* Toggles */
-.toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid #eadfce;background:#fff;padding:6px 10px;border-radius:999px;font-size:12px}
+  :root{
+    --bg1:#F8D49A;
+    --bg2:#F2B35E;
+    --surface:#FFFFFF;
+    --text:#2A2A2A;
+    --accent:#FF7A00;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,Helvetica,sans-serif;color:var(--text);background:#f4f4f4}
+  .wrap{display:grid;grid-template-columns:320px 1fr;gap:14px;min-height:100vh;padding:12px}
+  .panel{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:12px;position:sticky;top:12px;height:calc(100vh - 24px);overflow:auto}
+  .panel h3{margin:10px 0 8px;font-size:15px}
+  .row{display:flex;gap:8px;margin:6px 0}
+  label{font-size:12px;color:#6b6b6b;display:block;margin:8px 0 4px}
+  input[type=text],input[type=number],input[type=url],select,textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 10px;font:inherit;background:#fff}
+  input[type=color]{width:42px;height:32px;border:1px solid #ddd;border-radius:6px;padding:0;appearance:none}
+  button{border:0;border-radius:8px;padding:8px 12px;background:#2e7d32;color:#fff;cursor:pointer}
+  button.sec{background:#006dc1}
+  button.ghost{background:#eee;color:#333}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .preview{background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 120%);border:1px solid #e6e6e6;border-radius:16px;padding:18px;min-height:calc(100vh - 24px);position:relative;overflow:hidden}
+  .grid{display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:24px}
+  .brand-area{display:flex;align-items:center;gap:10px;user-select:none;position:relative}
+  .brand-logo{width:56px;height:56px;border-radius:14px;display:inline-grid;place-items:center;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+  .brand-logo img{max-width:48px;max-height:48px;display:block}
+  .brand-title{font-weight:800;font-size:52px;letter-spacing:.5px;color:#1a8917}
+  .brand-title span.orange{color:#ff6c00}
+  .brand-title span.green{color:#1a8917}
+  .drag{position:absolute;inset:0;cursor:move}
+  .card{width:260px;min-height:120px;background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 28px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.08);padding:14px 14px 16px 14px;position:relative;user-select:none;overflow:hidden}
+  .card.circle{aspect-ratio:1/1;border-radius:999px;width:160px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+  .card.oval{border-radius:999px}
+  .card .icon{font-size:26px}
+  .card h4{margin:6px 0 4px;font-size:18px;color:var(--accent)}
+  .card p{margin:0;font-size:13px;color:#666;word-break:break-word}
+  .corner{position:absolute;right:8px;top:8px;background:#fff;border:1px solid #eee;border-radius:999px;width:28px;height:28px;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:15px;color:#9b9b9b}
+  .k{display:flex;gap:8px;align-items:center}
+  .muted{color:#888;font-size:12px}
+  .hr{height:1px;background:#eee;margin:10px 0}
+  .badge{background:#fff6eb;color:#c25d00;border:1px solid #ffd7a3;border-radius:6px;padding:3px 8px;font-size:12px}
+  .pill{border-radius:999px}
+  .mini{font-size:12px}
+  .shadow-none{box-shadow:none!important}
+  .handle{position:absolute;inset:0;cursor:move}
+  .row .grow{flex:1}
+  .float-tip{position:absolute;left:12px;top:12px;font-size:12px;color:#444;background:rgba(255,255,255,.7);padding:4px 8px;border-radius:8px}
+  .searchbar{display:flex;gap:8px}
+  .searchbar input{flex:1;border-radius:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <aside>
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <h2 style="margin:0">Админ витрины</h2>
-      <div class="row" style="gap:6px;flex:0 0 auto">
-        <button id="btnSave" class="btn">Сохранить</button>
-        <button id="btnExport" class="btn secondary">Экспорт</button>
-        <input id="fileImport" type="file" accept="application/json" hidden>
-        <button id="btnImport" class="btn secondary">Импорт</button>
-      </div>
+  <aside class="panel" id="panel">
+    <div class="toolbar">
+      <button id="btnExport">Экспорт</button>
+      <button class="sec" id="btnImport">Импорт</button>
+      <input type="file" id="fileImport" accept=".json,application/json,.txt,.html" style="display:none"/>
+      <button class="ghost" id="btnUndo">Undo</button>
+      <button class="ghost" id="btnRedo">Redo</button>
     </div>
-    <div id="status" class="small"></div>
+    <div class="hr"></div>
 
     <h3>Бренд</h3>
     <label>Название</label>
-    <input id="brandText" type="text" placeholder="MySale" value="MySale">
+    <input id="brandTitle" type="text" placeholder="MySale" value="MySale"/>
     <div class="row">
-      <label class="toggle"><input id="perLetter" type="checkbox"> Пер-буквенные цвета</label>
-      <label style="margin:0">Размер</label><input id="brandSize" type="number" value="48" min="18" max="160" style="width:90px">
-    </div>
-    <div id="lettersBox" class="letters" style="display:none"></div>
-    <div class="row">
-      <label>Логотип (PNG/SVG)</label>
-      <input id="logoFile" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp">
-      <label style="margin:0">Размер</label><input id="logoSize" type="number" value="64" min="24" max="220" style="width:90px">
+      <div class="grow">
+        <label>Логотип (PNG/SVG с прозрачностью)</label>
+        <input id="logoInput" type="file" accept=".png,.svg,.jpg,.jpeg"/>
+      </div>
     </div>
     <div class="row">
-      <label class="toggle"><input id="lockBrand" type="checkbox"> Закрепить бренд</label>
-      <label class="toggle"><input id="lockLogo" type="checkbox"> Закрепить логотип</label>
+      <label class="k"><input type="checkbox" id="lockBrand"/> Закрепить бренд</label>
+      <label class="k"><input type="checkbox" id="lockLogo"/> Закрепить логотип</label>
     </div>
 
+    <div class="hr"></div>
     <h3>Тема</h3>
     <div class="row">
-      <div><label>Фон</label><input id="bg" type="color" value="#F7E6CA"></div>
-      <div><label>Поверхность</label><input id="surface" type="color" value="#FFF5E6"></div>
-    </div>
-    <div class="row">
-      <div><label>Текст</label><input id="textC" type="color" value="#2A2A1A"></div>
-      <div><label>Акцент</label><input id="accent" type="color" value="#FF7A00"></div>
-    </div>
-    <div class="row">
-      <label style="margin:0">Радиус по умолчанию</label><input id="radius" type="number" value="16" min="0" max="300" style="width:90px">
-      <label style="margin:0">Колонки (первичное авто-раскладка)</label><input id="cols" type="number" value="4" min="1" max="8" style="width:90px">
-    </div>
-
-    <div class="sep"></div>
-    <h3>Поиск</h3>
-    <div class="row">
-      <label class="toggle"><input id="searchEnabled" type="checkbox" checked> Показать поиск</label>
-      <label class="toggle"><input id="lockSearch" type="checkbox"> Закрепить поиск</label>
-    </div>
-    <label>Placeholder</label>
-    <input id="searchText" type="text" value="Поиск товаров, услуг и объявлений…">
-    <div class="row">
-      <label style="margin:0">Ширина (px)</label><input id="searchWidth" type="number" value="680" min="260" max="1200" style="width:120px">
-    </div>
-
-    <div class="sep"></div>
-    <h3>Карточки</h3>
-    <div class="row" style="gap:10px;flex-wrap:wrap">
-      <button id="btnAddCard" class="btn">+ Карточка</button>
-      <button id="btnDelCard" class="btn warn" title="Удалить выбранную" disabled>Удалить</button>
-      <label class="toggle"><input id="freeMove" type="checkbox"> Свободное перемещение</label>
-      <button id="btnResetPos" class="btn secondary">Сбросить позиции</button>
-    </div>
-
-    <div id="cardEditor" style="display:none">
-      <div class="sep"></div>
-      <h3>Выбрана карточка</h3>
-      <label>Иконка (emoji/символ)</label><input id="ceIcon" type="text">
-      <label>Заголовок</label><input id="ceTitle" type="text">
-      <label>Подпись</label><input id="ceHint" type="text">
-      <label>Ссылка (URL)</label><input id="ceLink" type="url" placeholder="https://…">
-      <div class="row">
-        <div><label>Ширина (px)</label><input id="ceW" type="number" min="160" max="560"></div>
-        <div><label>Высота (px)</label><input id="ceH" type="number" min="110" max="420"></div>
+      <div class="grow">
+        <label>Фон от</label><input id="clrBg1" type="color" value="#F8D49A"/>
       </div>
-      <label>Радиус (px) — 0 квадрат, 999 круг/овал</label><input id="ceRadius" type="number" min="0" max="999">
+      <div class="grow">
+        <label>Фон до</label><input id="clrBg2" type="color" value="#F2B35E"/>
+      </div>
+    </div>
+    <div class="row">
+      <div class="grow">
+        <label>Поверхность</label><input id="clrSurface" type="color" value="#FFFFFF"/>
+      </div>
+      <div class="grow">
+        <label>Текст</label><input id="clrText" type="color" value="#2A2A2A"/>
+      </div>
+      <div class="grow">
+        <label>Акцент</label><input id="clrAccent" type="color" value="#FF7A00"/>
+      </div>
+    </div>
+    <div class="row">
+      <div class="grow">
+        <label>Радиус по умолчанию</label><input id="radius" type="number" min="0" max="200" value="16"/>
+      </div>
+      <div class="grow">
+        <label>Колонки</label><input id="cols" type="number" min="1" max="6" value="4"/>
+      </div>
     </div>
 
-    <div class="sep"></div>
-    <h3>История</h3>
+    <div class="hr"></div>
+    <h3>Режим</h3>
     <div class="row">
-      <button id="btnUndo" class="btn secondary"><span class="kbd">Ctrl+Z</span> Undo</button>
-      <button id="btnRedo" class="btn secondary"><span class="kbd">Ctrl+Shift+Z</span> Redo</button>
+      <label class="k"><input type="checkbox" id="freeMove"/> Свободное перемещение</label>
+      <button class="ghost" id="btnResetPos">Сбросить позиции</button>
+    </div>
+
+    <div class="hr"></div>
+    <h3>Карточки</h3>
+    <div class="row">
+      <button id="btnAdd">+ Карточка</button>
+      <button id="btnDel" class="ghost">Удалить</button>
+    </div>
+    <div class="row">
+      <label>Поиск (над сеткой)</label>
+      <select id="searchMode">
+        <option value="off">Выключен</option>
+        <option value="on" selected>Включен</option>
+      </select>
+    </div>
+    <div id="cardEditor" style="display:none">
+      <div class="hr"></div>
+      <div class="badge">Редактор выбранной карточки</div>
+      <label>Заголовок</label><input id="edTitle" type="text" placeholder="Недвижимость"/>
+      <label>Подзаголовок</label><input id="edHint" type="text" placeholder="Квартиры, дома..."/>
+      <label>Иконка (emoji/символ)</label><input id="edIcon" type="text" placeholder="🏠"/>
+      <label>Ссылка (http…)</label><input id="edLink" type="url" placeholder="https://example.com"/>
+      <div class="row">
+        <div class="grow">
+          <label>Форма</label>
+          <select id="edShape">
+            <option value="rect">Прямоугольник</option>
+            <option value="rounded" selected>Скруглённая</option>
+            <option value="pill">Пилюля</option>
+            <option value="oval">Овал</option>
+            <option value="circle">Круг</option>
+          </select>
+        </div>
+        <div class="grow">
+          <label>Ширина</label><input id="edW" type="number" min="120" max="680" value="260"/>
+        </div>
+        <div class="grow">
+          <label>Высота</label><input id="edH" type="number" min="110" max="420" value="120"/>
+        </div>
+      </div>
+      <div class="row">
+        <div class="grow">
+          <label>Радиус (перекрывает общий)</label><input id="edR" type="number" min="0" max="999" value="16"/>
+        </div>
+        <div class="grow">
+          <label>Граница</label><input id="edBorder" type="color" value="#E5E5E5"/>
+        </div>
+      </div>
     </div>
   </aside>
 
-  <main>
-    <div class="toolbar">
-      <span class="badge">Предпросмотр</span>
-      <span class="small" style="margin-left:8px">Клики по карточкам открывают ссылку, только если «Свободное перемещение» выключено</span>
-      <span id="status" class="small"></span>
+  <main class="preview" id="preview">
+    <div class="float-tip">Клик по карточке открывает ссылку (только если «Свободное перемещение» выключено)</div>
+
+    <div class="brand-area" id="brandArea">
+      <div class="brand-logo" id="brandLogo"><img id="logoImg" alt="logo" /></div>
+      <div class="brand-title" id="brandTitleX">
+        <span class="green">My</span><span class="orange">Sale</span>
+      </div>
+      <div class="handle" id="brandHandle" title="Переместить"></div>
     </div>
 
-    <div id="canvas" class="canvas">
-      <!-- Логотип / Бренд -->
-      <div id="logoBox" class="box draggable" title="Перетащите логотип">
-        <img id="logoImg" alt="logo">
+    <div id="searchWrap" style="margin:14px 0 22px">
+      <div class="searchbar">
+        <input id="searchInput" type="text" placeholder="Поиск товаров, услуг и объявлений…"/>
+        <button class="ghost" id="searchClear">Очистить</button>
       </div>
-      <div id="brandBox" class="box draggable" title="Перетащите бренд">
-        <div id="brandView" class="brand"></div>
-      </div>
-
-      <!-- Поиск -->
-      <div id="searchBox" class="box draggable" title="Перетащите строку поиска">
-        <div class="search">
-          <input id="searchInput" type="text" placeholder="">
-          <button>Поиск</button>
-        </div>
-      </div>
-
-      <!-- Карточки -->
-      <div id="cardsLayer" class="cards"></div>
     </div>
+
+    <section id="grid" class="grid"></section>
   </main>
 </div>
 
 <script>
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-function tip(t){ const el=document.querySelectorAll('#status')[1]||document.querySelector('#status'); el.textContent=t; clearTimeout(tip._t); tip._t=setTimeout(()=>el.textContent='',1400); }
-function uid(){ return Math.random().toString(36).slice(2,9) }
-function esc(s){return String(s).replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;'}[m])) }
+const $=(s,p=document)=>p.querySelector(s);
+const $$=(s,p=document)=>Array.from(p.querySelectorAll(s));
 
-const LSKEY='mysale_admin_v6';
+let state=load()||def();
+let history=[deep(state)]; let hPtr=0;
+function pushH(){ history=history.slice(0,hPtr+1); history.push(deep(state)); hPtr=history.length-1; }
+function undo(){ if(hPtr>0){ hPtr--; state=deep(history[hPtr]); save(); renderAll(); }}
+function redo(){ if(hPtr<history.length-1){ hPtr++; state=deep(history[hPtr]); save(); renderAll(); }}
 
-const state = load() || {
-  theme:{bg:'#F7E6CA',surface:'#FFF5E6',text:'#2A2A1A',accent:'#FF7A00',radius:16,cols:4},
-  freeMove:false,
-  brand:{text:'MySale',size:48,per:false,letters:[],pos:{x:120,y:26},locked:false},
-  logo:{src:'',size:64,pos:{x:24,y:24},locked:false},
-  search:{enabled:true,placeholder:'Поиск товаров, услуг и объявлений…',width:680,pos:{x:260,y:86},locked:false},
-  cards: seedCards().map(c=>({...c,pos:null}))
-};
+function def(){ return {
+  brand:{x:24,y:18,title:"MySale",logo:"",lockBrand:false,lockLogo:false},
+  theme:{bg1:"#F8D49A",bg2:"#F2B35E",surface:"#FFFFFF",text:"#2A2A2A",accent:"#FF7A00",radius:16,cols:4},
+  flags:{freeMove:false,search:true},
+  cards:[
+    {id:id(),title:"Недвижимость",hint:"Квартиры, дома, коммерция",icon:"🏠",link:"https://example.com/real-estate",x:420,y:220,w:260,h:120,r:16,shape:"rounded",border:"#E5E5E5"},
+    {id:id(),title:"Транспорт",hint:"Легковые, грузовые",icon:"🚗",link:"https://example.com/cars",x:330,y:360,w:260,h:120,r:16,shape:"rounded",border:"#E5E5E5"},
+    {id:id(),title:"Электроника",hint:"Телефоны и ПК",icon:"💻",link:"https://example.com/elec",x:640,y:360,w:260,h:120,r:16,shape:"rounded",border:"#E5E5E5"}
+  ]
+};}
 
-const H={stack:[JSON.stringify(state)],i:0,max:140};
-function pushH(){ H.stack = H.stack.slice(0,H.i+1); H.stack.push(JSON.stringify(state)); H.i = Math.min(H.stack.length-1, H.i+1); if(H.stack.length>H.max){ H.stack.shift(); H.i--; } }
-function undo(){ if(H.i>0){ H.i--; Object.assign(state, JSON.parse(H.stack[H.i])); renderAll(); save(); tip('Undo'); } }
-function redo(){ if(H.i<H.stack.length-1){ H.i++; Object.assign(state, JSON.parse(H.stack[H.i])); renderAll(); save(); tip('Redo'); } }
+function id(){return Math.random().toString(36).slice(2,9)}
+function deep(o){return JSON.parse(JSON.stringify(o))}
+function save(){localStorage.setItem("mysale_admin_state",JSON.stringify(state))}
+function load(){try{return JSON.parse(localStorage.getItem("mysale_admin_state")||"")}catch(e){return null}}
+function cssVar(n,v){document.documentElement.style.setProperty(n,v)}
+
+// Export/Import
+$('#btnExport').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mysale_vitrine.json';a.click();URL.revokeObjectURL(a.href)};
+$('#btnImport').onclick=()=>$('#fileImport').click();
+$('#fileImport').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);pushH();save();renderAll()}catch(err){alert('Ошибка импорта: '+err.message)}};r.readAsText(f)};
+
 $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
-window.addEventListener('keydown',e=>{
-  if(e.ctrlKey && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); }
-  if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); redo(); }
-});
 
-/* THEME */
-function applyTheme(){
-  document.documentElement.style.setProperty('--bg', state.theme.bg);
-  document.documentElement.style.setProperty('--surface', state.theme.surface);
-  document.documentElement.style.setProperty('--text', state.theme.text);
-  document.documentElement.style.setProperty('--accent', state.theme.accent);
-  document.documentElement.style.setProperty('--radius', (state.theme.radius||16)+'px');
-}
-['bg','surface','textC','accent'].forEach(id=>{
-  const key=id==='textC'?'text':id;
-  $('#'+id).value=state.theme[key];
-  $('#'+id).addEventListener('input', e=>{ state.theme[key]=e.target.value; applyTheme(); pushH(); save(); });
-});
-$('#radius').value=state.theme.radius; $('#radius').oninput=e=>{ state.theme.radius=+e.target.value||16; applyTheme(); updateAllCardRadius(); pushH(); save(); };
-$('#cols').value=state.theme.cols; $('#cols').oninput=e=>{ state.theme.cols=Math.max(1,+e.target.value||4); pushH(); save(); };
+// Brand
+$('#brandTitle').oninput=e=>{state.brand.title=e.target.value;updBrand();pushH();save()}
+$('#logoInput').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{state.brand.logo=fr.result;updBrand();pushH();save()};fr.readAsDataURL(f)}
+$('#lockBrand').onchange=e=>{state.brand.lockBrand=e.target.checked;save()}
+$('#lockLogo').onchange=e=>{state.brand.lockLogo=e.target.checked;save()}
 
-function updateAllCardRadius(){
-  $$('.card').forEach(el=>{
-    const c = state.cards.find(k=>k.id===el.dataset.id);
-    el.style.borderRadius = (c.radius!=null?c.radius:state.theme.radius)+'px';
-  });
-}
+// Theme
+$('#clrBg1').oninput=e=>{state.theme.bg1=e.target.value;applyTheme();pushH();save()}
+$('#clrBg2').oninput=e=>{state.theme.bg2=e.target.value;applyTheme();pushH();save()}
+$('#clrSurface').oninput=e=>{state.theme.surface=e.target.value;applyTheme();pushH();save()}
+$('#clrText').oninput=e=>{state.theme.text=e.target.value;applyTheme();pushH();save()}
+$('#clrAccent').oninput=e=>{state.theme.accent=e.target.value;applyTheme();pushH();save()}
+$('#radius').oninput=e=>{state.theme.radius=+e.target.value||0;applyTheme();pushH();save()}
+$('#cols').oninput=e=>{state.theme.cols=+e.target.value||4;applyTheme();pushH();save()}
 
-/* BRAND */
-function renderBrand(){
-  const root = $('#brandView'); root.style.fontSize=state.brand.size+'px'; root.innerHTML='';
-  const chars=[...state.brand.text];
-  if(state.brand.per){ while(state.brand.letters.length < chars.length) state.brand.letters.push(state.theme.accent); }
-  chars.forEach((ch,i)=>{
-    const sp=document.createElement('span'); sp.textContent=ch;
-    sp.style.color = state.brand.per ? (state.brand.letters[i]||state.theme.text) : 'var(--text)';
-    root.appendChild(sp);
-  });
-  const bb = $('#brandBox'); bb.style.left=(state.brand.pos?.x ?? 120)+'px'; bb.style.top=(state.brand.pos?.y ?? 26)+'px'; bb.style.zIndex=10;
-}
-function buildLettersUI(){
-  const box = $('#lettersBox');
-  if(!state.brand.per){ box.style.display='none'; box.innerHTML=''; return; }
-  box.style.display='flex'; box.innerHTML='';
-  [...state.brand.text].forEach((ch,i)=>{
-    const cell=document.createElement('div'); cell.className='cell';
-    cell.innerHTML=`<b>${esc(ch)}</b><input type="color" value="${state.brand.letters[i]||state.theme.accent}">`;
-    const inp=cell.querySelector('input'); inp.oninput=()=>{ state.brand.letters[i]=inp.value; const sp=$('#brandView').children[i]; if(sp){ sp.style.color=inp.value; } pushH(); save(); };
-    box.appendChild(cell);
-  });
-}
-$('#brandText').value=state.brand.text; $('#brandText').oninput=e=>{ state.brand.text=e.target.value; renderBrand(); buildLettersUI(); pushH(); save(); };
-$('#brandSize').value=state.brand.size; $('#brandSize').oninput=e=>{ state.brand.size=+e.target.value||48; renderBrand(); pushH(); save(); };
-$('#perLetter').checked=state.brand.per; $('#perLetter').onchange=e=>{ state.brand.per=!!e.target.checked; buildLettersUI(); renderBrand(); pushH(); save(); };
-$('#lockBrand').checked=!!state.brand.locked; $('#lockBrand').onchange=e=>{ state.brand.locked=!!e.target.checked; pushH(); save(); };
+// Mode
+$('#freeMove').onchange=e=>{state.flags.freeMove=e.target.checked;save();renderCards()}
+$('#btnResetPos').onclick=()=>{state.cards.forEach(c=>{c.x=0;c.y=0});pushH();save();renderCards()}
 
-/* LOGO */
-function renderLogo(){
-  const img=$('#logoImg');
-  if(state.logo.src){ img.src=state.logo.src; img.style.display='block'; } else { img.removeAttribute('src'); img.style.display='none'; }
-  img.style.width=img.style.height=(state.logo.size||64)+'px';
-  const lb=$('#logoBox'); lb.style.left=(state.logo.pos?.x ?? 24)+'px'; lb.style.top=(state.logo.pos?.y ?? 24)+'px'; lb.style.zIndex=11;
-}
-$('#logoFile').onchange=e=>{
-  const f=e.target.files?.[0]; if(!f) return;
-  const rd=new FileReader(); rd.onload=ev=>{ state.logo.src=ev.target.result; renderLogo(); pushH(); save(); };
-  rd.readAsDataURL(f);
-};
-$('#logoSize').value=state.logo.size; $('#logoSize').oninput=e=>{ state.logo.size=+e.target.value||64; renderLogo(); pushH(); save(); };
-$('#lockLogo').checked=!!state.logo.locked; $('#lockLogo').onchange=e=>{ state.logo.locked=!!e.target.checked; pushH(); save(); };
+// Search
+$('#searchMode').onchange=e=>{state.flags.search=e.target.value==='on';renderSearch();save()}
+$('#searchClear').onclick=()=>{$('#searchInput').value='';filterCards('')}
+$('#searchInput').oninput=e=>filterCards(e.target.value)
 
-/* SEARCH */
-function renderSearch(){
-  $('#searchBox').style.display = state.search.enabled ? '' : 'none';
-  $('#searchInput').placeholder = state.search.placeholder||'';
-  $('#searchInput').style.width = (state.search.width-120)+'px';
-  const sb=$('#searchBox'); sb.style.left=(state.search.pos?.x||260)+'px'; sb.style.top=(state.search.pos?.y||86)+'px';
-}
-$('#searchEnabled').checked=state.search.enabled; $('#searchEnabled').onchange=e=>{ state.search.enabled=!!e.target.checked; renderSearch(); pushH(); save(); };
-$('#searchText').value=state.search.placeholder; $('#searchText').oninput=e=>{ state.search.placeholder=e.target.value; renderSearch(); pushH(); save(); };
-$('#searchWidth').value=state.search.width; $('#searchWidth').oninput=e=>{ state.search.width=Math.max(260,+e.target.value||680); renderSearch(); pushH(); save(); };
-$('#lockSearch').checked=!!state.search.locked; $('#lockSearch').onchange=e=>{ state.search.locked=!!e.target.checked; pushH(); save(); };
+// Cards add/del
+$('#btnAdd').onclick=()=>{const c={id:id(),title:'Новая карточка',hint:'Подзаголовок',icon:'✨',link:'',x:30+Math.random()*400,y:180+Math.random()*280,w:260,h:120,r:state.theme.radius,shape:'rounded',border:'#E5E5E5'};state.cards.push(c);selectCard(c.id);pushH();save();renderCards()}
+$('#btnDel').onclick=()=>{if(!selId)return;state.cards=state.cards.filter(c=>c.id!==selId);selId=null;$('#cardEditor').style.display='none';pushH();save();renderCards()}
 
-/* CARDS */
-function seedCards(){
-  return [
-    {id:uid(),title:'Недвижимость',hint:'Квартиры, дома',icon:'🏠',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Транспорт',hint:'Легковые, грузовые',icon:'🚗',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Электроника',hint:'Телефоны и ПК',icon:'💻',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Работа',hint:'Вакансии',icon:'💼',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Услуги',hint:'Сервис и помощь',icon:'🛠️',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Мебель',hint:'Дом и дача',icon:'🛋️',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Одежда',hint:'Мода',icon:'👕',link:'',w:240,h:null,radius:null},
-    {id:uid(),title:'Хобби',hint:'Отдых и спорт',icon:'🚴',link:'',w:240,h:null,radius:null}
-  ];
-}
-function ensureCardPositions(){
-  const startX=24, startY=170, colW=260, rowH=170, gap=18, cols=Math.max(1,state.theme.cols|0);
-  state.cards.forEach((c,i)=>{ if(!c.pos){ const col=i%cols, row=(i/cols|0); c.pos={x:startX+col*(colW+gap), y:startY+row*(rowH+gap)}; } });
-}
+// Card editor
+const flds=['edTitle','edHint','edIcon','edLink','edW','edH','edR','edBorder']
+flds.forEach(id=>{$('#'+id).oninput=e=>{const c=cur();if(!c)return;
+  if(id==='edW')c.w=Math.max(120,Math.min(680,+e.target.value||260));
+  else if(id==='edH')c.h=Math.max(110,Math.min(420,+e.target.value||120));
+  else if(id==='edR')c.r=Math.max(0,Math.min(999,+e.target.value||16));
+  else if(id==='edTitle')c.title=e.target.value;
+  else if(id==='edHint')c.hint=e.target.value;
+  else if(id==='edIcon')c.icon=e.target.value;
+  else if(id==='edLink')c.link=e.target.value.trim();
+  else if(id==='edBorder')c.border=e.target.value;
+  pushH();save();renderCards()
+}})
+$('#edShape').onchange=e=>{const c=cur();if(!c)return;c.shape=e.target.value;pushH();save();renderCards()}
 
-let currentId=null;
+// Render
+function applyTheme(){cssVar('--bg1',state.theme.bg1);cssVar('--bg2',state.theme.bg2);cssVar('--surface',state.theme.surface);cssVar('--text',state.theme.text);cssVar('--accent',state.theme.accent);cssVar('--radius',state.theme.radius+'px');$('#grid').style.setProperty('--cols',state.theme.cols)}
+function updBrand(){const bt=$('#brandTitleX');const t=state.brand.title||'MySale';const a=t.slice(0,2),b=t.slice(2)||'';bt.innerHTML=`<span class="green">${esc(a)}</span><span class="orange">${esc(b)}</span>`;$('#brandTitle').value=t; if(state.brand.logo){$('#logoImg').src=state.brand.logo;$('#logoImg').style.display='block'}else{$('#logoImg').style.display='none'};const box=$('#brandArea');box.style.left=(state.brand.x||24)+'px';box.style.top=(state.brand.y||18)+'px'}
+function renderSearch(){$('#searchWrap').style.display=state.flags.search?'block':'none'}
 
 function renderCards(){
-  const layer=$('#cardsLayer'); layer.innerHTML=''; ensureCardPositions();
-  state.cards.forEach((c,idx)=>{
-    const el=document.createElement('div'); el.className='card'; el.dataset.id=c.id;
-    el.style.left=c.pos.x+'px'; el.style.top=c.pos.y+'px';
-    el.style.width = (c.w||240)+'px';
-    if(c.h) el.style.height = c.h+'px'; else el.style.removeProperty('height');
-    el.style.borderRadius = (c.radius!=null?c.radius:state.theme.radius)+'px';
-    el.style.zIndex = 5+idx;
-
-    el.innerHTML=`<a class="link" href="${c.link||'#'}" target="_blank" rel="noopener">🔗</a>
-      <div class="icon" contenteditable="plaintext-only">${esc(c.icon||'⬜')}</div>
-      <div class="title" contenteditable="plaintext-only">${esc(c.title||'Без названия')}</div>
-      <p class="hint" contenteditable="plaintext-only">${esc(c.hint||'')}</p>`;
-
-    el.querySelector('.title').addEventListener('input',e=>{ c.title=e.target.textContent; if(currentId===c.id) $('#ceTitle').value=c.title; save(); });
-    el.querySelector('.hint').addEventListener('input',e=>{ c.hint=e.target.textContent; if(currentId===c.id) $('#ceHint').value=c.hint; save(); });
-    el.querySelector('.icon').addEventListener('input',e=>{ c.icon=e.target.textContent||'⬜'; if(currentId===c.id) $('#ceIcon').value=c.icon; save(); });
-
-    el.querySelector('.link').addEventListener('click',e=>{
-      if(state.freeMove){ e.preventDefault(); return; }
-      if(!c.link){ e.preventDefault(); const u=prompt('URL карточки:', c.link||''); if(u!=null){ c.link=u; e.currentTarget.href=u; pushH(); save(); } }
-    });
-
-    el.addEventListener('pointerdown',()=>{ el.style.zIndex = ++Z.top; selectCard(c.id); });
-    layer.appendChild(el);
-  });
-
-  // подсветка выбранной
-  $$('.card').forEach(e=>e.classList.toggle('selected', e.dataset.id===currentId));
-  refreshCardEditor();
+  const grid=$('#grid');grid.innerHTML='';const fm=state.flags.freeMove;grid.style.position=fm?'relative':'unset';
+  state.cards.forEach(c=>{
+    const el=document.createElement('article');el.className='card shadow';if(c.shape==='circle')el.classList.add('circle');if(c.shape==='oval')el.classList.add('oval');if(c.shape==='pill')el.classList.add('pill');
+    el.style.width=(c.shape==='circle'?Math.min(c.w,c.h):c.w)+'px';el.style.height=(c.shape==='circle'?Math.min(c.w,c.h):c.h)+'px';
+    el.style.borderRadius=(c.shape==='rounded')?(c.r||state.theme.radius)+'px':(c.shape==='pill'||c.shape==='oval'||c.shape==='circle')?'999px':(c.r||state.theme.radius)+'px';
+    el.style.borderColor=c.border||'#E5E5E5';el.style.borderStyle='solid';el.style.borderWidth='1px';el.dataset.id=c.id;
+    if(fm){el.style.position='absolute';el.style.left=(c.x||0)+'px';el.style.top=(c.y||0)+'px';const drag=document.createElement('div');drag.className='handle';el.appendChild(drag);makeDrag(drag,(dx,dy)=>{c.x=Math.max(0,(c.x||0)+dx);c.y=Math.max(0,(c.y||0)+dy);el.style.left=c.x+'px';el.style.top=c.y+'px'})}
+    const corner=document.createElement('a');corner.className='corner';corner.innerHTML='🔗';corner.href=c.link||'#';corner.target='_blank';corner.rel='noopener';el.appendChild(corner);
+    const icon=document.createElement('div');icon.className='icon';icon.textContent=c.icon||'•';el.appendChild(icon);
+    const h4=document.createElement('h4');h4.textContent=c.title||'';el.appendChild(h4);
+    const p=document.createElement('p');p.textContent=c.hint||'';el.appendChild(p);
+    el.addEventListener('click',ev=>{if(state.flags.freeMove)return;if(c.link&&/^https?:\/\//i.test(c.link))window.open(c.link,'_blank','noopener')});
+    el.addEventListener('mousedown',()=>sel(c.id));grid.appendChild(el);
+  })
 }
 
-function selectCard(id){
-  currentId=id;
-  $$('.card').forEach(e=>e.classList.toggle('selected', e.dataset.id===currentId));
-  refreshCardEditor();
-}
+let selId=null; function cur(){return state.cards.find(c=>c.id===selId)}
+function sel(id){selId=id;const c=cur();if(!c){$('#cardEditor').style.display='none';return}$('#cardEditor').style.display='block';$('#edTitle').value=c.title||'';$('#edHint').value=c.hint||'';$('#edIcon').value=c.icon||'';$('#edLink').value=c.link||'';$('#edW').value=c.w||260;$('#edH').value=c.h||120;$('#edR').value=c.r||state.theme.radius||16;$('#edBorder').value=c.border||'#E5E5E5';$('#edShape').value=c.shape||'rounded'}
 
-/* Drag-n-drop */
-let Z={top:100}; let drag=null;
-function enableDrag(on){
-  const targets=[ $('#logoBox'), $('#brandBox'), $('#searchBox'), ...$$('.card') ];
-  targets.forEach(el=>{ el.classList.toggle('draggable', on); el.onpointerdown = on ? startDrag : null; });
-}
-function startDrag(e){
-  const el=e.currentTarget;
-  if(!state.freeMove) return;
-  if(el.id==='logoBox'   && state.logo.locked)   return;
-  if(el.id==='brandBox'  && state.brand.locked)  return;
-  if(el.id==='searchBox' && state.search.locked) return;
-  el.setPointerCapture(e.pointerId);
-  el.classList.add('dragging');
-  const r=el.getBoundingClientRect(); const c=$('#canvas').getBoundingClientRect();
-  drag={el, dx:e.clientX-r.left, dy:e.clientY-r.top, bounds:c};
-  el.style.zIndex = ++Z.top;
-  // выберем карточку при перетаскивании
-  if(el.classList.contains('card')) selectCard(el.dataset.id);
-}
-function onMove(e){
-  if(!drag) return;
-  const {el,dx,dy,bounds}=drag;
-  let x=e.clientX - bounds.left - dx;
-  let y=e.clientY - bounds.top  - dy;
-  x=Math.max(0, Math.min(x, bounds.width - el.offsetWidth));
-  y=Math.max(0, Math.min(y, bounds.height - el.offsetHeight));
-  el.style.left=x+'px'; el.style.top=y+'px';
-}
-function onUp(){
-  if(!drag) return;
-  const el=drag.el; el.classList.remove('dragging');
-  const pos={x:parseFloat(el.style.left)||0,y:parseFloat(el.style.top)||0};
-  if(el.id==='logoBox'){ state.logo.pos=pos; }
-  else if(el.id==='brandBox'){ state.brand.pos=pos; }
-  else if(el.id==='searchBox'){ state.search.pos=pos; }
-  else { const c=state.cards.find(k=>k.id===el.dataset.id); if(c) c.pos=pos; }
-  drag=null; pushH(); save();
-}
-window.addEventListener('pointermove', onMove);
-window.addEventListener('pointerup', onUp);
+function renderAll(){ $('#lockBrand').checked=!!state.brand.lockBrand;$('#lockLogo').checked=!!state.brand.lockLogo;$('#brandTitle').value=state.brand.title||'MySale';$('#clrBg1').value=state.theme.bg1;$('#clrBg2').value=state.theme.bg2;$('#clrSurface').value=state.theme.surface;$('#clrText').value=state.theme.text;$('#clrAccent').value=state.theme.accent;$('#radius').value=state.theme.radius;$('#cols').value=state.theme.cols;$('#freeMove').checked=!!state.flags.freeMove;$('#searchMode').value=state.flags.search?'on':'off';applyTheme();updBrand();renderSearch();renderCards()}
 
-/* Panel bindings */
-function applyPanel(){
-  $('#bg').value=state.theme.bg; $('#surface').value=state.theme.surface; $('#textC').value=state.theme.text; $('#accent').value=state.theme.accent;
-  $('#radius').value=state.theme.radius; $('#cols').value=state.theme.cols;
-  $('#brandText').value=state.brand.text; $('#brandSize').value=state.brand.size; $('#perLetter').checked=!!state.brand.per;
-  $('#logoSize').value=state.logo.size; $('#lockBrand').checked=!!state.brand.locked; $('#lockLogo').checked=!!state.logo.locked;
-  $('#searchEnabled').checked=state.search.enabled; $('#searchText').value=state.search.placeholder; $('#searchWidth').value=state.search.width; $('#lockSearch').checked=!!state.search.locked;
-  $('#freeMove').checked=state.freeMove;
-}
-$('#freeMove').onchange=e=>{ state.freeMove=!!e.target.checked; enableDrag(state.freeMove); save(); };
-$('#btnResetPos').onclick=()=>{
-  state.brand.pos={x:120,y:26}; state.logo.pos={x:24,y:24}; state.search.pos={x:260,y:86};
-  state.cards.forEach(c=>c.pos=null);
-  pushH(); renderAll(); save(); tip('Позиции сброшены');
-};
-
-/* Card editor */
-function refreshCardEditor(){
-  const has = !!currentId;
-  $('#btnDelCard').disabled=!has;
-  const box = $('#cardEditor'); box.style.display = has ? 'block' : 'none';
-  if(!has) return;
-  const c = state.cards.find(x=>x.id===currentId); if(!c) return;
-
-  $('#ceIcon').value=c.icon||'';  $('#ceTitle').value=c.title||'';  $('#ceHint').value=c.hint||'';  $('#ceLink').value=c.link||'';
-  $('#ceW').value=c.w||240;  $('#ceH').value=c.h||'';  $('#ceRadius').value=(c.radius!=null?c.radius:state.theme.radius);
-
-  $('#ceIcon').oninput = e=>{ c.icon=e.target.value; renderCards(); pushH(); save(); };
-  $('#ceTitle').oninput= e=>{ c.title=e.target.value; renderCards(); pushH(); save(); };
-  $('#ceHint').oninput = e=>{ c.hint=e.target.value; renderCards(); pushH(); save(); };
-  $('#ceLink').oninput = e=>{ c.link=e.target.value; pushH(); save(); };
-  $('#ceW').oninput    = e=>{ c.w=Math.max(160,+e.target.value||240); renderCards(); pushH(); save(); };
-  $('#ceH').oninput    = e=>{ c.h= e.target.value? Math.max(110,+e.target.value) : null; renderCards(); pushH(); save(); };
-  $('#ceRadius').oninput = e=>{ c.radius = +e.target.value; renderCards(); pushH(); save(); };
-}
-
-$('#btnAddCard').onclick=()=>{
-  const c={id:uid(),title:'Новая карточка',hint:'Подпись',icon:'🧩',link:'',w:240,h:null,radius:null,pos:null};
-  state.cards.push(c); pushH(); renderCards(); save(); tip('Карточка добавлена');
-};
-$('#btnDelCard').onclick=()=>{
-  if(!currentId) return;
-  const i=state.cards.findIndex(x=>x.id===currentId);
-  if(i>-1){ state.cards.splice(i,1); currentId=null; pushH(); renderCards(); save(); tip('Удалено'); }
-};
-
-/* Save / Load / Import / Export */
-function save(){ localStorage.setItem(LSKEY, JSON.stringify(state)); }
-function load(){ try{ return JSON.parse(localStorage.getItem(LSKEY)||'null') }catch(e){ return null } }
-$('#btnSave').onclick=()=>{ save(); tip('Сохранено'); };
-$('#btnExport').onclick=()=>{
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));
-  a.download='mysale_admin_state.json'; a.click();
-};
-$('#btnImport').onclick=()=>$('#fileImport').click();
-$('#fileImport').onchange=e=>{
-  const f=e.target.files?.[0]; if(!f) return;
-  const rd=new FileReader();
-  rd.onload=ev=>{ try{ Object.assign(state, JSON.parse(ev.target.result)); pushH(); renderAll(); save(); tip('Импортировано'); }catch(err){ alert('Неверный JSON'); } };
-  rd.readAsText(f);
-};
-
-/* Render */
-function renderAll(){
-  applyTheme(); applyPanel();
-  renderLogo(); renderBrand(); buildLettersUI();
-  renderSearch();
-  renderCards();
-  enableDrag(state.freeMove);
-}
-function ensureInit(){
-  if(!state._seeded){ ensureCardPositions(); state._seeded=true; pushH(); save(); }
-}
-ensureInit(); renderAll();
+// brand drag
+(function(){const host=$('#brandArea');makeDrag($('#brandHandle'),(dx,dy)=>{if(state.brand.lockBrand&&state.brand.lockLogo)return;state.brand.x=Math.max(0,(state.brand.x||0)+dx);state.brand.y=Math.max(0,(state.brand.y||0)+dy);host.style.left=state.brand.x+'px';host.style.top=state.brand.y+'px'})})();
+function makeDrag(target,cb){let sx=0,sy=0,drag=false;target.addEventListener('mousedown',e=>{drag=true;sx=e.clientX;sy=e.clientY;e.preventDefault()});window.addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-sx,dy=e.clientY-sy;sx=e.clientX;sy=e.clientY;cb(dx,dy)});window.addEventListener('mouseup',()=>{if(drag){drag=false;pushH();save()}})}
+function filterCards(q){q=(q||'').trim().toLowerCase(); $$('#grid .card').forEach(el=>{const c=state.cards.find(x=>x.id===el.dataset.id);const str=(c.title+' '+c.hint).toLowerCase();el.style.display=q?(str.includes(q)?'':''):''})}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[m]))}
+applyTheme();renderAll();
 </script>
 </body>
 </html>
