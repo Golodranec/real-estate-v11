@@ -1,443 +1,566 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MySale — витрина (админ v3)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MySale — админка витрины (полная)</title>
 <style>
-  :root{
-    --bg:#f7e2ca;
-    --accent:#f47b0a;
-    --card:#fff4e8;
-    --text:#2b2b2b;
-    --radius:18px;
-  }
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-  }
-  .toolbar{
-    position:sticky;top:0;z-index:10;
-    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
-    padding:14px 16px;
-    background:linear-gradient(180deg,#fff8f0,rgba(255,248,240,.8));
-    border-bottom:1px solid #f0d6b9;
-    backdrop-filter:saturate(1.1) blur(4px);
-  }
-  .toolbar .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .btn{border:0;background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.06);
-       border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:600}
-  .btn:hover{background:#fff7ef}
-  .switch{display:inline-flex;gap:8px;align-items:center;font-weight:600}
-  .switch input{accent-color:var(--accent);transform:scale(1.1)}
+:root{
+  --bg:#F8EAD6;
+  --surface:#FFF5E6;
+  --primary:#F27C14;
+  --text:#3A2A1A;
+  --card-radius:16px;
+  --gap:18px;
+  --shadow:0 8px 24px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+/* layout */
+.wrapper{display:grid; grid-template-columns:340px 1fr; gap:24px; padding:20px;}
+@media (max-width:1000px){.wrapper{grid-template-columns:1fr}}
+.panel{
+  background:var(--surface);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+h2{margin:0 0 12px 0; font-size:18px}
+label{font-size:12px; display:block; opacity:.7; margin:12px 0 6px}
+input[type="text"],input[type="number"],input[type="url"],input[type="color"],textarea,select{
+  width:100%; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:10px 12px; background:#fff; outline:none;
+}
+textarea{min-height:72px; resize:vertical}
+.row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+button{
+  background:var(--primary); color:#fff; border:0; border-radius:10px; padding:10px 14px; cursor:pointer;
+  box-shadow:0 2px 0 rgba(0,0,0,.08); font-weight:600;
+}
+button.secondary{background:#fff; color:var(--text); border:1px solid rgba(0,0,0,.1)}
+button.ghost{background:transparent; border:1px dashed rgba(0,0,0,.25); color:var(--text)}
+small.help{display:block; opacity:.6; margin-top:6px}
+.grid{
+  display:grid;
+  gap:var(--gap);
+  grid-template-columns:repeat(var(--cols,4),1fr);
+}
+@media (max-width:1200px){.grid{grid-template-columns:repeat(var(--cols,3),1fr)}}
+@media (max-width:900px){.grid{grid-template-columns:repeat(var(--cols,2),1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:repeat(var(--cols,1),1fr)}}
+.card{
+  background:#fff;
+  border-radius:var(--card-radius);
+  box-shadow:var(--shadow);
+  padding:18px;
+  user-select:none;
+  cursor:grab;
+}
+.card.dragging{opacity:.5}
+.card .icon{font-size:42px; line-height:1; margin-bottom:10px}
+.card .title{font-size:18px; font-weight:800; margin:0 0 6px}
+.card .sub{opacity:.6; font-size:13px; margin:0}
+.toolbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px
+}
+.brand{
+  display:flex; align-items:center; gap:12px;
+}
+.brand .logo{width:48px; height:48px; border-radius:14px; overflow:hidden; background:transparent; display:grid; place-items:center; box-shadow:var(--shadow)}
+.brand .logo img{max-width:100%; max-height:100%; object-fit:contain}
+.brand .text{font-size:28px; font-weight:900; letter-spacing:.2px}
+.kbd{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#00000010; padding:2px 6px; border-radius:6px}
+.list{display:flex; flex-direction:column; gap:10px; max-height:36vh; overflow:auto}
+.item{background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:10px; display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center}
+.item .dot{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid; place-items:center; color:#fff; font-weight:900}
+.item button{padding:6px 10px}
+.footer{opacity:.65; font-size:12px; margin-top:8px}
+hr{border:0; border-top:1px solid rgba(0,0,0,.08); margin:14px 0}
+input[type="file"]{border:0}
+.switch{display:flex; align-items:center; gap:8px}
+.switch input{accent-color:var(--primary)}
+.badge{font-size:12px; background:#0000000f; padding:3px 8px; border-radius:999px}
 
-  .page{max-width:1120px;margin:28px auto;padding:0 16px}
-  /* LOGO */
-  .logo-wrap{display:flex;gap:14px;align-items:center;margin:8px 0 18px}
-  .logo-img{
-    width:56px;height:56px;border-radius:14px;
-    background:transparent; /* важно для PNG без фона */
-    display:grid;place-items:center;overflow:hidden;
-    box-shadow:0 6px 18px rgba(0,0,0,.07);
+  .card.free .icon, .card.free .title, .card.free .sub{
+    position:absolute; cursor:grab; background:rgba(255,255,255,.6); padding:2px 6px; border-radius:8px;
   }
-  .logo-img img{max-width:100%;max-height:100%;display:block;}
 
-  .brand{display:flex;gap:2px;align-items:flex-end;flex-wrap:wrap}
-  .brand .letter{
-    font-weight:900;font-size:44px;line-height:1;
-    letter-spacing:.5px; cursor:pointer; user-select:none;
-  }
-  .brand .letter[contenteditable="true"]{outline:2px dashed rgba(0,0,0,.1);outline-offset:4px;border-radius:6px;padding:2px 4px}
-
-  .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-  @media (max-width:960px){.grid{grid-template-columns:repeat(3,1fr)}}
-  @media (max-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
-  .card{
-    position:relative;
-    border-radius:var(--radius);
-    background:var(--card);
-    padding:16px;
-    box-shadow:0 10px 20px rgba(0,0,0,.06), inset 0 0 0 1px rgba(244,123,10,.06);
-    min-height:140px;
-    overflow:hidden;
-  }
-  .card .movable{
-    position:relative; /* switches to absolute in “free move” mode */
-    display:inline-flex; gap:6px; align-items:center;
-    padding:3px 6px;
-    border-radius:8px;
-  }
-  .card .movable[data-type="icon"]{font-size:34px}
-  .card .movable[data-type="title"]{font-weight:800;font-size:18px}
-  .card .movable[data-type="hint"]{font-size:12px;opacity:.7}
-
-  .card.free .movable{
-    position:absolute; 
-    cursor:grab;
-    background:rgba(255,255,255,.7);
-    box-shadow:0 3px 10px rgba(0,0,0,.06);
-  }
-  .ghost{opacity:.6}
-  .small{font-size:12px;opacity:.8}
-  .stack-ind{margin-left:8px;font-size:12px;opacity:.7}
-
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .col{display:flex;flex-direction:column;gap:6px}
-  input[type="text"],input[type="url"],input[type="number"]{
-    padding:8px 10px;border-radius:10px;border:1px solid #efd0b0;background:#fff;min-width:180px
-  }
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;
-        background:#fff;border:1px solid #efd0b0}
-  .colorbox{display:flex;align-items:center;gap:6px}
-  .colorbox input[type="color"]{width:34px;height:34px;border:0;padding:0;background:none}
-  .colorbox input[type="text"]{width:88px}
-  .muted{opacity:.7}
 </style>
 </head>
 <body>
-  <div class="toolbar">
-    <div class="group">
-      <button class="btn" id="undoBtn">Undo</button>
-      <button class="btn" id="redoBtn">Redo</button>
-      <span class="stack-ind" id="stackInfo"></span>
-    </div>
-    <div class="group">
-      <label class="switch"><input type="checkbox" id="moveToggle"> Свободное перемещение</label>
-    </div>
-    <div class="group">
-      <label class="chip">Фон HEX <input id="bgHex" type="text" value="#f7e2ca"></label>
-      <span class="muted">или</span>
-      <label class="chip">RGB 
-        <input id="bgR" type="number" min="0" max="255" value="247">
-        <input id="bgG" type="number" min="0" max="255" value="226">
-        <input id="bgB" type="number" min="0" max="255" value="202">
-      </label>
-    </div>
-  </div>
-
-  <div class="page">
-    <div class="logo-wrap">
-      <div class="logo-img">
-        <img id="logoImg" alt="logo">
-      </div>
-      <div class="col">
-        <div class="row">
-          <label class="chip">PNG логотип
-            <input id="logoFile" type="file" accept=".png,.svg,.webp,.jpg,.jpeg">
-          </label>
-          <label class="chip">Размер <input id="logoSize" type="number" min="28" max="160" value="56">px</label>
-          <span class="muted">Фон логотипа у контейнера прозрачный.</span>
+  <div class="wrapper">
+    <!-- LEFT: SETTINGS -->
+    <div class="panel" id="settings">
+      <div class="toolbar">
+        <div class="brand">
+          <div class="logo"><img id="logoImg" alt=""></div>
+          <div class="text" id="brandText">mysale</div>
         </div>
-        <div class="row brand" id="brand">
-          <!-- буквы бренда (отдельно управляемые) -->
+        <div class="actions">
+          <button id="saveBtn">Сохранить</button>
+          <button class="secondary" id="loadBtn">Загрузить</button>
         </div>
-        <div id="brandColors" class="row"></div>
       </div>
+
+      <h2>Бренд</h2>
+      <div class="actions"><button class="secondary" id="toggleLetterEditor">Пер-буквенные цвета</button></div>
+      <div id="letterEditor" class="list" style="display:none"></div>
+      <label>Название</label>
+      <input type="text" id="inpBrandText" placeholder="mysale">
+      <div class="row">
+        <div>
+          <label>Размер текста (px)</label>
+          <input type="number" id="inpBrandSize" min="20" max="120" value="40">
+        </div>
+        <div>
+          <label>Загрузить логотип (PNG/SVG/JPG)</label>
+          <input type="file" id="inpLogo" accept="image/*">
+          <small class="help">Файл хранится локально (localStorage)</small>
+        </div>
+      </div>
+
+      <hr>
+      <h2>Тема</h2>
+      <div class="row">
+        <div>
+          <label>Фон</label>
+          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorBg"><input type="text" id="colorBgHex" placeholder="#RRGGBB" style="width:110px"></div>
+        </div>
+        <div>
+          <label>Поверхность</label>
+          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorSurface"><input type="text" id="colorSurfaceHex" placeholder="#RRGGBB" style="width:110px"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Акцент</label>
+          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorPrimary"><input type="text" id="colorPrimaryHex" placeholder="#RRGGBB" style="width:110px"></div>
+        </div>
+        <div>
+          <label>Текст</label>
+          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorText"><input type="text" id="colorTextHex" placeholder="#RRGGBB" style="width:110px"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Радиус карточек (px)</label>
+          <input type="number" id="inpRadius" min="0" max="40" value="16">
+        </div>
+        <div>
+          <label>Колонки</label>
+          <input type="number" id="inpCols" min="1" max="6" value="4">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="secondary" id="exportBtn">Экспорт JSON</button>
+        <label class="switch"><input type="file" id="importFile" hidden><button class="secondary" id="importBtn">Импорт JSON</button></label>
+        <button class="ghost" id="resetBtn">Сбросить</button>
+      </div>
+
+      <hr>
+      <h2>Карточки</h2>
+      <div class="actions">
+        <button id="addCard">+ Добавить</button>
+        <span class="badge">Перетаскивайте карточки для сортировки</span>
+      </div>
+      <div class="list" id="cardsList"></div>
+      <div class="footer">Хранение данных в <span class="kbd">localStorage</span>. Экспортируйте JSON для резервной копии.</div>
     </div>
 
-    <div class="grid" id="grid"></div>
+    <!-- RIGHT: PREVIEW -->
+    <div class="panel">
+      <div class="toolbar">
+        <div class="brand">
+          <div class="logo"><img id="logoImgPreview" alt=""></div>
+          <div class="text" id="brandTextPreview">mysale</div>
+        </div>
+        <div class="badge">Предпросмотр</div>
+          <label class="switch"><input type="checkbox" id="freeMoveToggle"> Свободное перемещение</label>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
   </div>
 
 <script>
-const $ = (s,root=document)=>root.querySelector(s);
-const $$ = (s,root=document)=>Array.from(root.querySelectorAll(s));
+const key = 'mysale_vitrine_state_v1';
 
-// ====== STATE & UNDO/REDO ======
-const STORAGE_KEY = "mysale_admin_v3_state";
-let state = {
-  bg:"#f7e2ca",
-  brand:[{ch:"m",color:"#ff7a00"},{ch:"y",color:"#ff7a00"},{ch:"s",color:"#ff7a00"},{ch:"a",color:"#ff7a00"},{ch:"l",color:"#ff7a00"},{ch:"e",color:"#ff7a00"}],
-  logo:{src:"", size:56},
-  freeMove:false,
-  cards:[
-    {icon:"🏠",title:"Недвижимость",hint:"Real Estate", x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"🚗",title:"Транспорт",   hint:"Cars",        x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"💻",title:"Электроника", hint:"Electronics",x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"🧰",title:"Услуги",      hint:"Services",   x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"🛋",title:"Мебель",      hint:"Furniture",  x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"👕",title:"Мода",        hint:"Fashion",    x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"🚲",title:"Хобби",       hint:"Hobbies",    x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
-    {icon:"💼",title:"Работа",      hint:"Jobs",       x:{icon:12,title:62,hint:62}, y:{icon:16,title:16,hint:44}, href:"#"},
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+const state = {
+  brand: { text:'mysale', size:40, logo:'' },
+  theme: { bg:'#F8EAD6', surface:'#FFF5E6', primary:'#F27C14', text:'#3A2A1A', radius:16, cols:4 },
+  cards: [
+    {icon:'🏠', title:'Недвижимость', sub:'Продажа, аренда', url:'#', newTab:true},
+    {icon:'🚗', title:'Транспорт', sub:'Авто, мото, запчасти', url:'#', newTab:true},
+    {icon:'💻', title:'Электроника', sub:'Телефоны, ноутбуки', url:'#', newTab:true},
+    {icon:'💼', title:'Работа', sub:'Вакансии, резюме', url:'#', newTab:true},
+    {icon:'🛠️', title:'Услуги', sub:'Сервис, ремонт', url:'#', newTab:true},
+    {icon:'🛋️', title:'Мебель', sub:'Дом и дача', url:'#', newTab:true},
+    {icon:'👕', title:'Мода', sub:'Одежда и обувь', url:'#', newTab:true},
+    {icon:'🚴', title:'Хобби', sub:'Спорт и отдых', url:'#', newTab:true},
   ]
 };
 
-// Undo/Redo stacks
-let undoStack = [];
-let redoStack = [];
-function pushHistory(){
-  undoStack.push(JSON.stringify(state));
-  redoStack.length = 0; // clear redo on new action
-  updateStackInfo();
+// ---------- persistence ----------
+function saveToLS(){
+  localStorage.setItem(key, JSON.stringify(state));
+  alert('Сохранено в браузере (localStorage).');
 }
-function undo(){
-  if(!undoStack.length) return;
-  redoStack.push(JSON.stringify(state));
-  state = JSON.parse(undoStack.pop());
-  save(); render();
-  updateStackInfo();
-}
-function redo(){
-  if(!redoStack.length) return;
-  undoStack.push(JSON.stringify(state));
-  state = JSON.parse(redoStack.pop());
-  save(); render();
-  updateStackInfo();
-}
-function updateStackInfo(){
-  $('#stackInfo').textContent = `↶ ${undoStack.length} · ${redoStack.length} ↷`;
-}
-
-// ====== STORAGE ======
-function load(){
-  try{
-    const s = localStorage.getItem(STORAGE_KEY);
-    if(s) state = {...state, ...JSON.parse(s)};
-  }catch(e){console.warn(e)}
-}
-function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-// ====== HELPERS ======
-function hexToRgb(hex){
-  hex = hex.replace('#','');
-  if(hex.length===3) hex = hex.split('').map(x=>x+x).join('');
-  const int = parseInt(hex,16);
-  return {r:(int>>16)&255,g:(int>>8)&255,b:int&255};
-}
-function rgbToHex(r,g,b){
-  const toHex=x=>('0'+Math.max(0,Math.min(255,x)).toString(16)).slice(-2);
-  return '#'+toHex(r)+toHex(g)+toHex(b);
-}
-
-// ====== RENDER ======
-function render(){
-  // bg
-  document.documentElement.style.setProperty('--bg', state.bg);
-  const {r,g,b} = hexToRgb(state.bg);
-  bgHex.value = state.bg.toLowerCase();
-  bgR.value=r; bgG.value=g; bgB.value=b;
-
-  // move mode
-  $('#moveToggle').checked = !!state.freeMove;
-
-  // logo
-  if(state.logo.src){
-    $('#logoImg').src = state.logo.src;
-  }else{
-    $('#logoImg').src = '';
-  }
-  $('.logo-img').style.width = state.logo.size+'px';
-  $('.logo-img').style.height = state.logo.size+'px';
-
-  // brand
-  const brand = $('#brand');
-  brand.innerHTML='';
-  state.brand.forEach((b,i)=>{
-    const span = document.createElement('span');
-    span.className='letter';
-    span.style.color=b.color;
-    span.textContent=b.ch;
-    span.dataset.index=i;
-    span.title='Кликните 2 раза, чтобы редактировать букву';
-    span.addEventListener('dblclick',()=>{
-      span.contentEditable = "true";
-      span.focus();
-    });
-    span.addEventListener('blur',()=>{
-      span.contentEditable = "false";
-      const ch = span.textContent.trim().slice(0,1)||'·';
-      if(state.brand[i].ch!==ch){ pushHistory(); state.brand[i].ch=ch; save(); }
-      span.textContent = state.brand[i].ch;
-    });
-    brand.appendChild(span);
-  });
-
-  // brand color controls
-  const bc = $('#brandColors'); bc.innerHTML='';
-  state.brand.forEach((b,i)=>{
-    const box = document.createElement('label');
-    box.className='colorbox';
-    box.innerHTML = `
-      <span class="small">Буква ${i+1}</span>
-      <input type="color" value="${b.color}">
-      <input type="text" value="${b.color.toLowerCase()}">
-    `;
-    const [picker,hex] = box.querySelectorAll('input');
-    picker.addEventListener('input',e=>{
-      pushHistory();
-      state.brand[i].color = e.target.value;
-      save(); render();
-    });
-    hex.addEventListener('change',e=>{
-      let v = e.target.value.trim();
-      if(!/^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) { e.target.value = state.brand[i].color; return; }
-      if(v[0]!=='#') v = '#'+v;
-      pushHistory();
-      state.brand[i].color = v;
-      save(); render();
-    });
-    bc.appendChild(box);
-  });
-
-  // cards
-  const grid = $('#grid'); grid.innerHTML='';
-  state.cards.forEach((c,idx)=>{
-    const card = document.createElement('div');
-    card.className='card'+(state.freeMove?' free':'');
-
-    const icon = document.createElement('div');
-    icon.className='movable'; icon.dataset.type='icon'; icon.textContent=c.icon;
-    const title = document.createElement('div');
-    title.className='movable'; title.dataset.type='title'; title.textContent=c.title;
-    title.contentEditable = "true";
-    title.addEventListener('blur', ()=>{ 
-      const v = title.textContent.trim(); if(v!==c.title){ pushHistory(); c.title=v; save(); }
-    });
-    const hint = document.createElement('div');
-    hint.className='movable'; hint.dataset.type='hint'; hint.textContent=c.hint;
-    hint.contentEditable="true";
-    hint.addEventListener('blur', ()=>{
-      const v = hint.textContent.trim(); if(v!==c.hint){ pushHistory(); c.hint=v; save(); }
-    });
-
-    // position for free move
-    ['icon','title','hint'].forEach(k=>{
-      const el = (k==='icon'?icon:k==='title'?title:hint);
-      if(state.freeMove){
-        el.style.left = (c.x?.[k]??12)+'px';
-        el.style.top  = (c.y?.[k]??12)+'px';
-      }else{
-        el.style.left=''; el.style.top='';
-      }
-    });
-
-    // dragging in free move mode
-    if(state.freeMove){
-      [icon,title,hint].forEach(el=>{
-        el.draggable=true;
-        el.addEventListener('dragstart',ev=>{
-          el.classList.add('ghost');
-          const rect = card.getBoundingClientRect();
-          const r2 = el.getBoundingClientRect();
-          ev.dataTransfer.setData('text/plain', JSON.stringify({
-            type: el.dataset.type,
-            dx: ev.clientX - r2.left,
-            dy: ev.clientY - r2.top,
-            rect: {x:rect.left,y:rect.top}
-          }));
-        });
-        el.addEventListener('dragend',()=>el.classList.remove('ghost'));
-      });
-      card.addEventListener('dragover',ev=>ev.preventDefault());
-      card.addEventListener('drop',ev=>{
-        ev.preventDefault();
-        const data = JSON.parse(ev.dataTransfer.getData('text/plain'));
-        const type = data.type;
-        const x = ev.clientX - data.rect.x - data.dx;
-        const y = ev.clientY - data.rect.y - data.dy;
-        // clamp
-        const cr = card.getBoundingClientRect();
-        const maxX = cr.width - 20, maxY = cr.height - 20;
-        pushHistory();
-        c.x[type] = Math.max(0,Math.min(maxX, Math.round(x)));
-        c.y[type] = Math.max(0,Math.min(maxY, Math.round(y)));
-        save(); render();
-      });
+function loadFromLS(){
+  const s = localStorage.getItem(key);
+  if(!s) return;
+  try{ 
+    const obj = JSON.parse(s);
+    if(obj && obj.brand && obj.theme && Array.isArray(obj.cards)){
+      Object.assign(state.brand, obj.brand);
+      Object.assign(state.theme, obj.theme);
+      state.cards.splice(0,state.cards.length, ...obj.cards);
     }
-
-    // link
-    const link = document.createElement('a');
-    link.href = c.href || '#';
-    link.target = "_blank";
-    link.className='small'; link.textContent='Ссылка';
-    link.style.position='absolute'; link.style.right='12px'; link.style.bottom='10px';
-
-    // reorder support: drag whole card
-    card.draggable=true;
-    card.addEventListener('dragstart',e=>{
-      e.dataTransfer.setData('text/plain', idx);
-      setTimeout(()=>card.classList.add('ghost'),0);
-    });
-    card.addEventListener('dragend',()=>card.classList.remove('ghost'));
-    card.addEventListener('dragover',e=>e.preventDefault());
-    card.addEventListener('drop',e=>{
-      e.preventDefault();
-      const from = +e.dataTransfer.getData('text/plain');
-      const to = idx;
-      if(from===to) return;
-      pushHistory();
-      const item = state.cards.splice(from,1)[0];
-      state.cards.splice(to,0,item);
-      save(); render();
-    });
-
-    card.appendChild(icon);
-    card.appendChild(title);
-    card.appendChild(hint);
-    card.appendChild(link);
-    grid.appendChild(card);
-  });
+  }catch(e){console.error(e)}
 }
 
-// ====== UI BINDINGS ======
-$('#undoBtn').addEventListener('click',undo);
-$('#redoBtn').addEventListener('click',redo);
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mysale_vitrine_state.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
-$('#moveToggle').addEventListener('change',e=>{
-  pushHistory();
-  state.freeMove = e.target.checked;
-  save(); render();
-});
-
-// background (HEX + RGB sync)
-const bgHex = $('#bgHex'), bgR=$('#bgR'), bgG=$('#bgG'), bgB=$('#bgB');
-bgHex.addEventListener('change',e=>{
-  let v = e.target.value.trim();
-  if(!/^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(v)) { e.target.value = state.bg; return; }
-  if(v[0]!=='#') v = '#'+v;
-  pushHistory();
-  state.bg=v; save(); render();
-});
-[bgR,bgG,bgB].forEach(inp=>{
-  inp.addEventListener('input',()=>{
-    const r=+bgR.value||0, g=+bgG.value||0, b=+bgB.value||0;
-    pushHistory();
-    state.bg = rgbToHex(r,g,b);
-    save(); render();
-  });
-});
-
-// logo upload & size
-$('#logoFile').addEventListener('change',e=>{
-  const f = e.target.files?.[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    pushHistory();
-    state.logo.src = String(ev.target.result);
-    save(); render();
+function importJSON(file){
+  const fr = new FileReader();
+  fr.onload = e=>{
+    try{
+      const obj = JSON.parse(e.target.result);
+      if(obj.brand && obj.theme && Array.isArray(obj.cards)){
+        Object.assign(state.brand, obj.brand);
+        Object.assign(state.theme, obj.theme);
+        state.cards = obj.cards;
+        renderAll();
+      }else alert('Неверный формат JSON');
+    }catch(err){ alert('Ошибка JSON: '+err.message) }
   };
-  reader.readAsDataURL(f);
-});
-$('#logoSize').addEventListener('input',e=>{
-  pushHistory();
-  state.logo.size = Math.max(28, Math.min(160, +e.target.value||56));
-  save(); render();
+  fr.readAsText(file);
+}
+
+// ---------- helpers ----------
+function applyTheme(){
+  document.documentElement.style.setProperty('--bg', state.theme.bg);
+  document.documentElement.style.setProperty('--surface', state.theme.surface);
+  document.documentElement.style.setProperty('--primary', state.theme.primary);
+  document.documentElement.style.setProperty('--text', state.theme.text);
+  document.documentElement.style.setProperty('--card-radius', state.theme.radius+'px');
+  document.querySelector('.panel:nth-child(2) .grid').style.setProperty('--cols', state.theme.cols);
+}
+
+function setBrand(){
+  $('#brandText').textContent = state.brand.text;
+  $('#brandText').style.fontSize = state.brand.size+'px';
+  $('#brandTextPreview').textContent = state.brand.text;
+  $('#brandTextPreview').style.fontSize = state.brand.size+'px';
+  $('#logoImg').src = state.brand.logo || '';
+  $('#logoImgPreview').src = state.brand.logo || '';
+  $('#inpBrandText').value = state.brand.text;
+  $('#inpBrandSize').value = state.brand.size;
+}
+
+function updateInputs(){
+  $('#colorBg').value = state.theme.bg;
+  $('#colorSurface').value = state.theme.surface;
+  $('#colorPrimary').value = state.theme.primary;
+  $('#colorText').value = state.theme.text;
+  $('#inpRadius').value = state.theme.radius;
+  $('#inpCols').value = state.theme.cols;
+}
+
+function createCardEl(card, idx){
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.draggable = true;
+  el.innerHTML = `
+    <div class="icon">${card.icon||'📦'}</div>
+    <h3 class="title">${card.title||'Без названия'}</h3>
+    <p class="sub">${card.sub||''}</p>
+  `;
+  if(card.bg) el.style.background = card.bg;
+  if(card.color) el.style.color = card.color;
+  // click
+  el.addEventListener('click', e=>{
+    if(card.url){
+      if(card.newTab) window.open(card.url, '_blank');
+      else location.href = card.url;
+    }
+  });
+  // drag & drop
+  el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', idx); el.classList.add('dragging'); });
+  el.addEventListener('dragend', e=>{ el.classList.remove('dragging'); });
+  el.addEventListener('dragover', e=>{ e.preventDefault(); });
+  el.addEventListener('drop', e=>{
+    e.preventDefault();
+    const from = +e.dataTransfer.getData('text/plain');
+    const to = idx;
+    if(from===to) return;
+    const [item] = state.cards.splice(from,1);
+    state.cards.splice(to,0,item);
+    renderAll();
+  });
+  return el;
+}
+
+function renderGrid(){
+  const grid = $('#grid');
+  grid.innerHTML='';
+  state.cards.forEach((c,i)=> grid.appendChild(createCardEl(c,i)));
+}
+
+function renderCardsList(){
+  const list = $('#cardsList');
+  list.innerHTML='';
+  state.cards.forEach((c,i)=>{
+    const it = document.createElement('div');
+    it.className='item';
+    it.innerHTML = `
+      <div class="dot">${(c.icon||'🔖').slice(0,2)}</div>
+      <div>
+        <div style="font-weight:700">${c.title||'Без названия'}</div>
+        <div style="opacity:.65; font-size:12px">${c.url||'Ссылка не задана'}</div>
+      </div>
+      <div style="display:flex; gap:6px">
+        <button class="secondary" data-edit>Ред.</button>
+        <button class="ghost" data-dup title="Дублировать">Дубль</button>
+        <button class="ghost" data-del title="Удалить">✕</button>
+      </div>
+    `;
+    it.querySelector('[data-edit]').onclick=()=> openCardEditor(i);
+    it.querySelector('[data-del]').onclick=()=>{ if(confirm('Удалить карточку?')){ state.cards.splice(i,1); renderAll(); } };
+    it.querySelector('[data-dup]').onclick=()=>{ state.cards.splice(i+1,0, JSON.parse(JSON.stringify(c))); renderAll(); };
+    list.appendChild(it);
+  });
+}
+
+function openCardEditor(i){
+  const c = state.cards[i];
+  const dlg = document.createElement('div');
+  Object.assign(dlg.style,{
+    position:'fixed', inset:'0', background:'rgba(0,0,0,.35)', display:'grid', placeItems:'center', zIndex:9999
+  });
+  dlg.innerHTML = `
+  <div class="panel" style="width:min(700px, 92vw)">
+    <h2>Карточка</h2>
+    <div class="row">
+      <div><label>Иконка (эмодзи)</label><input type="text" id="eIcon" value="${c.icon||''}" placeholder="🏠"></div>
+      <div><label>Открывать в новой вкладке</label><div class="switch"><input type="checkbox" id="eTab" ${c.newTab?'checked':''}><span>target=_blank</span></div></div>
+    </div>
+    <div class="row">
+      <div><label>Заголовок</label><input type="text" id="eTitle" value="${c.title||''}"></div>
+      <div><label>Подзаголовок</label><input type="text" id="eSub" value="${c.sub||''}"></div>
+    </div>
+    <label>Ссылка (URL)</label><input type="url" id="eUrl" value="${c.url||''}" placeholder="https://...">
+    <div class="row">
+      <div><label>Цвет фона</label><input type="color" id="eBg" value="${c.bg||'#ffffff'}"></div>
+      <div><label>Цвет текста</label><input type="color" id="eColor" value="${c.color||'#000000'}"></div>
+    </div>
+    <div class="actions" style="justify-content:space-between">
+      <button class="secondary" id="close">Отмена</button>
+      <div style="display:flex; gap:8px">
+        <button class="ghost" id="remove">Удалить</button>
+        <button id="apply">Применить</button>
+      </div>
+    </div>
+  </div>`;
+  dlg.onclick = e=>{ if(e.target===dlg) dlg.remove(); };
+  dlg.querySelector('#close').onclick=()=> dlg.remove();
+  dlg.querySelector('#remove').onclick=()=>{ if(confirm('Удалить карточку?')){ state.cards.splice(i,1); dlg.remove(); renderAll(); } };
+  dlg.querySelector('#apply').onclick=()=>{
+    c.icon = dlg.querySelector('#eIcon').value || '🔖';
+    c.title = dlg.querySelector('#eTitle').value || 'Без названия';
+    c.sub = dlg.querySelector('#eSub').value || '';
+    c.url = dlg.querySelector('#eUrl').value || '';
+    c.bg = dlg.querySelector('#eBg').value || '#ffffff';
+    c.color = dlg.querySelector('#eColor').value || '#000000';
+    c.newTab = dlg.querySelector('#eTab').checked;
+    dlg.remove();
+    renderAll();
+  };
+  document.body.appendChild(dlg);
+}
+
+function renderAll(){
+  // theme
+  applyTheme();
+  // brand
+  setBrand();
+  // lists
+  renderGrid();
+  renderCardsList();
+  // inputs
+  updateInputs();
+}
+
+// ---------- bindings ----------
+$('#saveBtn').onclick = saveToLS;
+$('#loadBtn').onclick = ()=>{ loadFromLS(); renderAll(); };
+$('#exportBtn').onclick = exportJSON;
+$('#importBtn').onclick = ()=> $('#importFile').click();
+$('#importFile').onchange = e=>{ if(e.target.files[0]) importJSON(e.target.files[0]); };
+$('#resetBtn').onclick = ()=>{ if(confirm('Сбросить к заводским?')){ localStorage.removeItem(key); location.reload(); } };
+$('#addCard').onclick = ()=>{ state.cards.push({icon:'🆕', title:'Новая карточка', sub:'Описание', url:'#', newTab:true}); renderAll(); };
+
+// theme inputs
+$('#colorBg').oninput = e=>{ state.theme.bg = e.target.value; applyTheme(); };
+$('#colorSurface').oninput = e=>{ state.theme.surface = e.target.value; applyTheme(); };
+$('#colorPrimary').oninput = e=>{ state.theme.primary = e.target.value; applyTheme(); };
+$('#colorText').oninput = e=>{ state.theme.text = e.target.value; applyTheme(); };
+$('#inpRadius').oninput = e=>{ state.theme.radius = +e.target.value; applyTheme(); };
+$('#inpCols').oninput = e=>{ state.theme.cols = Math.max(1, Math.min(6, +e.target.value||4)); applyTheme(); };
+
+// brand inputs
+$('#inpBrandText').oninput = e=>{ state.brand.text = e.target.value; setBrand(); };
+$('#inpBrandSize').oninput = e=>{ state.brand.size = +e.target.value||40; setBrand(); };
+$('#inpLogo').onchange = e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const fr = new FileReader();
+  fr.onload = ev=>{ state.brand.logo = ev.target.result; setBrand(); };
+  fr.readAsDataURL(f);
+};
+
+// init
+loadFromLS();
+renderAll();
+
+// === HEX <-> normalize ===
+function normHex(v){ v=v.trim(); if(!v) return null; if(v[0]!=='#') v='#'+v; if(!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return null; if(v.length===4){v='#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]} return v.toUpperCase() }
+
+// === Per-letter logo editor state ===
+if(!state.brandLetters){ state.brandLetters = (state.brand.text||'mysale').split('').map(ch=>({ch, color:'#F27C14'})); }
+
+function buildLetterEditor(){
+  const box = document.getElementById('letterEditor');
+  box.innerHTML = '';
+  state.brandLetters.forEach((L, i)=>{
+    const row = document.createElement('div'); row.className='item';
+    row.innerHTML = `
+      <div class="dot">${L.ch}</div>
+      <div>
+        <div style="display:flex; gap:8px; align-items:center">
+          <input type="text" data-k="ch" value="${L.ch}" style="width:60px">
+          <input type="color" data-k="color" value="${L.color}">
+          <input type="text" data-k="hex" value="${L.color}" style="width:100px">
+        </div>
+      </div>
+      <div>
+        <button class="ghost" data-up>↑</button>
+        <button class="ghost" data-down>↓</button>
+        <button class="secondary" data-del>✕</button>
+      </div>`;
+    row.querySelector('[data-k="ch"]').oninput = e=>{ L.ch = (e.target.value||' ').slice(0,1) ; renderBrandLetters(); };
+    const color = row.querySelector('[data-k="color"]');
+    const hex = row.querySelector('[data-k="hex"]');
+    color.oninput = e=>{ L.color = e.target.value; hex.value=L.color; renderBrandLetters(); };
+    hex.onchange = e=>{ const v=normHex(e.target.value)||L.color; L.color=v; color.value=v; renderBrandLetters(); };
+    row.querySelector('[data-up"]').onclick = ()=>{ if(i>0){ const t=state.brandLetters.splice(i,1)[0]; state.brandLetters.splice(i-1,0,t); buildLetterEditor(); renderBrandLetters(); } };
+    row.querySelector('[data-down"]').onclick = ()=>{ if(i<state.brandLetters.length-1){ const t=state.brandLetters.splice(i,1)[0]; state.brandLetters.splice(i+1,0,t); buildLetterEditor(); renderBrandLetters(); } };
+    row.querySelector('[data-del"]').onclick = ()=>{ state.brandLetters.splice(i,1); buildLetterEditor(); renderBrandLetters(); };
+    box.appendChild(row);
+  });
+  const add = document.createElement('button'); add.className='ghost'; add.textContent='+ Буква';
+  add.onclick = ()=>{ state.brandLetters.push({ch:'*', color:'#F27C14'}); buildLetterEditor(); renderBrandLetters(); };
+  box.appendChild(add);
+}
+
+function renderBrandLetters(){
+  const t = state.brandLetters.map(x=>`<span style="color:${x.color};font-weight:900">${x.ch}</span>`).join('');
+  document.getElementById('brandText').innerHTML = t || '&nbsp;';
+  document.getElementById('brandTextPreview').innerHTML = t || '&nbsp;';
+  saveToLS();
+}
+
+document.getElementById('toggleLetterEditor').onclick = ()=>{
+  const el = document.getElementById('letterEditor');
+  el.style.display = el.style.display==='none' ? 'block':'none';
+  if(el.style.display==='block') buildLetterEditor();
+};
+
+// === Sync HEX text boxes with color pickers ===
+function syncHexInputs(){
+  colorBgHex.value = state.theme.bg;
+  colorSurfaceHex.value = state.theme.surface;
+  colorPrimaryHex.value = state.theme.primary;
+  colorTextHex.value = state.theme.text;
+}
+syncHexInputs();
+
+colorBgHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.bg=v; colorBg.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.bg; };
+colorSurfaceHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.surface=v; colorSurface.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.surface; };
+colorPrimaryHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.primary=v; colorPrimary.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.primary; };
+colorTextHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.text=v; colorText.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.text; };
+
+[colorBg,colorSurface,colorPrimary,colorText].forEach(inp=> inp.addEventListener('input', syncHexInputs));
+
+// === Free move inside cards ===
+if(!state.freeMove){ state.freeMove=false; }
+if(!state.cards.every(c=>c.x&&c.y)){ state.cards.forEach(c=>{ c.x={icon:12,title:62,sub:62}; c.y={icon:16,title:16,sub:44}; }); }
+
+const freeToggle = document.getElementById('freeMoveToggle');
+if(freeToggle){
+  freeToggle.checked = state.freeMove;
+  freeToggle.onchange = ()=>{ state.freeMove = freeToggle.checked; renderAll(); saveToLS(); };
+}
+
+const _createCardEl_orig = createCardEl;
+createCardEl = function(card, idx){
+  const el = _createCardEl_orig(card, idx);
+  if(state.freeMove){
+    el.classList.add('free');
+    const icon = el.querySelector('.icon');
+    const title = el.querySelector('.title');
+    const sub = el.querySelector('.sub');
+    const setPos=(node,k)=>{
+      if(!node) return;
+      node.style.left = (card.x?.[k]??12)+'px';
+      node.style.top  = (card.y?.[k]??12)+'px';
+      node.draggable = true;
+      node.addEventListener('dragstart',ev=>{
+        const r = el.getBoundingClientRect();
+        const r2 = node.getBoundingClientRect();
+        ev.dataTransfer.setData('text/plain', JSON.stringify({k, dx:ev.clientX-r2.left, dy:ev.clientY-r2.top, ox:r.left, oy:r.top}));
+      });
+    };
+    setPos(icon,'icon'); setPos(title,'title'); setPos(sub,'sub');
+    el.addEventListener('dragover',ev=>ev.preventDefault());
+    el.addEventListener('drop',ev=>{
+      ev.preventDefault();
+      const data = JSON.parse(ev.dataTransfer.getData('text/plain')||'{}');
+      if(!data.k) return;
+      const x = Math.round(ev.clientX - data.ox - data.dx);
+      const y = Math.round(ev.clientY - data.oy - data.dy);
+      card.x[data.k]=Math.max(0,x); card.y[data.k]=Math.max(0,y);
+      saveToLS(); renderAll();
+    });
+  }
+  return el;
+};
+
+// Simple undo/redo (snapshot before applyTheme/render heavy ops could be added globally)
+if(!window._hist){ window._hist = {u:[], r:[]}; }
+function push(){ _hist.u.push(JSON.stringify(state)); _hist.r.length=0; }
+function undo2(){ if(!_hist.u.length) return; _hist.r.push(JSON.stringify(state)); state=JSON.parse(_hist.u.pop()); renderAll(); saveToLS(); }
+function redo2(){ if(!_hist.r.length) return; _hist.u.push(JSON.stringify(state)); state=JSON.parse(_hist.r.pop()); renderAll(); saveToLS(); }
+document.addEventListener('keydown', (e)=>{
+  if(e.ctrlKey && (e.key==='z' || e.key==='Z')){ e.preventDefault(); undo2(); }
+  if(e.ctrlKey && (e.key==='y' || e.key==='Y')){ e.preventDefault(); redo2(); }
 });
 
-// bootstrap
-function init(){
-  try{
-    const s = localStorage.getItem("mysale_admin_v3_state");
-    if(s){ state = {...state, ...JSON.parse(s)} }
-  }catch(e){}
-  render(); $('#stackInfo').textContent = '↶ 0 · 0 ↷';
-}
-init();
 </script>
 </body>
 </html>
