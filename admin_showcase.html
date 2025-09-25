@@ -1,526 +1,519 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MySale — витрина (админка)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MySale — Витрина (Админ)</title>
 <style>
   :root{
-    --bg:#f7e6ca;
-    --surface:#fff5ea;
-    --text:#2a2a2a;
-    --accent:#ff7a00;
-    --card-radius:16px;
+    --bg:#F7E6CA;
+    --surface:#FFF5E6;
+    --accent:#FF7A00;
+    --text:#2A2A1A;
+    --radius:16px;
     --cols:4;
+    --gap:18px;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
     margin:0;
-    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;
+    background:var(--bg);
     color:var(--text);
-    background:linear-gradient(180deg,#f8e9d0, #f4e0c4 60%, #f0d9ba);
   }
-  .wrap{display:grid; grid-template-columns:320px 1fr; gap:16px; height:100%;}
-  aside{background:#fff; border-radius:16px; padding:14px 14px 100px; overflow:auto; box-shadow:0 10px 30px rgba(0,0,0,.06)}
-  main{background:var(--bg); border-radius:16px; padding:12px; overflow:auto; box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)}
-  h2{margin:8px 0 6px; font-size:18px}
-  h3{margin:14px 0 6px; font-size:14px; opacity:.75}
-  label{font-size:12px; display:block; margin:10px 0 4px; opacity:.8}
-  input[type="text"], input[type="number"], input[type="color"], textarea, select{
-    width:100%; padding:10px 12px; border:1px solid #e4e1da; border-radius:12px; background:#fff; outline:none;
+  .wrap{display:grid;grid-template-columns:320px 1fr;gap:20px;min-height:100%}
+  aside{
+    background:#fff8ee;
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 8px 30px rgba(0,0,0,.06);
+    margin:14px;
+    height:calc(100vh - 28px);
+    overflow:auto;
+    position:sticky;top:14px
   }
-  .row{display:grid; grid-template-columns:1fr 84px; gap:8px}
-  .row-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
-  .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid #e0dccf; background:#fff; cursor:pointer; user-select:none}
-  .btn.orange{background:var(--accent); color:#fff; border-color:transparent}
-  .btn.ghost{background:transparent}
-  .btn:active{transform:translateY(1px)}
-  .flex{display:flex; gap:8px; flex-wrap:wrap}
-  .muted{opacity:.6; font-size:12px}
-  .toolbar{position:sticky; top:0; background:#fff; z-index:10; padding-bottom:8px}
+  aside h3{margin:0 0 8px;font-size:16px}
+  aside .group{border-top:1px dashed #eadfcf;padding-top:12px;margin-top:12px}
+  label{display:block;font-size:12px;margin:12px 0 6px;color:#7a6b57}
+  input[type="text"], input[type="number"], input[type="url"], textarea, select{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #ebdfce;background:#fff;
+    outline:none;box-shadow:0 2px 0 rgba(0,0,0,.02) inset;font-size:14px
+  }
+  textarea{min-height:90px}
+  .row{display:flex;gap:10px;align-items:center}
+  .row > *{flex:1}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:0;background:var(--accent);color:#fff;padding:9px 14px;border-radius:12px;cursor:pointer;font-weight:600;box-shadow:0 6px 18px rgba(255,122,0,.25)}
+  .btn.secondary{background:#fff;color:var(--text);border:1px solid #eadfcf;box-shadow:none}
+  .toolbar{display:flex;gap:10px;margin:8px 0 0;flex-wrap:wrap}
+  #header{
+    display:flex;justify-content:space-between;align-items:center;padding:18px 22px;margin:14px 14px 0;border-radius:18px;
+    background:linear-gradient(180deg, var(--surface), #fff7ec);
+    box-shadow:0 8px 30px rgba(0,0,0,.05);
+    position:sticky;top:0;z-index:2
+  }
+  .brandBox{display:flex;align-items:center;gap:12px;position:relative}
+  #brandName{font-size:42px;font-weight:800;letter-spacing:.5px;display:inline-flex;gap:2px;line-height:1}
+  #brandName span{display:inline-block}
+  #logo{width:52px;height:52px;object-fit:contain}
+  .canvas{
+    padding:20px;margin:18px;min-height:calc(100vh - 200px);
+  }
   .grid{
-    --gap:14px;
-    display:grid; gap:var(--gap);
-    grid-template-columns:repeat(var(--cols), minmax(220px,1fr));
-    align-content:start; padding:12px;
+    display:grid;grid-template-columns:repeat(var(--cols), minmax(220px,1fr));gap:var(--gap);
+    position:relative;
   }
   .card{
-    background:var(--surface);
-    border-radius:var(--card-radius);
-    padding:14px;
-    box-shadow:0 12px 24px rgba(0,0,0,.05);
-    min-height:110px;
-    position:relative;
-    transition:box-shadow .2s, transform .15s;
+    background:var(--surface);border-radius:var(--radius);
+    box-shadow:0 15px 30px rgba(0,0,0,.08);
+    padding:18px;position:relative;transition:box-shadow .15s, transform .15s;
+    user-select:text
   }
-  .card:hover{box-shadow:0 16px 26px rgba(0,0,0,.08)}
-  .pill{height:36px; border-radius:18px; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,.08); display:flex; align-items:center; padding:0 12px; gap:10px}
-  .logo-img{width:44px; height:44px; object-fit:contain; display:block; background:transparent}
-  .brand-wrap{display:flex; align-items:center; gap:10px}
-  .brand{font-weight:800; font-size:44px; letter-spacing:.5px; display:inline-flex; gap:2px; line-height:1}
-  .brand span{display:inline-block}
-  .draggable{cursor:grab}
-  .dragging{opacity:.85; cursor:grabbing}
-  .movable main{position:relative}
-  .movable .card.abs{position:absolute; margin:0; transform:translate(-50%,-50%)}
-  .note{padding:10px 12px; border-radius:10px; background:#fff7e8; border:1px dashed #f6cc8f; font-size:12px}
-  .inline{display:inline-flex; align-items:center; gap:6px}
-  .hexrow{display:grid; grid-template-columns:1fr 90px; gap:6px}
-  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
-  .small{font-size:12px}
+  .card:hover{box-shadow:0 18px 40px rgba(0,0,0,.12);transform:translateY(-1px)}
+  .card .title{font-weight:800;margin:6px 0;font-size:18px;outline:none}
+  .card .hint{font-size:13px;color:#7a6b57;margin:0;outline:none}
+  .card .icon{font-size:28px}
+  .linkBadge{
+    position:absolute;top:10px;right:10px;background:#fff;border:1px solid #eadfcf;border-radius:999px;padding:4px 9px;font-size:12px;color:#7a6b57;cursor:pointer
+  }
+  .freemove .grid{position:relative}
+  .freemove .card,
+  .freemove .brandBox{position:absolute;cursor:move}
+  .pill{display:inline-flex;gap:6px;background:#fff;border:1px solid #eadfcf;padding:6px 9px;border-radius:999px;font-size:12px;align-items:center}
+  .pill input[type="color"]{border:0;padding:0;width:22px;height:22px;background:none}
+  .colorRow{display:flex;gap:8px;align-items:center}
+  .colorRow input[type="text"]{width:92px}
+  .letters{display:flex;flex-wrap:wrap;gap:6px}
+  .letters .letter{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadfcf;padding:6px;border-radius:10px}
+  .letters .letter b{min-width:10px}
+  .ghostTip{font-size:12px;color:#998d7b}
+  .status{font-size:12px;color:#6d5c46;margin-left:8px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <aside>
-    <div class="toolbar flex">
-      <button class="btn orange" id="saveBtn">Сохранить</button>
-      <button class="btn" id="loadBtn">Загрузить</button>
-      <button class="btn" id="undoBtn">Undo</button>
-      <button class="btn" id="redoBtn">Redo</button>
+    <div class="row" style="align-items:center;gap:10px">
+      <img id="logoPreview" src="" alt="logo" style="width:34px;height:34px;object-fit:contain;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.08);background:transparent"/>
+      <h2 style="margin:0">MySale — Админ</h2>
     </div>
 
-    <h2>Бренд</h2>
-    <div class="grid-2">
-      <div>
-        <label>Название</label>
-        <input type="text" id="brandInput" placeholder="MySale" />
-      </div>
-      <div>
-        <label>Размер названия</label>
-        <input type="number" id="brandSize" min="20" max="120" value="48" />
-      </div>
-    </div>
-    <div class="flex">
-      <label class="inline"><input type="checkbox" id="perLetter"> Пер-буквенные цвета</label>
-      <label class="inline"><input type="checkbox" id="freeMove"> Свободное перемещение</label>
-    </div>
-    <div id="lettersColors" style="display:none; margin-top:8px;"></div>
-
-    <h3>Логотип</h3>
-    <input type="file" id="logoFile" accept="image/png,image/svg+xml,image/jpeg" />
-    <div class="muted">PNG/SVG рекомендуются. Прозрачность сохраняется.</div>
-
-    <h2>Тема</h2>
-    <div class="row">
-      <div class="hexrow">
-        <div>
-          <label>Фон</label>
-          <input type="color" id="bgColor">
-        </div>
-        <div>
-          <label class="small">HEX</label>
-          <input type="text" id="bgHex" placeholder="#f7e6ca" />
-        </div>
-      </div>
-      <div class="hexrow">
-        <div>
-          <label>Поверхность</label>
-          <input type="color" id="surfaceColor">
-        </div>
-        <div>
-          <label class="small">HEX</label>
-          <input type="text" id="surfaceHex" placeholder="#fff5ea" />
-        </div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="hexrow">
-        <div>
-          <label>Акцент</label>
-          <input type="color" id="accentColor">
-        </div>
-        <div>
-          <label class="small">HEX</label>
-          <input type="text" id="accentHex" placeholder="#ff7a00" />
-        </div>
-      </div>
-      <div class="hexrow">
-        <div>
-          <label>Текст</label>
-          <input type="color" id="textColor">
-        </div>
-        <div>
-          <label class="small">HEX</label>
-          <input type="text" id="textHex" placeholder="#2a2a2a" />
-        </div>
-      </div>
+    <div class="toolbar">
+      <button class="btn" id="btnSave">Сохранить</button>
+      <button class="btn secondary" id="btnExport">Экспорт</button>
+      <label class="btn secondary" style="cursor:pointer">
+        Импорт <input id="fileImport" type="file" accept="application/json" style="display:none">
+      </label>
+      <span class="status" id="status"></span>
     </div>
 
-    <div class="row-3">
-      <div>
-        <label>Колонки</label>
-        <input type="number" id="cols" min="1" max="6" value="4">
+    <div class="group">
+      <h3>Бренд</h3>
+      <label>Название</label>
+      <input id="brandInput" type="text" placeholder="MySale" value="MySale"/>
+      <div class="row">
+        <label class="pill"><input id="perLetter" type="checkbox"> Пер-буквенные цвета</label>
+        <label class="pill"><input id="freeMove" type="checkbox"> Свободное перемещение</label>
       </div>
-      <div>
-        <label>Радиус карточек</label>
-        <input type="number" id="radius" min="0" max="36" value="16">
-      </div>
-      <div>
+
+      <label>Логотип (PNG/SVG с прозрачностью)</label>
+      <input id="fileLogo" type="file" accept="image/png, image/svg+xml, image/jpeg"/>
+      <div class="row">
         <label>Размер текста</label>
-        <input type="number" id="textSize" min="12" max="22" value="16">
+        <input id="brandSize" type="number" value="42" min="16" max="120"/>
+      </div>
+      <div id="lettersPanel" class="letters" style="display:none"></div>
+    </div>
+
+    <div class="group">
+      <h3>Тема</h3>
+      <div class="row">
+        <div class="colorRow">
+          <label style="margin:0">Фон</label>
+          <input type="color" id="bgColor">
+          <input type="text" id="bgHex" value="#F7E6CA">
+        </div>
+        <div class="colorRow">
+          <label style="margin:0">Поверхность</label>
+          <input type="color" id="surfaceColor">
+          <input type="text" id="surfaceHex" value="#FFF5E6">
+        </div>
+      </div>
+      <div class="row">
+        <div class="colorRow">
+          <label style="margin:0">Акцент</label>
+          <input type="color" id="accentColor">
+          <input type="text" id="accentHex" value="#FF7A00">
+        </div>
+        <div class="colorRow">
+          <label style="margin:0">Текст</label>
+          <input type="color" id="textColor">
+          <input type="text" id="textHex" value="#2A2A1A">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Радиус карточек</label>
+          <input id="radius" type="number" value="16" min="0" max="40">
+        </div>
+        <div>
+          <label>Колонки</label>
+          <input id="cols" type="number" value="4" min="1" max="8">
+        </div>
       </div>
     </div>
 
-    <h2>Экспорт</h2>
-    <div class="flex">
-      <button class="btn" id="exportBtn">Экспорт JSON</button>
-      <button class="btn" id="importBtn">Импорт JSON</button>
-      <button class="btn ghost" id="resetPos">Сброс позиций</button>
+    <div class="group">
+      <h3>Действия</h3>
+      <div class="row">
+        <button class="btn secondary" id="btnUndo">Undo</button>
+        <button class="btn secondary" id="btnRedo">Redo</button>
+      </div>
+      <p class="ghostTip">Горячие клавиши: <b>Ctrl+Z</b> и <b>Ctrl+Shift+Z</b>.</p>
     </div>
-    <p class="note" style="margin-top:10px">Подсказка: в режиме «Свободное перемещение» перетаскивайте карточки, логотип и бренд мышкой. Позиции сохраняются.</p>
   </aside>
 
   <main>
-    <div class="brand-wrap" id="brandWrap">
-      <img id="logoImg" class="logo-img draggable" alt="logo" />
-      <div id="brand" class="brand draggable" aria-label="brand"></div>
+    <div id="header">
+      <div class="brandBox" data-draggable="brand">
+        <img id="logo" alt="logo"/>
+        <div id="brandName"></div>
+      </div>
+      <div class="ghostTip">Перетаскивайте элементы при включенном «Свободное перемещение»</div>
     </div>
 
-    <div class="grid" id="grid">
+    <div class="canvas">
+      <div id="grid" class="grid"></div>
     </div>
   </main>
 </div>
 
 <script>
-const qs = s=>document.querySelector(s);
-const qsa = s=>document.querySelectorAll(s);
+  // ===== Helpers =====
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+  const statusEl = $('#status');
+  const grid = $('#grid');
+  const body = document.body;
 
-const state = {
-  brandText: "MySale",
-  brandSize: 48,
-  perLetter:false,
-  letters: [],
-  colors: {
-    bg:"#f7e6ca",
-    surface:"#fff5ea",
-    accent:"#ff7a00",
-    text:"#2a2a2a"
-  },
-  cols:4,
-  radius:16,
-  textSize:16,
-  freeMove:false,
-  positions:{},
-  logoDataUrl:""
-};
+  const defaultCards = [
+    { id: 'realestate', title:'Недвижимость', hint:'Квартиры, дома и участки', icon:'🏠', link:'' },
+    { id: 'cars',       title:'Транспорт',     hint:'Легковые и грузовые',    icon:'🚗', link:'' },
+    { id: 'electronics',title:'Электроника',   hint:'Телефоны и техника',     icon:'💻', link:'' },
+    { id: 'jobs',       title:'Работа',        hint:'Вакансии и резюме',      icon:'💼', link:'' },
+    { id: 'services',   title:'Услуги',        hint:'Ремонт, грузоперевозки', icon:'🛠️', link:'' },
+    { id: 'furniture',  title:'Мебель',        hint:'Диваны, шкафы, столы',   icon:'🛋️', link:'' },
+    { id: 'fashion',    title:'Одежда',        hint:'Мужская и женская',      icon:'👕', link:'' },
+    { id: 'hobbies',    title:'Хобби',         hint:'Спорт и отдых',          icon:'🚴', link:'' }
+  ];
 
-const historyStack=[];
-let historyIdx=-1;
-function pushHistory(){
-  const snap = JSON.stringify(state);
-  if(historyIdx < historyStack.length-1) historyStack.splice(historyIdx+1);
-  historyStack.push(snap); historyIdx=historyStack.length-1;
-  localStorage.setItem('mysale_admin_history', JSON.stringify(historyStack));
-  localStorage.setItem('mysale_admin_history_idx', historyIdx);
-}
-function canUndo(){ return historyIdx>0; }
-function canRedo(){ return historyIdx<historyStack.length-1; }
-function doUndo(){
-  if(!canUndo()) return;
-  historyIdx--; Object.assign(state, JSON.parse(historyStack[historyIdx])); renderAll();
-}
-function doRedo(){
-  if(!canRedo()) return;
-  historyIdx++; Object.assign(state, JSON.parse(historyStack[historyIdx])); renderAll();
-}
-function loadHistory(){
-  try{
-    const h = JSON.parse(localStorage.getItem('mysale_admin_history')||'[]');
-    const i = +localStorage.getItem('mysale_admin_history_idx');
-    if(h.length){
-      historyStack.splice(0); h.forEach(x=>historyStack.push(x));
-      historyIdx = isFinite(i)? i : h.length-1;
-      if(historyIdx>=0){
-        Object.assign(state, JSON.parse(historyStack[historyIdx]));
-      }
-    }else{
-      pushHistory();
-    }
-  }catch(e){ pushHistory(); }
-}
+  const state = {
+    theme:{
+      bg:'#F7E6CA', surface:'#FFF5E6', accent:'#FF7A00', text:'#2A2A1A',
+      radius:16, cols:4
+    },
+    brand:{
+      text:'MySale', size:42, perLetters:false, letters:[], logo:'', pos:null
+    },
+    freeMove:false,
+    cards: defaultCards.map((c,i)=>({...c, pos:null}))
+  };
 
-function clamp(n, a, b){return Math.min(b, Math.max(a,n));}
-function toHex(c){ c=c.trim(); if(!c) return ""; if(c.startsWith('#')) return c.toLowerCase();
-  const ctx = document.createElement('canvas').getContext('2d'); ctx.fillStyle=c; return ctx.fillStyle; }
-function syncColorPair(colorEl, hexEl, key){
-  const hex = toHex(colorEl.value||'#000000');
-  hexEl.value = hex;
-  state.colors[key] = hex;
-  applyTheme();
-}
-function syncHexPair(hexEl, colorEl, key){
-  let hex = toHex(hexEl.value||'#000000');
-  hexEl.value = hex; colorEl.value = hex;
-  state.colors[key] = hex;
-  applyTheme();
-}
-function applyTheme(){
-  document.documentElement.style.setProperty('--bg', state.colors.bg);
-  document.documentElement.style.setProperty('--surface', state.colors.surface);
-  document.documentElement.style.setProperty('--accent', state.colors.accent);
-  document.documentElement.style.setProperty('--text', state.colors.text);
-  document.documentElement.style.setProperty('--card-radius', state.radius+'px');
-  document.documentElement.style.setProperty('--cols', state.cols);
-  document.body.style.fontSize = state.textSize+'px';
-}
-function el(id){return document.getElementById(id);}
-
-function hydrateSidebar(){
-  el('brandInput').value = state.brandText;
-  el('brandSize').value = state.brandSize;
-  el('perLetter').checked = state.perLetter;
-  el('freeMove').checked = state.freeMove;
-  el('bgColor').value = state.colors.bg;
-  el('bgHex').value = state.colors.bg;
-  el('surfaceColor').value = state.colors.surface;
-  el('surfaceHex').value = state.colors.surface;
-  el('accentColor').value = state.colors.accent;
-  el('accentHex').value = state.colors.accent;
-  el('textColor').value = state.colors.text;
-  el('textHex').value = state.colors.text;
-  el('cols').value = state.cols;
-  el('radius').value = state.radius;
-  el('textSize').value = state.textSize;
-}
-
-function renderBrand(){
-  const root = el('brand');
-  root.innerHTML = "";
-  root.style.fontSize = state.brandSize + "px";
-  if(state.perLetter){
-    const cols = state.letters.length ? state.letters : new Array(state.brandText.length).fill(null);
-    for(let i=0;i<state.brandText.length;i++){
-      const s = document.createElement('span');
-      s.textContent = state.brandText[i];
-      s.style.color = cols[i] || 'var(--accent)';
-      root.appendChild(s);
-    }
-    buildLettersControls();
-  }else{
-    const s = document.createElement('span');
-    s.textContent = state.brandText;
-    s.style.color = 'var(--accent)';
-    root.appendChild(s);
-    el('lettersColors').style.display='none';
+  // ===== Undo/Redo =====
+  const undoStack=[]; const redoStack=[];
+  function pushHistory(){
+    undoStack.push(JSON.stringify(state));
+    if(undoStack.length>80) undoStack.shift();
+    redoStack.length=0;
   }
-}
-
-function buildLettersControls(){
-  const box = el('lettersColors');
-  box.innerHTML="";
-  box.style.display='block';
-  const row = document.createElement('div');
-  row.className='grid-2';
-  for(let i=0;i<state.brandText.length;i++){
-    const wrap = document.createElement('div');
-    const lab = document.createElement('label'); lab.textContent = 'Буква: "'+ state.brandText[i] +'"';
-    const inp = document.createElement('input'); inp.type='color';
-    const current = state.letters[i] || '#ff7a00';
-    inp.value = current;
-    inp.oninput = ()=>{ state.letters[i]=inp.value; renderBrand(); pushHistory(); };
-    wrap.appendChild(lab); wrap.appendChild(inp);
-    row.appendChild(wrap);
+  function doUndo(){
+    if(!undoStack.length) return;
+    redoStack.push(JSON.stringify(state));
+    const prev = undoStack.pop();
+    Object.assign(state, JSON.parse(prev));
+    renderAll();
+    tip('Отменено');
   }
-  box.appendChild(row);
-}
-
-function renderLogo(){
-  const img = el('logoImg');
-  if(state.logoDataUrl){ img.src = state.logoDataUrl; img.style.display="block"; }
-  else { img.removeAttribute('src'); img.style.display="none"; }
-}
-
-function buildGrid(){
-  const g = el('grid');
-  g.innerHTML="";
-  for(let i=0;i<8;i++){
-    const c = document.createElement('div');
-    c.className='card draggable';
-    c.id = 'card_'+i;
-    const t = document.createElement('div');
-    t.className='pill'; t.textContent="Карточка "+(i+1);
-    c.appendChild(t);
-    const p = document.createElement('div'); p.className='muted'; p.style.marginTop="8px";
-    p.textContent="Здесь будет ваш модуль / ссылка.";
-    c.appendChild(p);
-    g.appendChild(c);
+  function doRedo(){
+    if(!redoStack.length) return;
+    undoStack.push(JSON.stringify(state));
+    const next = redoStack.pop();
+    Object.assign(state, JSON.parse(next));
+    renderAll();
+    tip('Повторено');
   }
-}
-
-function applyMoveMode(){
-  document.body.classList.toggle('movable', !!state.freeMove);
-  const cards = qsa('.card');
-  cards.forEach(card=>{
-    if(state.freeMove){
-      const r = card.getBoundingClientRect();
-      const mainR = qs('main').getBoundingClientRect();
-      const x = r.left - mainR.left + r.width/2;
-      const y = r.top  - mainR.top  + r.height/2;
-      card.classList.add('abs');
-      card.style.left = x+'px'; card.style.top = y+'px';
-    }else{
-      card.classList.remove('abs');
-      card.style.left=""; card.style.top="";
-    }
+  $('#btnUndo').onclick=doUndo;
+  $('#btnRedo').onclick=doRedo;
+  window.addEventListener('keydown',e=>{
+    if(e.ctrlKey && e.key==='z'){ e.preventDefault(); doUndo(); }
+    if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); doRedo(); }
   });
-  draggableInit();
-}
 
-let dragData=null;
-function draggableInit(){
-  qsa('.draggable, .card').forEach(elm=>{
-    elm.onmousedown = (e)=>{
-      if(!state.freeMove) return;
-      const main = qs('main');
-      const mr = main.getBoundingClientRect();
-      const r = elm.getBoundingClientRect();
-      dragData = {
-        elm, main, mr,
-        offsetX: e.clientX - r.left,
-        offsetY: e.clientY - r.top
-      };
-      elm.classList.add('dragging');
-      document.onmousemove = onDrag;
-      document.onmouseup = stopDrag;
+  // ===== Theme bindings =====
+  function syncColor(pairId, initVal){
+    const color = $(pairId+'Color'), hex=$(pairId+'Hex');
+    color.value = initVal; hex.value = initVal;
+    color.oninput = e=>{ hex.value = e.target.value.toUpperCase(); applyTheme(); };
+    hex.oninput = e=>{
+      const v=e.target.value.trim();
+      if(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)){ color.value=v; applyTheme(); }
     };
-  });
-}
-function onDrag(e){
-  if(!dragData) return;
-  const {elm, mr, offsetX, offsetY} = dragData;
-  const x = clamp(e.clientX - mr.left - offsetX + (elm.offsetWidth/2), 0, mr.width);
-  const y = clamp(e.clientY - mr.top  - offsetY + (elm.offsetHeight/2), 0, mr.height);
-  elm.style.position='absolute';
-  elm.style.left = x+'px';
-  elm.style.top  = y+'px';
-}
-function stopDrag(){
-  if(!dragData) return;
-  dragData.elm.classList.remove('dragging');
-  dragData=null;
-  savePositions();
-  pushHistory();
-}
-function savePositions(){
-  const main = qs('main');
-  const mr = main.getBoundingClientRect();
-  const pos={};
-  const all = [];
-  all.push({id:'logoImg', el:el('logoImg')});
-  all.push({id:'brandWrap', el:el('brandWrap')});
-  qsa('.card').forEach(c=>all.push({id:c.id, el:c}));
-  all.forEach(({id, el})=>{
-    const r = el.getBoundingClientRect();
-    pos[id] = { left: r.left - mr.left + r.width/2, top: r.top - mr.top + r.height/2 };
-  });
-  state.positions = pos;
-  localStorage.setItem('mysale_admin_positions', JSON.stringify(pos));
-}
-function restorePositions(){
-  const pos = state.positions || {};
-  const main = qs('main');
-  if(!Object.keys(pos).length) return;
-  document.body.classList.add('movable');
-  qsa('#logoImg, #brandWrap, .card').forEach(elm=>{
-    const id = elm.id || (elm===el('brandWrap')?'brandWrap':null);
-    if(!id || !pos[id]) return;
-    const {left, top} = pos[id];
-    elm.style.position='absolute';
-    elm.style.left = left+'px';
-    elm.style.top  = top+'px';
-    if(elm.classList.contains('card')) elm.classList.add('abs');
-  });
-}
-
-function renderAll(){
-  hydrateSidebar();
-  renderBrand();
-  renderLogo();
-  applyTheme();
-  if(!el('grid').children.length) buildGrid();
-  document.body.classList.toggle('movable', state.freeMove);
-  if(state.freeMove){ applyMoveMode(); } else {
-    qsa('.card').forEach(c=>{ c.style.left=""; c.style.top=""; c.classList.remove('abs'); c.style.position=''; });
-    el('logoImg').style.left="";
-    el('logoImg').style.top="";
-    qs('#brandWrap').style.left="";
-    qs('#brandWrap').style.top="";
   }
-  draggableInit();
-}
+  syncColor('#bg', state.theme.bg);
+  syncColor('#surface', state.theme.surface);
+  syncColor('#accent', state.theme.accent);
+  syncColor('#text', state.theme.text);
+  $('#radius').value=state.theme.radius;
+  $('#cols').value=state.theme.cols;
+  $('#radius').oninput = ()=>{ state.theme.radius = +$('#radius').value; applyTheme(); };
+  $('#cols').oninput = ()=>{ state.theme.cols = Math.max(1, +$('#cols').value); applyTheme(); };
 
-function init(){
-  try{
-    const stored = JSON.parse(localStorage.getItem('mysale_admin_state')||'null');
-    if(stored) Object.assign(state, stored);
-  }catch(e){}
-  loadHistory();
-  renderAll();
-  if(state.positions) restorePositions();
-  el('brandInput').addEventListener('input', e=>{
-    state.brandText = e.target.value || ""; renderBrand(); pushHistory();
-  });
-  el('brandSize').addEventListener('input', e=>{
-    state.brandSize = clamp(+e.target.value, 20, 120); renderBrand(); pushHistory();
-  });
-  el('perLetter').addEventListener('change', e=>{
-    state.perLetter = !!e.target.checked; renderBrand(); pushHistory();
-  });
-  el('freeMove').addEventListener('change', e=>{
-    state.freeMove = !!e.target.checked; renderAll(); pushHistory();
+  function applyTheme(){
+    pushHistory();
+    state.theme.bg = $('#bgHex').value;
+    state.theme.surface = $('#surfaceHex').value;
+    state.theme.accent = $('#accentHex').value;
+    state.theme.text = $('#textHex').value;
+    document.documentElement.style.setProperty('--bg', state.theme.bg);
+    document.documentElement.style.setProperty('--surface', state.theme.surface);
+    document.documentElement.style.setProperty('--accent', state.theme.accent);
+    document.documentElement.style.setProperty('--text', state.theme.text);
+    document.documentElement.style.setProperty('--radius', state.theme.radius+'px');
+    document.documentElement.style.setProperty('--cols', state.theme.cols);
+  }
+
+  // ===== Brand =====
+  const brandInput = $('#brandInput');
+  const brandName = $('#brandName');
+  const perLetter = $('#perLetter');
+  const brandSize = $('#brandSize');
+  const lettersPanel = $('#lettersPanel');
+  const logo = $('#logo'); const logoPreview = $('#logoPreview');
+  brandInput.value = state.brand.text;
+  brandSize.value = state.brand.size;
+  perLetter.checked = state.brand.perLetters;
+
+  function renderBrand(){
+    brandName.style.fontSize = state.brand.size+'px';
+    brandName.innerHTML='';
+    const letters = [...state.brand.text];
+    if(state.brand.perLetters && state.brand.letters.length !== letters.length){
+      state.brand.letters = letters.map((ch,i)=>({ch,color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0')}));
+    }
+    if(state.brand.perLetters){
+      letters.forEach((ch,i)=>{
+        const sp = document.createElement('span');
+        sp.textContent = ch;
+        sp.style.color = state.brand.letters[i]?.color || 'var(--text)';
+        brandName.appendChild(sp);
+      });
+      lettersPanel.style.display='flex';
+      lettersPanel.innerHTML='';
+      letters.forEach((ch,i)=>{
+        const box=document.createElement('div'); box.className='letter';
+        box.innerHTML = `<b>${ch}</b><input type="color" value="${state.brand.letters[i].color}">`;
+        box.querySelector('input').oninput = (e)=>{
+          pushHistory(); state.brand.letters[i].color = e.target.value; renderBrand();
+        };
+        lettersPanel.appendChild(box);
+      });
+    }else{
+      lettersPanel.style.display='none';
+      letters.forEach(ch=>{
+        const sp=document.createElement('span'); sp.textContent=ch; brandName.appendChild(sp);
+      });
+    }
+  }
+  brandInput.oninput = ()=>{ pushHistory(); state.brand.text = brandInput.value || ' '; renderBrand(); };
+  perLetter.oninput = ()=>{ pushHistory(); state.brand.perLetters = perLetter.checked; renderBrand(); };
+  brandSize.oninput = ()=>{ pushHistory(); state.brand.size = +brandSize.value; renderBrand(); };
+
+  $('#fileLogo').addEventListener('change', e=>{
+    const f = e.target.files?.[0]; if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ev=>{
+      pushHistory();
+      state.brand.logo = ev.target.result;
+      logo.src = logoPreview.src = state.brand.logo;
+      logo.style.background='transparent';
+      logoPreview.style.background='transparent';
+    };
+    rd.readAsDataURL(f);
   });
 
-  [['bg','bgColor','bgHex'], ['surface','surfaceColor','surfaceHex'], ['accent','accentColor','accentHex'], ['text','textColor','textHex']]
-  .forEach(([k,c,h])=>{
-    el(c).addEventListener('input', ()=>{ syncColorPair(el(c), el(h), k); pushHistory(); });
-    el(h).addEventListener('input', ()=>{ syncHexPair(el(h), el(c), k); pushHistory(); });
-  });
+  // ===== Cards =====
+  function cardEl(card){
+    const el=document.createElement('div'); el.className='card'; el.dataset.id=card.id;
+    el.innerHTML = `
+      <div class="linkBadge" title="Ссылка для клика по карточке">🔗 link</div>
+      <div class="icon" contenteditable="plaintext-only">${card.icon||'⬜'}</div>
+      <div class="title" contenteditable="plaintext-only">${card.title}</div>
+      <p class="hint" contenteditable="plaintext-only">${card.hint||''}</p>
+    `;
+    const openLink = (e)=>{
+      if(e.target.closest('.linkBadge')){
+        const url = prompt('Укажите URL (полную ссылку):', card.link||'');
+        if(url!=null){ pushHistory(); card.link=url; tip('Ссылка обновлена'); }
+        return;
+      }
+      if(card.link && !state.freeMove) window.open(card.link,'_blank');
+    };
+    el.addEventListener('dblclick', openLink);
+    el.querySelector('.title').addEventListener('input',e=>{ card.title=e.target.textContent; saveQuiet(); });
+    el.querySelector('.hint').addEventListener('input',e=>{ card.hint=e.target.textContent; saveQuiet(); });
+    el.querySelector('.icon').addEventListener('input',e=>{ card.icon=e.target.textContent||'⬜'; saveQuiet(); });
+    return el;
+  }
+  function renderCards(){
+    grid.innerHTML='';
+    state.cards.forEach((c,i)=>{
+      const el = cardEl(c); grid.appendChild(el);
+    });
+    applyFreeMove(); // restore positions if were
+  }
 
-  el('cols').addEventListener('input', e=>{ state.cols = clamp(+e.target.value,1,6); applyTheme(); pushHistory(); });
-  el('radius').addEventListener('input', e=>{ state.radius = clamp(+e.target.value,0,36); applyTheme(); pushHistory(); });
-  el('textSize').addEventListener('input', e=>{ state.textSize = clamp(+e.target.value,12,22); applyTheme(); pushHistory(); });
+  // ===== Free move / Drag =====
+  const freeMove = $('#freeMove');
+  freeMove.checked = state.freeMove;
+  freeMove.oninput = ()=>{ pushHistory(); state.freeMove=freeMove.checked; applyFreeMove(); };
 
-  el('logoFile').addEventListener('change', e=>{
-    const f = e.target.files && e.target.files[0]; if(!f) return;
-    const r = new FileReader(); r.onload = ()=>{ state.logoDataUrl = r.result; renderLogo(); pushHistory(); };
-    r.readAsDataURL(f);
-  });
+  function applyFreeMove(){
+    document.body.classList.toggle('freemove', state.freeMove);
+    const cardNodes = $$('.card', grid);
+    if(state.freeMove){
+      // Switch to absolute positions
+      cardNodes.forEach((el,idx)=>{
+        const c = state.cards[idx];
+        const r = el.getBoundingClientRect();
+        const g = grid.getBoundingClientRect();
+        if(!c.pos) c.pos = {x: r.left-g.left, y:r.top-g.top};
+        el.style.left = c.pos.x+'px';
+        el.style.top  = c.pos.y+'px';
+        el.style.width = r.width+'px';
+      });
+      $('.brandBox').style.position='absolute';
+      if(!state.brand.pos){
+        const b = $('.brandBox').getBoundingClientRect();
+        const h = $('#header').getBoundingClientRect();
+        state.brand.pos = {x:b.left-h.left, y:b.top-h.top};
+      }
+      const bb = $('.brandBox');
+      const h = $('#header').getBoundingClientRect();
+      bb.style.left = state.brand.pos.x+'px';
+      bb.style.top  = state.brand.pos.y+'px';
 
-  el('saveBtn').addEventListener('click', ()=>{
-    localStorage.setItem('mysale_admin_state', JSON.stringify(state));
-  });
-  el('loadBtn').addEventListener('click', ()=>{
-    const s = JSON.parse(localStorage.getItem('mysale_admin_state')||'null');
-    if(s){ Object.assign(state, s); renderAll(); }
-  });
-  el('undoBtn').addEventListener('click', doUndo);
-  el('redoBtn').addEventListener('click', doRedo);
+      enableDrag([...cardNodes, $('.brandBox')], (el)=>{
+        if(el.classList.contains('card')){
+          const idx = Array.from(grid.children).indexOf(el);
+          const c = state.cards[idx];
+          c.pos = { x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
+        }else{
+          state.brand.pos = { x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
+        }
+        saveQuiet();
+      }, grid, $('#header'));
+    }else{
+      // Back to grid flow
+      disableDrag();
+      cardNodes.forEach(el=>{ el.style.left=el.style.top=el.style.width=''; });
+      $('.brandBox').style.left=$('.brandBox').style.top='';
+      $('.brandBox').style.position='relative';
+    }
+  }
 
-  el('exportBtn').addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download='mysale_admin_state.json'; a.click();
-    URL.revokeObjectURL(a.href);
-  });
-  el('importBtn').addEventListener('click', async ()=>{
-    const txt = prompt('Вставьте JSON:');
-    if(!txt) return;
+  let dragData=null;
+  function enableDrag(els, onStop, gridBox, headerBox){
+    els.forEach(el=>{
+      el.onpointerdown = (e)=>{
+        if(!state.freeMove) return;
+        dragData = { el, startX:e.clientX, startY:e.clientY };
+        const r = el.getBoundingClientRect();
+        dragData.offsetX = e.clientX - r.left;
+        dragData.offsetY = e.clientY - r.top;
+        el.setPointerCapture(e.pointerId);
+      };
+      el.onpointermove = (e)=>{
+        if(!dragData || dragData.el!==el) return;
+        const parent = el.classList.contains('card') ? gridBox : headerBox;
+        const p = parent.getBoundingClientRect();
+        let x = e.clientX - p.left - dragData.offsetX;
+        let y = e.clientY - p.top - dragData.offsetY;
+        x = Math.max(0, Math.min(x, p.width - el.offsetWidth));
+        y = Math.max(0, Math.min(y, p.height - el.offsetHeight));
+        el.style.left = x+'px'; el.style.top=y+'px';
+      };
+      el.onpointerup = (e)=>{
+        if(!dragData || dragData.el!==el) return;
+        el.releasePointerCapture(e.pointerId);
+        dragData=null;
+        onStop?.(el);
+      };
+    });
+  }
+  function disableDrag(){
+    $$('.card, .brandBox').forEach(el=>{
+      el.onpointerdown = el.onpointermove = el.onpointerup = null;
+    });
+  }
+
+  // ===== Save/Load/Export =====
+  function tip(t){ statusEl.textContent=t; clearTimeout(tip._t); tip._t=setTimeout(()=>statusEl.textContent='',1500); }
+  function saveQuiet(){ localStorage.setItem('mysale_admin_v3', JSON.stringify(state)); }
+  function save(){ pushHistory(); saveQuiet(); tip('Сохранено'); }
+  function load(){
+    const raw = localStorage.getItem('mysale_admin_v3');
+    if(!raw){ pushHistory(); renderAll(); return; }
     try{
-      const obj = JSON.parse(txt);
+      const obj = JSON.parse(raw);
       Object.assign(state, obj);
       renderAll();
-      pushHistory();
-    }catch(e){ alert('Неверный JSON'); }
-  });
-  el('resetPos').addEventListener('click', ()=>{
-    state.positions={};
-    localStorage.removeItem('mysale_admin_positions');
-    renderAll(); pushHistory();
-  });
-}
-document.addEventListener('DOMContentLoaded', init);
+    }catch(e){ console.warn('load failed', e); pushHistory(); renderAll(); }
+  }
+  $('#btnSave').onclick=save;
+  $('#btnExport').onclick=()=>{
+    const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='mysale_admin_state.json'; a.click();
+  };
+  $('#fileImport').onchange=e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=ev=>{
+      try{
+        const obj=JSON.parse(ev.target.result);
+        pushHistory();
+        Object.assign(state,obj);
+        renderAll();
+        tip('Импортировано');
+      }catch(e){ alert('Не удалось импортировать JSON'); }
+    }; rd.readAsText(f);
+  };
+
+  // ===== Render =====
+  function renderAll(){
+    // theme
+    $('#bgHex').value = state.theme.bg; $('#bgColor').value=state.theme.bg;
+    $('#surfaceHex').value = state.theme.surface; $('#surfaceColor').value=state.theme.surface;
+    $('#accentHex').value = state.theme.accent; $('#accentColor').value=state.theme.accent;
+    $('#textHex').value = state.theme.text; $('#textColor').value=state.theme.text;
+    $('#radius').value=state.theme.radius; $('#cols').value=state.theme.cols;
+    applyTheme();
+
+    // brand
+    brandInput.value=state.brand.text; perLetter.checked=state.brand.perLetters; brandSize.value=state.brand.size;
+    renderBrand();
+    if(state.brand.logo){ logo.src=logoPreview.src=state.brand.logo; logo.style.background='transparent'; logoPreview.style.background='transparent'; }
+    else { logo.removeAttribute('src'); logoPreview.removeAttribute('src'); }
+
+    // cards
+    renderCards();
+
+    // free move
+    freeMove.checked = state.freeMove;
+    applyFreeMove();
+  }
+
+  // initial
+  pushHistory();
+  load();
 </script>
 </body>
 </html>
