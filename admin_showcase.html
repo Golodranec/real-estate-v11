@@ -1,334 +1,526 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>MySale — витрина (админ)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MySale — витрина (админка)</title>
 <style>
   :root{
-    --bg:#F7E6CA;
-    --surface:#FFF5E3;
-    --accent:#F27C14;
-    --text:#3A2A1A;
-    --radius:14px;
+    --bg:#f7e6ca;
+    --surface:#fff5ea;
+    --text:#2a2a2a;
+    --accent:#ff7a00;
+    --card-radius:16px;
     --cols:4;
-    --brandSize:48;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.3 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial}
-  .app{display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:100%}
-  .panel{padding:16px;background:#fff7eb;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.06) inset, 0 2px 12px rgba(0,0,0,.04)}
-  .panel h3{margin:8px 0 12px;font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:.05em}
-  .panel .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
-  .panel input[type="text"], .panel input[type="number"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #eadfce;background:#fff}
-  .panel input[type="color"]{width:48px;height:36px;padding:0;border:none;background:none}
-  .panel button{padding:8px 12px;border:0;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
-  .panel .muted{opacity:.7}
-  .preview{position:relative;padding:16px;background:linear-gradient(180deg,var(--surface),#fff2dd);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-  .switch{display:flex;gap:8px;align-items:center;font-weight:600}
-  .switch input{width:18px;height:18px}
-  .stage{position:relative;min-height:420px;border-radius:16px;padding:24px}
-  .brand{display:flex;align-items:center;gap:12px;user-select:none}
-  .brand__logo{width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.12));background:transparent;border-radius:12px}
-  .brand__name{font-size:var(--brandSize,48px);font-weight:900;letter-spacing:.5px;display:flex;gap:2px;line-height:1}
-  .brand__name span{display:inline-block}
-  .cards{display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:16px;margin-top:20px}
-  .card{padding:16px;background:#fff;border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,.08), 0 2px 10px rgba(0,0,0,.03)}
-  .ghost{pointer-events:none;opacity:.4}
-  /* free-move mode */
-  .free .movable{position:absolute;cursor:move;user-select:none}
-  .dragging{opacity:.8;outline:2px dashed var(--accent)}
-  .hint{font-size:12px;opacity:.6}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid #e7d7bf;background:#fff;cursor:pointer}
-  .grid{display:grid;gap:8px}
-  .grid.two{grid-template-columns:1fr 1fr}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+    color:var(--text);
+    background:linear-gradient(180deg,#f8e9d0, #f4e0c4 60%, #f0d9ba);
+  }
+  .wrap{display:grid; grid-template-columns:320px 1fr; gap:16px; height:100%;}
+  aside{background:#fff; border-radius:16px; padding:14px 14px 100px; overflow:auto; box-shadow:0 10px 30px rgba(0,0,0,.06)}
+  main{background:var(--bg); border-radius:16px; padding:12px; overflow:auto; box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)}
+  h2{margin:8px 0 6px; font-size:18px}
+  h3{margin:14px 0 6px; font-size:14px; opacity:.75}
+  label{font-size:12px; display:block; margin:10px 0 4px; opacity:.8}
+  input[type="text"], input[type="number"], input[type="color"], textarea, select{
+    width:100%; padding:10px 12px; border:1px solid #e4e1da; border-radius:12px; background:#fff; outline:none;
+  }
+  .row{display:grid; grid-template-columns:1fr 84px; gap:8px}
+  .row-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid #e0dccf; background:#fff; cursor:pointer; user-select:none}
+  .btn.orange{background:var(--accent); color:#fff; border-color:transparent}
+  .btn.ghost{background:transparent}
+  .btn:active{transform:translateY(1px)}
+  .flex{display:flex; gap:8px; flex-wrap:wrap}
+  .muted{opacity:.6; font-size:12px}
+  .toolbar{position:sticky; top:0; background:#fff; z-index:10; padding-bottom:8px}
+  .grid{
+    --gap:14px;
+    display:grid; gap:var(--gap);
+    grid-template-columns:repeat(var(--cols), minmax(220px,1fr));
+    align-content:start; padding:12px;
+  }
+  .card{
+    background:var(--surface);
+    border-radius:var(--card-radius);
+    padding:14px;
+    box-shadow:0 12px 24px rgba(0,0,0,.05);
+    min-height:110px;
+    position:relative;
+    transition:box-shadow .2s, transform .15s;
+  }
+  .card:hover{box-shadow:0 16px 26px rgba(0,0,0,.08)}
+  .pill{height:36px; border-radius:18px; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,.08); display:flex; align-items:center; padding:0 12px; gap:10px}
+  .logo-img{width:44px; height:44px; object-fit:contain; display:block; background:transparent}
+  .brand-wrap{display:flex; align-items:center; gap:10px}
+  .brand{font-weight:800; font-size:44px; letter-spacing:.5px; display:inline-flex; gap:2px; line-height:1}
+  .brand span{display:inline-block}
+  .draggable{cursor:grab}
+  .dragging{opacity:.85; cursor:grabbing}
+  .movable main{position:relative}
+  .movable .card.abs{position:absolute; margin:0; transform:translate(-50%,-50%)}
+  .note{padding:10px 12px; border-radius:10px; background:#fff7e8; border:1px dashed #f6cc8f; font-size:12px}
+  .inline{display:inline-flex; align-items:center; gap:6px}
+  .hexrow{display:grid; grid-template-columns:1fr 90px; gap:6px}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .small{font-size:12px}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="panel">
-    <div class="row">
-      <button id="saveBtn">Сохранить</button>
-      <button id="loadBtn" class="btn">Загрузить</button>
+<div class="wrap">
+  <aside>
+    <div class="toolbar flex">
+      <button class="btn orange" id="saveBtn">Сохранить</button>
+      <button class="btn" id="loadBtn">Загрузить</button>
+      <button class="btn" id="undoBtn">Undo</button>
+      <button class="btn" id="redoBtn">Redo</button>
     </div>
 
-    <h3>Бренд</h3>
-    <div class="grid">
-      <label class="row"><input id="perLetter" type="checkbox"> <span>Пер-буквенные цвета</span></label>
-      <div class="row"><input id="brandText" type="text" value="MySale"/><span class="muted">Название</span></div>
-      <div class="row"><input id="brandSize" type="number" min="28" max="96" value="48"/><span class="muted">Размер</span></div>
-      <div class="row"><input id="brandColor" type="color" value="#1a1a1a"/><span class="muted">Цвет (общий)</span></div>
-      <div id="lettersBox" class="grid two" style="display:none"></div>
-      <div class="row">
-        <input id="logoFile" type="file" accept="image/*"/>
-        <span class="muted">Логотип PNG/SVG/JPG</span>
+    <h2>Бренд</h2>
+    <div class="grid-2">
+      <div>
+        <label>Название</label>
+        <input type="text" id="brandInput" placeholder="MySale" />
       </div>
-      <div class="hint">Логотип хранится локально (LocalStorage). У PNG будет прозрачный фон.</div>
+      <div>
+        <label>Размер названия</label>
+        <input type="number" id="brandSize" min="20" max="120" value="48" />
+      </div>
+    </div>
+    <div class="flex">
+      <label class="inline"><input type="checkbox" id="perLetter"> Пер-буквенные цвета</label>
+      <label class="inline"><input type="checkbox" id="freeMove"> Свободное перемещение</label>
+    </div>
+    <div id="lettersColors" style="display:none; margin-top:8px;"></div>
+
+    <h3>Логотип</h3>
+    <input type="file" id="logoFile" accept="image/png,image/svg+xml,image/jpeg" />
+    <div class="muted">PNG/SVG рекомендуются. Прозрачность сохраняется.</div>
+
+    <h2>Тема</h2>
+    <div class="row">
+      <div class="hexrow">
+        <div>
+          <label>Фон</label>
+          <input type="color" id="bgColor">
+        </div>
+        <div>
+          <label class="small">HEX</label>
+          <input type="text" id="bgHex" placeholder="#f7e6ca" />
+        </div>
+      </div>
+      <div class="hexrow">
+        <div>
+          <label>Поверхность</label>
+          <input type="color" id="surfaceColor">
+        </div>
+        <div>
+          <label class="small">HEX</label>
+          <input type="text" id="surfaceHex" placeholder="#fff5ea" />
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="hexrow">
+        <div>
+          <label>Акцент</label>
+          <input type="color" id="accentColor">
+        </div>
+        <div>
+          <label class="small">HEX</label>
+          <input type="text" id="accentHex" placeholder="#ff7a00" />
+        </div>
+      </div>
+      <div class="hexrow">
+        <div>
+          <label>Текст</label>
+          <input type="color" id="textColor">
+        </div>
+        <div>
+          <label class="small">HEX</label>
+          <input type="text" id="textHex" placeholder="#2a2a2a" />
+        </div>
+      </div>
     </div>
 
-    <h3>Тема</h3>
-    <div class="grid two">
-      <label class="row"><input id="bg" type="color" value="#F7E6CA"><span>Фон</span></label>
-      <label class="row"><input id="surface" type="color" value="#FFF5E3"><span>Поверхность</span></label>
-      <label class="row"><input id="accent" type="color" value="#F27C14"><span>Акцент</span></label>
-      <label class="row"><input id="text" type="color" value="#3A2A1A"><span>Текст</span></label>
-      <div class="row"><input id="radius" type="number" min="0" max="30" value="14"/><span>Радиус карточек</span></div>
-      <div class="row"><input id="cols" type="number" min="1" max="6" value="4"/><span>Колонки</span></div>
+    <div class="row-3">
+      <div>
+        <label>Колонки</label>
+        <input type="number" id="cols" min="1" max="6" value="4">
+      </div>
+      <div>
+        <label>Радиус карточек</label>
+        <input type="number" id="radius" min="0" max="36" value="16">
+      </div>
+      <div>
+        <label>Размер текста</label>
+        <input type="number" id="textSize" min="12" max="22" value="16">
+      </div>
     </div>
 
-    <h3>Экспорт / Импорт</h3>
-    <div class="grid">
-      <button id="exportBtn" class="btn">Экспорт JSON</button>
-      <input id="importFile" class="btn" type="file" accept="application/json"/>
+    <h2>Экспорт</h2>
+    <div class="flex">
+      <button class="btn" id="exportBtn">Экспорт JSON</button>
+      <button class="btn" id="importBtn">Импорт JSON</button>
+      <button class="btn ghost" id="resetPos">Сброс позиций</button>
     </div>
+    <p class="note" style="margin-top:10px">Подсказка: в режиме «Свободное перемещение» перетаскивайте карточки, логотип и бренд мышкой. Позиции сохраняются.</p>
   </aside>
 
-  <main class="panel preview">
-    <div class="toolbar">
-      <label class="switch"><input id="freeMove" type="checkbox"/> <span>Свободное перемещение</span></label>
-      <button id="resetPos" class="btn">Сбросить позиции</button>
+  <main>
+    <div class="brand-wrap" id="brandWrap">
+      <img id="logoImg" class="logo-img draggable" alt="logo" />
+      <div id="brand" class="brand draggable" aria-label="brand"></div>
     </div>
 
-    <div id="stage" class="stage">
-      <div id="brand" class="brand movable" data-key="brand">
-        <img id="logo" class="brand__logo movable" data-key="logo" alt="logo" src="" />
-        <div id="brandName" class="brand__name movable" data-key="brandName"></div>
-      </div>
-
-      <section class="cards">
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-        <div class="card">Карточка</div>
-      </section>
+    <div class="grid" id="grid">
     </div>
   </main>
 </div>
 
 <script>
-const $ = s => document.querySelector(s);
-const root = document.documentElement;
-const ls = (k,v)=> v===undefined? JSON.parse(localStorage.getItem(k)||'null')
-                                 : localStorage.setItem(k,JSON.stringify(v));
-const CFG_KEY = 'mysale_admin_cfg_v2';
-const POS_KEY = 'mysale_admin_pos_v2';
+const qs = s=>document.querySelector(s);
+const qsa = s=>document.querySelectorAll(s);
 
-/* ---------- helpers ---------- */
-function setVar(name, val){ root.style.setProperty(name,val); }
-function hex(v){ return /^#/.test(v)?v:"#"+v; }
+const state = {
+  brandText: "MySale",
+  brandSize: 48,
+  perLetter:false,
+  letters: [],
+  colors: {
+    bg:"#f7e6ca",
+    surface:"#fff5ea",
+    accent:"#ff7a00",
+    text:"#2a2a2a"
+  },
+  cols:4,
+  radius:16,
+  textSize:16,
+  freeMove:false,
+  positions:{},
+  logoDataUrl:""
+};
 
-/* ---------- brand text / per-letter coloring ---------- */
-function mountBrandText(){
-  const name = $('#brandText').value || 'MySale';
-  const box = $('#brandName');
-  const per = $('#perLetter').checked;
-  box.style.fontSize = $('#brandSize').value+'px';
-  box.innerHTML = '';
-  if(per){
-    $('#lettersBox').style.display = 'grid';
-    $('#lettersBox').innerHTML = '';
-    [...name].forEach((ch,i)=>{
-      const span = document.createElement('span');
-      span.textContent = ch;
-      const color = (ls(CFG_KEY)?.letters||[])[i] || $('#brandColor').value;
-      span.style.color = color;
-      box.appendChild(span);
-      // editor input
-      const inp = document.createElement('input');
-      inp.type='color'; inp.value = color;
-      inp.title = 'Буква «'+(ch||'␣')+'»';
-      inp.addEventListener('input',()=>{
-        span.style.color = inp.value;
-        saveCfg();
-      });
-      $('#lettersBox').appendChild(inp);
-    });
-  }else{
-    $('#lettersBox').style.display = 'none';
-    const span = document.createElement('span');
-    span.textContent = name;
-    span.style.color = $('#brandColor').value;
-    box.appendChild(span);
-  }
+const historyStack=[];
+let historyIdx=-1;
+function pushHistory(){
+  const snap = JSON.stringify(state);
+  if(historyIdx < historyStack.length-1) historyStack.splice(historyIdx+1);
+  historyStack.push(snap); historyIdx=historyStack.length-1;
+  localStorage.setItem('mysale_admin_history', JSON.stringify(historyStack));
+  localStorage.setItem('mysale_admin_history_idx', historyIdx);
 }
-
-/* ---------- free move (drag) ---------- */
-let activeDrag = null, start = null;
-function onPointerDown(e){
-  if(!$('#freeMove').checked) return;
-  const t = e.target.closest('.movable');
-  if(!t) return;
-  activeDrag = t;
-  t.classList.add('dragging');
-  const r = t.getBoundingClientRect();
-  const s = $('#stage').getBoundingClientRect();
-  // ensure absolute position
-  if(getComputedStyle(t).position!=='absolute'){
-    t.style.position='absolute';
-    t.style.left = (r.left - s.left) + 'px';
-    t.style.top  = (r.top  - s.top ) + 'px';
-  }
-  start = {x:e.clientX, y:e.clientY, left:parseFloat(t.style.left||0), top:parseFloat(t.style.top||0)};
-  e.preventDefault();
+function canUndo(){ return historyIdx>0; }
+function canRedo(){ return historyIdx<historyStack.length-1; }
+function doUndo(){
+  if(!canUndo()) return;
+  historyIdx--; Object.assign(state, JSON.parse(historyStack[historyIdx])); renderAll();
 }
-function onPointerMove(e){
-  if(!activeDrag) return;
-  const dx = e.clientX - start.x;
-  const dy = e.clientY - start.y;
-  activeDrag.style.left = (start.left + dx) + 'px';
-  activeDrag.style.top  = (start.top  + dy) + 'px';
+function doRedo(){
+  if(!canRedo()) return;
+  historyIdx++; Object.assign(state, JSON.parse(historyStack[historyIdx])); renderAll();
 }
-function onPointerUp(){
-  if(!activeDrag) return;
-  activeDrag.classList.remove('dragging');
-  // persist positions
-  const pos = ls(POS_KEY) || {};
-  pos[ activeDrag.dataset.key ] = { left: activeDrag.style.left, top: activeDrag.style.top };
-  ls(POS_KEY,pos);
-  activeDrag=null;
-}
-
-function applyPositions(){
-  const pos = ls(POS_KEY) || {};
-  for(const [key, p] of Object.entries(pos)){
-    const el = document.querySelector(`[data-key="${key}"]`);
-    if(!el) continue;
-    el.style.position='absolute';
-    el.style.left = p.left;
-    el.style.top  = p.top;
-  }
-}
-
-$('#freeMove').addEventListener('change', e=>{
-  $('#stage').classList.toggle('free', e.target.checked);
-  if(e.target.checked){
-    // when enabling free move we need to materialize positions
-    document.querySelectorAll('.movable').forEach(el=>{
-      const r = el.getBoundingClientRect();
-      const s = $('#stage').getBoundingClientRect();
-      if(getComputedStyle(el).position!=='absolute'){
-        el.style.position='absolute';
-        el.style.left = (r.left - s.left)+'px';
-        el.style.top  = (r.top  - s.top )+'px';
+function loadHistory(){
+  try{
+    const h = JSON.parse(localStorage.getItem('mysale_admin_history')||'[]');
+    const i = +localStorage.getItem('mysale_admin_history_idx');
+    if(h.length){
+      historyStack.splice(0); h.forEach(x=>historyStack.push(x));
+      historyIdx = isFinite(i)? i : h.length-1;
+      if(historyIdx>=0){
+        Object.assign(state, JSON.parse(historyStack[historyIdx]));
       }
-    });
-  }else{
-    // turn back to normal flow
-    document.querySelectorAll('.movable').forEach(el=>{
-      el.style.position='';
-      el.style.left = '';
-      el.style.top  = '';
-    });
-  }
-});
-
-$('#stage').addEventListener('pointerdown', onPointerDown);
-window.addEventListener('pointermove', onPointerMove);
-window.addEventListener('pointerup', onPointerUp);
-
-$('#resetPos').addEventListener('click',()=>{
-  localStorage.removeItem(POS_KEY);
-  document.querySelectorAll('.movable').forEach(el=>{
-    el.style.position='';
-    el.style.left=''; el.style.top='';
-  });
-});
-
-/* ---------- file upload (logo) ---------- */
-$('#logoFile').addEventListener('change', e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const url = URL.createObjectURL(f);
-  $('#logo').src = url;
-  saveCfg();
-});
-
-/* ---------- theme ---------- */
-['bg','surface','accent','text','radius','cols'].forEach(id=>{
-  $('#'+id).addEventListener('input', applyTheme);
-});
-function applyTheme(){
-  setVar('--bg', $('#bg').value);
-  setVar('--surface', $('#surface').value);
-  setVar('--accent', $('#accent').value);
-  setVar('--text', $('#text').value);
-  setVar('--radius', $('#radius').value+'px');
-  setVar('--cols', $('#cols').value);
+    }else{
+      pushHistory();
+    }
+  }catch(e){ pushHistory(); }
 }
 
-/* ---------- brand controls ---------- */
-$('#brandText').addEventListener('input', ()=>{ mountBrandText(); saveCfg(); });
-$('#brandColor').addEventListener('input', ()=>{ mountBrandText(); saveCfg(); });
-$('#brandSize').addEventListener('input', ()=>{ mountBrandText(); saveCfg(); });
-$('#perLetter').addEventListener('change', ()=>{ mountBrandText(); saveCfg(); });
-
-/* ---------- save / load ---------- */
-function collectCfg(){
-  const letters = [...$('#brandName').querySelectorAll('span')].map(s=>s.style.color);
-  return {
-    theme:{
-      bg:$('#bg').value, surface:$('#surface').value, accent:$('#accent').value, text:$('#text').value,
-      radius:$('#radius').value, cols:$('#cols').value
-    },
-    brand:{
-      text:$('#brandText').value, size:$('#brandSize').value, color:$('#brandColor').value,
-      perLetter:$('#perLetter').checked, letters
-    },
-    logo: $('#logo').src || null
-  };
-}
-function applyCfg(cfg){
-  if(!cfg) return;
-  const t = cfg.theme||{};
-  $('#bg').value=t.bg||'#F7E6CA';
-  $('#surface').value=t.surface||'#FFF5E3';
-  $('#accent').value=t.accent||'#F27C14';
-  $('#text').value=t.text||'#3A2A1A';
-  $('#radius').value=t.radius||14;
-  $('#cols').value=t.cols||4;
+function clamp(n, a, b){return Math.min(b, Math.max(a,n));}
+function toHex(c){ c=c.trim(); if(!c) return ""; if(c.startsWith('#')) return c.toLowerCase();
+  const ctx = document.createElement('canvas').getContext('2d'); ctx.fillStyle=c; return ctx.fillStyle; }
+function syncColorPair(colorEl, hexEl, key){
+  const hex = toHex(colorEl.value||'#000000');
+  hexEl.value = hex;
+  state.colors[key] = hex;
   applyTheme();
-
-  const b = cfg.brand||{};
-  $('#brandText').value = b.text||'MySale';
-  $('#brandSize').value = b.size||48;
-  $('#brandColor').value = b.color||'#1a1a1a';
-  $('#perLetter').checked = !!b.perLetter;
-  ls(CFG_KEY, cfg); // keep letters for mountBrandText
-  mountBrandText();
-
-  if(cfg.logo) $('#logo').src = cfg.logo;
 }
-function saveCfg(){
-  const cfg = collectCfg();
-  ls(CFG_KEY,cfg);
+function syncHexPair(hexEl, colorEl, key){
+  let hex = toHex(hexEl.value||'#000000');
+  hexEl.value = hex; colorEl.value = hex;
+  state.colors[key] = hex;
+  applyTheme();
 }
-$('#saveBtn').addEventListener('click',()=>{ saveCfg(); alert('Сохранено в браузере'); });
-$('#loadBtn').addEventListener('click',()=>{ applyCfg(ls(CFG_KEY)); applyPositions(); });
+function applyTheme(){
+  document.documentElement.style.setProperty('--bg', state.colors.bg);
+  document.documentElement.style.setProperty('--surface', state.colors.surface);
+  document.documentElement.style.setProperty('--accent', state.colors.accent);
+  document.documentElement.style.setProperty('--text', state.colors.text);
+  document.documentElement.style.setProperty('--card-radius', state.radius+'px');
+  document.documentElement.style.setProperty('--cols', state.cols);
+  document.body.style.fontSize = state.textSize+'px';
+}
+function el(id){return document.getElementById(id);}
 
-/* ---------- export / import ---------- */
-$('#exportBtn').addEventListener('click',()=>{
-  const data = JSON.stringify({cfg:collectCfg(), pos:ls(POS_KEY)||{}},null,2);
-  const blob = new Blob([data],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'mysale_vitrine_config.json';
-  a.click();
-});
-$('#importFile').addEventListener('change',async e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const text = await f.text();
-  const {cfg,pos} = JSON.parse(text);
-  applyCfg(cfg); ls(CFG_KEY,cfg);
-  ls(POS_KEY,pos||{}); applyPositions();
-});
+function hydrateSidebar(){
+  el('brandInput').value = state.brandText;
+  el('brandSize').value = state.brandSize;
+  el('perLetter').checked = state.perLetter;
+  el('freeMove').checked = state.freeMove;
+  el('bgColor').value = state.colors.bg;
+  el('bgHex').value = state.colors.bg;
+  el('surfaceColor').value = state.colors.surface;
+  el('surfaceHex').value = state.colors.surface;
+  el('accentColor').value = state.colors.accent;
+  el('accentHex').value = state.colors.accent;
+  el('textColor').value = state.colors.text;
+  el('textHex').value = state.colors.text;
+  el('cols').value = state.cols;
+  el('radius').value = state.radius;
+  el('textSize').value = state.textSize;
+}
 
-/* ---------- init ---------- */
-applyCfg(ls(CFG_KEY));  // theme + brand + logo
-applyPositions();       // restore positions for free move
+function renderBrand(){
+  const root = el('brand');
+  root.innerHTML = "";
+  root.style.fontSize = state.brandSize + "px";
+  if(state.perLetter){
+    const cols = state.letters.length ? state.letters : new Array(state.brandText.length).fill(null);
+    for(let i=0;i<state.brandText.length;i++){
+      const s = document.createElement('span');
+      s.textContent = state.brandText[i];
+      s.style.color = cols[i] || 'var(--accent)';
+      root.appendChild(s);
+    }
+    buildLettersControls();
+  }else{
+    const s = document.createElement('span');
+    s.textContent = state.brandText;
+    s.style.color = 'var(--accent)';
+    root.appendChild(s);
+    el('lettersColors').style.display='none';
+  }
+}
+
+function buildLettersControls(){
+  const box = el('lettersColors');
+  box.innerHTML="";
+  box.style.display='block';
+  const row = document.createElement('div');
+  row.className='grid-2';
+  for(let i=0;i<state.brandText.length;i++){
+    const wrap = document.createElement('div');
+    const lab = document.createElement('label'); lab.textContent = 'Буква: "'+ state.brandText[i] +'"';
+    const inp = document.createElement('input'); inp.type='color';
+    const current = state.letters[i] || '#ff7a00';
+    inp.value = current;
+    inp.oninput = ()=>{ state.letters[i]=inp.value; renderBrand(); pushHistory(); };
+    wrap.appendChild(lab); wrap.appendChild(inp);
+    row.appendChild(wrap);
+  }
+  box.appendChild(row);
+}
+
+function renderLogo(){
+  const img = el('logoImg');
+  if(state.logoDataUrl){ img.src = state.logoDataUrl; img.style.display="block"; }
+  else { img.removeAttribute('src'); img.style.display="none"; }
+}
+
+function buildGrid(){
+  const g = el('grid');
+  g.innerHTML="";
+  for(let i=0;i<8;i++){
+    const c = document.createElement('div');
+    c.className='card draggable';
+    c.id = 'card_'+i;
+    const t = document.createElement('div');
+    t.className='pill'; t.textContent="Карточка "+(i+1);
+    c.appendChild(t);
+    const p = document.createElement('div'); p.className='muted'; p.style.marginTop="8px";
+    p.textContent="Здесь будет ваш модуль / ссылка.";
+    c.appendChild(p);
+    g.appendChild(c);
+  }
+}
+
+function applyMoveMode(){
+  document.body.classList.toggle('movable', !!state.freeMove);
+  const cards = qsa('.card');
+  cards.forEach(card=>{
+    if(state.freeMove){
+      const r = card.getBoundingClientRect();
+      const mainR = qs('main').getBoundingClientRect();
+      const x = r.left - mainR.left + r.width/2;
+      const y = r.top  - mainR.top  + r.height/2;
+      card.classList.add('abs');
+      card.style.left = x+'px'; card.style.top = y+'px';
+    }else{
+      card.classList.remove('abs');
+      card.style.left=""; card.style.top="";
+    }
+  });
+  draggableInit();
+}
+
+let dragData=null;
+function draggableInit(){
+  qsa('.draggable, .card').forEach(elm=>{
+    elm.onmousedown = (e)=>{
+      if(!state.freeMove) return;
+      const main = qs('main');
+      const mr = main.getBoundingClientRect();
+      const r = elm.getBoundingClientRect();
+      dragData = {
+        elm, main, mr,
+        offsetX: e.clientX - r.left,
+        offsetY: e.clientY - r.top
+      };
+      elm.classList.add('dragging');
+      document.onmousemove = onDrag;
+      document.onmouseup = stopDrag;
+    };
+  });
+}
+function onDrag(e){
+  if(!dragData) return;
+  const {elm, mr, offsetX, offsetY} = dragData;
+  const x = clamp(e.clientX - mr.left - offsetX + (elm.offsetWidth/2), 0, mr.width);
+  const y = clamp(e.clientY - mr.top  - offsetY + (elm.offsetHeight/2), 0, mr.height);
+  elm.style.position='absolute';
+  elm.style.left = x+'px';
+  elm.style.top  = y+'px';
+}
+function stopDrag(){
+  if(!dragData) return;
+  dragData.elm.classList.remove('dragging');
+  dragData=null;
+  savePositions();
+  pushHistory();
+}
+function savePositions(){
+  const main = qs('main');
+  const mr = main.getBoundingClientRect();
+  const pos={};
+  const all = [];
+  all.push({id:'logoImg', el:el('logoImg')});
+  all.push({id:'brandWrap', el:el('brandWrap')});
+  qsa('.card').forEach(c=>all.push({id:c.id, el:c}));
+  all.forEach(({id, el})=>{
+    const r = el.getBoundingClientRect();
+    pos[id] = { left: r.left - mr.left + r.width/2, top: r.top - mr.top + r.height/2 };
+  });
+  state.positions = pos;
+  localStorage.setItem('mysale_admin_positions', JSON.stringify(pos));
+}
+function restorePositions(){
+  const pos = state.positions || {};
+  const main = qs('main');
+  if(!Object.keys(pos).length) return;
+  document.body.classList.add('movable');
+  qsa('#logoImg, #brandWrap, .card').forEach(elm=>{
+    const id = elm.id || (elm===el('brandWrap')?'brandWrap':null);
+    if(!id || !pos[id]) return;
+    const {left, top} = pos[id];
+    elm.style.position='absolute';
+    elm.style.left = left+'px';
+    elm.style.top  = top+'px';
+    if(elm.classList.contains('card')) elm.classList.add('abs');
+  });
+}
+
+function renderAll(){
+  hydrateSidebar();
+  renderBrand();
+  renderLogo();
+  applyTheme();
+  if(!el('grid').children.length) buildGrid();
+  document.body.classList.toggle('movable', state.freeMove);
+  if(state.freeMove){ applyMoveMode(); } else {
+    qsa('.card').forEach(c=>{ c.style.left=""; c.style.top=""; c.classList.remove('abs'); c.style.position=''; });
+    el('logoImg').style.left="";
+    el('logoImg').style.top="";
+    qs('#brandWrap').style.left="";
+    qs('#brandWrap').style.top="";
+  }
+  draggableInit();
+}
+
+function init(){
+  try{
+    const stored = JSON.parse(localStorage.getItem('mysale_admin_state')||'null');
+    if(stored) Object.assign(state, stored);
+  }catch(e){}
+  loadHistory();
+  renderAll();
+  if(state.positions) restorePositions();
+  el('brandInput').addEventListener('input', e=>{
+    state.brandText = e.target.value || ""; renderBrand(); pushHistory();
+  });
+  el('brandSize').addEventListener('input', e=>{
+    state.brandSize = clamp(+e.target.value, 20, 120); renderBrand(); pushHistory();
+  });
+  el('perLetter').addEventListener('change', e=>{
+    state.perLetter = !!e.target.checked; renderBrand(); pushHistory();
+  });
+  el('freeMove').addEventListener('change', e=>{
+    state.freeMove = !!e.target.checked; renderAll(); pushHistory();
+  });
+
+  [['bg','bgColor','bgHex'], ['surface','surfaceColor','surfaceHex'], ['accent','accentColor','accentHex'], ['text','textColor','textHex']]
+  .forEach(([k,c,h])=>{
+    el(c).addEventListener('input', ()=>{ syncColorPair(el(c), el(h), k); pushHistory(); });
+    el(h).addEventListener('input', ()=>{ syncHexPair(el(h), el(c), k); pushHistory(); });
+  });
+
+  el('cols').addEventListener('input', e=>{ state.cols = clamp(+e.target.value,1,6); applyTheme(); pushHistory(); });
+  el('radius').addEventListener('input', e=>{ state.radius = clamp(+e.target.value,0,36); applyTheme(); pushHistory(); });
+  el('textSize').addEventListener('input', e=>{ state.textSize = clamp(+e.target.value,12,22); applyTheme(); pushHistory(); });
+
+  el('logoFile').addEventListener('change', e=>{
+    const f = e.target.files && e.target.files[0]; if(!f) return;
+    const r = new FileReader(); r.onload = ()=>{ state.logoDataUrl = r.result; renderLogo(); pushHistory(); };
+    r.readAsDataURL(f);
+  });
+
+  el('saveBtn').addEventListener('click', ()=>{
+    localStorage.setItem('mysale_admin_state', JSON.stringify(state));
+  });
+  el('loadBtn').addEventListener('click', ()=>{
+    const s = JSON.parse(localStorage.getItem('mysale_admin_state')||'null');
+    if(s){ Object.assign(state, s); renderAll(); }
+  });
+  el('undoBtn').addEventListener('click', doUndo);
+  el('redoBtn').addEventListener('click', doRedo);
+
+  el('exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download='mysale_admin_state.json'; a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  el('importBtn').addEventListener('click', async ()=>{
+    const txt = prompt('Вставьте JSON:');
+    if(!txt) return;
+    try{
+      const obj = JSON.parse(txt);
+      Object.assign(state, obj);
+      renderAll();
+      pushHistory();
+    }catch(e){ alert('Неверный JSON'); }
+  });
+  el('resetPos').addEventListener('click', ()=>{
+    state.positions={};
+    localStorage.removeItem('mysale_admin_positions');
+    renderAll(); pushHistory();
+  });
+}
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
