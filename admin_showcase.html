@@ -2,565 +2,333 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MySale — админка витрины (полная)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MySale — витрина (админ)</title>
 <style>
-:root{
-  --bg:#F8EAD6;
-  --surface:#FFF5E6;
-  --primary:#F27C14;
-  --text:#3A2A1A;
-  --card-radius:16px;
-  --gap:18px;
-  --shadow:0 8px 24px rgba(0,0,0,.08);
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font:16px/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-}
-/* layout */
-.wrapper{display:grid; grid-template-columns:340px 1fr; gap:24px; padding:20px;}
-@media (max-width:1000px){.wrapper{grid-template-columns:1fr}}
-.panel{
-  background:var(--surface);
-  border-radius:20px;
-  box-shadow:var(--shadow);
-  padding:16px;
-}
-h2{margin:0 0 12px 0; font-size:18px}
-label{font-size:12px; display:block; opacity:.7; margin:12px 0 6px}
-input[type="text"],input[type="number"],input[type="url"],input[type="color"],textarea,select{
-  width:100%; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:10px 12px; background:#fff; outline:none;
-}
-textarea{min-height:72px; resize:vertical}
-.row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
-button{
-  background:var(--primary); color:#fff; border:0; border-radius:10px; padding:10px 14px; cursor:pointer;
-  box-shadow:0 2px 0 rgba(0,0,0,.08); font-weight:600;
-}
-button.secondary{background:#fff; color:var(--text); border:1px solid rgba(0,0,0,.1)}
-button.ghost{background:transparent; border:1px dashed rgba(0,0,0,.25); color:var(--text)}
-small.help{display:block; opacity:.6; margin-top:6px}
-.grid{
-  display:grid;
-  gap:var(--gap);
-  grid-template-columns:repeat(var(--cols,4),1fr);
-}
-@media (max-width:1200px){.grid{grid-template-columns:repeat(var(--cols,3),1fr)}}
-@media (max-width:900px){.grid{grid-template-columns:repeat(var(--cols,2),1fr)}}
-@media (max-width:640px){.grid{grid-template-columns:repeat(var(--cols,1),1fr)}}
-.card{
-  background:#fff;
-  border-radius:var(--card-radius);
-  box-shadow:var(--shadow);
-  padding:18px;
-  user-select:none;
-  cursor:grab;
-}
-.card.dragging{opacity:.5}
-.card .icon{font-size:42px; line-height:1; margin-bottom:10px}
-.card .title{font-size:18px; font-weight:800; margin:0 0 6px}
-.card .sub{opacity:.6; font-size:13px; margin:0}
-.toolbar{
-  display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px
-}
-.brand{
-  display:flex; align-items:center; gap:12px;
-}
-.brand .logo{width:48px; height:48px; border-radius:14px; overflow:hidden; background:transparent; display:grid; place-items:center; box-shadow:var(--shadow)}
-.brand .logo img{max-width:100%; max-height:100%; object-fit:contain}
-.brand .text{font-size:28px; font-weight:900; letter-spacing:.2px}
-.kbd{font:12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#00000010; padding:2px 6px; border-radius:6px}
-.list{display:flex; flex-direction:column; gap:10px; max-height:36vh; overflow:auto}
-.item{background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:10px; display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center}
-.item .dot{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid; place-items:center; color:#fff; font-weight:900}
-.item button{padding:6px 10px}
-.footer{opacity:.65; font-size:12px; margin-top:8px}
-hr{border:0; border-top:1px solid rgba(0,0,0,.08); margin:14px 0}
-input[type="file"]{border:0}
-.switch{display:flex; align-items:center; gap:8px}
-.switch input{accent-color:var(--primary)}
-.badge{font-size:12px; background:#0000000f; padding:3px 8px; border-radius:999px}
-
-  .card.free .icon, .card.free .title, .card.free .sub{
-    position:absolute; cursor:grab; background:rgba(255,255,255,.6); padding:2px 6px; border-radius:8px;
+  :root{
+    --bg:#F7E6CA;
+    --surface:#FFF5E3;
+    --accent:#F27C14;
+    --text:#3A2A1A;
+    --radius:14px;
+    --cols:4;
+    --brandSize:48;
   }
-
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.3 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial}
+  .app{display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:100%}
+  .panel{padding:16px;background:#fff7eb;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.06) inset, 0 2px 12px rgba(0,0,0,.04)}
+  .panel h3{margin:8px 0 12px;font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:.05em}
+  .panel .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
+  .panel input[type="text"], .panel input[type="number"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #eadfce;background:#fff}
+  .panel input[type="color"]{width:48px;height:36px;padding:0;border:none;background:none}
+  .panel button{padding:8px 12px;border:0;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
+  .panel .muted{opacity:.7}
+  .preview{position:relative;padding:16px;background:linear-gradient(180deg,var(--surface),#fff2dd);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .switch{display:flex;gap:8px;align-items:center;font-weight:600}
+  .switch input{width:18px;height:18px}
+  .stage{position:relative;min-height:420px;border-radius:16px;padding:24px}
+  .brand{display:flex;align-items:center;gap:12px;user-select:none}
+  .brand__logo{width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.12));background:transparent;border-radius:12px}
+  .brand__name{font-size:var(--brandSize,48px);font-weight:900;letter-spacing:.5px;display:flex;gap:2px;line-height:1}
+  .brand__name span{display:inline-block}
+  .cards{display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:16px;margin-top:20px}
+  .card{padding:16px;background:#fff;border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,.08), 0 2px 10px rgba(0,0,0,.03)}
+  .ghost{pointer-events:none;opacity:.4}
+  /* free-move mode */
+  .free .movable{position:absolute;cursor:move;user-select:none}
+  .dragging{opacity:.8;outline:2px dashed var(--accent)}
+  .hint{font-size:12px;opacity:.6}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid #e7d7bf;background:#fff;cursor:pointer}
+  .grid{display:grid;gap:8px}
+  .grid.two{grid-template-columns:1fr 1fr}
 </style>
 </head>
 <body>
-  <div class="wrapper">
-    <!-- LEFT: SETTINGS -->
-    <div class="panel" id="settings">
-      <div class="toolbar">
-        <div class="brand">
-          <div class="logo"><img id="logoImg" alt=""></div>
-          <div class="text" id="brandText">mysale</div>
-        </div>
-        <div class="actions">
-          <button id="saveBtn">Сохранить</button>
-          <button class="secondary" id="loadBtn">Загрузить</button>
-        </div>
-      </div>
-
-      <h2>Бренд</h2>
-      <div class="actions"><button class="secondary" id="toggleLetterEditor">Пер-буквенные цвета</button></div>
-      <div id="letterEditor" class="list" style="display:none"></div>
-      <label>Название</label>
-      <input type="text" id="inpBrandText" placeholder="mysale">
-      <div class="row">
-        <div>
-          <label>Размер текста (px)</label>
-          <input type="number" id="inpBrandSize" min="20" max="120" value="40">
-        </div>
-        <div>
-          <label>Загрузить логотип (PNG/SVG/JPG)</label>
-          <input type="file" id="inpLogo" accept="image/*">
-          <small class="help">Файл хранится локально (localStorage)</small>
-        </div>
-      </div>
-
-      <hr>
-      <h2>Тема</h2>
-      <div class="row">
-        <div>
-          <label>Фон</label>
-          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorBg"><input type="text" id="colorBgHex" placeholder="#RRGGBB" style="width:110px"></div>
-        </div>
-        <div>
-          <label>Поверхность</label>
-          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorSurface"><input type="text" id="colorSurfaceHex" placeholder="#RRGGBB" style="width:110px"></div>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>Акцент</label>
-          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorPrimary"><input type="text" id="colorPrimaryHex" placeholder="#RRGGBB" style="width:110px"></div>
-        </div>
-        <div>
-          <label>Текст</label>
-          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="colorText"><input type="text" id="colorTextHex" placeholder="#RRGGBB" style="width:110px"></div>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>Радиус карточек (px)</label>
-          <input type="number" id="inpRadius" min="0" max="40" value="16">
-        </div>
-        <div>
-          <label>Колонки</label>
-          <input type="number" id="inpCols" min="1" max="6" value="4">
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="secondary" id="exportBtn">Экспорт JSON</button>
-        <label class="switch"><input type="file" id="importFile" hidden><button class="secondary" id="importBtn">Импорт JSON</button></label>
-        <button class="ghost" id="resetBtn">Сбросить</button>
-      </div>
-
-      <hr>
-      <h2>Карточки</h2>
-      <div class="actions">
-        <button id="addCard">+ Добавить</button>
-        <span class="badge">Перетаскивайте карточки для сортировки</span>
-      </div>
-      <div class="list" id="cardsList"></div>
-      <div class="footer">Хранение данных в <span class="kbd">localStorage</span>. Экспортируйте JSON для резервной копии.</div>
+<div class="app">
+  <aside class="panel">
+    <div class="row">
+      <button id="saveBtn">Сохранить</button>
+      <button id="loadBtn" class="btn">Загрузить</button>
     </div>
 
-    <!-- RIGHT: PREVIEW -->
-    <div class="panel">
-      <div class="toolbar">
-        <div class="brand">
-          <div class="logo"><img id="logoImgPreview" alt=""></div>
-          <div class="text" id="brandTextPreview">mysale</div>
-        </div>
-        <div class="badge">Предпросмотр</div>
-          <label class="switch"><input type="checkbox" id="freeMoveToggle"> Свободное перемещение</label>
+    <h3>Бренд</h3>
+    <div class="grid">
+      <label class="row"><input id="perLetter" type="checkbox"> <span>Пер-буквенные цвета</span></label>
+      <div class="row"><input id="brandText" type="text" value="MySale"/><span class="muted">Название</span></div>
+      <div class="row"><input id="brandSize" type="number" min="28" max="96" value="48"/><span class="muted">Размер</span></div>
+      <div class="row"><input id="brandColor" type="color" value="#1a1a1a"/><span class="muted">Цвет (общий)</span></div>
+      <div id="lettersBox" class="grid two" style="display:none"></div>
+      <div class="row">
+        <input id="logoFile" type="file" accept="image/*"/>
+        <span class="muted">Логотип PNG/SVG/JPG</span>
       </div>
-      <div class="grid" id="grid"></div>
+      <div class="hint">Логотип хранится локально (LocalStorage). У PNG будет прозрачный фон.</div>
     </div>
-  </div>
+
+    <h3>Тема</h3>
+    <div class="grid two">
+      <label class="row"><input id="bg" type="color" value="#F7E6CA"><span>Фон</span></label>
+      <label class="row"><input id="surface" type="color" value="#FFF5E3"><span>Поверхность</span></label>
+      <label class="row"><input id="accent" type="color" value="#F27C14"><span>Акцент</span></label>
+      <label class="row"><input id="text" type="color" value="#3A2A1A"><span>Текст</span></label>
+      <div class="row"><input id="radius" type="number" min="0" max="30" value="14"/><span>Радиус карточек</span></div>
+      <div class="row"><input id="cols" type="number" min="1" max="6" value="4"/><span>Колонки</span></div>
+    </div>
+
+    <h3>Экспорт / Импорт</h3>
+    <div class="grid">
+      <button id="exportBtn" class="btn">Экспорт JSON</button>
+      <input id="importFile" class="btn" type="file" accept="application/json"/>
+    </div>
+  </aside>
+
+  <main class="panel preview">
+    <div class="toolbar">
+      <label class="switch"><input id="freeMove" type="checkbox"/> <span>Свободное перемещение</span></label>
+      <button id="resetPos" class="btn">Сбросить позиции</button>
+    </div>
+
+    <div id="stage" class="stage">
+      <div id="brand" class="brand movable" data-key="brand">
+        <img id="logo" class="brand__logo movable" data-key="logo" alt="logo" src="" />
+        <div id="brandName" class="brand__name movable" data-key="brandName"></div>
+      </div>
+
+      <section class="cards">
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+        <div class="card">Карточка</div>
+      </section>
+    </div>
+  </main>
+</div>
 
 <script>
-const key = 'mysale_vitrine_state_v1';
+const $ = s => document.querySelector(s);
+const root = document.documentElement;
+const ls = (k,v)=> v===undefined? JSON.parse(localStorage.getItem(k)||'null')
+                                 : localStorage.setItem(k,JSON.stringify(v));
+const CFG_KEY = 'mysale_admin_cfg_v2';
+const POS_KEY = 'mysale_admin_pos_v2';
 
-const $ = sel => document.querySelector(sel);
-const $$ = sel => Array.from(document.querySelectorAll(sel));
+/* ---------- helpers ---------- */
+function setVar(name, val){ root.style.setProperty(name,val); }
+function hex(v){ return /^#/.test(v)?v:"#"+v; }
 
-const state = {
-  brand: { text:'mysale', size:40, logo:'' },
-  theme: { bg:'#F8EAD6', surface:'#FFF5E6', primary:'#F27C14', text:'#3A2A1A', radius:16, cols:4 },
-  cards: [
-    {icon:'🏠', title:'Недвижимость', sub:'Продажа, аренда', url:'#', newTab:true},
-    {icon:'🚗', title:'Транспорт', sub:'Авто, мото, запчасти', url:'#', newTab:true},
-    {icon:'💻', title:'Электроника', sub:'Телефоны, ноутбуки', url:'#', newTab:true},
-    {icon:'💼', title:'Работа', sub:'Вакансии, резюме', url:'#', newTab:true},
-    {icon:'🛠️', title:'Услуги', sub:'Сервис, ремонт', url:'#', newTab:true},
-    {icon:'🛋️', title:'Мебель', sub:'Дом и дача', url:'#', newTab:true},
-    {icon:'👕', title:'Мода', sub:'Одежда и обувь', url:'#', newTab:true},
-    {icon:'🚴', title:'Хобби', sub:'Спорт и отдых', url:'#', newTab:true},
-  ]
-};
-
-// ---------- persistence ----------
-function saveToLS(){
-  localStorage.setItem(key, JSON.stringify(state));
-  alert('Сохранено в браузере (localStorage).');
-}
-function loadFromLS(){
-  const s = localStorage.getItem(key);
-  if(!s) return;
-  try{ 
-    const obj = JSON.parse(s);
-    if(obj && obj.brand && obj.theme && Array.isArray(obj.cards)){
-      Object.assign(state.brand, obj.brand);
-      Object.assign(state.theme, obj.theme);
-      state.cards.splice(0,state.cards.length, ...obj.cards);
-    }
-  }catch(e){console.error(e)}
-}
-
-function exportJSON(){
-  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'mysale_vitrine_state.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function importJSON(file){
-  const fr = new FileReader();
-  fr.onload = e=>{
-    try{
-      const obj = JSON.parse(e.target.result);
-      if(obj.brand && obj.theme && Array.isArray(obj.cards)){
-        Object.assign(state.brand, obj.brand);
-        Object.assign(state.theme, obj.theme);
-        state.cards = obj.cards;
-        renderAll();
-      }else alert('Неверный формат JSON');
-    }catch(err){ alert('Ошибка JSON: '+err.message) }
-  };
-  fr.readAsText(file);
-}
-
-// ---------- helpers ----------
-function applyTheme(){
-  document.documentElement.style.setProperty('--bg', state.theme.bg);
-  document.documentElement.style.setProperty('--surface', state.theme.surface);
-  document.documentElement.style.setProperty('--primary', state.theme.primary);
-  document.documentElement.style.setProperty('--text', state.theme.text);
-  document.documentElement.style.setProperty('--card-radius', state.theme.radius+'px');
-  document.querySelector('.panel:nth-child(2) .grid').style.setProperty('--cols', state.theme.cols);
-}
-
-function setBrand(){
-  $('#brandText').textContent = state.brand.text;
-  $('#brandText').style.fontSize = state.brand.size+'px';
-  $('#brandTextPreview').textContent = state.brand.text;
-  $('#brandTextPreview').style.fontSize = state.brand.size+'px';
-  $('#logoImg').src = state.brand.logo || '';
-  $('#logoImgPreview').src = state.brand.logo || '';
-  $('#inpBrandText').value = state.brand.text;
-  $('#inpBrandSize').value = state.brand.size;
-}
-
-function updateInputs(){
-  $('#colorBg').value = state.theme.bg;
-  $('#colorSurface').value = state.theme.surface;
-  $('#colorPrimary').value = state.theme.primary;
-  $('#colorText').value = state.theme.text;
-  $('#inpRadius').value = state.theme.radius;
-  $('#inpCols').value = state.theme.cols;
-}
-
-function createCardEl(card, idx){
-  const el = document.createElement('div');
-  el.className = 'card';
-  el.draggable = true;
-  el.innerHTML = `
-    <div class="icon">${card.icon||'📦'}</div>
-    <h3 class="title">${card.title||'Без названия'}</h3>
-    <p class="sub">${card.sub||''}</p>
-  `;
-  if(card.bg) el.style.background = card.bg;
-  if(card.color) el.style.color = card.color;
-  // click
-  el.addEventListener('click', e=>{
-    if(card.url){
-      if(card.newTab) window.open(card.url, '_blank');
-      else location.href = card.url;
-    }
-  });
-  // drag & drop
-  el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', idx); el.classList.add('dragging'); });
-  el.addEventListener('dragend', e=>{ el.classList.remove('dragging'); });
-  el.addEventListener('dragover', e=>{ e.preventDefault(); });
-  el.addEventListener('drop', e=>{
-    e.preventDefault();
-    const from = +e.dataTransfer.getData('text/plain');
-    const to = idx;
-    if(from===to) return;
-    const [item] = state.cards.splice(from,1);
-    state.cards.splice(to,0,item);
-    renderAll();
-  });
-  return el;
-}
-
-function renderGrid(){
-  const grid = $('#grid');
-  grid.innerHTML='';
-  state.cards.forEach((c,i)=> grid.appendChild(createCardEl(c,i)));
-}
-
-function renderCardsList(){
-  const list = $('#cardsList');
-  list.innerHTML='';
-  state.cards.forEach((c,i)=>{
-    const it = document.createElement('div');
-    it.className='item';
-    it.innerHTML = `
-      <div class="dot">${(c.icon||'🔖').slice(0,2)}</div>
-      <div>
-        <div style="font-weight:700">${c.title||'Без названия'}</div>
-        <div style="opacity:.65; font-size:12px">${c.url||'Ссылка не задана'}</div>
-      </div>
-      <div style="display:flex; gap:6px">
-        <button class="secondary" data-edit>Ред.</button>
-        <button class="ghost" data-dup title="Дублировать">Дубль</button>
-        <button class="ghost" data-del title="Удалить">✕</button>
-      </div>
-    `;
-    it.querySelector('[data-edit]').onclick=()=> openCardEditor(i);
-    it.querySelector('[data-del]').onclick=()=>{ if(confirm('Удалить карточку?')){ state.cards.splice(i,1); renderAll(); } };
-    it.querySelector('[data-dup]').onclick=()=>{ state.cards.splice(i+1,0, JSON.parse(JSON.stringify(c))); renderAll(); };
-    list.appendChild(it);
-  });
-}
-
-function openCardEditor(i){
-  const c = state.cards[i];
-  const dlg = document.createElement('div');
-  Object.assign(dlg.style,{
-    position:'fixed', inset:'0', background:'rgba(0,0,0,.35)', display:'grid', placeItems:'center', zIndex:9999
-  });
-  dlg.innerHTML = `
-  <div class="panel" style="width:min(700px, 92vw)">
-    <h2>Карточка</h2>
-    <div class="row">
-      <div><label>Иконка (эмодзи)</label><input type="text" id="eIcon" value="${c.icon||''}" placeholder="🏠"></div>
-      <div><label>Открывать в новой вкладке</label><div class="switch"><input type="checkbox" id="eTab" ${c.newTab?'checked':''}><span>target=_blank</span></div></div>
-    </div>
-    <div class="row">
-      <div><label>Заголовок</label><input type="text" id="eTitle" value="${c.title||''}"></div>
-      <div><label>Подзаголовок</label><input type="text" id="eSub" value="${c.sub||''}"></div>
-    </div>
-    <label>Ссылка (URL)</label><input type="url" id="eUrl" value="${c.url||''}" placeholder="https://...">
-    <div class="row">
-      <div><label>Цвет фона</label><input type="color" id="eBg" value="${c.bg||'#ffffff'}"></div>
-      <div><label>Цвет текста</label><input type="color" id="eColor" value="${c.color||'#000000'}"></div>
-    </div>
-    <div class="actions" style="justify-content:space-between">
-      <button class="secondary" id="close">Отмена</button>
-      <div style="display:flex; gap:8px">
-        <button class="ghost" id="remove">Удалить</button>
-        <button id="apply">Применить</button>
-      </div>
-    </div>
-  </div>`;
-  dlg.onclick = e=>{ if(e.target===dlg) dlg.remove(); };
-  dlg.querySelector('#close').onclick=()=> dlg.remove();
-  dlg.querySelector('#remove').onclick=()=>{ if(confirm('Удалить карточку?')){ state.cards.splice(i,1); dlg.remove(); renderAll(); } };
-  dlg.querySelector('#apply').onclick=()=>{
-    c.icon = dlg.querySelector('#eIcon').value || '🔖';
-    c.title = dlg.querySelector('#eTitle').value || 'Без названия';
-    c.sub = dlg.querySelector('#eSub').value || '';
-    c.url = dlg.querySelector('#eUrl').value || '';
-    c.bg = dlg.querySelector('#eBg').value || '#ffffff';
-    c.color = dlg.querySelector('#eColor').value || '#000000';
-    c.newTab = dlg.querySelector('#eTab').checked;
-    dlg.remove();
-    renderAll();
-  };
-  document.body.appendChild(dlg);
-}
-
-function renderAll(){
-  // theme
-  applyTheme();
-  // brand
-  setBrand();
-  // lists
-  renderGrid();
-  renderCardsList();
-  // inputs
-  updateInputs();
-}
-
-// ---------- bindings ----------
-$('#saveBtn').onclick = saveToLS;
-$('#loadBtn').onclick = ()=>{ loadFromLS(); renderAll(); };
-$('#exportBtn').onclick = exportJSON;
-$('#importBtn').onclick = ()=> $('#importFile').click();
-$('#importFile').onchange = e=>{ if(e.target.files[0]) importJSON(e.target.files[0]); };
-$('#resetBtn').onclick = ()=>{ if(confirm('Сбросить к заводским?')){ localStorage.removeItem(key); location.reload(); } };
-$('#addCard').onclick = ()=>{ state.cards.push({icon:'🆕', title:'Новая карточка', sub:'Описание', url:'#', newTab:true}); renderAll(); };
-
-// theme inputs
-$('#colorBg').oninput = e=>{ state.theme.bg = e.target.value; applyTheme(); };
-$('#colorSurface').oninput = e=>{ state.theme.surface = e.target.value; applyTheme(); };
-$('#colorPrimary').oninput = e=>{ state.theme.primary = e.target.value; applyTheme(); };
-$('#colorText').oninput = e=>{ state.theme.text = e.target.value; applyTheme(); };
-$('#inpRadius').oninput = e=>{ state.theme.radius = +e.target.value; applyTheme(); };
-$('#inpCols').oninput = e=>{ state.theme.cols = Math.max(1, Math.min(6, +e.target.value||4)); applyTheme(); };
-
-// brand inputs
-$('#inpBrandText').oninput = e=>{ state.brand.text = e.target.value; setBrand(); };
-$('#inpBrandSize').oninput = e=>{ state.brand.size = +e.target.value||40; setBrand(); };
-$('#inpLogo').onchange = e=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  const fr = new FileReader();
-  fr.onload = ev=>{ state.brand.logo = ev.target.result; setBrand(); };
-  fr.readAsDataURL(f);
-};
-
-// init
-loadFromLS();
-renderAll();
-
-// === HEX <-> normalize ===
-function normHex(v){ v=v.trim(); if(!v) return null; if(v[0]!=='#') v='#'+v; if(!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return null; if(v.length===4){v='#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]} return v.toUpperCase() }
-
-// === Per-letter logo editor state ===
-if(!state.brandLetters){ state.brandLetters = (state.brand.text||'mysale').split('').map(ch=>({ch, color:'#F27C14'})); }
-
-function buildLetterEditor(){
-  const box = document.getElementById('letterEditor');
+/* ---------- brand text / per-letter coloring ---------- */
+function mountBrandText(){
+  const name = $('#brandText').value || 'MySale';
+  const box = $('#brandName');
+  const per = $('#perLetter').checked;
+  box.style.fontSize = $('#brandSize').value+'px';
   box.innerHTML = '';
-  state.brandLetters.forEach((L, i)=>{
-    const row = document.createElement('div'); row.className='item';
-    row.innerHTML = `
-      <div class="dot">${L.ch}</div>
-      <div>
-        <div style="display:flex; gap:8px; align-items:center">
-          <input type="text" data-k="ch" value="${L.ch}" style="width:60px">
-          <input type="color" data-k="color" value="${L.color}">
-          <input type="text" data-k="hex" value="${L.color}" style="width:100px">
-        </div>
-      </div>
-      <div>
-        <button class="ghost" data-up>↑</button>
-        <button class="ghost" data-down>↓</button>
-        <button class="secondary" data-del>✕</button>
-      </div>`;
-    row.querySelector('[data-k="ch"]').oninput = e=>{ L.ch = (e.target.value||' ').slice(0,1) ; renderBrandLetters(); };
-    const color = row.querySelector('[data-k="color"]');
-    const hex = row.querySelector('[data-k="hex"]');
-    color.oninput = e=>{ L.color = e.target.value; hex.value=L.color; renderBrandLetters(); };
-    hex.onchange = e=>{ const v=normHex(e.target.value)||L.color; L.color=v; color.value=v; renderBrandLetters(); };
-    row.querySelector('[data-up"]').onclick = ()=>{ if(i>0){ const t=state.brandLetters.splice(i,1)[0]; state.brandLetters.splice(i-1,0,t); buildLetterEditor(); renderBrandLetters(); } };
-    row.querySelector('[data-down"]').onclick = ()=>{ if(i<state.brandLetters.length-1){ const t=state.brandLetters.splice(i,1)[0]; state.brandLetters.splice(i+1,0,t); buildLetterEditor(); renderBrandLetters(); } };
-    row.querySelector('[data-del"]').onclick = ()=>{ state.brandLetters.splice(i,1); buildLetterEditor(); renderBrandLetters(); };
-    box.appendChild(row);
-  });
-  const add = document.createElement('button'); add.className='ghost'; add.textContent='+ Буква';
-  add.onclick = ()=>{ state.brandLetters.push({ch:'*', color:'#F27C14'}); buildLetterEditor(); renderBrandLetters(); };
-  box.appendChild(add);
-}
-
-function renderBrandLetters(){
-  const t = state.brandLetters.map(x=>`<span style="color:${x.color};font-weight:900">${x.ch}</span>`).join('');
-  document.getElementById('brandText').innerHTML = t || '&nbsp;';
-  document.getElementById('brandTextPreview').innerHTML = t || '&nbsp;';
-  saveToLS();
-}
-
-document.getElementById('toggleLetterEditor').onclick = ()=>{
-  const el = document.getElementById('letterEditor');
-  el.style.display = el.style.display==='none' ? 'block':'none';
-  if(el.style.display==='block') buildLetterEditor();
-};
-
-// === Sync HEX text boxes with color pickers ===
-function syncHexInputs(){
-  colorBgHex.value = state.theme.bg;
-  colorSurfaceHex.value = state.theme.surface;
-  colorPrimaryHex.value = state.theme.primary;
-  colorTextHex.value = state.theme.text;
-}
-syncHexInputs();
-
-colorBgHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.bg=v; colorBg.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.bg; };
-colorSurfaceHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.surface=v; colorSurface.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.surface; };
-colorPrimaryHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.primary=v; colorPrimary.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.primary; };
-colorTextHex.onchange = e=>{ const v=normHex(e.target.value); if(v){ state.theme.text=v; colorText.value=v; applyTheme(); saveToLS(); e.target.value=v; } else e.target.value=state.theme.text; };
-
-[colorBg,colorSurface,colorPrimary,colorText].forEach(inp=> inp.addEventListener('input', syncHexInputs));
-
-// === Free move inside cards ===
-if(!state.freeMove){ state.freeMove=false; }
-if(!state.cards.every(c=>c.x&&c.y)){ state.cards.forEach(c=>{ c.x={icon:12,title:62,sub:62}; c.y={icon:16,title:16,sub:44}; }); }
-
-const freeToggle = document.getElementById('freeMoveToggle');
-if(freeToggle){
-  freeToggle.checked = state.freeMove;
-  freeToggle.onchange = ()=>{ state.freeMove = freeToggle.checked; renderAll(); saveToLS(); };
-}
-
-const _createCardEl_orig = createCardEl;
-createCardEl = function(card, idx){
-  const el = _createCardEl_orig(card, idx);
-  if(state.freeMove){
-    el.classList.add('free');
-    const icon = el.querySelector('.icon');
-    const title = el.querySelector('.title');
-    const sub = el.querySelector('.sub');
-    const setPos=(node,k)=>{
-      if(!node) return;
-      node.style.left = (card.x?.[k]??12)+'px';
-      node.style.top  = (card.y?.[k]??12)+'px';
-      node.draggable = true;
-      node.addEventListener('dragstart',ev=>{
-        const r = el.getBoundingClientRect();
-        const r2 = node.getBoundingClientRect();
-        ev.dataTransfer.setData('text/plain', JSON.stringify({k, dx:ev.clientX-r2.left, dy:ev.clientY-r2.top, ox:r.left, oy:r.top}));
+  if(per){
+    $('#lettersBox').style.display = 'grid';
+    $('#lettersBox').innerHTML = '';
+    [...name].forEach((ch,i)=>{
+      const span = document.createElement('span');
+      span.textContent = ch;
+      const color = (ls(CFG_KEY)?.letters||[])[i] || $('#brandColor').value;
+      span.style.color = color;
+      box.appendChild(span);
+      // editor input
+      const inp = document.createElement('input');
+      inp.type='color'; inp.value = color;
+      inp.title = 'Буква «'+(ch||'␣')+'»';
+      inp.addEventListener('input',()=>{
+        span.style.color = inp.value;
+        saveCfg();
       });
-    };
-    setPos(icon,'icon'); setPos(title,'title'); setPos(sub,'sub');
-    el.addEventListener('dragover',ev=>ev.preventDefault());
-    el.addEventListener('drop',ev=>{
-      ev.preventDefault();
-      const data = JSON.parse(ev.dataTransfer.getData('text/plain')||'{}');
-      if(!data.k) return;
-      const x = Math.round(ev.clientX - data.ox - data.dx);
-      const y = Math.round(ev.clientY - data.oy - data.dy);
-      card.x[data.k]=Math.max(0,x); card.y[data.k]=Math.max(0,y);
-      saveToLS(); renderAll();
+      $('#lettersBox').appendChild(inp);
+    });
+  }else{
+    $('#lettersBox').style.display = 'none';
+    const span = document.createElement('span');
+    span.textContent = name;
+    span.style.color = $('#brandColor').value;
+    box.appendChild(span);
+  }
+}
+
+/* ---------- free move (drag) ---------- */
+let activeDrag = null, start = null;
+function onPointerDown(e){
+  if(!$('#freeMove').checked) return;
+  const t = e.target.closest('.movable');
+  if(!t) return;
+  activeDrag = t;
+  t.classList.add('dragging');
+  const r = t.getBoundingClientRect();
+  const s = $('#stage').getBoundingClientRect();
+  // ensure absolute position
+  if(getComputedStyle(t).position!=='absolute'){
+    t.style.position='absolute';
+    t.style.left = (r.left - s.left) + 'px';
+    t.style.top  = (r.top  - s.top ) + 'px';
+  }
+  start = {x:e.clientX, y:e.clientY, left:parseFloat(t.style.left||0), top:parseFloat(t.style.top||0)};
+  e.preventDefault();
+}
+function onPointerMove(e){
+  if(!activeDrag) return;
+  const dx = e.clientX - start.x;
+  const dy = e.clientY - start.y;
+  activeDrag.style.left = (start.left + dx) + 'px';
+  activeDrag.style.top  = (start.top  + dy) + 'px';
+}
+function onPointerUp(){
+  if(!activeDrag) return;
+  activeDrag.classList.remove('dragging');
+  // persist positions
+  const pos = ls(POS_KEY) || {};
+  pos[ activeDrag.dataset.key ] = { left: activeDrag.style.left, top: activeDrag.style.top };
+  ls(POS_KEY,pos);
+  activeDrag=null;
+}
+
+function applyPositions(){
+  const pos = ls(POS_KEY) || {};
+  for(const [key, p] of Object.entries(pos)){
+    const el = document.querySelector(`[data-key="${key}"]`);
+    if(!el) continue;
+    el.style.position='absolute';
+    el.style.left = p.left;
+    el.style.top  = p.top;
+  }
+}
+
+$('#freeMove').addEventListener('change', e=>{
+  $('#stage').classList.toggle('free', e.target.checked);
+  if(e.target.checked){
+    // when enabling free move we need to materialize positions
+    document.querySelectorAll('.movable').forEach(el=>{
+      const r = el.getBoundingClientRect();
+      const s = $('#stage').getBoundingClientRect();
+      if(getComputedStyle(el).position!=='absolute'){
+        el.style.position='absolute';
+        el.style.left = (r.left - s.left)+'px';
+        el.style.top  = (r.top  - s.top )+'px';
+      }
+    });
+  }else{
+    // turn back to normal flow
+    document.querySelectorAll('.movable').forEach(el=>{
+      el.style.position='';
+      el.style.left = '';
+      el.style.top  = '';
     });
   }
-  return el;
-};
-
-// Simple undo/redo (snapshot before applyTheme/render heavy ops could be added globally)
-if(!window._hist){ window._hist = {u:[], r:[]}; }
-function push(){ _hist.u.push(JSON.stringify(state)); _hist.r.length=0; }
-function undo2(){ if(!_hist.u.length) return; _hist.r.push(JSON.stringify(state)); state=JSON.parse(_hist.u.pop()); renderAll(); saveToLS(); }
-function redo2(){ if(!_hist.r.length) return; _hist.u.push(JSON.stringify(state)); state=JSON.parse(_hist.r.pop()); renderAll(); saveToLS(); }
-document.addEventListener('keydown', (e)=>{
-  if(e.ctrlKey && (e.key==='z' || e.key==='Z')){ e.preventDefault(); undo2(); }
-  if(e.ctrlKey && (e.key==='y' || e.key==='Y')){ e.preventDefault(); redo2(); }
 });
 
+$('#stage').addEventListener('pointerdown', onPointerDown);
+window.addEventListener('pointermove', onPointerMove);
+window.addEventListener('pointerup', onPointerUp);
+
+$('#resetPos').addEventListener('click',()=>{
+  localStorage.removeItem(POS_KEY);
+  document.querySelectorAll('.movable').forEach(el=>{
+    el.style.position='';
+    el.style.left=''; el.style.top='';
+  });
+});
+
+/* ---------- file upload (logo) ---------- */
+$('#logoFile').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const url = URL.createObjectURL(f);
+  $('#logo').src = url;
+  saveCfg();
+});
+
+/* ---------- theme ---------- */
+['bg','surface','accent','text','radius','cols'].forEach(id=>{
+  $('#'+id).addEventListener('input', applyTheme);
+});
+function applyTheme(){
+  setVar('--bg', $('#bg').value);
+  setVar('--surface', $('#surface').value);
+  setVar('--accent', $('#accent').value);
+  setVar('--text', $('#text').value);
+  setVar('--radius', $('#radius').value+'px');
+  setVar('--cols', $('#cols').value);
+}
+
+/* ---------- brand controls ---------- */
+$('#brandText').addEventListener('input', ()=>{ mountBrandText(); saveCfg(); });
+$('#brandColor').addEventListener('input', ()=>{ mountBrandText(); saveCfg(); });
+$('#brandSize').addEventListener('input', ()=>{ mountBrandText(); saveCfg(); });
+$('#perLetter').addEventListener('change', ()=>{ mountBrandText(); saveCfg(); });
+
+/* ---------- save / load ---------- */
+function collectCfg(){
+  const letters = [...$('#brandName').querySelectorAll('span')].map(s=>s.style.color);
+  return {
+    theme:{
+      bg:$('#bg').value, surface:$('#surface').value, accent:$('#accent').value, text:$('#text').value,
+      radius:$('#radius').value, cols:$('#cols').value
+    },
+    brand:{
+      text:$('#brandText').value, size:$('#brandSize').value, color:$('#brandColor').value,
+      perLetter:$('#perLetter').checked, letters
+    },
+    logo: $('#logo').src || null
+  };
+}
+function applyCfg(cfg){
+  if(!cfg) return;
+  const t = cfg.theme||{};
+  $('#bg').value=t.bg||'#F7E6CA';
+  $('#surface').value=t.surface||'#FFF5E3';
+  $('#accent').value=t.accent||'#F27C14';
+  $('#text').value=t.text||'#3A2A1A';
+  $('#radius').value=t.radius||14;
+  $('#cols').value=t.cols||4;
+  applyTheme();
+
+  const b = cfg.brand||{};
+  $('#brandText').value = b.text||'MySale';
+  $('#brandSize').value = b.size||48;
+  $('#brandColor').value = b.color||'#1a1a1a';
+  $('#perLetter').checked = !!b.perLetter;
+  ls(CFG_KEY, cfg); // keep letters for mountBrandText
+  mountBrandText();
+
+  if(cfg.logo) $('#logo').src = cfg.logo;
+}
+function saveCfg(){
+  const cfg = collectCfg();
+  ls(CFG_KEY,cfg);
+}
+$('#saveBtn').addEventListener('click',()=>{ saveCfg(); alert('Сохранено в браузере'); });
+$('#loadBtn').addEventListener('click',()=>{ applyCfg(ls(CFG_KEY)); applyPositions(); });
+
+/* ---------- export / import ---------- */
+$('#exportBtn').addEventListener('click',()=>{
+  const data = JSON.stringify({cfg:collectCfg(), pos:ls(POS_KEY)||{}},null,2);
+  const blob = new Blob([data],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mysale_vitrine_config.json';
+  a.click();
+});
+$('#importFile').addEventListener('change',async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const text = await f.text();
+  const {cfg,pos} = JSON.parse(text);
+  applyCfg(cfg); ls(CFG_KEY,cfg);
+  ls(POS_KEY,pos||{}); applyPositions();
+});
+
+/* ---------- init ---------- */
+applyCfg(ls(CFG_KEY));  // theme + brand + logo
+applyPositions();       // restore positions for free move
 </script>
 </body>
 </html>
