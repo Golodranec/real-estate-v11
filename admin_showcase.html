@@ -1,25 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MySale — Админ витрины (v5, stable)</title>
-<!--
-  MySale Admin v5 (stable)
-  --------------------------------------------------
-  Цели патча:
-  1) Свободное перемещение у логотипа, бренда и карточек — независимо.
-  2) Позиции закрепляются (persist) после выключения свободного режима.
-  3) Карточки редактируемые: иконка, заголовок, подпись, ссылка.
-  4) Цвета: парные поля (color picker + HEX). Тема: фон/поверхность/текст/акцент.
-  5) Логотип PNG/SVG без заливки фона, перетаскивается отдельно.
-  6) Пер-буквенные цвета бренда (каждая буква имеет свой цвет).
-  7) Undo/Redo (кнопки и горячие клавиши), экспорт/импорт JSON.
-  8) Сброс позиций (только координаты), не затрагивает контент.
-  9) Без сброса фокуса: рендер частичный, обновления адресные.
-  10) Клики по карточке открывают ссылку только когда freeMove=off.
-  11) Z-индекс при захвате: активный элемент поверх остальных.
--->
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MySale — Админ витрины (v6)</title>
 <style>
 :root{
   --bg:#F7E6CA;
@@ -32,30 +16,13 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0;
-  font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-  background:var(--bg);
-  color:var(--text);
-}
-.wrap{display:grid;grid-template-columns:340px 1fr;gap:18px;min-height:100%}
-/* Sidebar */
-aside{
-  background:#fff8ee;
-  border-radius:16px;
-  padding:16px;
-  margin:14px;
-  position:sticky; top:14px;
-  height:calc(100vh - 28px);
-  overflow:auto;
-  box-shadow:0 10px 28px rgba(0,0,0,.06)
-}
+body{margin:0;font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:var(--text)}
+.wrap{display:grid;grid-template-columns:360px 1fr;gap:18px;min-height:100%}
+aside{background:#fff8ee;border-radius:16px;padding:16px;margin:14px;position:sticky;top:14px;height:calc(100vh - 28px);overflow:auto;box-shadow:0 10px 28px rgba(0,0,0,.06)}
 h2{margin:8px 0 10px}
 h3{margin:12px 0 6px}
 label{font-size:12px;color:#7a6b57;margin:8px 0 4px;display:block}
-input[type="text"],input[type="number"],input[type="url"],input[type="color"]{
-  width:100%;padding:9px 12px;border:1px solid #eadfce;border-radius:10px;background:#fff;outline:none
-}
+input[type="text"],input[type="number"],input[type="url"],input[type="color"],select,textarea{width:100%;padding:9px 12px;border:1px solid #eadfce;border-radius:10px;background:#fff;outline:none}
 .small{font-size:12px;opacity:.65}
 .row{display:flex;gap:8px;align-items:center}
 .row>*{flex:1}
@@ -64,52 +31,30 @@ input[type="text"],input[type="number"],input[type="url"],input[type="color"]{
 .btn.warn{background:#d33}
 .kbd{background:#eee;border-radius:6px;padding:2px 6px;font:12px/18px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .sep{height:1px;background:#eadfce;margin:10px 0}
-/* Canvas */
-main{
-  background:linear-gradient(180deg,var(--surface),#fff7ec);
-  border-radius:16px;
-  margin:14px 14px 14px 0;
-  padding:14px;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)
-}
-.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
 .badge{background:#fff;border:1px solid #eadfce;border-radius:999px;padding:4px 9px;font-size:12px}
+.toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid #eadfce;background:#fff;padding:6px 10px;border-radius:999px;font-size:12px}
 #status{font-size:12px;color:#665844;margin-left:6px}
-.canvas{
-  position:relative;
-  min-height:82vh;
-  border-radius:12px;
-  padding:14px;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)
-}
-/* Independent boxes */
-.box{position:absolute;z-index:5}
+main{background:linear-gradient(180deg,var(--surface),#fff7ec);border-radius:16px;margin:14px 14px 14px 0;padding:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.canvas{position:relative;min-height:82vh;border-radius:12px;padding:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)}
+.box{position:absolute}
 .brand{font-weight:900;font-size:48px;letter-spacing:.4px;display:inline-flex;gap:0;line-height:1}
 .brand span{display:inline-block;white-space:pre}
 #logoImg{width:64px;height:64px;object-fit:contain;display:block;background:transparent}
-/* Cards layer */
 .cards{position:relative}
-.card{
-  position:absolute;
-  background:#fff;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:14px;
-  min-width:220px;
-  max-width:360px;
-}
+.card{position:absolute;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;min-width:160px}
 .card .icon{font-size:28px}
 .card .title{font-weight:800;margin:6px 0 4px;font-size:18px;outline:none}
 .card .hint{font-size:13px;color:#7a6b57;margin:0;outline:none}
 .card .link{position:absolute;top:8px;right:10px;font-size:12px;color:#7a6b57;background:#fff;border:1px solid #eadfce;border-radius:999px;padding:3px 8px;text-decoration:none}
-/* Drag visuals */
 .draggable{cursor:grab}
 .dragging{opacity:.92;cursor:grabbing;outline:2px dashed rgba(0,0,0,.18)}
-/* Letters UI */
-.letters{display:flex;flex-wrap:wrap;gap:6px}
-.letters .cell{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #eadfce;border-radius:10px;padding:6px}
-/* Toggles */
-.toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid #eadfce;background:#fff;padding:6px 10px;border-radius:999px;font-size:12px}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.3);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.on{display:flex}
+.boxModal{background:#fff8ee;border:1px solid #eadfce;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.15);padding:16px;width:min(560px,92vw)}
+.boxModal h3{margin:0 0 8px}
+.boxModal .row{margin:6px 0}
 </style>
 </head>
 <body>
@@ -126,6 +71,11 @@ main{
     </div>
     <div id="status" class="small"></div>
 
+    <div class="row">
+      <input id="search" type="text" placeholder="Поиск карточек по названию/подсказке">
+      <button id="btnAdd" class="btn secondary">+ Карточка</button>
+    </div>
+
     <h3>Бренд</h3>
     <label>Название</label>
     <input id="brandText" type="text" placeholder="MySale" value="MySale">
@@ -133,7 +83,7 @@ main{
       <label class="toggle"><input id="perLetter" type="checkbox"> Пер-буквенные цвета</label>
       <label style="margin:0">Размер</label><input id="brandSize" type="number" value="48" min="18" max="160" style="width:90px">
     </div>
-    <div id="lettersBox" class="letters" style="display:none"></div>
+    <div id="lettersBox" class="row" style="flex-wrap:wrap;gap:6px"></div>
     <div class="row">
       <label>Логотип (PNG/SVG)</label>
       <input id="logoFile" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp">
@@ -142,6 +92,9 @@ main{
     <div class="row">
       <label class="toggle"><input id="lockBrand" type="checkbox"> Закрепить бренд</label>
       <label class="toggle"><input id="lockLogo" type="checkbox"> Закрепить логотип</label>
+    </div>
+    <div class="row">
+      <label class="toggle"><input id="brandAbove" type="checkbox"> Бренд поверх логотипа</label>
     </div>
 
     <h3>Тема</h3>
@@ -154,8 +107,7 @@ main{
       <div><label>Акцент</label><input id="accent" type="color" value="#FF7A00"></div>
     </div>
     <div class="row">
-      <label style="margin:0">Радиус</label><input id="radius" type="number" value="16" min="0" max="36" style="width:90px">
-      <label style="margin:0">Колонки (раскладка при первом размещении)</label><input id="cols" type="number" value="4" min="1" max="8" style="width:90px">
+      <label style="margin:0">Радиус по умолчанию</label><input id="radius" type="number" value="16" min="0" max="99" style="width:90px">
     </div>
 
     <div class="sep"></div>
@@ -180,49 +132,92 @@ main{
     </div>
 
     <div id="canvas" class="canvas">
-      <!-- Independent movable boxes -->
-      <div id="logoBox" class="box draggable" title="Перетащите логотип">
+      <div id="logoBox" class="box" title="Перетащите логотип">
         <img id="logoImg" alt="logo">
       </div>
-      <div id="brandBox" class="box draggable" title="Перетащите бренд">
+      <div id="brandBox" class="box" title="Перетащите бренд">
         <div id="brandView" class="brand"></div>
       </div>
-      <!-- Cards layer (absolute positioned always) -->
       <div id="cardsLayer" class="cards"></div>
     </div>
   </main>
 </div>
 
+<!-- Card Editor Modal -->
+<div id="cardModal" class="modal">
+  <div class="boxModal">
+    <h3>Редактор карточки</h3>
+    <div class="row"><label>Название</label><input id="cmTitle" type="text"></div>
+    <div class="row"><label>Подсказка</label><input id="cmHint" type="text"></div>
+    <div class="row"><label>Иконка (emoji/текст)</label><input id="cmIcon" type="text"></div>
+    <div class="row"><label>Ссылка</label><input id="cmLink" type="url" placeholder="https://..."></div>
+    <div class="row">
+      <div><label>Цвет</label><input id="cmColor" type="color"></div>
+      <div><label>Ширина (px)</label><input id="cmW" type="number" min="120" max="600" step="2"></div>
+      <div><label>Высота (px)</label><input id="cmH" type="number" min="120" max="600" step="2"></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Форма</label>
+        <select id="cmShape">
+          <option value="rect">Прямоугольник</option>
+          <option value="rounded">Скругленная</option>
+          <option value="pill">Пилюля</option>
+          <option value="oval">Овал</option>
+          <option value="circle">Круг</option>
+          <option value="custom">Своя</option>
+        </select>
+      </div>
+      <div>
+        <label>Радиус (для «Своя»)</label>
+        <input id="cmRadius" type="number" min="0" max="300" step="1">
+      </div>
+      <label class="toggle" style="flex:0 0 auto"><input id="cmLock" type="checkbox"> Заблокировать перемещение</label>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <div class="row" style="gap:6px;flex:0 0 auto">
+        <button id="cmSave" class="btn">Сохранить</button>
+        <button id="cmDup" class="btn secondary">Дублировать</button>
+        <button id="cmDel" class="btn warn">Удалить</button>
+      </div>
+      <button id="cmClose" class="btn secondary">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// ----------------------------- Helpers ---------------------------------
 const $=s=>document.querySelector(s);
 const $$=s=>Array.from(document.querySelectorAll(s));
 const statusEl=$('#status');
-function tip(t){ statusEl.textContent=t; clearTimeout(tip._t); tip._t=setTimeout(()=>statusEl.textContent='',1400); }
-function uid(){ return Math.random().toString(36).slice(2,9) }
-function esc(s){return String(s).replace(/[&<>"]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;'}[m])) }
 
-// ------------------------------- State ---------------------------------
+// ---------------- State ----------------
 const state = load() || {
-  theme:{bg:'#F7E6CA',surface:'#FFF5E6',text:'#2A2A1A',accent:'#FF7A00',radius:16,cols:4},
+  theme:{bg:'#F7E6CA',surface:'#FFF5E6',text:'#2A2A1A',accent:'#FF7A00',radius:16},
   freeMove:false,
-  brand:{text:'MySale',size:48,per:false,letters:[],pos:{x:120,y:26},locked:false},
+  brand:{text:'MySale',size:48,per:false,letters:[],pos:{x:120,y:26},locked:false,above:true},
   logo:{src:'',size:64,pos:{x:24,y:24},locked:false},
-  cards: defaultCards().map(c=>({...c,pos:null}))
+  cards: defaults().map(c=>({...c,pos:null,w:260,h:170,shape:'rounded',radius:16,locked:false}))
 };
-
-// History: O(1) push/pop, limited length
-const H={stack:[JSON.stringify(state)],i:0,max:120};
-function pushH(){ H.stack = H.stack.slice(0,H.i+1); H.stack.push(JSON.stringify(state)); H.i = Math.min(H.stack.length-1, H.i+1); if(H.stack.length>H.max){ H.stack.shift(); H.i--; } }
-function undo(){ if(H.i>0){ H.i--; Object.assign(state, JSON.parse(H.stack[H.i])); renderAll(); save(); tip('Undo'); } }
-function redo(){ if(H.i<H.stack.length-1){ H.i++; Object.assign(state, JSON.parse(H.stack[H.i])); renderAll(); save(); tip('Redo'); } }
+const H={stack:[JSON.stringify(state)],i:0,max:140};
+function pushH(){H.stack=H.stack.slice(0,H.i+1);H.stack.push(JSON.stringify(state));H.i=Math.min(H.stack.length-1,H.i+1);if(H.stack.length>H.max){H.stack.shift();H.i--;}}
+function undo(){if(H.i>0){H.i--;Object.assign(state,JSON.parse(H.stack[H.i]));renderAll();save();tip('Undo');}}
+function redo(){if(H.i<H.stack.length-1){H.i++;Object.assign(state,JSON.parse(H.stack[H.i]));renderAll();save();tip('Redo');}}
 $('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
-window.addEventListener('keydown',e=>{
-  if(e.ctrlKey && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undo(); }
-  if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); redo(); }
-});
+window.addEventListener('keydown',e=>{if(e.ctrlKey&&!e.shiftKey&&e.key.toLowerCase()==='z'){e.preventDefault();undo();}if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='z'){e.preventDefault();redo();}});
 
-// ------------------------------- Theme ---------------------------------
+function defaults(){return [
+  {id:uid(),title:'Недвижимость',hint:'Квартиры, дома',icon:'🏠',link:''},
+  {id:uid(),title:'Транспорт',hint:'Легковые, грузовые',icon:'🚗',link:''},
+  {id:uid(),title:'Электроника',hint:'Телефоны и ПК',icon:'💻',link:''},
+  {id:uid(),title:'Работа',hint:'Вакансии',icon:'💼',link:''},
+  {id:uid(),title:'Услуги',hint:'Сервис и помощь',icon:'🛠️',link:''},
+  {id:uid(),title:'Мебель',hint:'Дом и дача',icon:'🛋️',link:''},
+  {id:uid(),title:'Одежда',hint:'Мода',icon:'👕',link:''},
+  {id:uid(),title:'Хобби',hint:'Отдых и спорт',icon:'🚴',link:''}
+];}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function tip(t){statusEl.textContent=t;clearTimeout(tip._t);tip._t=setTimeout(()=>statusEl.textContent='',1400);}
+
 function applyTheme(){
   document.documentElement.style.setProperty('--bg', state.theme.bg);
   document.documentElement.style.setProperty('--surface', state.theme.surface);
@@ -231,134 +226,158 @@ function applyTheme(){
   document.documentElement.style.setProperty('--radius', state.theme.radius+'px');
 }
 ['bg','surface','textC','accent'].forEach(id=>{
-  const key=(id==='textC')?'text':id;
-  $('#'+id).value = state.theme[key];
-  $('#'+id).addEventListener('input', e=>{ state.theme[key]=e.target.value; applyTheme(); pushH(); save(); });
+  const key=(id==='textC')?'text':id; $('#'+id).value=state.theme[key];
+  $('#'+id).addEventListener('input',e=>{state.theme[key]=e.target.value;applyTheme();pushH();save();});
 });
-$('#radius').value=state.theme.radius; $('#radius').oninput=e=>{ state.theme.radius=+e.target.value||16; applyTheme(); pushH(); save(); };
-$('#cols').value=state.theme.cols; $('#cols').oninput=e=>{ state.theme.cols=Math.max(1,+e.target.value||4); pushH(); save(); };
+$('#radius').value=state.theme.radius; $('#radius').oninput=e=>{state.theme.radius=+e.target.value||16;applyTheme();pushH();save();};
 
-// --------------------------- Brand & Logo -------------------------------
+// ---- Brand / Logo ----
 function renderBrand(){
-  const root = $('#brandView'); root.style.fontSize=state.brand.size+'px'; root.innerHTML='';
-  const chars=[...state.brand.text];
-  if(state.brand.per){
-    while(state.brand.letters.length < chars.length) state.brand.letters.push(state.theme.accent);
-  }
-  chars.forEach((ch,i)=>{
-    const sp=document.createElement('span'); sp.textContent=ch;
-    sp.style.color = state.brand.per ? (state.brand.letters[i]||state.theme.text) : 'var(--text)';
-    root.appendChild(sp);
-  });
-  // position
-  const bb = $('#brandBox');
-  bb.style.left = (state.brand.pos?.x ?? 120)+'px';
-  bb.style.top  = (state.brand.pos?.y ?? 26)+'px';
-  bb.style.zIndex = 10;
+  const box=$('#brandView'); box.style.fontSize=state.brand.size+'px'; box.innerHTML='';
+  const arr=[...state.brand.text];
+  if(state.brand.per){ while(state.brand.letters.length<arr.length) state.brand.letters.push(state.theme.accent); }
+  arr.forEach((ch,i)=>{ const sp=document.createElement('span'); sp.textContent=ch; sp.style.color=state.brand.per?(state.brand.letters[i]||state.theme.text):'var(--text)'; box.appendChild(sp); });
+  const bb=$('#brandBox'); bb.style.left=(state.brand.pos?.x??120)+'px'; bb.style.top=(state.brand.pos?.y??26)+'px';
+  bb.style.zIndex = state.brand.above ? 12 : 10;
 }
 function buildLettersUI(){
-  const box = $('#lettersBox');
-  if(!state.brand.per){ box.style.display='none'; box.innerHTML=''; return; }
-  box.style.display='flex'; box.innerHTML='';
+  const wrap=$('#lettersBox'); wrap.innerHTML=''; wrap.style.display=state.brand.per?'flex':'none';
+  if(!state.brand.per) return;
   [...state.brand.text].forEach((ch,i)=>{
-    const cell=document.createElement('div'); cell.className='cell';
-    cell.innerHTML=`<b>${esc(ch)}</b><input type="color" value="${state.brand.letters[i]||state.theme.accent}">`;
-    const inp=cell.querySelector('input'); inp.oninput=()=>{ state.brand.letters[i]=inp.value; // live update only that letter
-      const sp = $('#brandView').children[i]; if(sp){ sp.style.color=inp.value; } pushH(); save(); };
-    box.appendChild(cell);
+    const cell=document.createElement('div'); cell.className='row'; cell.style.flex='0 0 auto'; cell.style.gap='6px'; cell.innerHTML=`<label style="margin:0;min-width:16px">${ch}</label><input type="color" value="${state.brand.letters[i]||state.theme.accent}" style="width:44px">`;
+    const inp=cell.querySelector('input'); inp.oninput=()=>{state.brand.letters[i]=inp.value; const span=$('#brandView').children[i]; if(span) span.style.color=inp.value; pushH();save();};
+    wrap.appendChild(cell);
   });
 }
-$('#brandText').value=state.brand.text; $('#brandText').oninput=e=>{ state.brand.text=e.target.value; renderBrand(); buildLettersUI(); pushH(); save(); };
-$('#brandSize').value=state.brand.size; $('#brandSize').oninput=e=>{ state.brand.size=+e.target.value||48; renderBrand(); pushH(); save(); };
-$('#perLetter').checked=state.brand.per; $('#perLetter').onchange=e=>{ state.brand.per=!!e.target.checked; buildLettersUI(); renderBrand(); pushH(); save(); };
-$('#lockBrand').checked=!!state.brand.locked; $('#lockBrand').onchange=e=>{ state.brand.locked=!!e.target.checked; pushH(); save(); };
+$('#brandText').value=state.brand.text; $('#brandText').oninput=e=>{state.brand.text=e.target.value;renderBrand();buildLettersUI();pushH();save();};
+$('#brandSize').value=state.brand.size; $('#brandSize').oninput=e=>{state.brand.size=+e.target.value||48;renderBrand();pushH();save();};
+$('#perLetter').checked=state.brand.per; $('#perLetter').onchange=e=>{state.brand.per=!!e.target.checked;buildLettersUI();renderBrand();pushH();save();};
+$('#brandAbove').checked=!!state.brand.above; $('#brandAbove').onchange=e=>{state.brand.above=!!e.target.checked;renderBrand();pushH();save();};
+$('#lockBrand').checked=!!state.brand.locked; $('#lockBrand').onchange=e=>{state.brand.locked=!!e.target.checked;pushH();save();};
 
 function renderLogo(){
-  const img=$('#logoImg');
-  if(state.logo.src){ img.src=state.logo.src; img.style.display='block'; }
-  else { img.removeAttribute('src'); img.style.display='none'; }
+  const img=$('#logoImg'); if(state.logo.src){img.src=state.logo.src;img.style.display='block';}else{img.removeAttribute('src');img.style.display='none';}
   img.style.width=img.style.height=(state.logo.size||64)+'px';
-  const lb=$('#logoBox');
-  lb.style.left=(state.logo.pos?.x ?? 24)+'px';
-  lb.style.top =(state.logo.pos?.y ?? 24)+'px';
-  lb.style.zIndex=11;
+  const lb=$('#logoBox'); lb.style.left=(state.logo.pos?.x??24)+'px'; lb.style.top=(state.logo.pos?.y??24)+'px';
+  lb.style.zIndex = state.brand.above ? 10 : 12;
 }
-$('#logoFile').onchange=e=>{
-  const f=e.target.files?.[0]; if(!f) return;
-  const rd=new FileReader(); rd.onload=ev=>{ state.logo.src=ev.target.result; renderLogo(); pushH(); save(); };
-  rd.readAsDataURL(f);
-};
-$('#logoSize').value=state.logo.size; $('#logoSize').oninput=e=>{ state.logo.size=+e.target.value||64; renderLogo(); pushH(); save(); };
-$('#lockLogo').checked=!!state.logo.locked; $('#lockLogo').onchange=e=>{ state.logo.locked=!!e.target.checked; pushH(); save(); };
+$('#logoFile').onchange=e=>{const f=e.target.files?.[0];if(!f) return; const rd=new FileReader(); rd.onload=ev=>{state.logo.src=ev.target.result;renderLogo();pushH();save();}; rd.readAsDataURL(f);};
+$('#logoSize').value=state.logo.size; $('#logoSize').oninput=e=>{state.logo.size=+e.target.value||64;renderLogo();pushH();save();};
+$('#lockLogo').checked=!!state.logo.locked; $('#lockLogo').onchange=e=>{state.logo.locked=!!e.target.checked;pushH();save();};
 
-// ------------------------------- Cards ---------------------------------
-function defaultCards(){
-  return [
-    {id:uid(),title:'Недвижимость',hint:'Квартиры, дома',icon:'🏠',link:''},
-    {id:uid(),title:'Транспорт',hint:'Легковые, грузовые',icon:'🚗',link:''},
-    {id:uid(),title:'Электроника',hint:'Телефоны и ПК',icon:'💻',link:''},
-    {id:uid(),title:'Работа',hint:'Вакансии',icon:'💼',link:''},
-    {id:uid(),title:'Услуги',hint:'Сервис и помощь',icon:'🛠️',link:''},
-    {id:uid(),title:'Мебель',hint:'Дом и дача',icon:'🛋️',link:''},
-    {id:uid(),title:'Одежда',hint:'Мода',icon:'👕',link:''},
-    {id:uid(),title:'Хобби',hint:'Отдых и спорт',icon:'🚴',link:''}
-  ];
-}
+// ---- Cards ----
 function ensureCardPositions(){
-  const startX=24, startY=150, colW=260, rowH=170, gap=18, cols=Math.max(1,state.theme.cols|0);
-  state.cards.forEach((c,i)=>{
-    if(!c.pos){
-      const col=i%cols, row=(i/cols|0);
-      c.pos={x:startX+col*(colW+gap), y:startY+row*(rowH+gap)};
-    }
+  const startX=24,startY=150,colW=260,rowH=180,gap=18,cols=4;
+  state.cards.forEach((c,i)=>{ if(!c.pos){const col=i%cols,row=(i/cols|0); c.pos={x:startX+col*(colW+gap), y:startY+row*(rowH+gap)};} });
+}
+function shapeToRadius(c){
+  switch(c.shape){
+    case 'rect': return 0;
+    case 'rounded': return state.theme.radius||16;
+    case 'pill': return 9999;
+    case 'oval': return 9999; // width!=height -> овал
+    case 'circle': return 9999; // width==height -> круг
+    case 'custom': return Math.max(0, c.radius|0);
+    default: return state.theme.radius||16;
+  }
+}
+function applyCardShape(el,c){
+  const r = shapeToRadius(c);
+  el.style.borderRadius = r + 'px';
+  // circle needs equal side
+  if(c.shape==='circle'){ const side = Math.max(120, Math.min(600, Math.max(c.w||200, c.h||200))); el.style.width=side+'px'; el.style.height=side+'px'; }
+  else { el.style.width = (c.w||260)+'px'; el.style.height = (c.h||170)+'px'; }
+}
+function cardEl(c){
+  const el=document.createElement('div'); el.className='card'; el.dataset.id=c.id;
+  el.style.left=c.pos.x+'px'; el.style.top=c.pos.y+'px'; el.style.background=c.color||'#fff';
+  applyCardShape(el,c);
+  el.innerHTML=`<a class="link" href="${c.link||'#'}" target="_blank" rel="noopener">🔗</a>
+    <div class="icon" contenteditable="plaintext-only">${esc(c.icon||'⬜')}</div>
+    <div class="title" contenteditable="plaintext-only">${esc(c.title||'Без названия')}</div>
+    <p class="hint" contenteditable="plaintext-only">${esc(c.hint||'')}</p>`;
+  el.querySelector('.title').addEventListener('input',e=>{c.title=e.target.textContent;save();});
+  el.querySelector('.hint').addEventListener('input',e=>{c.hint=e.target.textContent;save();});
+  el.querySelector('.icon').addEventListener('input',e=>{c.icon=e.target.textContent||'⬜';save();});
+  el.querySelector('.link').addEventListener('click',e=>{
+    if(state.freeMove){e.preventDefault();return;}
+    if(!c.link){e.preventDefault(); const u=prompt('URL карточки:', c.link||''); if(u!=null){c.link=u; e.currentTarget.href=u; pushH(); save();}}
   });
+  // dblclick to edit modal
+  el.addEventListener('dblclick',()=>openCardEditor(c));
+  return el;
 }
 function renderCards(){
   const layer=$('#cardsLayer'); layer.innerHTML=''; ensureCardPositions();
-  state.cards.forEach((c,idx)=>{
-    const el=document.createElement('div'); el.className='card'; el.dataset.id=c.id;
-    el.style.left=c.pos.x+'px'; el.style.top=c.pos.y+'px'; el.style.zIndex = 5+idx;
-    el.innerHTML=`<a class="link" href="${c.link||'#'}" target="_blank" rel="noopener">🔗</a>
-      <div class="icon" contenteditable="plaintext-only">${esc(c.icon||'⬜')}</div>
-      <div class="title" contenteditable="plaintext-only">${esc(c.title||'Без названия')}</div>
-      <p class="hint" contenteditable="plaintext-only">${esc(c.hint||'')}</p>`;
-    // inline edits
-    el.querySelector('.title').addEventListener('input',e=>{ c.title=e.target.textContent; save(); });
-    el.querySelector('.hint').addEventListener('input',e=>{ c.hint=e.target.textContent; save(); });
-    el.querySelector('.icon').addEventListener('input',e=>{ c.icon=e.target.textContent||'⬜'; save(); });
-    // link logic
-    el.querySelector('.link').addEventListener('click',e=>{
-      if(state.freeMove){ e.preventDefault(); return; }
-      if(!c.link){ e.preventDefault(); const u=prompt('URL карточки:', c.link||''); if(u!=null){ c.link=u; e.currentTarget.href=u; pushH(); save(); } }
-    });
-    // bring-to-front on mousedown
-    el.addEventListener('pointerdown',()=>{ el.style.zIndex = ++Z.top; });
+  const q = ($('#search').value||'').trim().toLowerCase();
+  state.cards.forEach(c=>{
+    const match = !q || (c.title.toLowerCase().includes(q) || (c.hint||'').toLowerCase().includes(q));
+    if(!match) return;
+    const el=cardEl(c);
     layer.appendChild(el);
   });
 }
+$('#search').addEventListener('input', renderCards);
 
-// ----------------------------- Drag & Drop ------------------------------
-let Z={top:100}; // z-index counter
+$('#btnAdd').onclick=()=>{
+  const c={id:uid(),title:'Новая карточка',hint:'',icon:'✨',link:'',pos:null,w:260,h:170,shape:'rounded',radius:16,locked:false,color:'#ffffff'};
+  state.cards.push(c); pushH(); renderCards(); save();
+};
+
+// ---- Card Editor Modal ----
+const modal=$('#cardModal');
+const cm={
+  title:$('#cmTitle'), hint:$('#cmHint'), icon:$('#cmIcon'), link:$('#cmLink'),
+  color:$('#cmColor'), w:$('#cmW'), h:$('#cmH'), shape:$('#cmShape'), radius:$('#cmRadius'),
+  lock:$('#cmLock'), save:$('#cmSave'), close:$('#cmClose'), dup:$('#cmDup'), del:$('#cmDel')
+};
+let currentCard=null;
+function openCardEditor(card){
+  currentCard=card;
+  cm.title.value=card.title||''; cm.hint.value=card.hint||''; cm.icon.value=card.icon||''; cm.link.value=card.link||'';
+  cm.color.value=card.color||'#ffffff'; cm.w.value=card.w||260; cm.h.value=card.h||170; cm.shape.value=card.shape||'rounded'; cm.radius.value=card.radius||16; cm.lock.checked=!!card.locked;
+  modal.classList.add('on');
+}
+cm.close.onclick=()=>{modal.classList.remove('on'); currentCard=null;};
+cm.save.onclick=()=>{
+  if(!currentCard) return;
+  currentCard.title=cm.title.value; currentCard.hint=cm.hint.value; currentCard.icon=cm.icon.value; currentCard.link=cm.link.value;
+  currentCard.color=cm.color.value; currentCard.w=Math.max(120,Math.min(600,+cm.w.value||260)); currentCard.h=Math.max(120,Math.min(600,+cm.h.value||170));
+  currentCard.shape=cm.shape.value; currentCard.radius=Math.max(0,Math.min(300,+cm.radius.value||16)); currentCard.locked=!!cm.lock.checked;
+  pushH(); save(); renderCards(); modal.classList.remove('on');
+};
+cm.dup.onclick=()=>{
+  if(!currentCard) return;
+  const cp=JSON.parse(JSON.stringify(currentCard)); cp.id=uid(); cp.pos={x:(currentCard.pos.x+20), y:(currentCard.pos.y+20)};
+  state.cards.push(cp); pushH(); save(); renderCards();
+};
+cm.del.onclick=()=>{
+  if(!currentCard) return;
+  state.cards=state.cards.filter(x=>x.id!==currentCard.id); pushH(); save(); renderCards(); modal.classList.remove('on');
+};
+
+// ---- Drag & Persist ----
 let drag=null;
 function enableDrag(on){
-  const targets=[ $('#logoBox'), $('#brandBox'), ...$$('.card') ];
+  const targets=[ $('#logoBox'), $('#brandBox'), ...$$('#cardsLayer .card') ];
   targets.forEach(el=>{
     el.classList.toggle('draggable', on);
     el.onpointerdown = on ? startDrag : null;
   });
 }
 function startDrag(e){
-  // respect locks and mode
   const el=e.currentTarget;
   if(!state.freeMove) return;
   if(el.id==='logoBox' && state.logo.locked) return;
   if(el.id==='brandBox' && state.brand.locked) return;
-  el.setPointerCapture(e.pointerId);
-  el.classList.add('dragging');
+  if(el.dataset.id){
+    const c=state.cards.find(k=>k.id===el.dataset.id);
+    if(c?.locked) return;
+  }
+  el.setPointerCapture(e.pointerId); el.classList.add('dragging');
   const r=el.getBoundingClientRect(); const c=$('#canvas').getBoundingClientRect();
   drag={el, dx:e.clientX-r.left, dy:e.clientY-r.top, bounds:c};
-  // bring to front
-  el.style.zIndex = ++Z.top;
+  el.style.zIndex = 1000; // bring to top
 }
 function onMove(e){
   if(!drag) return;
@@ -386,12 +405,14 @@ $('#btnResetPos').onclick=()=>{
   state.brand.pos={x:120,y:26};
   state.logo.pos={x:24,y:24};
   state.cards.forEach(c=>c.pos=null);
-  pushH(); renderAll(); save(); tip('Позиции сброшены');
+  pushH(); renderCards(); renderBrand(); renderLogo(); save(); tip('Позиции сброшены');
 };
 
-// ------------------------- Save / Load / Export -------------------------
-function save(){ localStorage.setItem('mysale_admin_v5', JSON.stringify(state)); }
-function load(){ try{ return JSON.parse(localStorage.getItem('mysale_admin_v5')||'null') }catch(e){ return null } }
+// ---- Search live ---- handled by renderCards on input
+
+// ---- Save/Load/Export/Import ----
+function save(){ localStorage.setItem('mysale_admin_v6', JSON.stringify(state)); }
+function load(){ try{ return JSON.parse(localStorage.getItem('mysale_admin_v6')||'null') }catch(e){ return null } }
 $('#btnSave').onclick=()=>{ save(); tip('Сохранено'); };
 $('#btnExport').onclick=()=>{
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));
@@ -401,18 +422,21 @@ $('#btnImport').onclick=()=>$('#fileImport').click();
 $('#fileImport').onchange=e=>{
   const f=e.target.files?.[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=ev=>{ try{ Object.assign(state, JSON.parse(ev.target.result)); pushH(); renderAll(); save(); tip('Импортировано'); }catch(err){ alert('Неверный JSON'); } };
+  rd.onload=ev=>{ try{ const obj=JSON.parse(ev.target.result); Object.assign(state, obj); pushH(); renderAll(); save(); tip('Импортировано'); }catch(err){ alert('Неверный JSON'); } };
   rd.readAsText(f);
 };
 
-// ------------------------------- Render ---------------------------------
+// ---- Render ----
 function applyPanel(){
-  // inputs -> state already synced by handlers when changed; here just reflect existing state to UI
   $('#bg').value=state.theme.bg; $('#surface').value=state.theme.surface; $('#textC').value=state.theme.text; $('#accent').value=state.theme.accent;
-  $('#radius').value=state.theme.radius; $('#cols').value=state.theme.cols;
+  $('#radius').value=state.theme.radius;
   $('#brandText').value=state.brand.text; $('#brandSize').value=state.brand.size; $('#perLetter').checked=!!state.brand.per;
-  $('#logoSize').value=state.logo.size; $('#lockBrand').checked=!!state.brand.locked; $('#lockLogo').checked=!!state.logo.locked;
+  $('#logoSize').value=state.logo.size; $('#lockBrand').checked=!!state.brand.locked; $('#lockLogo').checked=!!state.logo.locked; $('#brandAbove').checked=!!state.brand.above;
   $('#freeMove').checked=state.freeMove;
+}
+function ensureInitPositions(){
+  const startX=24,startY=150,colW=260,rowH=180,gap=18,cols=4;
+  state.cards.forEach((c,i)=>{ if(!c.pos){const col=i%cols,row=(i/cols|0); c.pos={x:startX+col*(colW+gap), y:startY+row*(rowH+gap)};} });
 }
 function renderAll(){
   applyTheme();
@@ -420,20 +444,10 @@ function renderAll(){
   renderLogo();
   renderBrand();
   buildLettersUI();
+  ensureInitPositions();
   renderCards();
   enableDrag(state.freeMove);
 }
-
-// Seed: if first run, create default positions; else restore from state
-function ensureInit(){
-  if(!state._seeded){
-    ensureCardPositions();
-    state._seeded=true;
-    pushH(); save();
-  }
-}
-
-ensureInit();
 renderAll();
 </script>
 </body>
