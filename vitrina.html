@@ -206,6 +206,19 @@
         <label>Emoji / Текст иконки
           <input class="input" name="emoji" placeholder="🏠 или буква"/>
         </label>
+
+        <div id="mediaControls" style="display:none; grid-column:1 / -1; border:1px dashed var(--ring); border-radius:10px; padding:10px; gap:10px; align-items:center">
+          <div style="font-weight:600">Медиа для щита</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn" type="button" id="btnPickPoster">Выбрать постер</button>
+            <button class="btn" type="button" id="btnPickAnim">Выбрать анимацию WebP</button>
+            <span id="fileInfo" style="color:var(--ink-dim)"></span>
+          </div>
+          <div id="mediaPreview" style="margin-top:8px; width:140px; aspect-ratio:1/1; border:1px solid var(--ring); border-radius:12px; overflow:hidden; display:none">
+            <img id="prevPoster" alt="" style="width:100%; height:100%; object-fit:cover">
+          </div>
+        </div>
+
         <label>Цвет щита
           <input class="color" name="color" type="color" value="#25b24d"/>
         </label>
@@ -244,6 +257,7 @@
   </template>
 
   <script>
+    console.log('MySale vitrine build: v7R-anim-ui');
     const KEY = 'mysale.categories.v5R';
     const el = s=>document.querySelector(s);
     const els = s=>Array.from(document.querySelectorAll(s));
@@ -351,7 +365,8 @@
       else{
         try{ new URL(h); okHref = true; }catch(e){ okHref = false; }
       }
-      const ok = okTitle && okHref;
+      let ok = okTitle && okHref;
+      if(form.elements.icon.value==='anim'){ ok = ok && !!form.dataset.posterData && !!form.dataset.animData; }
       saveBtn.disabled = !ok;
       return ok;
     }
@@ -370,7 +385,8 @@
       form.elements.emoji.value = item?.icon?.type==='emoji' ? (item.icon.value||'') : '';
       form.elements.color.value = item?.color || '#25b24d';
       form.elements.badge.value = item?.badge || 0;
-      modal.showModal(); validateModal();
+      if(item?.icon?.type==='anim'){ form.dataset.posterData=item.icon.poster||''; form.dataset.animData=item.icon.anim||''; } else { form.dataset.posterData=''; form.dataset.animData=''; }
+      modal.showModal(); validateModal(); refreshMediaUI();
     }
 
     form.addEventListener('input', validateModal);
@@ -378,6 +394,33 @@
       const h=form.elements.href.value.trim(); if(!h){alert('Сначала укажите ссылку'); return;}
       window.open(h.startsWith('/')?h:h,'_blank','noopener');
     });
+
+    
+    // Media controls
+    const mediaControls = el('#mediaControls');
+    const btnPickPoster = el('#btnPickPoster');
+    const btnPickAnim   = el('#btnPickAnim');
+    const fileInfo      = el('#fileInfo');
+    const mediaPreview  = el('#mediaPreview');
+    const prevPoster    = el('#prevPoster');
+
+    function refreshMediaUI() {
+      const mode = form.elements.icon.value;
+      const poster = form.dataset.posterData || '';
+      const anim = form.dataset.animData || '';
+      const need = mode === 'anim';
+      mediaControls.style.display = need ? 'grid' : 'none';
+      fileInfo.textContent = need ? (poster ? 'Постер выбран' : 'Постер не выбран') + ' · ' + (anim ? 'Анимация выбрана' : 'Анимация не выбрана') : '';
+      if (need && poster) {
+        mediaPreview.style.display = 'block';
+        prevPoster.src = poster;
+      } else {
+        mediaPreview.style.display = 'none';
+        prevPoster.removeAttribute('src');
+      }
+    }
+    btnPickPoster?.addEventListener('click', ()=> el('#posterInput').click());
+    btnPickAnim?.addEventListener('click', ()=> el('#animInput').click());
 
     // Submit handled by dialog close value
     modal.addEventListener('close', ()=>{
@@ -419,7 +462,7 @@
     });
 
     // Icon change triggers file pickers
-    form.elements.icon.addEventListener('change', ()=>{
+    form.elements.icon.addEventListener('change', ()=>{ refreshMediaUI();
       const v=form.elements.icon.value;
       if(v==='image'){ el('#imageInput').click(); }
       else if(v==='anim'){ setTimeout(()=> el('#posterInput').click(), 50); }
@@ -429,12 +472,14 @@
       const r=new FileReader(); r.onload=()=> form.dataset.imageData=r.result; r.readAsDataURL(f);
     });
     el('#posterInput').addEventListener('change', (e)=>{
+      fileInfo.textContent='Загрузка постера...';
       const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader(); r.onload=()=>{ form.dataset.posterData=r.result; setTimeout(()=> el('#animInput').click(), 100); }; r.readAsDataURL(f);
+      const r=new FileReader(); r.onload=()=>{ form.dataset.posterData=r.result; refreshMediaUI(); }; r.readAsDataURL(f);
     });
     el('#animInput').addEventListener('change', (e)=>{
+      fileInfo.textContent='Загрузка анимации...';
       const f=e.target.files[0]; if(!f) return;
-      const r=new FileReader(); r.onload=()=> form.dataset.animData=r.result; r.readAsDataURL(f);
+      const r=new FileReader(); r.onload=()=>{ form.dataset.animData=r.result; refreshMediaUI(); } r.readAsDataURL(f);
     });
 
     // Edit mode toggle
