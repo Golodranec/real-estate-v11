@@ -411,7 +411,8 @@
       <footer>
         <button class="btn danger" value="delete" id="deleteBtn" style="display:none"><svg width="16" height="16" style="vertical-align:-3px"><use href="#ico-trash"/></svg> Удалить</button>
         <button class="btn" value="cancel">Отмена</button>
-        <button class="btn primary" value="ok">Сохранить</button>
+        <button class="btn" type="button" id="previewBtn">Открыть</button>
+        <button class="btn primary" value="ok" id="saveBtn" disabled>Сохранить</button>
       </footer>
     </form>
   </dialog>
@@ -615,19 +616,15 @@
       form.elements.emoji.value = item?.icon?.type==='emoji' ? (item.icon.value||'') : '';
       form.elements.color.value = item?.color || '#25b24d';
       form.elements.badge.value = item?.badge || 0;
-      modal.showModal();
+      modal.showModal(); validateModal();
     }
 
     el('#addBtn').addEventListener('click', ()=> openModal(null));
 
     form.addEventListener('close', ()=>{}); // noop
-
-    form.addEventListener('submit', (e)=>{
-      e.preventDefault();
-    });
-
-    modal.addEventListener('close', ()=>{
+modal.addEventListener('close', ()=>{
       if(modal.returnValue==='ok'){
+        if(!validateModal()){ alert('Заполните Название и корректную Ссылку'); modal.showModal(); return; }
         const payload = {
           title: form.elements.title.value.trim(),
           href: form.elements.href.value.trim(),
@@ -711,6 +708,27 @@
       };
       reader.readAsDataURL(file);
     });
+
+    
+    // Validate and toggle Save
+    const saveBtn = el('#saveBtn');
+    function validateModal(){
+      const t = form.elements.title.value.trim();
+      const h = form.elements.href.value.trim();
+      const ok = t.length>0 && /^https?:\/\//.test(h) || h.startsWith('/') ;
+      saveBtn.disabled = !ok;
+      return ok;
+    }
+    form.addEventListener('input', validateModal);
+
+    // Preview link
+    el('#previewBtn').addEventListener('click', ()=>{
+      const h = form.elements.href.value.trim();
+      if(!h){ alert('Сначала укажите ссылку'); return; }
+      const url = h.startsWith('/') ? h : h;
+      window.open(url, '_blank', 'noopener');
+    });
+
 
     // Edit mode toggle
     el('#editToggle').addEventListener('change', (e)=>{
