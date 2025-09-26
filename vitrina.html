@@ -137,11 +137,56 @@
 
     /* Hidden file input styling hook */
     .file{display:none}
+  
+    /* Hover animations inside shield */
+    .shield-wrap .plate-slot{transition:transform .25s ease}
+    .cat:hover .plate-slot{transform:scale(1.03)}
+    .plate-slot image.poster{opacity:1; transition:opacity .2s ease}
+    .plate-slot image.anim{opacity:0; transition:opacity .2s ease}
+    .cat:hover .plate-slot image.anim{opacity:1}
+    .cat:hover .plate-slot image.poster{opacity:0}
+    /* Shine sweep */
+    .shield-wrap::after{
+      content:""; position:absolute; inset:0;
+      background: linear-gradient(120deg, transparent 40%, #ffffff40 50%, transparent 60%);
+      transform:translateX(-120%); transition:transform .7s ease;
+      border-radius:20%;
+      pointer-events:none;
+    }
+    .cat:hover .shield-wrap::after{ transform:translateX(120%) }
+
   </style>
 </head>
 <body class="theme--spring">
   <!-- SVG sprite -->
   <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
+    <!-- Card shield (matches logo style, no check) -->
+    <symbol id="sym-card-shield" viewBox="0 0 100 110">
+      <defs>
+        <linearGradient id="lg-green-card" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1db34e"/>
+          <stop offset="1" stop-color="#0c7c2f"/>
+        </linearGradient>
+        <linearGradient id="lg-glow-card" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2be36e"/>
+          <stop offset="1" stop-color="#14b44e"/>
+        </linearGradient>
+        <linearGradient id="lg-orange-card" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffb02e"/>
+          <stop offset="1" stop-color="#ff7f00"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 5 C40 12 25 15 10 18 v36 c0 23 16 42 40 51 c24-9 40-28 40-51 V18 C75 15 60 12 50 5z"
+            fill="url(#lg-green-card)" stroke="#063d1a" stroke-width="3"/>
+      <path d="M50 9 C41 15 27 17 14 20 v32 c0 21 14 38 36 46 c22-8 36-25 36-46 V20 C73 17 59 15 50 9z"
+            fill="url(#lg-glow-card)" opacity="0.35"/>
+      <path id="card-plate-shape" d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z"
+            fill="url(#lg-orange-card)" stroke="#a34b00" stroke-width="2"/>
+    </symbol>
+    <clipPath id="clip-card-plate">
+      <path d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z"/>
+    </clipPath>
+
     <symbol id="sym-logo-shield" viewBox="0 0 100 110">
       <defs>
         <linearGradient id="lg-green" x1="0" y1="0" x2="0" y2="1">
@@ -347,6 +392,7 @@
             <option value="ico-travel">Путешествия</option>
             <option value="emoji">Emoji</option>
             <option value="image">PNG/JPG</option>
+            <option value="anim">Анимированный WebP</option>
           </select>
         </label>
         <label>Emoji / Текст иконки
@@ -359,6 +405,8 @@
           <input class="input" name="badge" type="number" min="0" step="1" placeholder="0"/>
         </label>
         <input id="imageInput" class="file" type="file" accept="image/*"/>
+        <input id="posterInput" class="file" type="file" accept="image/*"/>
+        <input id="animInput" class="file" type="file" accept="image/webp"/>
       </div>
       <footer>
         <button class="btn danger" value="delete" id="deleteBtn" style="display:none"><svg width="16" height="16" style="vertical-align:-3px"><use href="#ico-trash"/></svg> Удалить</button>
@@ -368,15 +416,15 @@
     </form>
   </dialog>
 
+  
   <template id="cardTpl">
     <article class="cat" draggable="false">
       <div class="shield-wrap">
         <span class="badge" hidden>0</span>
         <svg class="shield" viewBox="0 0 100 110" aria-hidden="true">
-          <use href="#sym-shield"/>
-          <g clip-path="url(#clip-plate)">
-            <rect x="0" y="0" width="100" height="110" fill="url(#grad-plate)"/>
-            <g class="icon-slot" transform="translate(8,18) scale(0.9)"></g>
+          <use href="#sym-card-shield"/>
+          <g class="plate-slot" clip-path="url(#clip-card-plate)">
+            <!-- Poster and animated layers will be injected here -->
           </g>
         </svg>
       </div>
@@ -388,6 +436,7 @@
       </div>
     </article>
   </template>
+    
 
   <script>
     const KEY = 'mysale.categories.v2';
@@ -461,7 +510,7 @@
 
       // Update shield gradient dynamically
       elGrad('--shield', item.color);
-      const iconSlot = node.querySelector('.icon-slot');
+      const iconSlot = node.querySelector('.plate-slot');
       iconSlot.innerHTML = ''; // clear
       if(item.icon?.type === 'emoji'){
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -562,7 +611,7 @@
       el('#modalTitle').textContent = item ? 'Редактировать раздел' : 'Новый раздел';
       form.elements.title.value = item?.title || '';
       form.elements.href.value  = item?.href || '';
-      form.elements.icon.value  = item?.icon?.type==='emoji' ? 'emoji' : (item?.icon?.type==='image' ? 'image' : (item?.icon?.name || 'ico-house'));
+      form.elements.icon.value  = item?.icon?.type==='emoji' ? 'emoji' : (item?.icon?.type==='image' ? 'image' : (item?.icon?.type==='anim' ? 'anim' : (item?.icon?.name || 'ico-house')));
       form.elements.emoji.value = item?.icon?.type==='emoji' ? (item.icon.value||'') : '';
       form.elements.color.value = item?.color || '#25b24d';
       form.elements.badge.value = item?.badge || 0;
@@ -593,6 +642,12 @@
           const dataUrl = form.dataset.imageData || null;
           if(dataUrl){ payload.icon = {type:'image', data:dataUrl}; }
           else{ payload.icon = {type:'emoji', value:'🖼️'}; }
+        }else if(iconSel==='anim'){
+          const poster = form.dataset.posterData || '';
+          const anim = form.dataset.animData || '';
+          if(poster && anim){ payload.icon = {type:'anim', poster, anim}; }
+          else if(poster){ payload.icon = {type:'image', data:poster}; }
+          else{ payload.icon = {type:'emoji', value:'🖼️'}; }
         }else{
           payload.icon = {type:'svg', name: iconSel};
         }
@@ -608,7 +663,7 @@
         data = data.filter(x=>x.id!==currentId);
         save(); render();
       }
-      form.dataset.imageData = '';
+      form.dataset.imageData = ''; form.dataset.posterData=''; form.dataset.animData='';
       currentId = null;
     });
 
@@ -621,9 +676,30 @@
     // Icon select controls file input
     form.elements.icon.addEventListener('change', ()=>{
       const val = form.elements.icon.value;
+      
       if(val==='image'){
         el('#imageInput').click();
+      }else if(val==='anim'){
+        // Ask for poster first, then animated webp
+        setTimeout(()=> el('#posterInput').click(), 50);
       }
+
+    });
+
+    
+    el('#posterInput').addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const r = new FileReader();
+      r.onload = ()=>{ form.dataset.posterData = r.result; setTimeout(()=> el('#animInput').click(), 100); };
+      r.readAsDataURL(f);
+    });
+    el('#animInput').addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const r = new FileReader();
+      r.onload = ()=>{ form.dataset.animData = r.result; };
+      r.readAsDataURL(f);
     });
 
     el('#imageInput').addEventListener('change', (e)=>{
