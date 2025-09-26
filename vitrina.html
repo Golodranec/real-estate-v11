@@ -244,7 +244,7 @@
   </template>
 
   <script>
-    const KEY = 'mysale.categories.v4R';
+    const KEY = 'mysale.categories.v5R';
     const el = s=>document.querySelector(s);
     const els = s=>Array.from(document.querySelectorAll(s));
 
@@ -343,9 +343,17 @@
     const saveBtn = el('#saveBtn');
 
     function validateModal(){
-      const t=form.elements.title.value.trim(); const h=form.elements.href.value.trim();
-      const ok = t.length>0 && (/^https?:\\/\\//.test(h) || h.startsWith('/'));
-      saveBtn.disabled=!ok; return ok;
+      const t=form.elements.title.value.trim();
+      const h=form.elements.href.value.trim();
+      let okTitle = t.length>0;
+      let okHref = false;
+      if(h.startsWith('/')) okHref = true;
+      else{
+        try{ new URL(h); okHref = true; }catch(e){ okHref = false; }
+      }
+      const ok = okTitle && okHref;
+      saveBtn.disabled = !ok;
+      return ok;
     }
 
     function openModal(item){
