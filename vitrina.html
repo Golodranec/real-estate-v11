@@ -1,0 +1,93 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MySale Витрина</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #f0f8ff, #e6f2ff);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      width: 90%;
+      max-width: 1200px;
+    }
+    .card {
+      position: relative;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .card h3 {
+      margin: 10px;
+      font-size: 18px;
+      color: #333;
+    }
+    .card p {
+      margin: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    /* Анимация при наведении */
+    .card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.2);
+      transition: left 0.5s;
+    }
+    .card:hover::after {
+      left: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <img src="https://placehold.co/400x200/car" alt="Авто">
+      <h3>Транспорт</h3>
+      <p>Автомобили, мотоциклы и другое</p>
+    </div>
+    <div class="card">
+      <img src="https://placehold.co/400x200/home" alt="Недвижимость">
+      <h3>Недвижимость</h3>
+      <p>Квартиры, дома и участки</p>
+    </div>
+    <div class="card">
+      <img src="https://placehold.co/400x200/phone" alt="Электроника">
+      <h3>Электроника</h3>
+      <p>Телефоны, компьютеры и аксессуары</p>
+    </div>
+    <div class="card">
+      <img src="https://placehold.co/400x200/clinic" alt="Здоровье">
+      <h3>Здоровье</h3>
+      <p>Аптеки, клиники и врачи</p>
+    </div>
+  </div>
+</body>
+</html>
