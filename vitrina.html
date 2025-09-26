@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MySale — Витрина (редактируемая)</title>
+  <title>MySale — Витрина (редактор)</title>
   <style>
     :root{
       --bg:#eaf4ff;
@@ -11,62 +11,19 @@
       --panel:#ffffff;
       --ink:#0b1220;
       --ink-dim:#3b4456;
-      --brand-1:#20b74a;
-      --brand-2:#ff9d0a;
-      --shield:#2aa04b;
-      --shield-gloss:#55d773;
-      --tile:#f8fbff;
       --ring:#dbe7ff;
-      --input-bg:#f3f7ff;
       --chip:#edf4ff;
       --danger:#e11d48;
     }
-    .theme--winter{
-      --bg:#d9eeff;
-      --bg-accent:#bfe1ff;
-      --panel:#ffffff;
-      --shield:#2ea0ff;
-      --shield-gloss:#7fcbff;
-      --tile:#f3f9ff;
-      --ring:#cfe7ff;
-      --chip:#e8f4ff;
-    }
-    .theme--spring{
-      --bg:#e7ffe7;
-      --bg-accent:#c8ffd1;
-      --panel:#ffffff;
-      --shield:#25b24d;
-      --shield-gloss:#78e38f;
-      --tile:#f4fff6;
-      --ring:#ccffd9;
-      --chip:#e8ffef;
-    }
-    .theme--summer{
-      --bg:#fff1cc;
-      --bg-accent:#ffe099;
-      --panel:#ffffff;
-      --shield:#1cad48;
-      --shield-gloss:#62d87e;
-      --tile:#fff8e6;
-      --ring:#ffe2a8;
-      --chip:#fff0cc;
-    }
-    .theme--autumn{
-      --bg:#ffe9d5;
-      --bg-accent:#ffd0a6;
-      --panel:#ffffff;
-      --shield:#ff7a00;
-      --shield-gloss:#ffb266;
-      --tile:#fff6ee;
-      --ring:#ffd9b3;
-      --chip:#ffe7cc;
-    }
+    .theme--winter{ --bg:#d9eeff; --bg-accent:#bfe1ff; --panel:#fff; --chip:#e8f4ff; --ring:#cfe7ff; }
+    .theme--spring{ --bg:#e7ffe7; --bg-accent:#c8ffd1; --panel:#fff; --chip:#e8ffef; --ring:#ccffd9; }
+    .theme--summer{ --bg:#fff1cc; --bg-accent:#ffe099; --panel:#fff; --chip:#fff0cc; --ring:#ffe2a8; }
+    .theme--autumn{ --bg:#ffe9d5; --bg-accent:#ffd0a6; --panel:#fff; --chip:#ffe7cc; --ring:#ffd9b3; }
 
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       color:var(--ink);
       background:
         radial-gradient(1200px 600px at 20% -10%, var(--bg-accent), transparent 70%),
@@ -74,36 +31,25 @@
         linear-gradient(180deg, var(--bg), #ffffff);
       min-height:100%;
     }
-
     header{
-      position:relative;
-      z-index:1;
-      padding:18px 16px;
-      max-width:1200px;
-      margin:0 auto;
-      display:grid;
-      grid-template-columns:auto 1fr auto;
-      grid-gap:16px;
-      align-items:center;
+      padding:18px 16px; max-width:1200px; margin:0 auto;
+      display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center;
     }
-    .logo{display:flex; align-items:center; gap:10px; font-weight:800; font-size:28px; line-height:1; user-select:none;}
-    .logo-badge{width:38px; height:38px; filter: drop-shadow(0 0 6px #22c55e88); }
-    .logo-text{
-      background: linear-gradient(180deg, #1db34e 0%, #30d266 70%);
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      text-shadow: 0 1px 0 #0f6, 0 2px 6px #0000001a;
-    }
-    .logo-text em{ font-style:normal; background: linear-gradient(180deg, #ffb02e 0%, #ff7f00 80%); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow: 0 1px 0 #fb3, 0 2px 6px #0000001a; }
+    .logo{display:flex; align-items:center; gap:10px; font-weight:800; font-size:28px}
+    .logo-badge{width:38px; height:38px; filter: drop-shadow(0 0 6px #22c55e88)}
+    .logo-text{ background:linear-gradient(180deg,#1db34e 0%,#30d266 70%); -webkit-background-clip:text; background-clip:text; color:transparent;}
+    .logo-text em{font-style:normal; background:linear-gradient(180deg,#ffb02e 0%, #ff7f00 80%); -webkit-background-clip:text; background-clip:text; color:transparent;}
 
-    .search{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--ring); border-radius:999px; padding:10px 14px; box-shadow: 0 10px 30px #0000000a, inset 0 1px 0 #ffffffcc;}
-    .search input{appearance:none; border:0; outline:0; flex:1; font-size:16px; background:transparent; padding:8px; color:var(--ink);}
-    .search .icon-btn{appearance:none; border:0; background:var(--ink); color:#fff; padding:10px 14px; border-radius:999px; cursor:pointer;}
-    .chip{display:inline-flex; align-items:center; gap:8px; background:var(--chip); border:1px solid var(--ring); padding:10px 14px; border-radius:999px; font-size:14px; color:var(--ink-dim);}
+    .search{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--ring); border-radius:999px; padding:10px 14px; box-shadow: 0 10px 30px #0001, inset 0 1px 0 #ffffffcc;}
+    .search input{border:0; outline:0; flex:1; font-size:16px; background:transparent; padding:8px; color:var(--ink)}
+    .icon-btn{appearance:none; border:0; background:var(--ink); color:#fff; padding:10px 14px; border-radius:999px; cursor:pointer}
+
+    .chip{display:inline-flex; gap:8px; align-items:center; background:var(--chip); border:1px solid var(--ring); padding:10px 14px; border-radius:999px; font-size:14px; color:var(--ink-dim)}
 
     .container{max-width:1200px; margin:10px auto 60px; padding:0 16px}
-    .panel{background:var(--panel); border:1px solid var(--ring); border-radius:20px; padding:20px; box-shadow: 0 30px 60px #00000012;}
-    .toolbar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap}
-    .btn{appearance:none; border:1px solid var(--ring); background:var(--panel); padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; box-shadow: 0 8px 20px #0000000a;}
+    .panel{background:var(--panel); border:1px solid var(--ring); border-radius:20px; padding:20px; box-shadow: 0 30px 60px #0002;}
+    .toolbar{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+    .btn{appearance:none; border:1px solid var(--ring); background:#fff; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; box-shadow: 0 8px 20px #0000000a;}
     .btn.primary{background:var(--ink); color:#fff}
     .btn.danger{border-color:#fecaca; color:#991b1b; background:#fff1f2}
     .switch{display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none}
@@ -115,7 +61,7 @@
 
     .grid{display:grid; gap:24px; grid-template-columns: repeat(4, minmax(0,1fr));}
     @media (max-width:1000px){.grid{grid-template-columns: repeat(3, minmax(0,1fr));}}
-    @media (max-width:720px){header{grid-template-columns:1fr; grid-auto-rows:auto} .grid{grid-template-columns: repeat(2, minmax(0,1fr));}}
+    @media (max-width:720px){header{grid-template-columns:1fr} .grid{grid-template-columns: repeat(2, minmax(0,1fr));}}
 
     .cat{display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; position:relative}
     .shield-wrap{width:160px; aspect-ratio:1; position:relative; filter: drop-shadow(0 10px 10px #00000012) drop-shadow(0 20px 30px #00000010);}
@@ -124,10 +70,23 @@
     .actions{position:absolute; top:10px; right:10px; display:flex; gap:6px; opacity:0; transition:opacity .15s}
     .cat.editable:hover .actions{opacity:1}
     .icon-small{width:30px; height:30px; border-radius:8px; display:grid; place-items:center; background:#ffffffcc; border:1px solid var(--ring); cursor:grab; user-select:none}
-    .icon-btn-inline{appearance:none;border:1px solid var(--ring); background:#fff; padding:8px 10px; border-radius:8px; cursor:pointer}
+    .icon-btn-inline{appearance:none; border:1px solid var(--ring); background:#fff; padding:8px 10px; border-radius:8px; cursor:pointer}
     .badge{position:absolute; top:-8px; left:-8px; background:#0ea5e9; color:#fff; font-weight:700; font-size:12px; padding:4px 8px; border-radius:999px; border:2px solid #fff;}
 
-    /* Modal */
+    /* Hover effects */
+    .shield-wrap .plate-slot{transition:transform .25s ease}
+    .cat:hover .plate-slot{transform:scale(1.03)}
+    .plate-slot image.poster{opacity:1; transition:opacity .2s ease}
+    .plate-slot image.anim{opacity:0; transition:opacity .2s ease}
+    .cat:hover .plate-slot image.anim{opacity:1}
+    .cat:hover .plate-slot image.poster{opacity:0}
+    .plate-slot img.poster{opacity:1; transition:opacity .2s ease; width:100%; height:100%; object-fit:cover}
+    .plate-slot img.anim{opacity:0; transition:opacity .2s ease; width:100%; height:100%; object-fit:cover}
+    .cat:hover .plate-slot img.anim{opacity:1}
+    .cat:hover .plate-slot img.poster{opacity:0}
+    .shield-wrap::after{content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent 40%, #ffffff40 50%, transparent 60%); transform:translateX(-120%); transition:transform .7s ease; border-radius:20%; pointer-events:none}
+    .cat:hover .shield-wrap::after{ transform:translateX(120%) }
+
     dialog{border:0; border-radius:16px; padding:0; width:min(560px, 92vw); box-shadow:0 30px 80px #0006}
     .modal{padding:18px}
     .modal h3{margin:0 0 12px 0}
@@ -135,58 +94,13 @@
     .modal .row > label{display:flex; flex-direction:column; gap:6px}
     .modal footer{display:flex; gap:10px; justify-content:flex-end; margin-top:16px}
 
-    /* Hidden file input styling hook */
     .file{display:none}
-  
-    /* Hover animations inside shield */
-    .shield-wrap .plate-slot{transition:transform .25s ease}
-    .cat:hover .plate-slot{transform:scale(1.03)}
-    .plate-slot image.poster{opacity:1; transition:opacity .2s ease}
-    .plate-slot image.anim{opacity:0; transition:opacity .2s ease}
-    .cat:hover .plate-slot image.anim{opacity:1}
-    .cat:hover .plate-slot image.poster{opacity:0}
-    /* Shine sweep */
-    .shield-wrap::after{
-      content:""; position:absolute; inset:0;
-      background: linear-gradient(120deg, transparent 40%, #ffffff40 50%, transparent 60%);
-      transform:translateX(-120%); transition:transform .7s ease;
-      border-radius:20%;
-      pointer-events:none;
-    }
-    .cat:hover .shield-wrap::after{ transform:translateX(120%) }
-
   </style>
 </head>
 <body class="theme--spring">
   <!-- SVG sprite -->
   <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
-    <!-- Card shield (matches logo style, no check) -->
-    <symbol id="sym-card-shield" viewBox="0 0 100 110">
-      <defs>
-        <linearGradient id="lg-green-card" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#1db34e"/>
-          <stop offset="1" stop-color="#0c7c2f"/>
-        </linearGradient>
-        <linearGradient id="lg-glow-card" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#2be36e"/>
-          <stop offset="1" stop-color="#14b44e"/>
-        </linearGradient>
-        <linearGradient id="lg-orange-card" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#ffb02e"/>
-          <stop offset="1" stop-color="#ff7f00"/>
-        </linearGradient>
-      </defs>
-      <path d="M50 5 C40 12 25 15 10 18 v36 c0 23 16 42 40 51 c24-9 40-28 40-51 V18 C75 15 60 12 50 5z"
-            fill="url(#lg-green-card)" stroke="#063d1a" stroke-width="3"/>
-      <path d="M50 9 C41 15 27 17 14 20 v32 c0 21 14 38 36 46 c22-8 36-25 36-46 V20 C73 17 59 15 50 9z"
-            fill="url(#lg-glow-card)" opacity="0.35"/>
-      <path id="card-plate-shape" d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z"
-            fill="url(#lg-orange-card)" stroke="#a34b00" stroke-width="2"/>
-    </symbol>
-    <clipPath id="clip-card-plate">
-      <path d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z"/>
-    </clipPath>
-
+    <!-- Logo shield -->
     <symbol id="sym-logo-shield" viewBox="0 0 100 110">
       <defs>
         <linearGradient id="lg-green" x1="0" y1="0" x2="0" y2="1">
@@ -202,143 +116,45 @@
           <stop offset="1" stop-color="#ff7f00"/>
         </linearGradient>
       </defs>
-      <!-- Outer green body -->
-      <path d="M50 5 C40 12 25 15 10 18 v36 c0 23 16 42 40 51 c24-9 40-28 40-51 V18 C75 15 60 12 50 5z"
-            fill="url(#lg-green)" stroke="#063d1a" stroke-width="3"/>
-      <!-- Inner bevel/gloss -->
-      <path d="M50 9 C41 15 27 17 14 20 v32 c0 21 14 38 36 46 c22-8 36-25 36-46 V20 C73 17 59 15 50 9z"
-            fill="url(#lg-glow)" opacity="0.35"/>
-      <!-- Orange plate -->
-      <path d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z"
-            fill="url(#lg-orange)" stroke="#a34b00" stroke-width="2"/>
-      <!-- Check mark -->
+      <path d="M50 5 C40 12 25 15 10 18 v36 c0 23 16 42 40 51 c24-9 40-28 40-51 V18 C75 15 60 12 50 5z" fill="url(#lg-green)" stroke="#063d1a" stroke-width="3"/>
+      <path d="M50 9 C41 15 27 17 14 20 v32 c0 21 14 38 36 46 c22-8 36-25 36-46 V20 C73 17 59 15 50 9z" fill="url(#lg-glow)" opacity="0.35"/>
+      <path d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z" fill="url(#lg-orange)" stroke="#a34b00" stroke-width="2"/>
       <path d="M33 55 l12 12 l23-28" fill="none" stroke="#0f892f" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
 
-    <symbol id="sym-shield" viewBox="0 0 100 110">
-      <path d="M50 5 C40 12 25 15 10 18 v36 c0 23 16 42 40 51 c24-9 40-28 40-51 V18 C75 15 60 12 50 5z"
-            fill="url(#grad-shield)" stroke="rgba(0,0,0,.18)" stroke-width="2"/>
-      <path d="M50 10 C41 16 27 18 14 21 v33 c0 21 14 38 36 46 c22-8 36-25 36-46 V21 C73 18 59 16 50 10z"
-            fill="url(#grad-gloss)"/>
-      <clipPath id="clip-plate">
-        <path d="M50 14 C42 19 28 21 16 24 v30 c0 19 13 34 34 41 c21-7 34-22 34-41 V24 C72 21 58 19 50 14z"/>
-      </clipPath>
+    <!-- Card shield (no check) -->
+    <symbol id="sym-card-shield" viewBox="0 0 100 110">
+      <path d="M50 5 C40 12 25 15 10 18 v36 c0 23 16 42 40 51 c24-9 40-28 40-51 V18 C75 15 60 12 50 5z" fill="url(#lg-green)" stroke="#063d1a" stroke-width="3"/>
+      <path d="M50 9 C41 15 27 17 14 20 v32 c0 21 14 38 36 46 c22-8 36-25 36-46 V20 C73 17 59 15 50 9z" fill="url(#lg-glow)" opacity="0.35"/>
+      <path id="card-plate-shape" d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z" fill="url(#lg-orange)" stroke="#a34b00" stroke-width="2"/>
     </symbol>
+    <clipPath id="clip-card-plate">
+      <path d="M50 18 C43 23 31 25 20 27 v25 c0 16 11 29 30 35 c19-6 30-19 30-35 V27 C69 25 57 23 50 18z"/>
+    </clipPath>
 
-    <symbol id="ico-house" viewBox="0 0 100 100">
-      <path d="M10 60 L50 25 L90 60" fill="none" stroke="#0b1220" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-      <rect x="25" y="58" width="50" height="32" rx="4" fill="#ffffff" stroke="#0b1220" stroke-width="4"/>
-      <rect x="45" y="70" width="10" height="20" fill="#7bc4ff" stroke="#0b1220" stroke-width="3"/>
-      <rect x="30" y="68" width="10" height="10" fill="#7bc4ff" stroke="#0b1220" stroke-width="3"/>
-      <rect x="60" y="68" width="10" height="10" fill="#7bc4ff" stroke="#0b1220" stroke-width="3"/>
-    </symbol>
-    <symbol id="ico-car" viewBox="0 0 100 100">
-      <path d="M15 65 h70 a8 8 0 0 0 8-8 v-6 a10 10 0 0 0-7-9 l-12-4 a60 60 0 0 0-38 0 l-12 4 a10 10 0 0 0-7 9 v6 a8 8 0 0 0 8 8z" fill="#27c24c" stroke="#0b1220" stroke-width="4"/>
-      <circle cx="30" cy="70" r="8" fill="#fff" stroke="#0b1220" stroke-width="4"/>
-      <circle cx="70" cy="70" r="8" fill="#fff" stroke="#0b1220" stroke-width="4"/>
-      <rect x="32" y="44" width="36" height="12" rx="3" fill="#8ed8ff" stroke="#0b1220" stroke-width="3"/>
-    </symbol>
-    <symbol id="ico-clinic" viewBox="0 0 100 100">
-      <rect x="18" y="30" width="64" height="50" rx="6" fill="#ffffff" stroke="#0b1220" stroke-width="4"/>
-      <rect x="30" y="44" width="40" height="22" rx="3" fill="#c8f3ff" stroke="#0b1220" stroke-width="3"/>
-      <path d="M50 36 v10 M45 41 h10" stroke="#ff6b00" stroke-width="5" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="ico-phone" viewBox="0 0 100 100">
-      <rect x="32" y="18" width="36" height="64" rx="8" fill="#8b7bff" stroke="#0b1220" stroke-width="4"/>
-      <circle cx="50" cy="74" r="4" fill="#fff"/>
-      <rect x="38" y="26" width="24" height="36" rx="3" fill="#ffffff"/>
-    </symbol>
-    <symbol id="ico-services" viewBox="0 0 100 100">
-      <circle cx="40" cy="42" r="14" fill="#ffd2b3" stroke="#0b1220" stroke-width="3"/>
-      <rect x="28" y="54" width="24" height="22" rx="5" fill="#7fd3ff" stroke="#0b1220" stroke-width="3"/>
-      <rect x="20" y="68" width="60" height="14" rx="7" fill="#ffffff" stroke="#0b1220" stroke-width="3"/>
-    </symbol>
-    <symbol id="ico-home" viewBox="0 0 100 100">
-      <rect x="22" y="52" width="56" height="32" rx="6" fill="#fff3cd" stroke="#0b1220" stroke-width="3"/>
-      <rect x="34" y="60" width="32" height="18" rx="4" fill="#ffe9a2" stroke="#0b1220" stroke-width="3"/>
-      <path d="M22 52 h56 M34 60 h32" stroke="#0b1220" stroke-width="3"/>
-      <rect x="10" y="35" width="80" height="12" rx="6" fill="#ffefcc" stroke="#0b1220" stroke-width="3"/>
-    </symbol>
-    <symbol id="ico-worker" viewBox="0 0 100 100">
-      <circle cx="50" cy="38" r="14" fill="#ffd2b3" stroke="#0b1220" stroke-width="3"/>
-      <rect x="30" y="56" width="40" height="26" rx="8" fill="#7ad5ff" stroke="#0b1220" stroke-width="3"/>
-      <path d="M36 34 h28 l-2-6 a6 6 0 0 0-6-4 h-12 a6 6 0 0 0-6 4z" fill="#ffb84d" stroke="#0b1220" stroke-width="3"/>
-    </symbol>
-    <symbol id="ico-travel" viewBox="0 0 100 100">
-      <rect x="36" y="38" width="28" height="36" rx="6" fill="#8fd6ff" stroke="#0b1220" stroke-width="3"/>
-      <rect x="32" y="70" width="36" height="8" rx="4" fill="#0b1220"/>
-      <path d="M52 32 h6 a8 8 0 0 1 8 8" stroke="#ff9900" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="66" cy="36" r="8" fill="#ffcf7a" stroke="#0b1220" stroke-width="3"/>
-    </symbol>
-
-    <linearGradient id="grad-shield" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="var(--shield-gloss)" />
-      <stop offset="1" stop-color="var(--shield)" />
-    </linearGradient>
-    <linearGradient id="grad-gloss" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffffaa" />
-      <stop offset=".5" stop-color="#ffffff22" />
-      <stop offset="1" stop-color="#00000011" />
-    </linearGradient>
-    <linearGradient id="grad-plate" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e7f6ff" />
-      <stop offset="1" stop-color="#d2f1ff" />
-    </linearGradient>
-
-    <symbol id="ico-search" viewBox="0 0 24 24">
-      <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"></circle>
-      <path d="M20 20 L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-    </symbol>
-    <symbol id="ico-mic" viewBox="0 0 24 24">
-      <rect x="9" y="3" width="6" height="10" rx="3" fill="currentColor"></rect>
-      <path d="M5 11 a7 7 0 0 0 14 0 M12 18 v3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>
-    </symbol>
-    <symbol id="ico-loc" viewBox="0 0 24 24">
-      <path d="M12 22 c6-9 8-12 8-15 a8 8 0 0 0-16 0 c0 3 2 6 8 15z" fill="none" stroke="currentColor" stroke-width="2"></path>
-      <circle cx="12" cy="7" r="2" fill="currentColor"></circle>
-    </symbol>
-    <symbol id="ico-user" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4" fill="currentColor"></circle>
-      <path d="M4 21 a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="2"></path>
-    </symbol>
-    <symbol id="ico-heart" viewBox="0 0 24 24">
-      <path d="M12 20 C-6 8 6 -2 12 6 C18 -2 30 8 12 20z" fill="none" stroke="currentColor" stroke-width="2"></path>
-    </symbol>
-    <symbol id="ico-plus" viewBox="0 0 24 24">
-      <path d="M12 5 v14 M5 12 h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-    </symbol>
-    <symbol id="ico-pen" viewBox="0 0 24 24">
-      <path d="M14 4 l6 6 l-10 10 H4 v-6 z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
-    </symbol>
-    <symbol id="ico-trash" viewBox="0 0 24 24">
-      <path d="M4 7 h16 M9 7 v-2 h6 v2 M6 7 l1 13 h10 l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
-    </symbol>
-    <symbol id="ico-drag" viewBox="0 0 24 24">
-      <path d="M9 7 h6 M9 12 h6 M9 17 h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-    </symbol>
+    <!-- pictos -->
+    <symbol id="ico-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 20 L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="ico-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="10" rx="3" fill="currentColor"/><path d="M5 11 a7 7 0 0 0 14 0 M12 18 v3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></symbol>
+    <symbol id="ico-loc" viewBox="0 0 24 24"><path d="M12 22 c6-9 8-12 8-15 a8 8 0 0 0-16 0 c0 3 2 6 8 15z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="7" r="2" fill="currentColor"/></symbol>
+    <symbol id="ico-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 21 a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="ico-heart" viewBox="0 0 24 24"><path d="M12 20 C-6 8 6 -2 12 6 C18 -2 30 8 12 20z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="ico-plus" viewBox="0 0 24 24"><path d="M12 5 v14 M5 12 h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="ico-pen" viewBox="0 0 24 24"><path d="M14 4 l6 6 l-10 10 H4 v-6 z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="ico-trash" viewBox="0 0 24 24"><path d="M4 7 h16 M9 7 v-2 h6 v2 M6 7 l1 13 h10 l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="ico-drag" viewBox="0 0 24 24"><path d="M9 7 h6 M9 12 h6 M9 17 h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   </svg>
 
   <header class="container">
-    
     <div class="logo">
-      <svg class="logo-badge" viewBox="0 0 100 110" aria-hidden="true">
-        <use href="#sym-logo-shield"/>
-      </svg>
+      <svg class="logo-badge" viewBox="0 0 100 110" aria-hidden="true"><use href="#sym-logo-shield"/></svg>
       <div class="logo-text">My<em>Sale</em></div>
     </div>
-</div>
-
     <form class="search" onsubmit="event.preventDefault()">
       <svg aria-hidden="true" width="20" height="20"><use href="#ico-search"/></svg>
-      <input type="search" placeholder="Поиск по объявлениям" id="searchInput" />
-      <button type="button" class="icon-btn" title="Микрофон">
-        <svg aria-hidden="true" width="20" height="20"><use href="#ico-mic"/></svg>
-      </button>
-      <button type="button" class="icon-btn" title="Геолокация">
-        <svg aria-hidden="true" width="20" height="20"><use href="#ico-loc"/></svg>
-      </button>
+      <input type="search" placeholder="Поиск по объявлениям" />
+      <button type="button" class="icon-btn" title="Микрофон"><svg aria-hidden="true" width="20" height="20"><use href="#ico-mic"/></svg></button>
+      <button type="button" class="icon-btn" title="Геолокация"><svg aria-hidden="true" width="20" height="20"><use href="#ico-loc"/></svg></button>
     </form>
-
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
       <span class="chip"><svg width="18" height="18"><use href="#ico-user"/></svg>Войти</span>
       <span class="chip"><svg width="18" height="18"><use href="#ico-heart"/></svg>Избранное</span>
@@ -369,7 +185,6 @@
     </section>
   </main>
 
-  <!-- Modal -->
   <dialog id="modal">
     <form method="dialog" class="modal" id="modalForm">
       <h3 id="modalTitle">Новый раздел</h3>
@@ -382,14 +197,7 @@
         </label>
         <label>Иконка
           <select class="select" name="icon">
-            <option value="ico-house">Дом</option>
-            <option value="ico-car">Авто</option>
-            <option value="ico-clinic">Здоровье</option>
-            <option value="ico-phone">Электроника</option>
-            <option value="ico-services">Услуги</option>
-            <option value="ico-home">Дом и дача</option>
-            <option value="ico-worker">Работа</option>
-            <option value="ico-travel">Путешествия</option>
+            <option value="ico-house">SVG: Дом</option>
             <option value="emoji">Emoji</option>
             <option value="image">PNG/JPG</option>
             <option value="anim">Анимированный WebP</option>
@@ -417,16 +225,13 @@
     </form>
   </dialog>
 
-  
   <template id="cardTpl">
     <article class="cat" draggable="false">
       <div class="shield-wrap">
         <span class="badge" hidden>0</span>
         <svg class="shield" viewBox="0 0 100 110" aria-hidden="true">
           <use href="#sym-card-shield"/>
-          <g class="plate-slot" clip-path="url(#clip-card-plate)">
-            <!-- Poster and animated layers will be injected here -->
-          </g>
+          <g class="plate-slot" clip-path="url(#clip-card-plate)"></g>
         </svg>
       </div>
       <div class="label"></div>
@@ -437,14 +242,12 @@
       </div>
     </article>
   </template>
-    
 
   <script>
-    const KEY = 'mysale.categories.v2';
-    const el = sel => document.querySelector(sel);
-    const els = sel => Array.from(document.querySelectorAll(sel));
+    const KEY = 'mysale.categories.v4R';
+    const el = s=>document.querySelector(s);
+    const els = s=>Array.from(document.querySelectorAll(s));
 
-    // Default dataset
     const defaults = [
       {id:crypto.randomUUID(), title:'Недвижимость', icon:{type:'svg', name:'ico-house'}, href:'/realty', color:'#25b24d', badge:0},
       {id:crypto.randomUUID(), title:'Транспорт', icon:{type:'svg', name:'ico-car'}, href:'/transport', color:'#25b24d', badge:0},
@@ -456,39 +259,23 @@
       {id:crypto.randomUUID(), title:'Путешествия', icon:{type:'svg', name:'ico-travel'}, href:'/travel', color:'#25b24d', badge:0},
     ];
 
-    // State
     let data = load();
-    let editMode = false;
-    let dragId = null;
+    let editMode = false, dragId = null;
 
     function load(){
       try{
         const raw = localStorage.getItem(KEY);
         if(!raw) return structuredClone(defaults);
         const parsed = JSON.parse(raw);
-        if(!Array.isArray(parsed)) throw new Error('bad data');
-        return parsed;
-      }catch(e){
-        console.warn('corrupt data, reset', e);
-        return structuredClone(defaults);
-      }
+        return Array.isArray(parsed) ? parsed : structuredClone(defaults);
+      }catch(e){ return structuredClone(defaults); }
     }
-    function save(){
-      localStorage.setItem(KEY, JSON.stringify(data));
-    }
+    function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
 
-    // Render
     function render(){
-      const grid = el('#grid');
-      grid.innerHTML = '';
-      data.forEach(item=>{
-        const card = renderCard(item);
-        grid.appendChild(card);
-      });
-      els('.cat').forEach(node=>{
-        node.classList.toggle('editable', editMode);
-        node.setAttribute('draggable', editMode);
-      });
+      const grid = el('#grid'); grid.innerHTML = '';
+      data.forEach(item=> grid.appendChild(renderCard(item)));
+      els('.cat').forEach(n=>{ n.classList.toggle('editable', editMode); n.setAttribute('draggable', editMode); });
     }
 
     function renderCard(item){
@@ -497,113 +284,69 @@
       node.dataset.id = item.id;
       node.querySelector('.label').textContent = item.title;
 
-      // Badge
       const badge = node.querySelector('.badge');
-      if(item.badge && Number(item.badge) > 0){
-        badge.textContent = item.badge;
-        badge.hidden = false;
-      }else{
-        badge.hidden = true;
-      }
+      if(item.badge && Number(item.badge)>0){ badge.textContent=item.badge; badge.hidden=false; } else { badge.hidden=true; }
 
-      // Shield color
-      // removed buggy shield query
-
-      // Update shield gradient dynamically
-      elGrad('--shield', item.color);
       const iconSlot = node.querySelector('.plate-slot');
-      iconSlot.innerHTML = ''; // clear
-      if(item.icon?.type === 'emoji'){
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        g.setAttribute('x','50'); g.setAttribute('y','60'); g.setAttribute('text-anchor','middle'); g.setAttribute('font-size','48');
-        g.textContent = item.icon.value || '❓';
-        iconSlot.appendChild(g);
-      }else if(item.icon?.type === 'image'){
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        g.setAttributeNS('http://www.w3.org/1999/xlink','href', item.icon.data);
-        g.setAttribute('x','10'); g.setAttribute('y','10'); g.setAttribute('width','80'); g.setAttribute('height','80');
-        g.setAttribute('preserveAspectRatio','xMidYMid meet');
-        iconSlot.appendChild(g);
+      iconSlot.innerHTML='';
+      // helper: foreignObject img
+      const addFO = (cls, src)=>{
+        const fo = document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
+        fo.setAttribute('x','6'); fo.setAttribute('y','8'); fo.setAttribute('width','88'); fo.setAttribute('height','92');
+        const img = document.createElement('img'); img.src=src; img.className=cls; img.alt=''; img.draggable=false;
+        fo.appendChild(img);
+        iconSlot.appendChild(fo);
+      };
+      if(item.icon?.type==='anim' && item.icon.poster && item.icon.anim){
+        addFO('poster', item.icon.poster);
+        addFO('anim', item.icon.anim);
+      }else if(item.icon?.type==='image' && item.icon.data){
+        addFO('poster', item.icon.data);
+      }else if(item.icon?.type==='emoji'){
+        const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('x','50'); t.setAttribute('y','66'); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','46');
+        t.textContent = item.icon.value || '⭐';
+        iconSlot.appendChild(t);
       }else{
         const use = document.createElementNS('http://www.w3.org/2000/svg','use');
         use.setAttributeNS('http://www.w3.org/1999/xlink','href', '#'+(item.icon?.name||'ico-house'));
+        use.setAttribute('transform','translate(10,18) scale(0.85)');
         iconSlot.appendChild(use);
       }
 
-      // Click opens href in view mode
       node.addEventListener('click', (e)=>{
         if(editMode) return;
-        // Avoid clicking action buttons
-        const a = e.target.closest('.actions, .edit, .del, .drag');
-        if(a) return;
-        if(item.href){
-          window.location.href = item.href;
-        }
+        if(e.target.closest('.actions,.edit,.del,.drag')) return;
+        if(item.href){ window.open(item.href, '_self'); }
       });
 
-      // Actions for edit mode
-      node.querySelector('.edit').addEventListener('click', (e)=>{
-        e.stopPropagation();
-        openModal(item);
-      });
-      node.querySelector('.del').addEventListener('click', (e)=>{
-        e.stopPropagation();
-        if(confirm('Удалить раздел "'+item.title+'"?')){
-          data = data.filter(x=>x.id!==item.id);
-          save(); render();
-        }
-      });
+      node.querySelector('.edit').addEventListener('click', (e)=>{ e.stopPropagation(); openModal(item); });
+      node.querySelector('.del').addEventListener('click', (e)=>{ e.stopPropagation(); if(confirm('Удалить "'+item.title+'"?')){ data = data.filter(x=>x.id!==item.id); save(); render(); } });
 
-      // Drag handle logic
       const dragHandle = node.querySelector('.drag');
-      dragHandle.addEventListener('pointerdown', (e)=>{
-        if(!editMode) return;
-        dragId = item.id;
-        node.style.opacity = '.5';
-        node.setPointerCapture(e.pointerId);
-      });
-      dragHandle.addEventListener('pointerup', (e)=>{
-        if(!editMode) return;
-        dragId = null;
-        node.style.opacity = '';
-      });
-      node.addEventListener('dragstart', e=> e.preventDefault()); // disable native dnd
-      node.addEventListener('pointermove', (e)=>{}); // reserved
-
-      // Reorder logic using drag over neighbors
+      dragHandle.addEventListener('pointerdown', (e)=>{ if(!editMode) return; dragId=item.id; node.style.opacity='.5'; node.setPointerCapture(e.pointerId); });
+      dragHandle.addEventListener('pointerup', ()=>{ if(!editMode) return; dragId=null; node.style.opacity=''; });
+      node.addEventListener('dragstart', e=> e.preventDefault());
       node.addEventListener('pointerenter', ()=>{
         if(!editMode || !dragId || dragId===item.id) return;
         const from = data.findIndex(x=>x.id===dragId);
-        const to = data.findIndex(x=>x.id===item.id);
-        if(from<0 || to<0) return;
-        const [m] = data.splice(from,1);
-        data.splice(to,0,m);
-        save(); render();
+        const to   = data.findIndex(x=>x.id===item.id);
+        if(from<0||to<0) return;
+        const [m]=data.splice(from,1); data.splice(to,0,m); save(); render();
       });
 
       return node;
     }
 
-    // Helper to update CSS variable-based gradient color
-    function elGrad(varName, color){
-      document.documentElement.style.setProperty(varName, color);
-      const gloss = toLight(color);
-      document.documentElement.style.setProperty('--shield-gloss', gloss);
-    }
-    // Make lighter color for gloss
-    function toLight(hex){
-      try{
-        const c = hex.replace('#','');
-        const r=parseInt(c.substring(0,2),16), g=parseInt(c.substring(2,4),16), b=parseInt(c.substring(4,6),16);
-        const mix = (v)=>Math.min(255, Math.round(v + (255-v)*0.5));
-        return '#'+[mix(r),mix(g),mix(b)].map(v=>v.toString(16).padStart(2,'0')).join('');
-      }catch(e){return '#7fd773'}
-    }
-
     // Modal
-    const modal = el('#modal');
-    const form  = el('#modalForm');
-    let currentId = null;
+    const modal = el('#modal'); const form = el('#modalForm'); let currentId = null;
+    const saveBtn = el('#saveBtn');
+
+    function validateModal(){
+      const t=form.elements.title.value.trim(); const h=form.elements.href.value.trim();
+      const ok = t.length>0 && (/^https?:\\/\\//.test(h) || h.startsWith('/'));
+      saveBtn.disabled=!ok; return ok;
+    }
 
     function openModal(item){
       currentId = item?.id || null;
@@ -612,22 +355,29 @@
       el('#modalTitle').textContent = item ? 'Редактировать раздел' : 'Новый раздел';
       form.elements.title.value = item?.title || '';
       form.elements.href.value  = item?.href || '';
-      form.elements.icon.value  = item?.icon?.type==='emoji' ? 'emoji' : (item?.icon?.type==='image' ? 'image' : (item?.icon?.type==='anim' ? 'anim' : (item?.icon?.name || 'ico-house')));
+      form.elements.icon.value  = item?.icon?.type==='emoji' ? 'emoji' :
+                                  item?.icon?.type==='image' ? 'image' :
+                                  item?.icon?.type==='anim'  ? 'anim'  :
+                                  (item?.icon?.name || 'ico-house');
       form.elements.emoji.value = item?.icon?.type==='emoji' ? (item.icon.value||'') : '';
       form.elements.color.value = item?.color || '#25b24d';
       form.elements.badge.value = item?.badge || 0;
       modal.showModal(); validateModal();
     }
 
-    el('#addBtn').addEventListener('click', ()=> openModal(null));
+    form.addEventListener('input', validateModal);
+    el('#previewBtn').addEventListener('click', ()=>{
+      const h=form.elements.href.value.trim(); if(!h){alert('Сначала укажите ссылку'); return;}
+      window.open(h.startsWith('/')?h:h,'_blank','noopener');
+    });
 
-    form.addEventListener('close', ()=>{}); // noop
-modal.addEventListener('close', ()=>{
+    // Submit handled by dialog close value
+    modal.addEventListener('close', ()=>{
       if(modal.returnValue==='ok'){
-        if(!validateModal()){ alert('Заполните Название и корректную Ссылку'); modal.showModal(); return; }
+        if(!validateModal()){ alert('Заполните поля'); modal.showModal(); return; }
         const payload = {
           title: form.elements.title.value.trim(),
-          href: form.elements.href.value.trim(),
+          href:  form.elements.href.value.trim(),
           color: form.elements.color.value,
           badge: Number(form.elements.badge.value||0),
           icon: null
@@ -636,12 +386,11 @@ modal.addEventListener('close', ()=>{
         if(iconSel==='emoji'){
           payload.icon = {type:'emoji', value: form.elements.emoji.value || '⭐'};
         }else if(iconSel==='image'){
-          const dataUrl = form.dataset.imageData || null;
-          if(dataUrl){ payload.icon = {type:'image', data:dataUrl}; }
-          else{ payload.icon = {type:'emoji', value:'🖼️'}; }
+          const dataUrl = form.dataset.imageData || '';
+          payload.icon = dataUrl ? {type:'image', data:dataUrl} : {type:'emoji', value:'🖼️'};
         }else if(iconSel==='anim'){
           const poster = form.dataset.posterData || '';
-          const anim = form.dataset.animData || '';
+          const anim   = form.dataset.animData || '';
           if(poster && anim){ payload.icon = {type:'anim', poster, anim}; }
           else if(poster){ payload.icon = {type:'image', data:poster}; }
           else{ payload.icon = {type:'emoji', value:'🖼️'}; }
@@ -650,137 +399,58 @@ modal.addEventListener('close', ()=>{
         }
 
         if(currentId){
-          const idx = data.findIndex(x=>x.id===currentId);
-          if(idx>-1) data[idx] = {...data[idx], ...payload};
+          const i=data.findIndex(x=>x.id===currentId); if(i>-1) data[i]={...data[i], ...payload};
         }else{
           data.push({id:crypto.randomUUID(), ...payload});
         }
         save(); render();
       }else if(modal.returnValue==='delete' && currentId){
-        data = data.filter(x=>x.id!==currentId);
-        save(); render();
+        data = data.filter(x=>x.id!==currentId); save(); render();
       }
-      form.dataset.imageData = ''; form.dataset.posterData=''; form.dataset.animData='';
-      currentId = null;
+      form.dataset.imageData=''; form.dataset.posterData=''; form.dataset.animData=''; currentId=null;
     });
 
-    // Delete from modal
-    el('#deleteBtn').addEventListener('click', ()=>{
-      modal.returnValue = 'delete';
-      modal.close();
-    });
-
-    // Icon select controls file input
+    // Icon change triggers file pickers
     form.elements.icon.addEventListener('change', ()=>{
-      const val = form.elements.icon.value;
-      
-      if(val==='image'){
-        el('#imageInput').click();
-      }else if(val==='anim'){
-        // Ask for poster first, then animated webp
-        setTimeout(()=> el('#posterInput').click(), 50);
-      }
-
+      const v=form.elements.icon.value;
+      if(v==='image'){ el('#imageInput').click(); }
+      else if(v==='anim'){ setTimeout(()=> el('#posterInput').click(), 50); }
     });
-
-    
+    el('#imageInput').addEventListener('change', (e)=>{
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader(); r.onload=()=> form.dataset.imageData=r.result; r.readAsDataURL(f);
+    });
     el('#posterInput').addEventListener('change', (e)=>{
-      const f = e.target.files[0];
-      if(!f) return;
-      const r = new FileReader();
-      r.onload = ()=>{ form.dataset.posterData = r.result; setTimeout(()=> el('#animInput').click(), 100); };
-      r.readAsDataURL(f);
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader(); r.onload=()=>{ form.dataset.posterData=r.result; setTimeout(()=> el('#animInput').click(), 100); }; r.readAsDataURL(f);
     });
     el('#animInput').addEventListener('change', (e)=>{
-      const f = e.target.files[0];
-      if(!f) return;
-      const r = new FileReader();
-      r.onload = ()=>{ form.dataset.animData = r.result; };
-      r.readAsDataURL(f);
+      const f=e.target.files[0]; if(!f) return;
+      const r=new FileReader(); r.onload=()=> form.dataset.animData=r.result; r.readAsDataURL(f);
     });
-
-    el('#imageInput').addEventListener('change', (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        form.dataset.imageData = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    
-    // Validate and toggle Save
-    const saveBtn = el('#saveBtn');
-    function validateModal(){
-      const t = form.elements.title.value.trim();
-      const h = form.elements.href.value.trim();
-      const ok = t.length>0 && /^https?:\/\//.test(h) || h.startsWith('/') ;
-      saveBtn.disabled = !ok;
-      return ok;
-    }
-    form.addEventListener('input', validateModal);
-
-    // Preview link
-    el('#previewBtn').addEventListener('click', ()=>{
-      const h = form.elements.href.value.trim();
-      if(!h){ alert('Сначала укажите ссылку'); return; }
-      const url = h.startsWith('/') ? h : h;
-      window.open(url, '_blank', 'noopener');
-    });
-
 
     // Edit mode toggle
-    el('#editToggle').addEventListener('change', (e)=>{
-      editMode = e.target.checked;
-      render();
-    });
+    el('#editToggle').addEventListener('change', (e)=>{ editMode=e.target.checked; render(); });
 
     // Export / Import / Reset
     el('#exportBtn').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'mysale_categories.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
+      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='mysale_categories.json'; a.click(); URL.revokeObjectURL(a.href);
     });
     el('#importBtn').addEventListener('click', ()=> el('#importFile').click());
-    el('#importFile').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      try{
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if(!Array.isArray(parsed)) throw new Error('JSON должен быть массивом');
-        data = parsed;
-        save(); render();
-      }catch(err){
-        alert('Ошибка импорта: '+ err.message);
-      }
+    el('#importFile').addEventListener('change', async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      try{ const t=await f.text(); const j=JSON.parse(t); if(!Array.isArray(j)) throw new Error('JSON должен быть массивом'); data=j; save(); render(); }
+      catch(err){ alert('Ошибка импорта: '+err.message); }
     });
-    el('#resetBtn').addEventListener('click', ()=>{
-      if(confirm('Сбросить витрину к дефолту?')){
-        data = structuredClone(defaults);
-        save(); render();
-      }
-    });
+    el('#resetBtn').addEventListener('click', ()=>{ if(confirm('Сбросить витрину к дефолту?')){ data=structuredClone(defaults); save(); render(); } });
 
-    // Theme select
-    const themes = {
-      winter:'theme--winter',
-      spring:'theme--spring',
-      summer:'theme--summer',
-      autumn:'theme--autumn'
-    };
-    const themeSelect = el('#themeSelect');
-    function applyTheme(name){
-      document.body.className = themes[name] || 'theme--spring';
-    }
-    themeSelect.addEventListener('change', ()=> applyTheme(themeSelect.value));
-    applyTheme(themeSelect.value);
+    // Themes
+    const themes={winter:'theme--winter', spring:'theme--spring', summer:'theme--summer', autumn:'theme--autumn'};
+    const themeSelect=el('#themeSelect');
+    function applyTheme(n){ document.body.className = themes[n]||'theme--spring'; }
+    themeSelect.addEventListener('change', ()=> applyTheme(themeSelect.value)); applyTheme(themeSelect.value);
 
-    // Initial render
     render();
   </script>
 </body>
