@@ -6,300 +6,512 @@
 <title>MySale — Админ витрины</title>
 <style>
   :root{
-    --bg1:#F8D49A;
-    --bg2:#F2B35E;
+    --bg-from:#F7E6CA;
+    --bg-to:#F6B968;
     --surface:#FFFFFF;
-    --text:#2A2A2A;
+    --text:#232A1A;
     --accent:#FF7A00;
     --radius:16px;
+    --cols:4;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,Helvetica,sans-serif;color:var(--text);background:#f4f4f4}
-  .wrap{display:grid;grid-template-columns:320px 1fr;gap:14px;min-height:100vh;padding:12px}
-  .panel{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:12px;position:sticky;top:12px;height:calc(100vh - 24px);overflow:auto}
-  .panel h3{margin:10px 0 8px;font-size:15px}
-  .row{display:flex;gap:8px;margin:6px 0}
-  label{font-size:12px;color:#6b6b6b;display:block;margin:8px 0 4px}
-  input[type=text],input[type=number],input[type=url],select,textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:9px 10px;font:inherit;background:#fff}
-  input[type=color]{width:42px;height:32px;border:1px solid #ddd;border-radius:6px;padding:0;appearance:none}
-  button{border:0;border-radius:8px;padding:8px 12px;background:#2e7d32;color:#fff;cursor:pointer}
-  button.sec{background:#006dc1}
-  button.ghost{background:#eee;color:#333}
+  html,body{height:100%;margin:0}
+  body{display:flex;font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--text);background:
+    linear-gradient(180deg,var(--bg-from),var(--bg-to)) fixed}
+  aside{width:320px;min-width:300px;background:#fff8;
+        backdrop-filter: blur(6px); border-right:1px solid #0001;padding:14px;overflow:auto}
+  aside h2{margin:10px 0 6px;font-size:13px;color:#0008}
+  label{display:block;font-size:12px;color:#0008;margin:8px 0 4px}
+  input[type="text"],input[type="number"]{width:100%;padding:8px 10px;border:1px solid #0002;border-radius:8px;background:#fff}
+  input[type="color"]{width:44px;height:34px;border:1px solid #0003;border-radius:6px;background:#fff;vertical-align:middle}
+  .row{display:flex;gap:10px;align-items:center}
+  .row input[type="text"]{flex:1}
+  .btn{display:inline-flex;gap:6px;align-items:center;padding:8px 12px;border-radius:10px;border:1px solid #0002;background:#fff;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-  .preview{background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 120%);border:1px solid #e6e6e6;border-radius:16px;padding:18px;min-height:calc(100vh - 24px);position:relative;overflow:hidden}
-  .grid{display:grid;grid-template-columns:repeat(var(--cols,4),1fr);gap:24px}
-  .brand-area{display:flex;align-items:center;gap:10px;user-select:none;position:relative}
-  .brand-logo{width:56px;height:56px;border-radius:14px;display:inline-grid;place-items:center;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.12)}
-  .brand-logo img{max-width:48px;max-height:48px;display:block}
-  .brand-title{font-weight:800;font-size:52px;letter-spacing:.5px;color:#1a8917}
-  .brand-title span.orange{color:#ff6c00}
-  .brand-title span.green{color:#1a8917}
-  .drag{position:absolute;inset:0;cursor:move}
-  .card{width:260px;min-height:120px;background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 28px rgba(0,0,0,.12);border:1px solid rgba(0,0,0,.08);padding:14px 14px 16px 14px;position:relative;user-select:none;overflow:hidden}
-  .card.circle{aspect-ratio:1/1;border-radius:999px;width:160px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
-  .card.oval{border-radius:999px}
+  .section{padding:10px;border:1px dashed #0001;border-radius:12px;background:#fff6;margin-bottom:10px}
+  small.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#666}
+  main{flex:1;position:relative;overflow:auto}
+  .stage{min-height:100%;padding:32px 24px}
+  .brand{position:absolute;left:32px;top:24px;display:flex;align-items:center;gap:10px;user-select:none}
+  .brand .logo{width:56px;height:56px;border-radius:12px;display:grid;place-items:center;background:#fff7;backdrop-filter:blur(4px)}
+  .brand .logo img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+  .brand .name{font-size:54px;font-weight:800;letter-spacing:.5px;display:flex;gap:0 .6ch}
+  .brand .name span{display:inline-block}
+  .search{position:absolute;left:50%;transform:translateX(-50%);top:110px;display:flex;gap:8px;width:min(800px,86vw)}
+  .search input{flex:1;padding:12px 14px;border-radius:14px;border:1px solid #0002;background:#ffff}
+  .search button{padding:12px 16px;border:1px solid #0000;border-radius:14px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+  .grid{position:relative;margin-top:180px;display:grid;grid-template-columns:repeat(var(--cols),minmax(240px,1fr));gap:26px}
+  .card{position:relative;background:var(--surface);border-radius:var(--radius);box-shadow:
+        0 10px 30px #0001, 0 2px 0 1px #00000008 inset;border:1px solid #00000014;padding:14px 14px 16px;transition:.15s}
+  .card.dragging{opacity:.8;transform:scale(.98)}
   .card .icon{font-size:26px}
-  .card h4{margin:6px 0 4px;font-size:18px;color:var(--accent)}
-  .card p{margin:0;font-size:13px;color:#666;word-break:break-word}
-  .corner{position:absolute;right:8px;top:8px;background:#fff;border:1px solid #eee;border-radius:999px;width:28px;height:28px;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:15px;color:#9b9b9b}
-  .k{display:flex;gap:8px;align-items:center}
-  .muted{color:#888;font-size:12px}
-  .hr{height:1px;background:#eee;margin:10px 0}
-  .badge{background:#fff6eb;color:#c25d00;border:1px solid #ffd7a3;border-radius:6px;padding:3px 8px;font-size:12px}
-  .pill{border-radius:999px}
-  .mini{font-size:12px}
-  .shadow-none{box-shadow:none!important}
-  .handle{position:absolute;inset:0;cursor:move}
-  .row .grow{flex:1}
-  .float-tip{position:absolute;left:12px;top:12px;font-size:12px;color:#444;background:rgba(255,255,255,.7);padding:4px 8px;border-radius:8px}
-  .searchbar{display:flex;gap:8px}
-  .searchbar input{flex:1;border-radius:12px}
+  .card .title{margin:8px 0 4px;font-size:18px;font-weight:800;color:var(--accent);}
+  .card .hint{font-size:12.5px;color:#0009}
+  .card a.pin{position:absolute;right:10px;top:8px;font-size:18px;color:#aaa;text-decoration:none}
+  .card .title,.card .hint,.card .icon{position:relative}
+  .circle{border-radius:9999px!important}
+  .free .grid{display:block}
+  .free .card{position:absolute}
+  .badge{position:fixed;right:16px;top:12px;font:12px ui-monospace;background:#000b;color:#fff;padding:6px 10px;border-radius:999px}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <aside class="panel" id="panel">
+  <aside>
     <div class="toolbar">
-      <button id="btnExport">Экспорт</button>
-      <button class="sec" id="btnImport">Импорт</button>
-      <input type="file" id="fileImport" accept=".json,application/json,.txt,.html" style="display:none"/>
-      <button class="ghost" id="btnUndo">Undo</button>
-      <button class="ghost" id="btnRedo">Redo</button>
-    </div>
-    <div class="hr"></div>
-
-    <h3>Бренд</h3>
-    <label>Название</label>
-    <input id="brandTitle" type="text" placeholder="MySale" value="MySale"/>
-    <div class="row">
-      <div class="grow">
-        <label>Логотип (PNG/SVG с прозрачностью)</label>
-        <input id="logoInput" type="file" accept=".png,.svg,.jpg,.jpeg"/>
-      </div>
-    </div>
-    <div class="row">
-      <label class="k"><input type="checkbox" id="lockBrand"/> Закрепить бренд</label>
-      <label class="k"><input type="checkbox" id="lockLogo"/> Закрепить логотип</label>
+      <button class="btn" id="btnImport">Импорт</button>
+      <button class="btn" id="btnExport">Экспорт</button>
+      <button class="btn" id="btnUndo">Undo</button>
+      <button class="btn" id="btnRedo">Redo</button>
     </div>
 
-    <div class="hr"></div>
-    <h3>Тема</h3>
-    <div class="row">
-      <div class="grow">
-        <label>Фон от</label><input id="clrBg1" type="color" value="#F8D49A"/>
-      </div>
-      <div class="grow">
-        <label>Фон до</label><input id="clrBg2" type="color" value="#F2B35E"/>
-      </div>
-    </div>
-    <div class="row">
-      <div class="grow">
-        <label>Поверхность</label><input id="clrSurface" type="color" value="#FFFFFF"/>
-      </div>
-      <div class="grow">
-        <label>Текст</label><input id="clrText" type="color" value="#2A2A2A"/>
-      </div>
-      <div class="grow">
-        <label>Акцент</label><input id="clrAccent" type="color" value="#FF7A00"/>
-      </div>
-    </div>
-    <div class="row">
-      <div class="grow">
-        <label>Радиус по умолчанию</label><input id="radius" type="number" min="0" max="200" value="16"/>
-      </div>
-      <div class="grow">
-        <label>Колонки</label><input id="cols" type="number" min="1" max="6" value="4"/>
-      </div>
-    </div>
-
-    <div class="hr"></div>
-    <h3>Режим</h3>
-    <div class="row">
-      <label class="k"><input type="checkbox" id="freeMove"/> Свободное перемещение</label>
-      <button class="ghost" id="btnResetPos">Сбросить позиции</button>
-    </div>
-
-    <div class="hr"></div>
-    <h3>Карточки</h3>
-    <div class="row">
-      <button id="btnAdd">+ Карточка</button>
-      <button id="btnDel" class="ghost">Удалить</button>
-    </div>
-    <div class="row">
-      <label>Поиск (над сеткой)</label>
-      <select id="searchMode">
-        <option value="off">Выключен</option>
-        <option value="on" selected>Включен</option>
-      </select>
-    </div>
-    <div id="cardEditor" style="display:none">
-      <div class="hr"></div>
-      <div class="badge">Редактор выбранной карточки</div>
-      <label>Заголовок</label><input id="edTitle" type="text" placeholder="Недвижимость"/>
-      <label>Подзаголовок</label><input id="edHint" type="text" placeholder="Квартиры, дома..."/>
-      <label>Иконка (emoji/символ)</label><input id="edIcon" type="text" placeholder="🏠"/>
-      <label>Ссылка (http…)</label><input id="edLink" type="url" placeholder="https://example.com"/>
+    <div class="section">
+      <h2>Бренд</h2>
+      <label>Название</label>
+      <input id="brandName" type="text" value="MySale"/>
       <div class="row">
-        <div class="grow">
-          <label>Форма</label>
-          <select id="edShape">
-            <option value="rect">Прямоугольник</option>
-            <option value="rounded" selected>Скруглённая</option>
-            <option value="pill">Пилюля</option>
-            <option value="oval">Овал</option>
-            <option value="circle">Круг</option>
-          </select>
-        </div>
-        <div class="grow">
-          <label>Ширина</label><input id="edW" type="number" min="120" max="680" value="260"/>
-        </div>
-        <div class="grow">
-          <label>Высота</label><input id="edH" type="number" min="110" max="420" value="120"/>
-        </div>
+        <label>Цвета (HEX через запятую)</label>
+      </div>
+      <input id="brandColors" type="text" value="#ff6a00,#0ea21a"/>
+      <div class="row" style="margin-top:6px">
+        <label>Логотип (PNG/SVG)</label>
+      </div>
+      <input id="logoFile" type="file" accept="image/png,image/svg+xml"/>
+      <div class="row">
+        <label><input id="lockBrand" type="checkbox"/> Закрепить бренд</label>
+        <label><input id="lockLogo" type="checkbox"/> Закрепить логотип</label>
+      </div>
+      <small class="mono">Совет: PNG со слоем прозрачности — без белого фона.</small>
+    </div>
+
+    <div class="section">
+      <h2>Тема</h2>
+      <div class="row">
+        <div><label>Фон от</label><input id="bgFrom" type="color" value="#F7E6CA"/></div>
+        <div><label>Фон до</label><input id="bgTo" type="color" value="#F6B968"/></div>
       </div>
       <div class="row">
-        <div class="grow">
-          <label>Радиус (перекрывает общий)</label><input id="edR" type="number" min="0" max="999" value="16"/>
-        </div>
-        <div class="grow">
-          <label>Граница</label><input id="edBorder" type="color" value="#E5E5E5"/>
-        </div>
+        <div><label>Поверхность</label><input id="surface" type="color" value="#FFFFFF"/></div>
+        <div><label>Текст</label><input id="textColor" type="color" value="#232A1A"/></div>
+        <div><label>Акцент</label><input id="accent" type="color" value="#FF7A00"/></div>
       </div>
+      <div class="row">
+        <div style="flex:1"><label>Радиус карточек (px)</label><input id="radius" type="number" min="0" max="120" value="16"/></div>
+        <div style="flex:1"><label>Колонки</label><input id="cols" type="number" min="1" max="6" value="4"/></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Режим</h2>
+      <div class="row">
+        <label><input id="freeMove" type="checkbox"/> Свободное перемещение</label>
+        <button class="btn" id="btnResetPos">Сбросить позиции</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Карточки</h2>
+      <div class="row" style="gap:6px">
+        <button class="btn" id="btnAddCard">+ Карточка</button>
+        <button class="btn" id="btnDelCard">Удалить</button>
+      </div>
+      <label>Выбор карточки</label>
+      <select id="selCard"></select>
+
+      <label>Иконка (эмодзи/символ)</label>
+      <input id="cardIcon" type="text" placeholder="🏠"/>
+
+      <label>Заголовок</label>
+      <input id="cardTitle" type="text"/>
+
+      <label>Подзаголовок</label>
+      <input id="cardHint" type="text"/>
+
+      <label>Ссылка (URL)</label>
+      <input id="cardUrl" type="text" placeholder="https://..."/>
+
+      <div class="row">
+        <div style="flex:1"><label>Ширина (px)</label><input id="cardW" type="number" min="160" max="520" value="260"/></div>
+        <div style="flex:1"><label>Высота (px)</label><input id="cardH" type="number" min="120" max="520" value="150"/></div>
+      </div>
+
+      <div class="row">
+        <label><input id="shapeCircle" type="checkbox"/> Круг</label>
+      </div>
+
+      <h2>Позиции текста (смещения)</h2>
+      <div class="row">
+        <div style="flex:1"><label>dx заголовка</label><input id="dxTitle" type="number" value="0"/></div>
+        <div style="flex:1"><label>dy заголовка</label><input id="dyTitle" type="number" value="0"/></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>dx подписи</label><input id="dxHint" type="number" value="0"/></div>
+        <div style="flex:1"><label>dy подписи</label><input id="dyHint" type="number" value="0"/></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Поиск</h2>
+      <div class="row">
+        <label><input id="showSearch" type="checkbox" checked/> Показать строку поиска</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>История</h2>
+      <small class="mono">Каждое изменение сохраняется. Кнопки Undo/Redo — для навигации по истории.</small>
     </div>
   </aside>
 
-  <main class="preview" id="preview">
-    <div class="float-tip">Клик по карточке открывает ссылку (только если «Свободное перемещение» выключено)</div>
+  <main>
+    <div class="stage" id="stage">
+      <div class="badge" id="modeBadge">Редактирование</div>
 
-    <div class="brand-area" id="brandArea">
-      <div class="brand-logo" id="brandLogo"><img id="logoImg" alt="logo" /></div>
-      <div class="brand-title" id="brandTitleX">
-        <span class="green">My</span><span class="orange">Sale</span>
+      <div class="brand" id="brand">
+        <div class="logo" id="logoBox"><img id="logoImg" alt="logo"/></div>
+        <div class="name" id="brandNameView"></div>
       </div>
-      <div class="handle" id="brandHandle" title="Переместить"></div>
-    </div>
 
-    <div id="searchWrap" style="margin:14px 0 22px">
-      <div class="searchbar">
-        <input id="searchInput" type="text" placeholder="Поиск товаров, услуг и объявлений…"/>
-        <button class="ghost" id="searchClear">Очистить</button>
+      <div class="search" id="searchBar">
+        <input id="searchInput" type="text" placeholder="Поиск товаров, услуг и объявлений...">
+        <button id="searchClear" type="button">Очистить</button>
       </div>
-    </div>
 
-    <section id="grid" class="grid"></section>
+      <div class="grid" id="grid"></div>
+    </div>
   </main>
-</div>
 
 <script>
-const $=(s,p=document)=>p.querySelector(s);
-const $$=(s,p=document)=>Array.from(p.querySelectorAll(s));
+(() => {
+  const qs = s=>document.querySelector(s);
+  const qsa = s=>Array.from(document.querySelectorAll(s));
 
-let state=load()||def();
-let history=[deep(state)]; let hPtr=0;
-function pushH(){ history=history.slice(0,hPtr+1); history.push(deep(state)); hPtr=history.length-1; }
-function undo(){ if(hPtr>0){ hPtr--; state=deep(history[hPtr]); save(); renderAll(); }}
-function redo(){ if(hPtr<history.length-1){ hPtr++; state=deep(history[hPtr]); save(); renderAll(); }}
+  const state = {
+    brand:{ name:"MySale", colors:["#ff6a00","#0ea21a"], logo:null, lockBrand:false, lockLogo:false },
+    theme:{ bgFrom:"#F7E6CA", bgTo:"#F6B968", surface:"#FFFFFF", text:"#232A1A", accent:"#FF7A00", radius:16, cols:4 },
+    ui:{ free:false, showSearch:true },
+    cards:[],
+    sel:-1,
+    history:[], hi:-1
+  };
 
-function def(){ return {
-  brand:{x:24,y:18,title:"MySale",logo:"",lockBrand:false,lockLogo:false},
-  theme:{bg1:"#F8D49A",bg2:"#F2B35E",surface:"#FFFFFF",text:"#2A2A2A",accent:"#FF7A00",radius:16,cols:4},
-  flags:{freeMove:false,search:true},
-  cards:[
-    {id:id(),title:"Недвижимость",hint:"Квартиры, дома, коммерция",icon:"🏠",link:"https://example.com/real-estate",x:420,y:220,w:260,h:120,r:16,shape:"rounded",border:"#E5E5E5"},
-    {id:id(),title:"Транспорт",hint:"Легковые, грузовые",icon:"🚗",link:"https://example.com/cars",x:330,y:360,w:260,h:120,r:16,shape:"rounded",border:"#E5E5E5"},
-    {id:id(),title:"Электроника",hint:"Телефоны и ПК",icon:"💻",link:"https://example.com/elec",x:640,y:360,w:260,h:120,r:16,shape:"rounded",border:"#E5E5E5"}
-  ]
-};}
+  function applyTheme(){
+    const r = document.documentElement.style;
+    r.setProperty('--bg-from', state.theme.bgFrom);
+    r.setProperty('--bg-to', state.theme.bgTo);
+    r.setProperty('--surface', state.theme.surface);
+    r.setProperty('--text', state.theme.text);
+    r.setProperty('--accent', state.theme.accent);
+    r.setProperty('--radius', state.theme.radius+'px');
+    r.setProperty('--cols', state.theme.cols);
+    document.body.classList.toggle('free', state.ui.free);
+    qs('#modeBadge').textContent = state.ui.free? 'Свободное перемещение':'Редактирование';
+    qs('#searchBar').classList.toggle('hidden', !state.ui.showSearch);
+  }
 
-function id(){return Math.random().toString(36).slice(2,9)}
-function deep(o){return JSON.parse(JSON.stringify(o))}
-function save(){localStorage.setItem("mysale_admin_state",JSON.stringify(state))}
-function load(){try{return JSON.parse(localStorage.getItem("mysale_admin_state")||"")}catch(e){return null}}
-function cssVar(n,v){document.documentElement.style.setProperty(n,v)}
+  function renderBrand(){
+    const box = qs('#brandNameView');
+    box.innerHTML = '';
+    const letters = Array.from(state.brand.name);
+    const palette = state.brand.colors.length? state.brand.colors: ['#ff6a00'];
+    letters.forEach((ch,i)=>{
+      const span = document.createElement('span');
+      span.textContent = ch;
+      span.style.color = palette[i%palette.length];
+      box.appendChild(span);
+    });
+    const img = qs('#logoImg');
+    if(state.brand.logo){ img.src = state.brand.logo; img.classList.remove('hidden'); }
+    else { img.removeAttribute('src'); }
+  }
 
-// Export/Import
-$('#btnExport').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mysale_vitrine.json';a.click();URL.revokeObjectURL(a.href)};
-$('#btnImport').onclick=()=>$('#fileImport').click();
-$('#fileImport').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);pushH();save();renderAll()}catch(err){alert('Ошибка импорта: '+err.message)}};r.readAsText(f)};
+  function newCard(){
+    return {icon:'🏠', title:'Новая карточка', hint:'Описание', url:'#',
+            x:0, y:0, w:260, h:150, circle:false, dxT:0, dyT:0, dxH:0, dyH:0};
+  }
 
-$('#btnUndo').onclick=undo; $('#btnRedo').onclick=redo;
+  function cardTpl(m, idx){
+    const el = document.createElement('div');
+    el.className='card';
+    if(m.circle) el.classList.add('circle');
+    el.style.width = m.w+'px';
+    el.style.height = m.h+'px';
+    if(state.ui.free){
+      el.style.left = (m.x||0)+'px';
+      el.style.top  = (m.y||0)+'px';
+    }
+    el.dataset.idx = idx;
+    el.innerHTML = `
+      <a class="pin" href="#">🔗</a>
+      <div class="icon" style="transform: translate(${0}px,${0}px);">${m.icon||''}</div>
+      <div class="title" style="transform: translate(${m.dxT||0}px,${m.dyT||0}px);">${m.title||''}</div>
+      <div class="hint"  style="transform: translate(${m.dxH||0}px,${m.dyH||0}px);">${m.hint||''}</div>`;
 
-// Brand
-$('#brandTitle').oninput=e=>{state.brand.title=e.target.value;updBrand();pushH();save()}
-$('#logoInput').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{state.brand.logo=fr.result;updBrand();pushH();save()};fr.readAsDataURL(f)}
-$('#lockBrand').onchange=e=>{state.brand.lockBrand=e.target.checked;save()}
-$('#lockLogo').onchange=e=>{state.brand.lockLogo=e.target.checked;save()}
+    // Click behavior
+    el.addEventListener('click', (e)=>{
+      if(state.ui.free) return;
+      const a = e.target.closest('.pin');
+      if(a){ e.preventDefault(); window.open(m.url || '#','_blank'); return;}
+      window.open(m.url || '#','_blank');
+    });
 
-// Theme
-$('#clrBg1').oninput=e=>{state.theme.bg1=e.target.value;applyTheme();pushH();save()}
-$('#clrBg2').oninput=e=>{state.theme.bg2=e.target.value;applyTheme();pushH();save()}
-$('#clrSurface').oninput=e=>{state.theme.surface=e.target.value;applyTheme();pushH();save()}
-$('#clrText').oninput=e=>{state.theme.text=e.target.value;applyTheme();pushH();save()}
-$('#clrAccent').oninput=e=>{state.theme.accent=e.target.value;applyTheme();pushH();save()}
-$('#radius').oninput=e=>{state.theme.radius=+e.target.value||0;applyTheme();pushH();save()}
-$('#cols').oninput=e=>{state.theme.cols=+e.target.value||4;applyTheme();pushH();save()}
+    if(state.ui.free){
+      makeDraggable(el, (dx,dy, up)=>{
+        m.x = Math.max(0,(m.x||0)+dx);
+        m.y = Math.max(0,(m.y||0)+dy);
+        el.style.left = m.x+'px';
+        el.style.top = m.y+'px';
+        if(up) pushHistory();
+      });
+    }
 
-// Mode
-$('#freeMove').onchange=e=>{state.flags.freeMove=e.target.checked;save();renderCards()}
-$('#btnResetPos').onclick=()=>{state.cards.forEach(c=>{c.x=0;c.y=0});pushH();save();renderCards()}
+    el.addEventListener('pointerdown',()=>{ selectCard(idx); });
+    return el;
+  }
 
-// Search
-$('#searchMode').onchange=e=>{state.flags.search=e.target.value==='on';renderSearch();save()}
-$('#searchClear').onclick=()=>{$('#searchInput').value='';filterCards('')}
-$('#searchInput').oninput=e=>filterCards(e.target.value)
+  function makeDraggable(node, onMove){
+    let sx,sy;
+    const mm = (ev)=>{
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      onMove(dx,dy,false);
+      sx = ev.clientX; sy = ev.clientY;
+    };
+    const up = (ev)=>{
+      document.removeEventListener('pointermove',mm);
+      document.removeEventListener('pointerup',up);
+      onMove(0,0,true);
+      node.classList.remove('dragging');
+    };
+    node.addEventListener('pointerdown',(ev)=>{
+      if(ev.button!==0) return;
+      sx=ev.clientX; sy=ev.clientY;
+      node.classList.add('dragging');
+      document.addEventListener('pointermove',mm);
+      document.addEventListener('pointerup',up);
+    });
+  }
 
-// Cards add/del
-$('#btnAdd').onclick=()=>{const c={id:id(),title:'Новая карточка',hint:'Подзаголовок',icon:'✨',link:'',x:30+Math.random()*400,y:180+Math.random()*280,w:260,h:120,r:state.theme.radius,shape:'rounded',border:'#E5E5E5'};state.cards.push(c);selectCard(c.id);pushH();save();renderCards()}
-$('#btnDel').onclick=()=>{if(!selId)return;state.cards=state.cards.filter(c=>c.id!==selId);selId=null;$('#cardEditor').style.display='none';pushH();save();renderCards()}
+  function renderCards(){
+    const grid = qs('#grid'); grid.innerHTML='';
+    state.cards.forEach((m,i)=> grid.appendChild(cardTpl(m,i)));
+    rebuildSel();
+  }
 
-// Card editor
-const flds=['edTitle','edHint','edIcon','edLink','edW','edH','edR','edBorder']
-flds.forEach(id=>{$('#'+id).oninput=e=>{const c=cur();if(!c)return;
-  if(id==='edW')c.w=Math.max(120,Math.min(680,+e.target.value||260));
-  else if(id==='edH')c.h=Math.max(110,Math.min(420,+e.target.value||120));
-  else if(id==='edR')c.r=Math.max(0,Math.min(999,+e.target.value||16));
-  else if(id==='edTitle')c.title=e.target.value;
-  else if(id==='edHint')c.hint=e.target.value;
-  else if(id==='edIcon')c.icon=e.target.value;
-  else if(id==='edLink')c.link=e.target.value.trim();
-  else if(id==='edBorder')c.border=e.target.value;
-  pushH();save();renderCards()
-}})
-$('#edShape').onchange=e=>{const c=cur();if(!c)return;c.shape=e.target.value;pushH();save();renderCards()}
+  function rebuildSel(){
+    const sel = qs('#selCard'); sel.innerHTML='';
+    state.cards.forEach((m,i)=>{
+      const o = document.createElement('option');
+      o.value=i; o.textContent = (i+1)+'. '+(m.title||'Карточка');
+      sel.appendChild(o);
+    });
+    if(state.sel>=0 && state.sel<state.cards.length) sel.value=state.sel;
+    fillEditor();
+  }
 
-// Render
-function applyTheme(){cssVar('--bg1',state.theme.bg1);cssVar('--bg2',state.theme.bg2);cssVar('--surface',state.theme.surface);cssVar('--text',state.theme.text);cssVar('--accent',state.theme.accent);cssVar('--radius',state.theme.radius+'px');$('#grid').style.setProperty('--cols',state.theme.cols)}
-function updBrand(){const bt=$('#brandTitleX');const t=state.brand.title||'MySale';const a=t.slice(0,2),b=t.slice(2)||'';bt.innerHTML=`<span class="green">${esc(a)}</span><span class="orange">${esc(b)}</span>`;$('#brandTitle').value=t; if(state.brand.logo){$('#logoImg').src=state.brand.logo;$('#logoImg').style.display='block'}else{$('#logoImg').style.display='none'};const box=$('#brandArea');box.style.left=(state.brand.x||24)+'px';box.style.top=(state.brand.y||18)+'px'}
-function renderSearch(){$('#searchWrap').style.display=state.flags.search?'block':'none'}
+  function selectCard(i){
+    state.sel = i;
+    rebuildSel();
+  }
 
-function renderCards(){
-  const grid=$('#grid');grid.innerHTML='';const fm=state.flags.freeMove;grid.style.position=fm?'relative':'unset';
-  state.cards.forEach(c=>{
-    const el=document.createElement('article');el.className='card shadow';if(c.shape==='circle')el.classList.add('circle');if(c.shape==='oval')el.classList.add('oval');if(c.shape==='pill')el.classList.add('pill');
-    el.style.width=(c.shape==='circle'?Math.min(c.w,c.h):c.w)+'px';el.style.height=(c.shape==='circle'?Math.min(c.w,c.h):c.h)+'px';
-    el.style.borderRadius=(c.shape==='rounded')?(c.r||state.theme.radius)+'px':(c.shape==='pill'||c.shape==='oval'||c.shape==='circle')?'999px':(c.r||state.theme.radius)+'px';
-    el.style.borderColor=c.border||'#E5E5E5';el.style.borderStyle='solid';el.style.borderWidth='1px';el.dataset.id=c.id;
-    if(fm){el.style.position='absolute';el.style.left=(c.x||0)+'px';el.style.top=(c.y||0)+'px';const drag=document.createElement('div');drag.className='handle';el.appendChild(drag);makeDrag(drag,(dx,dy)=>{c.x=Math.max(0,(c.x||0)+dx);c.y=Math.max(0,(c.y||0)+dy);el.style.left=c.x+'px';el.style.top=c.y+'px'})}
-    const corner=document.createElement('a');corner.className='corner';corner.innerHTML='🔗';corner.href=c.link||'#';corner.target='_blank';corner.rel='noopener';el.appendChild(corner);
-    const icon=document.createElement('div');icon.className='icon';icon.textContent=c.icon||'•';el.appendChild(icon);
-    const h4=document.createElement('h4');h4.textContent=c.title||'';el.appendChild(h4);
-    const p=document.createElement('p');p.textContent=c.hint||'';el.appendChild(p);
-    el.addEventListener('click',ev=>{if(state.flags.freeMove)return;if(c.link&&/^https?:\/\//i.test(c.link))window.open(c.link,'_blank','noopener')});
-    el.addEventListener('mousedown',()=>sel(c.id));grid.appendChild(el);
-  })
-}
+  function fillEditor(){
+    qs('#brandName').value = state.brand.name;
+    qs('#brandColors').value = state.brand.colors.join(',');
+    qs('#lockBrand').checked = state.brand.lockBrand;
+    qs('#lockLogo').checked = state.brand.lockLogo;
+    qs('#bgFrom').value = state.theme.bgFrom;
+    qs('#bgTo').value = state.theme.bgTo;
+    qs('#surface').value = state.theme.surface;
+    qs('#textColor').value = state.theme.text;
+    qs('#accent').value = state.theme.accent;
+    qs('#radius').value = state.theme.radius;
+    qs('#cols').value = state.theme.cols;
+    qs('#freeMove').checked = state.ui.free;
+    qs('#showSearch').checked = state.ui.showSearch;
 
-let selId=null; function cur(){return state.cards.find(c=>c.id===selId)}
-function sel(id){selId=id;const c=cur();if(!c){$('#cardEditor').style.display='none';return}$('#cardEditor').style.display='block';$('#edTitle').value=c.title||'';$('#edHint').value=c.hint||'';$('#edIcon').value=c.icon||'';$('#edLink').value=c.link||'';$('#edW').value=c.w||260;$('#edH').value=c.h||120;$('#edR').value=c.r||state.theme.radius||16;$('#edBorder').value=c.border||'#E5E5E5';$('#edShape').value=c.shape||'rounded'}
+    const m = state.cards[state.sel];
+    const disabled = !m;
+    ['cardIcon','cardTitle','cardHint','cardUrl','cardW','cardH','shapeCircle','dxTitle','dyTitle','dxHint','dyHint'].forEach(id=> qs('#'+id).disabled = disabled);
+    if(!m) return;
+    qs('#cardIcon').value = m.icon||'';
+    qs('#cardTitle').value= m.title||'';
+    qs('#cardHint').value = m.hint||'';
+    qs('#cardUrl').value  = m.url||'';
+    qs('#cardW').value = m.w||260;
+    qs('#cardH').value = m.h||150;
+    qs('#shapeCircle').checked = !!m.circle;
+    qs('#dxTitle').value = m.dxT||0;
+    qs('#dyTitle').value = m.dyT||0;
+    qs('#dxHint').value = m.dxH||0;
+    qs('#dyHint').value = m.dyH||0;
+  }
 
-function renderAll(){ $('#lockBrand').checked=!!state.brand.lockBrand;$('#lockLogo').checked=!!state.brand.lockLogo;$('#brandTitle').value=state.brand.title||'MySale';$('#clrBg1').value=state.theme.bg1;$('#clrBg2').value=state.theme.bg2;$('#clrSurface').value=state.theme.surface;$('#clrText').value=state.theme.text;$('#clrAccent').value=state.theme.accent;$('#radius').value=state.theme.radius;$('#cols').value=state.theme.cols;$('#freeMove').checked=!!state.flags.freeMove;$('#searchMode').value=state.flags.search?'on':'off';applyTheme();updBrand();renderSearch();renderCards()}
+  function applyFromEditor(){
+    state.brand.name = qs('#brandName').value;
+    state.brand.colors = qs('#brandColors').value.split(',').map(s=>s.trim()).filter(Boolean);
+    state.brand.lockBrand = qs('#lockBrand').checked;
+    state.brand.lockLogo = qs('#lockLogo').checked;
+    state.theme.bgFrom = qs('#bgFrom').value;
+    state.theme.bgTo   = qs('#bgTo').value;
+    state.theme.surface= qs('#surface').value;
+    state.theme.text   = qs('#textColor').value;
+    state.theme.accent = qs('#accent').value;
+    state.theme.radius = +qs('#radius').value||16;
+    state.theme.cols   = +qs('#cols').value||4;
+    state.ui.free = qs('#freeMove').checked;
+    state.ui.showSearch = qs('#showSearch').checked;
 
-// brand drag
-(function(){const host=$('#brandArea');makeDrag($('#brandHandle'),(dx,dy)=>{if(state.brand.lockBrand&&state.brand.lockLogo)return;state.brand.x=Math.max(0,(state.brand.x||0)+dx);state.brand.y=Math.max(0,(state.brand.y||0)+dy);host.style.left=state.brand.x+'px';host.style.top=state.brand.y+'px'})})();
-function makeDrag(target,cb){let sx=0,sy=0,drag=false;target.addEventListener('mousedown',e=>{drag=true;sx=e.clientX;sy=e.clientY;e.preventDefault()});window.addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-sx,dy=e.clientY-sy;sx=e.clientX;sy=e.clientY;cb(dx,dy)});window.addEventListener('mouseup',()=>{if(drag){drag=false;pushH();save()}})}
-function filterCards(q){q=(q||'').trim().toLowerCase(); $$('#grid .card').forEach(el=>{const c=state.cards.find(x=>x.id===el.dataset.id);const str=(c.title+' '+c.hint).toLowerCase();el.style.display=q?(str.includes(q)?'':''):''})}
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[m]))}
-applyTheme();renderAll();
+    const m = state.cards[state.sel];
+    if(m){
+      m.icon = qs('#cardIcon').value;
+      m.title= qs('#cardTitle').value;
+      m.hint = qs('#cardHint').value;
+      m.url  = qs('#cardUrl').value;
+      m.w    = +qs('#cardW').value||260;
+      m.h    = +qs('#cardH').value||150;
+      m.circle = qs('#shapeCircle').checked;
+      m.dxT = +qs('#dxTitle').value||0;
+      m.dyT = +qs('#dyTitle').value||0;
+      m.dxH = +qs('#dxHint').value||0;
+      m.dyH = +qs('#dyHint').value||0;
+    }
+
+    applyTheme();
+    renderBrand();
+    renderCards();
+    pushHistory(false);
+  }
+
+  const fileSave = (name, text)=>{
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text],{type:'application/json'}));
+    a.download = name;
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  function exportJSON(){
+    const json = JSON.stringify(state, null, 2);
+    fileSave('mysale_showcase.json', json);
+  }
+
+  function importJSON(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        Object.assign(state, data);
+        state.hi = -1; state.history = [];
+        applyTheme(); renderBrand(); renderCards(); rebuildSel();
+        pushHistory(false);
+      }catch(e){ alert('Ошибка импорта: '+e.message); }
+    };
+    reader.readAsText(file);
+  }
+
+  function snapshot(){
+    const {history,hi} = state;
+    const snap = JSON.stringify({brand:state.brand, theme:state.theme, ui:state.ui, cards:state.cards, sel:state.sel});
+    return snap;
+  }
+  function pushHistory(advance=true){
+    const snap = snapshot();
+    if(state.history[state.hi]===snap) return;
+    state.history = state.history.slice(0,state.hi+1);
+    state.history.push(snap); state.hi = state.history.length-1;
+    if(advance) saveLocal();
+  }
+  function gotoHistory(hi){
+    if(hi<0 || hi>=state.history.length) return;
+    const data = JSON.parse(state.history[hi]);
+    state.brand=data.brand; state.theme=data.theme; state.ui=data.ui;
+    state.cards=data.cards; state.sel=data.sel;
+    state.hi = hi;
+    applyTheme(); renderBrand(); renderCards(); rebuildSel();
+    saveLocal();
+  }
+
+  function saveLocal(){ localStorage.setItem('mysale_showcase_admin', JSON.stringify(state)); }
+  function loadLocal(){
+    try{ const j = localStorage.getItem('mysale_showcase_admin');
+      if(j){ const data = JSON.parse(j); Object.assign(state,data); }
+    }catch(e){}
+  }
+
+  function initDefault(){
+    if(!state.cards.length){
+      state.cards = [
+        {icon:'🏠', title:'Недвижимость', hint:'Квартиры, дома, коммерция', url:'#', x:0,y:0,w:260,h:150,circle:false,dxT:0,dyT:0,dxH:0,dyH:0},
+        {icon:'🚗', title:'Транспорт', hint:'Легковые, грузовые', url:'#', x:300,y:0,w:260,h:150,circle:false,dxT:0,dyT:0,dxH:0,dyH:0},
+        {icon:'💼', title:'Работа', hint:'Вакансии', url:'#', x:600,y:0,w:260,h:150,circle:false},
+        {icon:'💻', title:'Электроника', hint:'Телефоны и ПК', url:'#', x:0,y:180,w:260,h:150,circle:false},
+        {icon:'🧰', title:'Услуги', hint:'Сервис и помощь', url:'#', x:300,y:180,w:260,h:150,circle:false},
+        {icon:'🛋️', title:'Мебель', hint:'Дом и дача', url:'#', x:600,y:180,w:260,h:150,circle:false}
+      ];
+    }
+  }
+
+  function bind(){
+    qs('#btnExport').onclick = exportJSON;
+    qs('#btnImport').onclick = ()=>{
+      const i = document.createElement('input');
+      i.type='file'; i.accept='application/json,.json';
+      i.onchange = ()=> i.files[0] && importJSON(i.files[0]);
+      i.click();
+    };
+    qs('#btnUndo').onclick = ()=> gotoHistory(state.hi-1);
+    qs('#btnRedo').onclick = ()=> gotoHistory(state.hi+1);
+
+    ['brandName','brandColors','bgFrom','bgTo','surface','textColor','accent','radius','cols','freeMove','showSearch','lockBrand','lockLogo']
+      .forEach(id => qs('#'+id).addEventListener('input', applyFromEditor));
+
+    qs('#searchClear').onclick = ()=> qs('#searchInput').value='';
+
+    qs('#logoFile').onchange = (ev)=>{
+      const f = ev.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{ state.brand.logo = reader.result; renderBrand(); pushHistory(); };
+      reader.readAsDataURL(f);
+    };
+
+    qs('#btnAddCard').onclick = ()=>{ state.cards.push(newCard()); state.sel = state.cards.length-1; applyFromEditor(); renderCards(); rebuildSel(); pushHistory(); };
+    qs('#btnDelCard').onclick = ()=>{
+      if(state.sel<0) return;
+      state.cards.splice(state.sel,1); state.sel = Math.min(state.sel, state.cards.length-1);
+      renderCards(); rebuildSel(); pushHistory();
+    };
+    qs('#selCard').onchange = (e)=>{ state.sel = +e.target.value; fillEditor(); };
+
+    ['cardIcon','cardTitle','cardHint','cardUrl','cardW','cardH','shapeCircle','dxTitle','dyTitle','dxHint','dyHint']
+      .forEach(id => qs('#'+id).addEventListener('input', applyFromEditor));
+
+    qs('#btnResetPos').onclick = ()=>{
+      state.cards.forEach((m,i)=>{ m.x = (i%3)*300; m.y = Math.floor(i/3)*180; });
+      renderCards(); pushHistory();
+    };
+
+    const brand = qs('#brand'), logo = qs('#logoBox');
+    makeDraggable(brand,(dx,dy,up)=>{
+      if(!state.ui.free || state.brand.lockBrand) return;
+      brand.style.left = (brand.offsetLeft + dx) + 'px';
+      brand.style.top  = (brand.offsetTop  + dy) + 'px';
+      if(up) pushHistory();
+    });
+    makeDraggable(logo,(dx,dy,up)=>{
+      if(!state.ui.free || state.brand.lockLogo) return;
+      logo.style.transform = `translate(${((logo._tx||0)+dx)}px,${((logo._ty||0)+dy)}px)`;
+      logo._tx = (logo._tx||0)+dx; logo._ty=(logo._ty||0)+dy;
+      if(up) pushHistory();
+    });
+  }
+
+  function init(){
+    loadLocal(); initDefault();
+    applyTheme(); renderBrand(); renderCards(); rebuildSel(); bind();
+    pushHistory(false);
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>
