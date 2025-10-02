@@ -146,16 +146,20 @@
   function makeEl(tag, cls) { const el = document.createElement(tag); if (cls) el.className = cls; return el; }
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-  // Helpers to avoid regex literals (для совместимости окружений)
+    // Helpers to avoid regex literals (для совместимости окружений)
   function isHttpUrl(u){ const s=String(u||'').trim().toLowerCase(); return s.startsWith('http://') || s.startsWith('https://'); }
-  function splitLines(v){ const s=String(v||''); const norm=s.split('\
-').join('\
-'); return norm.split('\
-').map(x=>x.trim()).filter(Boolean); }
+  function splitLines(v){ const s=String(v||''); const norm=s.split('\r').join('\n'); return norm.split('\n').map(x=>x.trim()).filter(Boolean); }
 
   const LANGS = ['RU','ENG','UZB'];
   function ensureI18n(it){ if(!it.i18n) it.i18n = {}; for(const L of LANGS){ if(!it.i18n[L]) it.i18n[L] = {}; } }
-  function t(it, key, fallback){ ensureI18n(it); const L = state.lang || 'RU'; const v = it.i18n[L] && it.i18n[L][key]; if(v!=null && v!=="") return v; if(it[key]!=null && it[key]!=="") return it[key]; return fallback; }
+  function defaultText(kind, key){
+    const D = {
+      login: { label: { RU: 'Войти', ENG: 'Log in', UZB: 'Kirish' } },
+      search: { placeholder: { RU: 'Поиск', ENG: 'Search', UZB: 'Qidiruv' } },
+    };
+    try { return (D[kind] && D[kind][key] && D[kind][key][(state.lang||'RU')]) || ''; } catch(_) { return ''; }
+  }
+  function t(it, key, fallback){ ensureI18n(it); const L = state.lang || 'RU'; const v = it.i18n[L] && it.i18n[L][key]; if(v!=null && v!=='') return v; if(it[key]!=null && it[key]!=='') return it[key]; return fallback; }
   const norm = (s) => String(s||'').toLocaleLowerCase();
 
   function mount(it) {
@@ -172,7 +176,7 @@
       const box=makeEl('div','card-box'); el.appendChild(box);
       const img=makeEl('img','card-img'); img.src=it.url||''; img.alt=t(it,'title',''); box.appendChild(img);
       const title=makeEl('div','title');
-      title.textContent = t(it, 'title', 'Категория');
+      title.textContent = t(it, 'title', (state.lang==='ENG'?'Category':(state.lang==='UZB'?'Kategoriya':'Категория')));
       title.style.color = it.titleColor || '#ffffff';
       title.style.fontSize = (it.titleSize||14)+'px';
       title.style.fontFamily = it.titleFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
@@ -181,7 +185,7 @@
 
     } else if (it.kind === 'search') {
       const inp=makeEl('input'); inp.type='search';
-      inp.placeholder = t(it,'placeholder','Поиск'); inp.className='search';
+      inp.placeholder = t(it,'placeholder', defaultText('search','placeholder')); inp.className='search';
       inp.style.background=it.bgColor||'#0a1217'; inp.style.color=it.textColor||'#e7eef7'; inp.style.borderRadius=(it.radius||12)+'px';
       inp.value = state.searchQuery || '';
       inp.oninput = () => { state.searchQuery = inp.value || ''; applySearchFilter(); save(); };
@@ -192,12 +196,21 @@
       for(const L of LANGS){ const o=makeEl('option'); o.textContent=L; o.value=L; sel.appendChild(o); }
       sel.value = state.lang || 'RU';
       sel.style.background=it.bgColor||'#0a1217'; sel.style.color=it.textColor||'#e7eef7'; sel.style.borderRadius=(it.radius||12)+'px';
-      sel.oninput = ()=>{ state.lang = sel.value; drawAll(); save(); };
+      sel.oninput = ()=>{ state.lang = sel.value; // propagate default placeholders/labels when empty for the new language
+        for(const item of state.items){ ensureI18n(item); const L = state.lang;
+          if(item.kind==='search' && !((item.i18n[L]||{}).placeholder)){
+            if(!item.i18n[L]) item.i18n[L]={}; item.i18n[L].placeholder = defaultText('search','placeholder');
+          }
+          if(item.kind==='login' && !((item.i18n[L]||{}).label)){
+            if(!item.i18n[L]) item.i18n[L]={}; item.i18n[L].label = defaultText('login','label');
+          }
+        }
+        drawAll(); save(); };
       el.appendChild(sel);
 
     } else if (it.kind === 'login') {
       const b=makeEl('button','chip');
-      b.textContent = t(it,'label','Войти');
+      b.textContent = t(it,'label', defaultText('login','label'));
       b.style.background=it.bgColor||'#0a1217'; b.style.color=it.textColor||'#e7eef7'; b.style.borderRadius=(it.radius||12)+'px';
       el.appendChild(b);
 
@@ -410,8 +423,7 @@
       box.appendChild(rowKV('Скругление', inputSelect([0,4,8,10,12,14,16,20,24].map(String), String(it.radius||10), v=>{ it.radius=+v; mount(it); save(); })));
       const ta=document.createElement('textarea');
       ta.placeholder='Опции: текст или текст|/url, по одной на строке';
-      ta.value=(Array.isArray(it.options)? it.options:[]).join('\
-');
+      ta.value=(Array.isArray(it.options)? it.options:[]).join('\n');
       ta.oninput=()=>{ it.options=splitLines(ta.value); mount(it); save(); };
       box.appendChild(rowKV('Опции', ta));
     }
