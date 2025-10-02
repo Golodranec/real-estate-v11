@@ -146,10 +146,16 @@
   function makeEl(tag, cls) { const el = document.createElement(tag); if (cls) el.className = cls; return el; }
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
+  // Helpers to avoid regex literals (для совместимости окружений)
+  function isHttpUrl(u){ const s=String(u||'').trim().toLowerCase(); return s.startsWith('http://') || s.startsWith('https://'); }
+  function splitLines(v){ const s=String(v||''); const norm=s.split('\
+').join('\
+'); return norm.split('\
+').map(x=>x.trim()).filter(Boolean); }
+
   const LANGS = ['RU','ENG','UZB'];
   function ensureI18n(it){ if(!it.i18n) it.i18n = {}; for(const L of LANGS){ if(!it.i18n[L]) it.i18n[L] = {}; } }
-  function t(it, key, fallback){ ensureI18n(it); const L = state.lang || 'RU'; const v = it.i18n[L] && it.i18n[L][key]; if(v!=null && v!=="") return v; if(it[key]!=null && it[key]!=="") return it[key]; return fallback;
-  }
+  function t(it, key, fallback){ ensureI18n(it); const L = state.lang || 'RU'; const v = it.i18n[L] && it.i18n[L][key]; if(v!=null && v!=="") return v; if(it[key]!=null && it[key]!=="") return it[key]; return fallback; }
   const norm = (s) => String(s||'').toLocaleLowerCase();
 
   function mount(it) {
@@ -231,7 +237,7 @@
       sEl.innerHTML='';
       const pairs=[];
       for(const raw of opts){ const str=String(raw); const [label, href] = str.includes('|') ? [str.split('|')[0].trim(), str.split('|').slice(1).join('|').trim()] : [str.trim(), '']; const o=document.createElement('option'); o.textContent=label; sEl.appendChild(o); pairs.push({label, href}); }
-      sEl.onchange=()=>{ const i=sEl.selectedIndex; const href=(pairs[i]&&pairs[i].href)||''; if(href){ if(/^https?:\/\//i.test(href)) window.open(href,'_blank'); else window.location.href=href; } };
+      sEl.onchange=()=>{ const i=sEl.selectedIndex; const href=(pairs[i]&&pairs[i].href)||''; if(href){ if(isHttpUrl(href)) window.open(href,'_blank'); else window.location.href=href; } };
       el.appendChild(sEl);
 
     } else if (it.kind === 'bar') {
@@ -246,7 +252,7 @@
     const editing = !!state.edit;
     el.onclick = null; el.onpointerdown = null; el.onpointermove = null; el.onpointerup = null;
     if(!editing){
-      if(it && it.href){ el.style.cursor='pointer'; el.onclick = (e)=>{ e.preventDefault(); const u = String(it.href||'').trim(); if(!u) return; if(/^https?:\/\//i.test(u)) window.open(u,'_blank'); else window.location.href=u; }; }
+      if(it && it.href){ el.style.cursor='pointer'; el.onclick = (e)=>{ e.preventDefault(); const u = String(it.href||'').trim(); if(!u) return; if(isHttpUrl(u)) window.open(u,'_blank'); else window.location.href=u; }; }
       else { el.style.cursor='default'; }
       return;
     }
@@ -327,8 +333,6 @@
     if(!it) return;
     const box=document.createElement('div'); box.className='grid dyn';
 
-    // Common position/size for certain kinds
-    const sizeKinds = ['search','text','login','lang','select','bar'];
     if(['logo','text'].includes(it.kind)){
       box.appendChild(rowKV('Текст (текущий язык)', inputText(t(it,'title', it.title||''), v=>{ ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title=v; if(!it.title) it.title=v; mount(it); save(); renderLayers(); })));
     }
@@ -408,8 +412,7 @@
       ta.placeholder='Опции: текст или текст|/url, по одной на строке';
       ta.value=(Array.isArray(it.options)? it.options:[]).join('\
 ');
-      ta.oninput=()=>{ it.options=ta.value.split(/\
-+/).map(s=>s.trim()).filter(Boolean); mount(it); save(); };
+      ta.oninput=()=>{ it.options=splitLines(ta.value); mount(it); save(); };
       box.appendChild(rowKV('Опции', ta));
     }
 
