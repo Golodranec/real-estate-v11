@@ -122,21 +122,13 @@
   const hist = [], future = [];
   const snapshot = () => JSON.parse(JSON.stringify(state));
   const pushHist = () => { hist.push(snapshot()); if (hist.length > 200) hist.shift(); future.length = 0; };
-  const applyState = (s) => { state = JSON.parse(JSON.stringify(s)); drawAll(); persist(); };
+  const applyState = (s) => { state = JSON.parse(JSON.stringify(s)); migrateState(); drawAll(); persist(); };
 
   const uid = () => 'i' + Math.random().toString(36).slice(2, 9);
   const find = (id) => state.items.find(x => x.id === id);
   function persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
-  function save() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { pushHist(); persist(); }, 120);
-  }
-  function load() {
-    try {
-      const s = localStorage.getItem(LS_KEY);
-      if (s) state = Object.assign({ bg: '#10151b', items: [], edit: true, lang: 'RU', searchQuery: '' }, JSON.parse(s));
-    } catch (e) {}
-  }
+  function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { pushHist(); persist(); }, 120); }
+  function load() { try { const s = localStorage.getItem(LS_KEY); if (s) state = Object.assign({ bg: '#10151b', items: [], edit: true, lang: 'RU', searchQuery: '' }, JSON.parse(s)); } catch (e) {} migrateState(); }
   window.addEventListener('beforeunload', persist);
   window.addEventListener('pagehide', persist);
   window.addEventListener('unload', persist);
@@ -146,20 +138,75 @@
   function makeEl(tag, cls) { const el = document.createElement(tag); if (cls) el.className = cls; return el; }
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-    // Helpers to avoid regex literals (для совместимости окружений)
+  // Helpers to avoid regex literals
   function isHttpUrl(u){ const s=String(u||'').trim().toLowerCase(); return s.startsWith('http://') || s.startsWith('https://'); }
-  function splitLines(v){ const s=String(v||''); const norm=s.split('\r').join('\n'); return norm.split('\n').map(x=>x.trim()).filter(Boolean); }
+  function splitLines(v){ const s=String(v||''); const norm=s.split('\
+').join('\
+'); return norm.split('\
+').map(x=>x.trim()).filter(Boolean); }
 
   const LANGS = ['RU','ENG','UZB'];
   function ensureI18n(it){ if(!it.i18n) it.i18n = {}; for(const L of LANGS){ if(!it.i18n[L]) it.i18n[L] = {}; } }
-  function defaultText(kind, key){
-    const D = {
-      login: { label: { RU: 'Войти', ENG: 'Log in', UZB: 'Kirish' } },
-      search: { placeholder: { RU: 'Поиск', ENG: 'Search', UZB: 'Qidiruv' } },
+
+  function defaultText(kind, key, L){
+    const map = {
+      card: { title: { RU:'Категория', ENG:'Category', UZB:'Kategoriya' }},
+      text: { title: { RU:'Текст', ENG:'Text', UZB:'Matn' }},
+      login:{ label: { RU:'Войти', ENG:'Log in', UZB:'Kirish' }},
+      search:{ placeholder:{ RU:'Поиск', ENG:'Search', UZB:'Qidiruv' }},
+      logo:{ title:{ RU:'MySale', ENG:'MySale', UZB:'MySale' }},
     };
-    try { return (D[kind] && D[kind][key] && D[kind][key][(state.lang||'RU')]) || ''; } catch(_) { return ''; }
+    const lang=L || (state.lang||'RU');
+    try { return map[kind][key][lang]; } catch(_) { return ''; }
   }
-  function t(it, key, fallback){ ensureI18n(it); const L = state.lang || 'RU'; const v = it.i18n[L] && it.i18n[L][key]; if(v!=null && v!=='') return v; if(it[key]!=null && it[key]!=='') return it[key]; return fallback; }
+
+  function t(it, key, fallback){
+    ensureI18n(it);
+    const L = state.lang || 'RU';
+    const langVal = it.i18n[L] && it.i18n[L][key];
+    if (langVal != null && langVal !== '') return langVal;
+    if (L !== 'RU' && typeof fallback !== 'undefined') return fallback;
+    if (L === 'RU') { const ruVal = it.i18n.RU && it.i18n.RU[key]; if (ruVal != null && ruVal !== '') return ruVal; }
+    if (it[key] != null && it[key] !== '') return it[key];
+    return fallback;
+  }
+
+  function migrateItem(it){
+    ensureI18n(it);
+    // перенос старых полей совместимости
+    if(it.titleRU && !it.i18n.RU.title) it.i18n.RU.title = it.titleRU;
+    if(it.titleENG && !it.i18n.ENG.title) it.i18n.ENG.title = it.titleENG;
+    if(it.titleUZB && !it.i18n.UZB.title) it.i18n.UZB.title = it.titleUZB;
+    // если у RU пусто, используем базовое поле
+    if(it.title && !it.i18n.RU.title && (it.kind==='card'||it.kind==='text'||it.kind==='logo')) it.i18n.RU.title = it.title;
+    if(it.kind==='login' && it.label && !it.i18n.RU.label) it.i18n.RU.label = it.label;
+    if(it.kind==='search' && it.placeholder && !it.i18n.RU.placeholder) it.i18n.RU.placeholder = it.placeholder;
+    // подставляем дефолты, чтобы при смене языка не было пусто
+    for(const L of LANGS){
+      if(it.kind==='card' && !it.i18n[L].title) it.i18n[L].title = defaultText('card','title',L);
+      if(it.kind==='text' && !it.i18n[L].title) it.i18n[L].title = defaultText('text','title',L);
+      if(it.kind==='logo' && !it.i18n[L].title) it.i18n[L].title = defaultText('logo','title',L);
+      if(it.kind==='login' && !it.i18n[L].label) it.i18n[L].label = defaultText('login','label',L);
+      if(it.kind==='search' && !it.i18n[L].placeholder) it.i18n[L].placeholder = defaultText('search','placeholder',L);
+    }
+  }
+
+  function migrateState(){ state.items.forEach(migrateItem); }
+
+  function initI18nForNew(it){ ensureI18n(it); for(const L of LANGS){ if(it.kind==='card') it.i18n[L].title = defaultText('card','title',L);
+      if(it.kind==='text') it.i18n[L].title = defaultText('text','title',L);
+      if(it.kind==='logo') it.i18n[L].title = defaultText('logo','title',L);
+      if(it.kind==='login') it.i18n[L].label = defaultText('login','label',L);
+      if(it.kind==='search') it.i18n[L].placeholder = defaultText('search','placeholder',L); } }
+
+  function ensureLangDefaults(L){ for(const it of state.items){ ensureI18n(it); if(it.kind==='card' && !it.i18n[L].title){ it.i18n[L].title = it.i18n.RU.title || defaultText('card','title',L); }
+      if(it.kind==='text' && !it.i18n[L].title){ it.i18n[L].title = it.i18n.RU.title || defaultText('text','title',L); }
+      if(it.kind==='logo' && !it.i18n[L].title){ it.i18n[L].title = it.i18n.RU.title || defaultText('logo','title',L); }
+      if(it.kind==='login' && !it.i18n[L].label){ it.i18n[L].label = it.i18n.RU.label || defaultText('login','label',L); }
+      if(it.kind==='search' && !it.i18n[L].placeholder){ it.i18n[L].placeholder = it.i18n.RU.placeholder || defaultText('search','placeholder',L); } } }
+
+  function setLang(L){ state.lang=L; ensureLangDefaults(L); drawAll(); save(); }
+
   const norm = (s) => String(s||'').toLocaleLowerCase();
 
   function mount(it) {
@@ -176,7 +223,8 @@
       const box=makeEl('div','card-box'); el.appendChild(box);
       const img=makeEl('img','card-img'); img.src=it.url||''; img.alt=t(it,'title',''); box.appendChild(img);
       const title=makeEl('div','title');
-      title.textContent = t(it, 'title', (state.lang==='ENG'?'Category':(state.lang==='UZB'?'Kategoriya':'Категория')));
+      const fb = state.lang==='ENG' ? 'Category' : (state.lang==='UZB' ? 'Kategoriya' : 'Категория');
+      title.textContent = t(it, 'title', fb);
       title.style.color = it.titleColor || '#ffffff';
       title.style.fontSize = (it.titleSize||14)+'px';
       title.style.fontFamily = it.titleFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
@@ -185,7 +233,8 @@
 
     } else if (it.kind === 'search') {
       const inp=makeEl('input'); inp.type='search';
-      inp.placeholder = t(it,'placeholder', defaultText('search','placeholder')); inp.className='search';
+      inp.placeholder = t(it,'placeholder', defaultText('search','placeholder'));
+      inp.className='search';
       inp.style.background=it.bgColor||'#0a1217'; inp.style.color=it.textColor||'#e7eef7'; inp.style.borderRadius=(it.radius||12)+'px';
       inp.value = state.searchQuery || '';
       inp.oninput = () => { state.searchQuery = inp.value || ''; applySearchFilter(); save(); };
@@ -196,16 +245,7 @@
       for(const L of LANGS){ const o=makeEl('option'); o.textContent=L; o.value=L; sel.appendChild(o); }
       sel.value = state.lang || 'RU';
       sel.style.background=it.bgColor||'#0a1217'; sel.style.color=it.textColor||'#e7eef7'; sel.style.borderRadius=(it.radius||12)+'px';
-      sel.oninput = ()=>{ state.lang = sel.value; // propagate default placeholders/labels when empty for the new language
-        for(const item of state.items){ ensureI18n(item); const L = state.lang;
-          if(item.kind==='search' && !((item.i18n[L]||{}).placeholder)){
-            if(!item.i18n[L]) item.i18n[L]={}; item.i18n[L].placeholder = defaultText('search','placeholder');
-          }
-          if(item.kind==='login' && !((item.i18n[L]||{}).label)){
-            if(!item.i18n[L]) item.i18n[L]={}; item.i18n[L].label = defaultText('login','label');
-          }
-        }
-        drawAll(); save(); };
+      sel.oninput = ()=>{ setLang(sel.value); };
       el.appendChild(sel);
 
     } else if (it.kind === 'login') {
@@ -221,7 +261,7 @@
       tEl.style.fontFamily = it.logoFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
       tEl.style.fontWeight = it.logoWeight || 800;
       tEl.style.fontSize = (it.logoSize || 24) + 'px';
-      const text = t(it,'title', it.title || 'MySale');
+      const text = t(it,'title', defaultText('logo','title'));
       const colors = it.logoColors || [];
       tEl.innerHTML='';
       for(let i=0;i<text.length;i++){ const sp=document.createElement('span'); sp.textContent=text[i]; sp.style.color = colors[i] || (it.color || '#2bff88'); tEl.appendChild(sp); }
@@ -229,7 +269,7 @@
 
     } else if (it.kind === 'text') {
       const tDiv=makeEl('div','chip');
-      tDiv.textContent = t(it,'title', it.title || 'Текст');
+      tDiv.textContent = t(it,'title', defaultText('text','title'));
       tDiv.style.fontFamily = it.fontFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
       tDiv.style.fontWeight = it.fontWeight || 600;
       tDiv.style.fontSize=(it.fontSize||16)+'px';
@@ -237,7 +277,7 @@
       const __tr = !!it.transparentBg; tDiv.style.background = __tr ? 'transparent' : (it.bgColor||'transparent'); tDiv.style.border = 'none'; tDiv.style.boxShadow='none'; tDiv.style.backdropFilter='none';
       tDiv.contentEditable='false';
       tDiv.ondblclick=()=>{ tDiv.contentEditable='true'; tDiv.focus(); };
-      tDiv.onblur=()=>{ const val=tDiv.textContent; ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title = val; it.title = it.title || val; tDiv.contentEditable='false'; save(); renderLayers(); persist(); };
+      tDiv.onblur=()=>{ const val=tDiv.textContent; ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title = val; if(L==='RU' && !it.title) it.title=val; save(); renderLayers(); persist(); tDiv.contentEditable='false'; };
       el.appendChild(tDiv);
 
     } else if (it.kind === 'select') {
@@ -249,7 +289,7 @@
       const opts = Array.isArray(it.options) ? it.options : ['Профиль','Объявления','Чат'];
       sEl.innerHTML='';
       const pairs=[];
-      for(const raw of opts){ const str=String(raw); const [label, href] = str.includes('|') ? [str.split('|')[0].trim(), str.split('|').slice(1).join('|').trim()] : [str.trim(), '']; const o=document.createElement('option'); o.textContent=label; sEl.appendChild(o); pairs.push({label, href}); }
+      for(const raw of opts){ const str=String(raw); const pipe = str.indexOf('|'); const label = pipe>=0 ? str.slice(0,pipe).trim() : str.trim(); const href = pipe>=0 ? str.slice(pipe+1).trim() : ''; const o=document.createElement('option'); o.textContent=label; sEl.appendChild(o); pairs.push({label, href}); }
       sEl.onchange=()=>{ const i=sEl.selectedIndex; const href=(pairs[i]&&pairs[i].href)||''; if(href){ if(isHttpUrl(href)) window.open(href,'_blank'); else window.location.href=href; } };
       el.appendChild(sEl);
 
@@ -269,7 +309,6 @@
       else { el.style.cursor='default'; }
       return;
     }
-    // edit mode: drag/resize
     el.style.cursor = 'move';
     let startX=0, startY=0;
     el.onpointerdown = (e)=>{
@@ -295,20 +334,15 @@
     el.onpointerup = (e)=>{ if(drag){ el.releasePointerCapture && el.releasePointerCapture(e.pointerId); drag=null; } };
   }
 
-  function select(id){
-    selected=id;
-    document.querySelectorAll('.item').forEach(n=>n.classList.toggle('selected', n.id===id));
-    renderProps(find(id));
-    renderLayers();
-    persist();
-  }
+  function select(id){ selected=id; document.querySelectorAll('.item').forEach(n=>n.classList.toggle('selected', n.id===id)); renderProps(find(id)); renderLayers(); persist(); }
 
   function renderLayers(){
     layerList.innerHTML='';
     state.items.forEach(it=>{
       const li=document.createElement('li'); li.className='layerItem'+(selected===it.id?' active':'');
       const meta=document.createElement('div'); meta.className='meta';
-      const titleTxt = (it.kind==='card'||it.kind==='text'||it.kind==='logo') ? (t(it,'title', it.title||it.kind)) : (it.kind==='login'? t(it,'label','login') : it.kind);
+      let fb = (it.kind==='card') ? (state.lang==='ENG'?'Category':state.lang==='UZB'?'Kategoriya':'Категория') : (it.kind);
+      const titleTxt = (it.kind==='card'||it.kind==='text'||it.kind==='logo') ? (t(it,'title', fb)) : (it.kind==='login'? t(it,'label','login') : it.kind);
       meta.textContent=titleTxt; li.appendChild(meta);
       const kind=document.createElement('div'); kind.className='kind'; kind.textContent=it.kind; li.appendChild(kind);
       const x=document.createElement('div'); x.className='x'; x.textContent='·'; li.appendChild(x);
@@ -333,12 +367,7 @@
   const logoSizes=['16','20','22','24','26','28','30','32','36','40','48','56'];
   const radiusList=['0','4','8','10','12','14','16','20','24','28','32'];
 
-  function langField(it, label, key){ ensureI18n(it); const g=document.createElement('div'); g.style.display='grid'; g.style.gap='6px';
-    for(const L of LANGS){ const row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='60px 1fr'; row.style.alignItems='center';
-      const lab=document.createElement('div'); lab.textContent=L; lab.style.color='#9fb0c2'; const inp=inputText((it.i18n[L]&&it.i18n[L][key])||'', v=>{ ensureI18n(it); if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L][key]=v; if(!it[key]) it[key]=v; mount(it); save(); renderLayers(); });
-      row.appendChild(lab); row.appendChild(inp); g.appendChild(row); }
-    return rowKV(label, g);
-  }
+  function langField(it, label, key){ ensureI18n(it); const g=document.createElement('div'); g.style.display='grid'; g.style.gap='6px'; for(const L of LANGS){ const row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='60px 1fr'; row.style.alignItems='center'; const lab=document.createElement('div'); lab.textContent=L; lab.style.color='#9fb0c2'; const val=(it.i18n[L]&&it.i18n[L][key])||''; const inp=inputText(val, v=>{ ensureI18n(it); if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L][key]=v; if(L==='RU' && key==='title' && !it.title) it.title=v; mount(it); save(); renderLayers(); }); row.appendChild(lab); row.appendChild(inp); g.appendChild(row); } return rowKV(label, g); }
 
   function renderProps(it){
     props.querySelectorAll('.dyn').forEach(n=>n.remove());
@@ -347,7 +376,7 @@
     const box=document.createElement('div'); box.className='grid dyn';
 
     if(['logo','text'].includes(it.kind)){
-      box.appendChild(rowKV('Текст (текущий язык)', inputText(t(it,'title', it.title||''), v=>{ ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title=v; if(!it.title) it.title=v; mount(it); save(); renderLayers(); })));
+      box.appendChild(rowKV('Текст (текущий язык)', inputText(t(it,'title', defaultText(it.kind,'title')), v=>{ ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title=v; if(L==='RU' && !it.title) it.title=v; mount(it); save(); renderLayers(); })));
     }
     if(it.kind==='card'){
       box.appendChild(langField(it,'Подпись (RU/ENG/UZB)','title'));
@@ -368,10 +397,10 @@
       box.appendChild(rowKV('Размер букв', inputSelect(logoSizes, String(it.logoSize||24), v=>{ it.logoSize=+v; mount(it); save(); })));
       box.appendChild(rowKV('Цвет по умолч.', inputColor(it.color||'#2bff88', v=>{ it.color=v; mount(it); save(); })));
       box.appendChild(rowKV('Emblem URL', inputText(it.imgUrl||'', v=>{ it.imgUrl=v; mount(it); save(); })));
-      box.appendChild(rowKV('Эмблема', inputBtn('Загрузить', ()=>{ imgInput.onchange=(e)=>{const f=e.target.files&&e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=ev=>{ it.imgUrl=ev.target.result; mount(it); save(); imgInput.value=''; }; rd.readAsDataURL(f); }; imgInput.click(); })));
+      box.appendChild(rowKV('Эмблема', inputBtn('Загрузить', ()=>{ imgInput.onchange=(e)=>{const f=e.target.files&&е.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=ev=>{ it.imgUrl=ev.target.result; mount(it); save(); imgInput.value=''; }; rd.readAsDataURL(f); }; imgInput.click(); })));
       box.appendChild(rowKV('Размер эмблемы', inputSelect(['16','20','24','28','32','40','48','56'], String(it.imgW||28), v=>{ it.imgW=+v; mount(it); save(); })));
       const colorsWrap=document.createElement('div'); colorsWrap.style.display='grid'; colorsWrap.style.gap='6px';
-      const text = t(it,'title', it.title||'MySale'); it.logoColors = it.logoColors || [];
+      const text = t(it,'title', defaultText('logo','title')); it.logoColors = it.logoColors || [];
       for(let i=0;i<text.length;i++){
         ((idx)=>{
           const c=inputColor(it.logoColors[idx] || it.color || '#2bff88', v=>{ it.logoColors[idx]=v; mount(it); save(); });
@@ -421,11 +450,8 @@
       box.appendChild(rowKV('Цвет фона', inputColor(it.bgColor||'#0a1217', v=>{ it.bgColor=v; mount(it); save(); })));
       box.appendChild(rowKV('Цвет текста', inputColor(it.textColor||'#e7eef7', v=>{ it.textColor=v; mount(it); save(); })));
       box.appendChild(rowKV('Скругление', inputSelect([0,4,8,10,12,14,16,20,24].map(String), String(it.radius||10), v=>{ it.radius=+v; mount(it); save(); })));
-      const ta=document.createElement('textarea');
-      ta.placeholder='Опции: текст или текст|/url, по одной на строке';
-      ta.value=(Array.isArray(it.options)? it.options:[]).join('\n');
-      ta.oninput=()=>{ it.options=splitLines(ta.value); mount(it); save(); };
-      box.appendChild(rowKV('Опции', ta));
+      const ta=document.createElement('textarea'); ta.placeholder='Опции: текст или текст|/url, по одной на строке'; ta.value=(Array.isArray(it.options)? it.options:[]).join('\
+'); ta.oninput=()=>{ it.options=splitLines(ta.value); mount(it); save(); }; box.appendChild(rowKV('Опции', ta));
     }
 
     if(it.kind==='bar'){
@@ -444,6 +470,7 @@
   function add(kind, init){
     const base = {id:uid(), kind:kind, x:0, y:0, w:(kind==='card'?170:(kind==='select'?200:260)), h:(kind==='card'?170:(kind==='select'?36:40))};
     const it = Object.assign(base, init||{});
+    initI18nForNew(it); // создаём переводы по умолчанию для всех языков
     state.items.push(it); mount(it); select(it.id); save(); renderLayers(); persist();
   }
 
@@ -464,7 +491,7 @@
     const q = norm(state.searchQuery);
     const cardIds = state.items.filter(it=>it.kind==='card').map(it=>it.id);
     for(const id of cardIds){ const it=find(id); const el=document.getElementById(id); if(!it||!el) continue; if(!q){ el.style.display='block'; el.classList.remove('muted'); continue; }
-      const title = t(it,'title', it.title||'');
+      const title = t(it,'title', it.i18n[state.lang]?.title || '');
       const kw = Array.isArray(it.keywords)? it.keywords.join(' ') : '';
       const hay = norm(title+' '+kw);
       const match = hay.includes(q);
@@ -472,40 +499,26 @@
     }
   }
 
-  // toolbar actions
-  document.getElementById('addCard').onclick = ()=> add('card',{title:'Категория'});
+  // toolbar actions — создаём сразу i18n-значения
+  document.getElementById('addCard').onclick = ()=> add('card',{});
   document.getElementById('addSearch').onclick = ()=> add('search',{});
   document.getElementById('addLang').onclick = ()=> add('lang',{});
   document.getElementById('addLogin').onclick = ()=> add('login',{});
-  document.getElementById('addLogo').onclick = ()=> add('logo',{title:'MySale'});
-  document.getElementById('addText').onclick = ()=> add('text',{title:'Текст', transparentBg:true});
+  document.getElementById('addLogo').onclick = ()=> add('logo',{});
+  document.getElementById('addText').onclick = ()=> add('text',{transparentBg:true});
   document.getElementById('addSelect').onclick = ()=> add('select',{options:['Профиль','Объявления','Чат'], w:200, h:36, bgColor:'#0a1217', textColor:'#e7eef7', radius:10});
   document.getElementById('addBar').onclick = ()=> add('bar',{w:700,h:64,x:0});
 
   document.getElementById('undoBtn').onclick = ()=>{ if(hist.length>0){ const cur=snapshot(); future.push(cur); const prev=hist.pop(); applyState(prev); } };
   document.getElementById('alignRowBtn').onclick = ()=> alignCardsRow();
   document.getElementById('redoBtn').onclick = ()=>{ if(future.length>0){ const cur=snapshot(); hist.push(cur); const next=future.pop(); applyState(next); } };
-  document.addEventListener('keydown', function(e){
-    if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); document.getElementById('undoBtn').click(); }
-    if(e.ctrlKey && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); document.getElementById('redoBtn').click(); }
-  });
+  document.addEventListener('keydown', function(e){ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); document.getElementById('undoBtn').click(); } if(e.ctrlKey && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); document.getElementById('redoBtn').click(); } });
 
   bg.addEventListener('input', function(){ state.bg=bg.value; document.documentElement.style.setProperty('--bg', state.bg); save(); });
 
-  document.getElementById('exportBtn').onclick = function(){
-    try{
-      const payload = JSON.stringify(state,null,2);
-      const blob = new Blob([payload],{type:'application/json'});
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='mysale_builder_r7e.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    }catch(err){ alert('Экспорт: '+err.message); }
-  };
+  document.getElementById('exportBtn').onclick = function(){ try{ const payload = JSON.stringify(state,null,2); const blob = new Blob([payload],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='mysale_builder_r7e.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }catch(err){ alert('Экспорт: '+err.message); } };
   document.getElementById('importBtn').onclick = function(){ importFile.click(); };
-  importFile.onchange = function(e){
-    const f=e.target.files && e.target.files[0]; if(!f) return;
-    const rd=new FileReader();
-    rd.onload=function(ev){ try{ const obj=JSON.parse(ev.target.result); if(!obj || !obj.items) throw new Error('неверный формат'); applyState(obj); pushHist(); }catch(err){ alert('Ошибка импорта: '+err.message); } };
-    rd.readAsText(f); importFile.value='';
-  };
+  importFile.onchange = function(e){ const f=e.target.files && e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=function(ev){ try{ const obj=JSON.parse(ev.target.result); if(!obj || !obj.items) throw new Error('неверный формат'); applyState(obj); pushHist(); }catch(err){ alert('Ошибка импорта: '+err.message); } }; rd.readAsText(f); importFile.value=''; };
   document.getElementById('clearBtn').onclick = function(){ if(confirm('Очистить?')){ state.items=[]; canvas.innerHTML=''; save(); renderLayers(); persist(); } };
 
   function drawAll(){
