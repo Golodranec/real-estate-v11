@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MySale — Витрина с поиском и языками</title>
+<style>
+  :root{ --bg:#f9cf8a; --border:rgba(0,0,0,.16); --fg:#e7eef7; }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;color:#0b0f12;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Arial,sans-serif;background:var(--bg)}
+  .builder{display:grid;grid-template-columns:320px 1fr 360px;gap:12px;padding:12px}
+  .panel{background:#0f141a;border:1px solid var(--border);border-radius:14px;overflow:auto;color:var(--fg)}
+  .panel .hd{padding:12px 12px 8px;font-weight:800;color:#dbeafe;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .tools{padding:12px;display:grid;gap:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--border);
+       background:#0e171f;color:#e7eef7;cursor:pointer}
+  .btn:hover{background:#0c141b}
+  .btn.red{background:#1e0e0e;border-color:#3b1c1c}
+  .canvas{border:1px dashed var(--border);border-radius:14px;position:relative;overflow:auto;background:var(--bg)}
+  .canvas-inner{position:relative;min-height:900px}
+  .item{position:absolute;user-select:none;touch-action:none;outline:2px solid transparent}
+  .item.selected{outline:2px dashed #4fc3f7}
+  .props .grid{padding:12px;display:grid;gap:10px}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center}
+  input[type="text"],input[type="color"],select,textarea{height:34px;border-radius:10px;border:1px solid var(--border);
+    background:#0a1217;color:#e7eef7;padding:0 10px}
+  input[type="number"]{height:34px;border-radius:10px;border:1px solid var(--border);background:#0a1217;color:#e7eef7;padding:0 10px}
+  textarea{height:90px;padding:10px}
+  .title{position:absolute;left:0;right:0;bottom:-26px;text-align:center;font-weight:700;color:#ffffff;text-shadow:0 1px 0 rgba(0,0,0,.6)}
+  .title.small{bottom:-22px}
+  .card-box{width:170px;height:170px;border-radius:18px}
+  .card-img{width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
+  .chip{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;background:#0a1217;color:#e7eef7;
+        padding:0 12px;border:1px solid var(--border);border-radius:12px;height:100%;width:100%}
+  .lang{width:100%}
+  .search{width:100%;height:100%;padding:0 12px;border-radius:12px;border:1px solid var(--border);background:#0a1217;color:#e7eef7}
+  .logoWrap{display:flex;align-items:center;gap:8px;height:100%}
+  .logoImg{width:28px;height:28px;object-fit:contain}
+  .logoText{display:flex;gap:0}
+  .logoText span{display:inline-block}
+  .bar{border-radius:14px;border:1px solid var(--border);padding:8px 10px;min-height:48px;background:#b74a19;color:#fff}
+  .bar-inner{position:relative;min-height:32px}
+  .note{color:#9fb0c2;font-size:12px}
+  .layers{padding:0 12px 12px}
+  .layers .titleRow{display:flex;justify-content:space-between;align-items:center;margin:8px 0;color:#9fb0c2}
+  .layerList{list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .layerItem{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0a1217;border-bottom:1px solid var(--border);cursor:pointer}
+  .layerItem:last-child{border-bottom:none}
+  .layerItem:hover{background:#0c151d}
+  .layerItem.active{background:#12202c}
+  .layerItem .meta{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cfe4ff}
+  .layerItem .kind{color:#8fb3ce;font-size:12px}
+  .layerItem .x{opacity:.8}
+  .muted{opacity:.35}
+</style>
+
+<!-- Note: Cloudflare bridge removed. Local i18n only. Host as static file (GitHub Pages / Netlify). -->
+
+</head>
+<body>
+<div class="builder">
+  <aside class="panel">
+    <div class="hd"><span>Инструменты</span></div>
+    <div class="tools" style="padding-top:6px;padding-bottom:0">
+      <label style="display:flex;align-items:center;gap:8px;color:#cfe4ff;"><input id="editToggle" type="checkbox" checked style="accent-color:#22c55e;width:18px;height:18px"> Режим редактирования</label>
+    </div>
+    <div class="tools">
+      <div class="row">
+        <button class="btn" id="addCard">+ Карточка</button>
+        <button class="btn" id="addSearch">+ Поиск</button>
+        <button class="btn" id="addLang">+ Язык</button>
+        <button class="btn" id="addLogin">+ Войти</button>
+        <button class="btn" id="addLogo">+ Логотип</button>
+        <button class="btn" id="addText">+ Текст</button>
+        <button class="btn" id="addSelect">+ Селект</button>
+        <button class="btn" id="addBar">+ Полоса</button>
+        <button class="btn" id="alignRowBtn">Выровнять в ряд</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="undoBtn">↶ Отменить</button>
+        <button class="btn" id="redoBtn">↷ Повторить</button>
+        <button class="btn" id="exportBtn">Экспорт</button>
+        <input id="importFile" type="file" accept="application/json" hidden>
+        <button class="btn" id="importBtn">Импорт</button>
+        <button class="btn red" id="clearBtn">Очистить</button>
+      </div>
+    </div>
+    <div class="layers">
+      <div class="titleRow">Слои</div>
+      <ul id="layerList" class="layerList"></ul>
+    </div>
+  </aside>
+
+  <main class="canvas">
+    <div class="canvas-inner" id="canvas"></div>
+  </main>
+
+  <aside class="panel props">
+    <div class="hd">Свойства</div>
+    <div class="grid" id="props">
+      <div class="kv"><div>Фон витрины</div><input type="color" id="bg"></div>
+      <div class="note">Перетаскивание — перенос. Alt + перетаскивание — изменение размера. Ctrl+Z / Ctrl+Y — undo/redo.</div>
+      <div style="height:1px;background:var(--border)"></div>
+      <div class="kv"><div>Элемент</div><div id="selInfo" style="color:#9fb0c2">не выбран</div></div>
+      <input id="imgInput" type="file" accept="image/*" hidden>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const LS_KEY = 'mysale.builder.r7e';
+  const canvas = document.getElementById('canvas');
+  const props = document.getElementById('props');
+  const bg = document.getElementById('bg');
+  const importFile = document.getElementById('importFile');
+  const imgInput = document.getElementById('imgInput');
+  const layerList = document.getElementById('layerList');
+
+  let state = { bg: '#f9cf8a', items: [], edit: true, lang: 'RU', searchQuery: '' };
+  let selected = null, drag = null, saveTimer = null;
+
+  const hist = [], future = [];
+  const snapshot = () => JSON.parse(JSON.stringify(state));
+  const pushHist = () => { hist.push(snapshot()); if (hist.length > 200) hist.shift(); future.length = 0; };
+  const applyState = (s) => { state = JSON.parse(JSON.stringify(s)); migrateState(); drawAll(); persist(); };
+
+  const uid = () => 'i' + Math.random().toString(36).slice(2, 9);
+  const find = (id) => state.items.find(x => x.id === id);
+  function persist() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+  function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { pushHist(); persist(); }, 120); }
+  function load() { try { const s = localStorage.getItem(LS_KEY); if (s) state = Object.assign({ bg: '#10151b', items: [], edit: true, lang: 'RU', searchQuery: '' }, JSON.parse(s)); } catch (e) {} migrateState(); }
+  window.addEventListener('beforeunload', persist);
+  window.addEventListener('pagehide', persist);
+  window.addEventListener('unload', persist);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') persist(); });
+  setInterval(persist, 2500);
+
+  function makeEl(tag, cls) { const el = document.createElement(tag); if (cls) el.className = cls; return el; }
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  // Helpers to avoid regex literals
+  function isHttpUrl(u){ const s=String(u||'').trim().toLowerCase(); return s.startsWith('http://') || s.startsWith('https://'); }
+  function splitLines(v){ const s=String(v||''); const norm=s.split('\
+').join('\
+'); return norm.split('\
+').map(x=>x.trim()).filter(Boolean); }
+
+  const LANGS = ['RU','ENG','UZB'];
+  function ensureI18n(it){ if(!it.i18n) it.i18n = {}; for(const L of LANGS){ if(!it.i18n[L]) it.i18n[L] = {}; } }
+
+  function defaultText(kind, key, L){
+    const map = {
+      card: { title: { RU:'Категория', ENG:'Category', UZB:'Kategoriya' }},
+      text: { title: { RU:'Текст', ENG:'Text', UZB:'Matn' }},
+      login:{ label: { RU:'Войти', ENG:'Log in', UZB:'Kirish' }},
+      search:{ placeholder:{ RU:'Поиск', ENG:'Search', UZB:'Qidiruv' }},
+      logo:{ title:{ RU:'MySale', ENG:'MySale', UZB:'MySale' }},
+    };
+    const lang=L || (state.lang||'RU');
+    try { return map[kind][key][lang]; } catch(_) { return ''; }
+  }
+
+  function t(it, key, fallback){
+    ensureI18n(it);
+    const L = state.lang || 'RU';
+    const langVal = it.i18n[L] && it.i18n[L][key];
+    if (langVal != null && langVal !== '') return langVal;
+    if (L !== 'RU' && typeof fallback !== 'undefined') return fallback;
+    if (L === 'RU') { const ruVal = it.i18n.RU && it.i18n.RU[key]; if (ruVal != null && ruVal !== '') return ruVal; }
+    if (it[key] != null && it[key] !== '') return it[key];
+    return fallback;
+  }
+
+  function migrateItem(it){
+    ensureI18n(it);
+    // перенос старых полей совместимости
+    if(it.titleRU && !it.i18n.RU.title) it.i18n.RU.title = it.titleRU;
+    if(it.titleENG && !it.i18n.ENG.title) it.i18n.ENG.title = it.titleENG;
+    if(it.titleUZB && !it.i18n.UZB.title) it.i18n.UZB.title = it.titleUZB;
+    // если у RU пусто, используем базовое поле
+    if(it.title && !it.i18n.RU.title && (it.kind==='card'||it.kind==='text'||it.kind==='logo')) it.i18n.RU.title = it.title;
+    if(it.kind==='login' && it.label && !it.i18n.RU.label) it.i18n.RU.label = it.label;
+    if(it.kind==='search' && it.placeholder && !it.i18n.RU.placeholder) it.i18n.RU.placeholder = it.placeholder;
+    // подставляем дефолты, чтобы при смене языка не было пусто
+    for(const L of LANGS){
+      if(it.kind==='card' && !it.i18n[L].title) it.i18n[L].title = defaultText('card','title',L);
+      if(it.kind==='text' && !it.i18n[L].title) it.i18n[L].title = defaultText('text','title',L);
+      if(it.kind==='logo' && !it.i18n[L].title) it.i18n[L].title = defaultText('logo','title',L);
+      if(it.kind==='login' && !it.i18n[L].label) it.i18n[L].label = defaultText('login','label',L);
+      if(it.kind==='search' && !it.i18n[L].placeholder) it.i18n[L].placeholder = defaultText('search','placeholder',L);
+    }
+  }
+
+  
+function migrateState(){ state.items.forEach(migrateItem); }
+
+
+  function initI18nForNew(it){ ensureI18n(it); for(const L of LANGS){ if(it.kind==='card') it.i18n[L].title = defaultText('card','title',L);
+      if(it.kind==='text') it.i18n[L].title = defaultText('text','title',L);
+      if(it.kind==='logo') it.i18n[L].title = defaultText('logo','title',L);
+      if(it.kind==='login') it.i18n[L].label = defaultText('login','label',L);
+      if(it.kind==='search') it.i18n[L].placeholder = defaultText('search','placeholder',L); } }
+
+  function ensureLangDefaults(L){ for(const it of state.items){ ensureI18n(it); if(it.kind==='card' && !it.i18n[L].title){ it.i18n[L].title = it.i18n.RU.title || defaultText('card','title',L); }
+      if(it.kind==='text' && !it.i18n[L].title){ it.i18n[L].title = it.i18n.RU.title || defaultText('text','title',L); }
+      if(it.kind==='logo' && !it.i18n[L].title){ it.i18n[L].title = it.i18n.RU.title || defaultText('logo','title',L); }
+      if(it.kind==='login' && !it.i18n[L].label){ it.i18n[L].label = it.i18n.RU.label || defaultText('login','label',L); }
+      if(it.kind==='search' && !it.i18n[L].placeholder){ it.i18n[L].placeholder = it.i18n.RU.placeholder || defaultText('search','placeholder',L); } } }
+
+  function setLang(L){ state.lang=L; ensureLangDefaults(L); drawAll(); save(); }
+
+  const norm = (s) => String(s||'').toLocaleLowerCase();
+
+  function mount(it) {
+    let el = document.getElementById(it.id);
+    if (!el) { el = makeEl('div', 'item'); el.id = it.id; canvas.appendChild(el); }
+    el.classList.toggle('selected', selected === it.id);
+    el.style.left = (it.x || 0) + 'px'; el.style.top = (it.y || 0) + 'px';
+    el.style.width = (it.w || (it.kind === 'card' ? 170 : 260)) + 'px';
+    el.style.height = (it.h || (it.kind === 'card' ? 170 : 40)) + 'px';
+    el.innerHTML='';
+
+    if (it.kind === 'card') {
+      el.style.width='170px'; el.style.height='170px';
+      const box=makeEl('div','card-box'); el.appendChild(box);
+      const img=makeEl('img','card-img'); img.src=it.url||''; img.alt=t(it,'title',''); box.appendChild(img);
+      const title=makeEl('div','title');
+      const fb = state.lang==='ENG' ? 'Category' : (state.lang==='UZB' ? 'Kategoriya' : 'Категория');
+      title.textContent = t(it, 'title', fb);
+      title.style.color = it.titleColor || '#ffffff';
+      title.style.fontSize = (it.titleSize||14)+'px';
+      title.style.fontFamily = it.titleFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+      title.className = 'title' + ((it.titleSize||14) < 14 ? ' small' : '');
+      el.appendChild(title);
+
+    } else if (it.kind === 'search') {
+      const inp=makeEl('input'); inp.type='search';
+      inp.placeholder = t(it,'placeholder', defaultText('search','placeholder'));
+      inp.className='search';
+      inp.style.background=it.bgColor||'#0a1217'; inp.style.color=it.textColor||'#e7eef7'; inp.style.borderRadius=(it.radius||12)+'px';
+      inp.value = state.searchQuery || '';
+      inp.oninput = () => { state.searchQuery = inp.value || ''; applySearchFilter(); save(); };
+      el.appendChild(inp);
+
+    } else if (it.kind === 'lang') {
+      const sel=makeEl('select','chip lang');
+      for(const L of LANGS){ const o=makeEl('option'); o.textContent=L; o.value=L; sel.appendChild(o); }
+      sel.value = state.lang || 'RU';
+      sel.style.background=it.bgColor||'#0a1217'; sel.style.color=it.textColor||'#e7eef7'; sel.style.borderRadius=(it.radius||12)+'px';
+      sel.oninput = ()=>{ setLang(sel.value); };
+      el.appendChild(sel);
+
+    } else if (it.kind === 'login') {
+      const b=makeEl('button','chip');
+      b.textContent = t(it,'label', defaultText('login','label'));
+      b.style.background=it.bgColor||'#0a1217'; b.style.color=it.textColor||'#e7eef7'; b.style.borderRadius=(it.radius||12)+'px';
+      el.appendChild(b);
+
+    } else if (it.kind === 'logo') {
+      const box=makeEl('div','logoWrap');
+      if(it.imgUrl){ const im=makeEl('img','logoImg'); im.src=it.imgUrl; im.style.width=(it.imgW||28)+'px'; im.style.height=(it.imgW||28)+'px'; box.appendChild(im); }
+      const tEl=makeEl('div','logoText');
+      tEl.style.fontFamily = it.logoFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+      tEl.style.fontWeight = it.logoWeight || 800;
+      tEl.style.fontSize = (it.logoSize || 24) + 'px';
+      const text = t(it,'title', defaultText('logo','title'));
+      const colors = it.logoColors || [];
+      tEl.innerHTML='';
+      for(let i=0;i<text.length;i++){ const sp=document.createElement('span'); sp.textContent=text[i]; sp.style.color = colors[i] || (it.color || '#2bff88'); tEl.appendChild(sp); }
+      box.appendChild(tEl); el.appendChild(box);
+
+    } else if (it.kind === 'text') {
+      const tDiv=makeEl('div','chip');
+      tDiv.textContent = t(it,'title', defaultText('text','title'));
+      tDiv.style.fontFamily = it.fontFamily || 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+      tDiv.style.fontWeight = it.fontWeight || 600;
+      tDiv.style.fontSize=(it.fontSize||16)+'px';
+      tDiv.style.color=it.textColor||'#0b0f12';
+      const __tr = !!it.transparentBg; tDiv.style.background = __tr ? 'transparent' : (it.bgColor||'transparent'); tDiv.style.border = 'none'; tDiv.style.boxShadow='none'; tDiv.style.backdropFilter='none';
+      tDiv.contentEditable='false';
+      tDiv.ondblclick=()=>{ tDiv.contentEditable='true'; tDiv.focus(); };
+      tDiv.onblur=()=>{ const val=tDiv.textContent; ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title = val; if(L==='RU' && !it.title) it.title=val; save(); renderLayers(); persist(); tDiv.contentEditable='false'; };
+      el.appendChild(tDiv);
+
+    } else if (it.kind === 'select') {
+      el.innerHTML='';
+      const sEl=document.createElement('select');
+      sEl.style.width='100%'; sEl.style.height='100%';
+      sEl.style.background=it.bgColor||'#0a1217'; sEl.style.color=it.textColor||'#e7eef7'; sEl.style.borderRadius=(it.radius||10)+'px';
+      sEl.style.border='1px solid var(--border)'; sEl.style.padding='0 10px'; sEl.style.outline='none';
+      const opts = Array.isArray(it.options) ? it.options : ['Профиль','Объявления','Чат'];
+      sEl.innerHTML='';
+      const pairs=[];
+      for(const raw of opts){ const str=String(raw); const pipe = str.indexOf('|'); const label = pipe>=0 ? str.slice(0,pipe).trim() : str.trim(); const href = pipe>=0 ? str.slice(pipe+1).trim() : ''; const o=document.createElement('option'); o.textContent=label; sEl.appendChild(o); pairs.push({label, href}); }
+      sEl.onchange=()=>{ const i=sEl.selectedIndex; const href=(pairs[i]&&pairs[i].href)||''; if(href){ if(isHttpUrl(href)) window.open(href,'_blank'); else window.location.href=href; } };
+      el.appendChild(sEl);
+
+    } else if (it.kind === 'bar') {
+      el.classList.add('bar'); if(it.barColor) el.style.background=it.barColor;
+      const inner=makeEl('div','bar-inner'); el.appendChild(inner);
+    }
+
+    bind(el, it);
+  }
+
+  function bind(el, it){
+    const editing = !!state.edit;
+    el.onclick = null; el.onpointerdown = null; el.onpointermove = null; el.onpointerup = null;
+    if(!editing){
+      if(it && it.href){ el.style.cursor='pointer'; el.onclick = (e)=>{ e.preventDefault(); const u = String(it.href||'').trim(); if(!u) return; if(isHttpUrl(u)) window.open(u,'_blank'); else window.location.href=u; }; }
+      else { el.style.cursor='default'; }
+      return;
+    }
+    el.style.cursor = 'move';
+    let startX=0, startY=0;
+    el.onpointerdown = (e)=>{
+      select(it.id);
+      const r=el.getBoundingClientRect(), p=canvas.getBoundingClientRect();
+      startX=e.clientX; startY=e.clientY;
+      drag={id:it.id, mode:(e.altKey?'resize':'move'), sx:e.clientX, sy:e.clientY, left:r.left-p.left, top:r.top-p.top, w:r.width, h:r.height, parent:p};
+      el.setPointerCapture && el.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    };
+    el.onpointermove = (e)=>{
+      if(!drag) return;
+      const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
+      if(drag.mode==='move'){
+        it.x = clamp(drag.left + dx, 0, Math.max(0, drag.parent.width - drag.w));
+        it.y = clamp(drag.top + dy, 0, Math.max(0, drag.parent.height - drag.h));
+      }else{
+        it.w = clamp(drag.w + dx, 40, Math.max(40, drag.parent.width - drag.left));
+        it.h = clamp(drag.h + dy, 24, Math.max(24, drag.parent.height - drag.top));
+      }
+      mount(it); save();
+    };
+    el.onpointerup = (e)=>{ if(drag){ el.releasePointerCapture && el.releasePointerCapture(e.pointerId); drag=null; } };
+  }
+
+  function select(id){ selected=id; document.querySelectorAll('.item').forEach(n=>n.classList.toggle('selected', n.id===id)); renderProps(find(id)); renderLayers(); persist(); }
+
+  function renderLayers(){
+    layerList.innerHTML='';
+    state.items.forEach(it=>{
+      const li=document.createElement('li'); li.className='layerItem'+(selected===it.id?' active':'');
+      const meta=document.createElement('div'); meta.className='meta';
+      let fb = (it.kind==='card') ? (state.lang==='ENG'?'Category':state.lang==='UZB'?'Kategoriya':'Категория') : (it.kind);
+      const titleTxt = (it.kind==='card'||it.kind==='text'||it.kind==='logo') ? (t(it,'title', fb)) : (it.kind==='login'? t(it,'label','login') : it.kind);
+      meta.textContent=titleTxt; li.appendChild(meta);
+      const kind=document.createElement('div'); kind.className='kind'; kind.textContent=it.kind; li.appendChild(kind);
+      const x=document.createElement('div'); x.className='x'; x.textContent='·'; li.appendChild(x);
+      li.onclick=()=>select(it.id);
+      layerList.appendChild(li);
+    });
+  }
+
+  function rowKV(label, inputEl){ const row=document.createElement('div'); row.className='kv'; const l=document.createElement('div'); l.textContent=label; row.appendChild(l); row.appendChild(inputEl); return row; }
+  function inputText(v,on){ const i=document.createElement('input'); i.type='text'; i.value=v||''; i.oninput=()=>on(i.value); return i; }
+  function inputNum(v,on,min=0,max=9999){ const i=document.createElement('input'); i.type='number'; i.value=(v??0); i.min=min; i.max=max; i.oninput=()=>on(+i.value||0); return i; }
+  function inputColor(v,on){ const c=document.createElement('input'); c.type='color'; c.value=v||'#000000'; c.oninput=()=>on(c.value); return c; }
+  function inputBtn(text,on){ const b=document.createElement('button'); b.className='btn'; b.textContent=text; b.onclick=(e)=>{e.preventDefault(); on();}; return b; }
+  function inputSelect(list,value,on){ const s=document.createElement('select'); list.forEach(val=>{ const op=document.createElement('option'); op.textContent=val; op.value=val; if(String(val)===String(value)) op.selected=true; s.appendChild(op); }); s.oninput=()=>on(s.value); return s; }
+
+  const fontFamilies=[
+    'Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
+    'Segoe UI, Arial, sans-serif', 'Roboto, Arial, sans-serif', 'Arial, Helvetica, sans-serif', 'Georgia, serif', 'Tahoma, Geneva, sans-serif'
+  ];
+  const weights=['300','400','500','600','700','800','900'];
+  const fontSizes=['12','14','16','18','20','22','24','26','28','30','32','36','40'];
+  const logoSizes=['16','20','22','24','26','28','30','32','36','40','48','56'];
+  const radiusList=['0','4','8','10','12','14','16','20','24','28','32'];
+
+  function langField(it, label, key){ ensureI18n(it); const g=document.createElement('div'); g.style.display='grid'; g.style.gap='6px'; for(const L of LANGS){ const row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='60px 1fr'; row.style.alignItems='center'; const lab=document.createElement('div'); lab.textContent=L; lab.style.color='#9fb0c2'; const val=(it.i18n[L]&&it.i18n[L][key])||''; const inp=inputText(val, v=>{ ensureI18n(it); if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L][key]=v; if(L==='RU' && key==='title' && !it.title) it.title=v; mount(it); save(); renderLayers(); }); row.appendChild(lab); row.appendChild(inp); g.appendChild(row); } return rowKV(label, g); }
+
+  function renderProps(it){
+    props.querySelectorAll('.dyn').forEach(n=>n.remove());
+    const selInfo=document.getElementById('selInfo'); selInfo.textContent = it? (it.kind + (it.title? ' — '+t(it,'title',it.title):'')) : 'не выбран';
+    if(!it) return;
+    const box=document.createElement('div'); box.className='grid dyn';
+
+    if(['logo','text'].includes(it.kind)){
+      box.appendChild(rowKV('Текст (текущий язык)', inputText(t(it,'title', defaultText(it.kind,'title')), v=>{ ensureI18n(it); const L=state.lang||'RU'; if(!it.i18n[L]) it.i18n[L]={}; it.i18n[L].title=v; if(L==='RU' && !it.title) it.title=v; mount(it); save(); renderLayers(); })));
+    }
+    if(it.kind==='card'){
+      box.appendChild(langField(it,'Подпись (RU/ENG/UZB)','title'));
+      box.appendChild(rowKV('Ссылка', inputText(it.href||'', v=>{ it.href=v; mount(it); save(); })));
+      box.appendChild(rowKV('Icon URL', inputText(it.url||'', v=>{ it.url=v; mount(it); save(); })));
+      box.appendChild(rowKV('Фото', inputBtn('Загрузить', ()=>{ imgInput.onchange=(e)=>{const f=e.target.files&&e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=ev=>{ it.url=ev.target.result; mount(it); save(); imgInput.value=''; }; rd.readAsDataURL(f); }; imgInput.click(); })));
+      box.appendChild(rowKV('Цвет подписи', inputColor(it.titleColor||'#ffffff', v=>{ it.titleColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Размер подписи', inputSelect(fontSizes, it.titleSize||'14', v=>{ it.titleSize=+v; mount(it); save(); })));
+      box.appendChild(rowKV('Шрифт подписи', inputSelect(fontFamilies, it.titleFamily||fontFamilies[0], v=>{ it.titleFamily=v; mount(it); save(); })));
+      const kwStr = Array.isArray(it.keywords)? it.keywords.join(', ') : '';
+      box.appendChild(rowKV('Ключевые слова', inputText(kwStr, v=>{ it.keywords = String(v||'').split(',').map(s=>s.trim()).filter(Boolean); applySearchFilter(); save(); })));
+    }
+
+    if(it.kind==='logo'){
+      box.appendChild(langField(it,'Название логотипа (RU/ENG/UZB)','title'));
+      box.appendChild(rowKV('Шрифт', inputSelect(fontFamilies, it.logoFamily||fontFamilies[0], v=>{ it.logoFamily=v; mount(it); save(); })));
+      box.appendChild(rowKV('Жирность', inputSelect(weights, String(it.logoWeight||800), v=>{ it.logoWeight=+v; mount(it); save(); })));
+      box.appendChild(rowKV('Размер букв', inputSelect(logoSizes, String(it.logoSize||24), v=>{ it.logoSize=+v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет по умолч.', inputColor(it.color||'#2bff88', v=>{ it.color=v; mount(it); save(); })));
+      box.appendChild(rowKV('Emblem URL', inputText(it.imgUrl||'', v=>{ it.imgUrl=v; mount(it); save(); })));
+      box.appendChild(rowKV('Эмблема', inputBtn('Загрузить', ()=>{ imgInput.onchange=(e)=>{const f=e.target.files&&е.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=ev=>{ it.imgUrl=ev.target.result; mount(it); save(); imgInput.value=''; }; rd.readAsDataURL(f); }; imgInput.click(); })));
+      box.appendChild(rowKV('Размер эмблемы', inputSelect(['16','20','24','28','32','40','48','56'], String(it.imgW||28), v=>{ it.imgW=+v; mount(it); save(); })));
+      const colorsWrap=document.createElement('div'); colorsWrap.style.display='grid'; colorsWrap.style.gap='6px';
+      const text = t(it,'title', defaultText('logo','title')); it.logoColors = it.logoColors || [];
+      for(let i=0;i<text.length;i++){
+        ((idx)=>{
+          const c=inputColor(it.logoColors[idx] || it.color || '#2bff88', v=>{ it.logoColors[idx]=v; mount(it); save(); });
+          const row=document.createElement('div'); row.style.display='grid'; row.style.gridTemplateColumns='70px 1fr'; row.style.alignItems='center';
+          const lab=document.createElement('div'); lab.textContent='Буква '+text[idx]; lab.style.color='#9fb0c2';
+          row.appendChild(lab); row.appendChild(c); colorsWrap.appendChild(row);
+        })(i);
+      }
+      box.appendChild(rowKV('Цвета букв', colorsWrap));
+      box.appendChild(rowKV('', inputBtn('Сбросить цвета', ()=>{ it.logoColors=[]; mount(it); save(); })));
+    }
+
+    if(it.kind==='search'){
+      box.appendChild(langField(it,'Placeholder (RU/ENG/UZB)','placeholder'));
+      box.appendChild(rowKV('Ширина', inputNum(it.w||400, v=>{ it.w=v; mount(it); save(); })));
+      box.appendChild(rowKV('Высота', inputNum(it.h||48, v=>{ it.h=v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет поля', inputColor(it.bgColor||'#0a1217', v=>{ it.bgColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет текста', inputColor(it.textColor||'#e7eef7', v=>{ it.textColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Скругление', inputSelect(radiusList, String(it.radius||12), v=>{ it.radius=+v; mount(it); save(); })));
+    }
+
+    if(it.kind==='text'){
+      box.appendChild(langField(it,'Текст (RU/ENG/UZB)','title'));
+      box.appendChild(rowKV('Шрифт', inputSelect(fontFamilies, it.fontFamily||fontFamilies[0], v=>{ it.fontFamily=v; mount(it); save(); })));
+      box.appendChild(rowKV('Жирность', inputSelect(weights, String(it.fontWeight||600), v=>{ it.fontWeight=+v; mount(it); save(); })));
+      box.appendChild(rowKV('Размер', inputSelect(fontSizes, String(it.fontSize||16), v=>{ it.fontSize=+v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет текста', inputColor(it.textColor||'#0b0f12', v=>{ it.textColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Фон', inputColor(it.bgColor||'#00000000', v=>{ it.bgColor=v; it.transparentBg=false; mount(it); save(); })));
+      const chk=document.createElement('input'); chk.type='checkbox'; chk.checked=!!it.transparentBg; chk.oninput=()=>{ it.transparentBg=chk.checked; mount(it); save(); };
+      box.appendChild(rowKV('Прозрачный фон', chk));
+      box.appendChild(rowKV('Ширина', inputNum(it.w||160, v=>{ it.w=v; mount(it); save(); })));
+      box.appendChild(rowKV('Высота', inputNum(it.h||40, v=>{ it.h=v; mount(it); save(); })));
+    }
+
+    if(it.kind==='login' || it.kind==='lang'){
+      if(it.kind==='login') box.appendChild(langField(it,'Текст кнопки (RU/ENG/UZB)','label'));
+      box.appendChild(rowKV('Ширина', inputNum(it.w||160, v=>{ it.w=v; mount(it); save(); })));
+      box.appendChild(rowKV('Высота', inputNum(it.h||40, v=>{ it.h=v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет фона', inputColor(it.bgColor||'#0a1217', v=>{ it.bgColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет текста', inputColor(it.textColor||'#e7eef7', v=>{ it.textColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Скругление', inputSelect(radiusList, String(it.radius||12), v=>{ it.radius=+v; mount(it); save(); })));
+    }
+
+    if(it.kind==='select'){
+      box.appendChild(rowKV('Ширина', inputNum(it.w||200, v=>{ it.w=v; mount(it); save(); })));
+      box.appendChild(rowKV('Высота', inputNum(it.h||36, v=>{ it.h=v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет фона', inputColor(it.bgColor||'#0a1217', v=>{ it.bgColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Цвет текста', inputColor(it.textColor||'#e7eef7', v=>{ it.textColor=v; mount(it); save(); })));
+      box.appendChild(rowKV('Скругление', inputSelect([0,4,8,10,12,14,16,20,24].map(String), String(it.radius||10), v=>{ it.radius=+v; mount(it); save(); })));
+      const ta=document.createElement('textarea'); ta.placeholder='Опции: текст или текст|/url, по одной на строке'; ta.value=(Array.isArray(it.options)? it.options:[]).join('\
+'); ta.oninput=()=>{ it.options=splitLines(ta.value); mount(it); save(); }; box.appendChild(rowKV('Опции', ta));
+    }
+
+    if(it.kind==='bar'){
+      box.appendChild(rowKV('Цвет полосы', inputColor(it.barColor||'#b74a19', v=>{ it.barColor=v; const el=document.getElementById(it.id); if(el) el.style.background=v; save(); })));
+      box.appendChild(rowKV('Скругление', inputSelect(radiusList, String(it.radius||14), v=>{ it.radius=+v; const el=document.getElementById(it.id); if(el) el.style.borderRadius=v+'px'; save(); })));
+      box.appendChild(rowKV('Ширина', inputNum(it.w||700, v=>{ it.w=v; mount(it); save(); })));
+      box.appendChild(rowKV('Высота', inputNum(it.h||64, v=>{ it.h=v; mount(it); save(); })));
+    }
+
+    const del=document.createElement('button'); del.className='btn red'; del.textContent='Удалить';
+    del.onclick=()=>{ state.items = state.items.filter(x=>x.id!==it.id); const n=document.getElementById(it.id); if(n) n.remove(); save(); selected=null; renderProps(null); renderLayers(); persist(); };
+    box.appendChild(del);
+    props.appendChild(box);
+  }
+
+  function add(kind, init){
+    const base = {id:uid(), kind:kind, x:0, y:0, w:(kind==='card'?170:(kind==='select'?200:260)), h:(kind==='card'?170:(kind==='select'?36:40))};
+    const it = Object.assign(base, init||{});
+    initI18nForNew(it); // создаём переводы по умолчанию для всех языков
+    state.items.push(it); mount(it); select(it.id); save(); renderLayers(); persist();
+  }
+
+  function alignCardsRow(){
+    const gapX = 18, cardW = 170, cardH = 170;
+    const cards = state.items.filter(it => it.kind==='card');
+    if(!cards.length) return;
+    const sorted = cards.slice().sort((a,b)=> (a.y||0)-(b.y||0) || (a.x||0)-(b.x||0));
+    const rows = []; const tol = cardH * 0.5;
+    sorted.forEach(c => { const y=c.y||0; let row=rows.find(r=>Math.abs(r.baseline-y)<=tol); if(!row){ row={baseline:y, items:[]}; rows.push(row);} row.items.push(c); row.baseline=Math.min(row.baseline,y); });
+    const minX = Math.min(...cards.map(c=>c.x||0));
+    rows.sort((a,b)=>a.baseline-b.baseline);
+    rows.forEach(row=>{ row.items.sort((a,b)=>(a.x||0)-(b.x||0)); let x=minX; row.items.forEach(it=>{ it.x=x; it.y=row.baseline; x+=cardW+gapX; }); });
+    drawAll(); save();
+  }
+
+  function applySearchFilter(){
+    const q = norm(state.searchQuery);
+    const cardIds = state.items.filter(it=>it.kind==='card').map(it=>it.id);
+    for(const id of cardIds){ const it=find(id); const el=document.getElementById(id); if(!it||!el) continue; if(!q){ el.style.display='block'; el.classList.remove('muted'); continue; }
+      const title = t(it,'title', it.i18n[state.lang]?.title || '');
+      const kw = Array.isArray(it.keywords)? it.keywords.join(' ') : '';
+      const hay = norm(title+' '+kw);
+      const match = hay.includes(q);
+      el.style.display = match ? 'block' : 'none';
+    }
+  }
+
+  // toolbar actions — создаём сразу i18n-значения
+  document.getElementById('addCard').onclick = ()=> add('card',{});
+  document.getElementById('addSearch').onclick = ()=> add('search',{});
+  document.getElementById('addLang').onclick = ()=> add('lang',{});
+  document.getElementById('addLogin').onclick = ()=> add('login',{});
+  document.getElementById('addLogo').onclick = ()=> add('logo',{});
+  document.getElementById('addText').onclick = ()=> add('text',{transparentBg:true});
+  document.getElementById('addSelect').onclick = ()=> add('select',{options:['Профиль','Объявления','Чат'], w:200, h:36, bgColor:'#0a1217', textColor:'#e7eef7', radius:10});
+  document.getElementById('addBar').onclick = ()=> add('bar',{w:700,h:64,x:0});
+
+  document.getElementById('undoBtn').onclick = ()=>{ if(hist.length>0){ const cur=snapshot(); future.push(cur); const prev=hist.pop(); applyState(prev); } };
+  document.getElementById('alignRowBtn').onclick = ()=> alignCardsRow();
+  document.getElementById('redoBtn').onclick = ()=>{ if(future.length>0){ const cur=snapshot(); hist.push(cur); const next=future.pop(); applyState(next); } };
+  document.addEventListener('keydown', function(e){ if(e.ctrlKey && e.key.toLowerCase()==='z'){ e.preventDefault(); document.getElementById('undoBtn').click(); } if(e.ctrlKey && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); document.getElementById('redoBtn').click(); } });
+
+  bg.addEventListener('input', function(){ state.bg=bg.value; document.documentElement.style.setProperty('--bg', state.bg); save(); });
+
+  document.getElementById('exportBtn').onclick = function(){ try{ const payload = JSON.stringify(state,null,2); const blob = new Blob([payload],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='mysale_builder_r7e.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }catch(err){ alert('Экспорт: '+err.message); } };
+  document.getElementById('importBtn').onclick = function(){ importFile.click(); };
+  importFile.onchange = function(e){ const f=e.target.files && e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=function(ev){ try{ const obj=JSON.parse(ev.target.result); if(!obj || !obj.items) throw new Error('неверный формат'); applyState(obj); pushHist(); }catch(err){ alert('Ошибка импорта: '+err.message); } }; rd.readAsText(f); importFile.value=''; };
+  document.getElementById('clearBtn').onclick = function(){ if(confirm('Очистить?')){ state.items=[]; canvas.innerHTML=''; save(); renderLayers(); persist(); } };
+
+  function drawAll(){
+    const editToggle=document.getElementById('editToggle'); if(editToggle){ editToggle.checked=!!state.edit; editToggle.oninput=()=>{ state.edit=!!editToggle.checked; drawAll(); persist(); }; }
+    document.documentElement.style.setProperty('--bg', state.bg); bg.value=state.bg;
+    canvas.innerHTML=''; state.items.forEach(mount); renderLayers(); applySearchFilter(); persist();
+  }
+
+  // boot
+  load(); drawAll(); pushHist(); persist();
+})();
+</script>
+
+</body>
+</html>
+function resolveLang(val, L){
+  const bad = new Set(['Text','Category','Категория','Текст']);
+  if(!val) return '';
+  if(typeof val==='string') return bad.has(val)? val : val;
+  let out = (val && (val[L] || val.RU)) || '';
+  if(!out){
+    for(const k in val){ if(val[k]){ out = val[k]; break; } }
+  }
+  if(bad.has(out)){
+    if(val.RU && !bad.has(val.RU)) return val.RU;
+    for(const k in val){ if(val[k] && !bad.has(val[k])) return val[k]; }
+  }
+  return out || '';
+}
+
